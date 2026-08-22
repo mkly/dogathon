@@ -23,7 +23,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    // Browser extensions can add attributes such as data-google-analytics-opt-out
+    // before React hydrates this element. Ignore only those root-level differences.
+    <html lang="en" suppressHydrationWarning>
       <body className={nunito.className}>
         <FeltFilters />
         {children}
