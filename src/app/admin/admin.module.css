@@ -90,6 +90,21 @@
 .stat span { margin-top: 8px; font-size: 11px; font-weight: 800; letter-spacing: 0.6px; text-transform: uppercase; }
 .stat small { margin-top: 5px; font-size: 0.68rem; font-weight: 700; opacity: 0.75; }
 
+.directoryNav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin: -24px 0 48px;
+  padding: 17px 20px;
+  border: 2px dashed rgb(61 51 43 / 24%);
+  border-radius: 13px 7px 12px 8px;
+  background: rgb(255 252 245 / 42%);
+}
+
+.directoryNav strong { font-size: 0.88rem; }
+.directoryNav :global(.felt-button) { flex: none; text-decoration: none; }
+
 .queueSection { margin-bottom: 52px; }
 
 .sectionTitle {
@@ -190,6 +205,8 @@
   .headerActions, .staffTools, .gmailGroup { align-items: stretch; flex-direction: column; }
   .stats { grid-template-columns: 1fr 1fr; gap: 12px; }
   .stat { min-height: 112px; padding: 17px; }
+  .directoryNav { align-items: stretch; flex-direction: column; margin-top: -8px; }
+  .directoryNav :global(.felt-button) { text-align: center; }
   .queueItem { padding: 19px; }
   .settings { grid-template-columns: 1fr; gap: 26px; padding: 32px 24px; }
   .saveRow { align-items: stretch; flex-direction: column; }
