@@ -67,22 +67,24 @@
 }
 
 .dogCard {
+  --pil: 1.4;
+  --drop: 0.7;
   display: grid;
-  gap: 0.6rem;
-  padding: 0.65rem;
-  border: 3px solid transparent;
-  border-radius: 18px 8px 16px 9px / 9px 16px 8px 18px;
-  color: var(--felt-ink);
-  background: rgb(248 242 231 / 55%);
+  gap: 0.55rem;
+  padding: 16px;
+  border-radius: 18px;
+  font-weight: 900;
   text-align: center;
-  transition: transform 120ms ease, background-color 120ms ease;
+  transition: translate 120ms ease;
 }
 
+/* the picked dog is the same cut patch, lifted off the mat and re-dyed denim */
 .dogChoice input:checked + .dogCard {
-  border-color: var(--felt-denim);
-  background: var(--felt-cream);
-  box-shadow: 0 5px 0 rgb(85 116 147 / 35%);
-  transform: translateY(-3px);
+  --felt-color: var(--felt-denim);
+  --felt-contrast: var(--felt-cream);
+  --drop: 1.35;
+
+  translate: 0 -3px;
 }
 
 .dogChoice input:focus-visible + .dogCard {
@@ -92,12 +94,6 @@
 
 .photo {
   width: 100%;
-  padding: 8px;
-  box-shadow: 0 3px 0 #d7cbb9, 0 6px 9px rgb(61 51 43 / 18%);
-}
-
-.photo::after {
-  inset: 4px;
 }
 
 .photo img,
