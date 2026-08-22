@@ -6,6 +6,14 @@
   padding: 30px 0 40px;
 }
 
+/* the wordmark is a cut felt object like everything else, not a flat logo */
+.wordmark {
+  display: block;
+  width: min(320px, 62%);
+  height: auto;
+  filter: drop-shadow(0 5px 5px rgb(61 51 43 / 26%));
+}
+
 .hero {
   display: grid;
   width: 100%;
@@ -276,6 +284,11 @@
 @media (max-width: 700px) {
   .siteShell {
     padding: 2rem 1rem 4rem;
+  }
+
+  .wordmark {
+    width: min(230px, 70%);
+    margin: 0 auto;
   }
 
   .hero {

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { FeltPanel, PhotoPatch, StitchBadge } from "@/components/felt";
 import { prisma } from "@/lib/prisma";
 
+import pawcastWordmark from "../../public/brand/pawcast-wordmark.png";
 import feltPup from "../../public/mascot/felt-pup-2.png";
 
 import styles from "./public.module.css";
@@ -18,6 +19,8 @@ export default async function Home() {
 
   return (
     <main className={styles.siteShell}>
+      <Image alt="Pawcast" className={styles.wordmark} priority src={pawcastWordmark} />
+
       <FeltPanel className={styles.hero} tone="moss">
         <div className={styles.heroCopy}>
           <h1>

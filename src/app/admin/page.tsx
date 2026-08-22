@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -7,6 +8,8 @@ import { SignOutButton } from "@/components/sign-out-button";
 import { gmailAuthStatus } from "@/lib/arcade";
 import { getSession } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
+
+import pawcastWordmark from "../../../public/brand/pawcast-wordmark.png";
 
 import { ComposeButton, DraftEditor, SettingsForm, StaffTools } from "./admin-controls";
 import { GMAIL_NOTICE_ID, gmailBlockedReason } from "./gmail-notice";
@@ -74,8 +77,8 @@ export default async function AdminPage() {
   return (
     <main className={styles.page}>
       <header className={styles.header}>
-        <Link className={`${styles.logo} felt-panel felt-brick`} href="/">
-          Sirius
+        <Link className={styles.logo} href="/">
+          <Image alt="Pawcast" priority src={pawcastWordmark} />
         </Link>
         <div>
           <p className={styles.eyebrow}>Copper&apos;s Dream Rescue</p>
