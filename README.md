@@ -26,6 +26,26 @@ A minimal Next.js app using PostgreSQL, Prisma, and Better Auth with username/pa
 
 Open [http://localhost:3000](http://localhost:3000).
 
+## Deploy to Vercel
+
+Configure the variables from `.env.example` as Vercel project environment
+variables before deploying. In particular, `DATABASE_URL` must point to a
+production PostgreSQL database, `BETTER_AUTH_SECRET` must be a production
+secret, and `BETTER_AUTH_URL` must be the deployed app URL. Configure the
+Arcade and Anthropic variables when those integrations are enabled. Vercel's
+install step runs the existing `postinstall` script, which generates the Prisma
+client.
+
+Then authenticate the Vercel CLI with `npx vercel login`, or provide a
+`VERCEL_TOKEN` for non-interactive environments, and run:
+
+```bash
+./deploy.sh
+```
+
+The script can be invoked from any directory and always deploys this repository
+to production. Additional Vercel CLI options may be passed as arguments.
+
 ## Demo
 
 The whole demo runs offline: with no `ARCADE_API_KEY` every email/SMS send and
