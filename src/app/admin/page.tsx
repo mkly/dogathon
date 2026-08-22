@@ -3,8 +3,8 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { FeltPanel, PhotoPatch, StitchBadge } from "@/components/felt";
-import { gmailAuthStatus } from "@/lib/arcade";
 import { SignOutButton } from "@/components/sign-out-button";
+import { gmailAuthStatus } from "@/lib/arcade";
 import { getSession } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
 
