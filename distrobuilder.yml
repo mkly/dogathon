@@ -1,0 +1,86 @@
+image:
+  distribution: debian
+  release: trixie
+  description: Debian 13 container with Node.js 24, PostgreSQL 17, and Prisma CLI
+  variant: default
+  expiry: 30d
+
+source:
+  downloader: debootstrap
+  url: https://deb.debian.org/debian/
+  # Allows hosts with an older debootstrap package to bootstrap trixie.
+  same_as: sid
+
+files:
+  - generator: hostname
+    path: /etc/hostname
+
+  - generator: hosts
+    path: /etc/hosts
+
+packages:
+  manager: apt
+  update: true
+  cleanup: true
+  sets:
+    - action: install
+      flags:
+        - --no-install-recommends
+      packages:
+        - systemd
+        - systemd-sysv
+        - dbus
+        - ca-certificates
+        - curl
+        - gnupg
+        - build-essential
+        - python3
+        - pkg-config
+        - openssl
+        - libssl-dev
+        - postgresql-17
+        - postgresql-client-17
+        - postgresql-contrib
+        - libpq-dev
+
+actions:
+  - trigger: post-packages
+    action: |-
+      #!/bin/sh
+      set -eux
+
+      # Install Node.js 24 from NodeSource's signed APT repository. Debian 13's
+      # own nodejs package is intentionally not used because it is not Node 24.
+      install -d -m 0755 /usr/share/keyrings
+      curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key \
+        | gpg --dearmor --yes -o /usr/share/keyrings/nodesource.gpg
+      chmod 0644 /usr/share/keyrings/nodesource.gpg
+
+      cat > /etc/apt/sources.list.d/nodesource.sources <<'EOF'
+      Types: deb
+      URIs: https://deb.nodesource.com/node_24.x
+      Suites: nodistro
+      Components: main
+      Architectures: amd64 arm64
+      Signed-By: /usr/share/keyrings/nodesource.gpg
+      EOF
+
+      apt-get update
+      DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends nodejs
+
+      # A generated Prisma Client is schema-specific, so only the pinned CLI is
+      # installed globally. The application can generate its client after its
+      # source and dependencies are mounted or installed in the container.
+      npm install --global prisma@7.9.1
+
+      systemctl enable postgresql.service
+
+      node --version | grep -Eq '^v24\.'
+      psql --version | grep -Eq ' 17\.'
+      prisma --version
+
+      npm cache clean --force
+      rm -rf /root/.npm /var/lib/apt/lists/*
+
+mappings:
+  architecture_map: debian
