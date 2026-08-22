@@ -274,6 +274,23 @@ svg.stitch.fine rect.thread { stroke-width: 1.4; }
   resize: none;
 }
 
+/* the native chevron is browser chrome sitting in a felt hole: draw our own in
+   ink and reserve the room for it */
+.felt-field > select {
+  padding-right: 44px;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.6 6 6.4 11 1.6' fill='none' stroke='%233d332b' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 17px center;
+  background-size: 13px 9px;
+  cursor: pointer;
+}
+
+.felt-field > select option {
+  background: var(--felt-cream);
+  color: var(--felt-ink);
+}
+
 .felt-field ::placeholder {
   color: rgb(61 51 43 / 45%);
 }

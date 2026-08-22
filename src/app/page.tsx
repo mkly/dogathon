@@ -26,11 +26,11 @@ export default async function Home() {
           <h1>
             Put a little love behind a{" "}
             <span className={styles.noOrphan}>
-              <span className="felt-hl">rescue dog</span>.
+              <span className="felt-hl">rescue friend</span>.
             </span>
           </h1>
           <p className={styles.lede}>
-            Sponsor a resident for $25 a month until they&apos;re adopted. You&apos;ll
+            Sponsor a resident for $25 a month until they find their forever home. You&apos;ll
             help with everyday care and get the good news from their journey.
           </p>
         </div>

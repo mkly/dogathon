@@ -81,7 +81,6 @@ export default async function AdminPage() {
           <Image alt="Pawcast" priority src={pawcastWordmark} />
         </Link>
         <div>
-          <p className={styles.eyebrow}>Copper&apos;s Dream Rescue</p>
           <h1>Staff room</h1>
         </div>
         <div className={styles.headerActions}>
