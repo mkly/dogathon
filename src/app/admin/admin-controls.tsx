@@ -81,6 +81,49 @@ export function ApproveButton({ id }: { id: string }) {
   );
 }
 
+export function ComposeButton({
+  residentId,
+  residentName,
+}: {
+  residentId: string;
+  residentName: string;
+}) {
+  const router = useRouter();
+  const [pending, setPending] = useState(false);
+  const [toast, setToast] = useState<Toast>(null);
+
+  async function compose() {
+    setPending(true);
+    setToast(null);
+    try {
+      const response = await fetch("/api/pupdates/compose", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ residentId }),
+      });
+      if (!response.ok) {
+        setToast({ tone: "error", text: await responseError(response, "Compose pupdate") });
+        return;
+      }
+      setToast({ tone: "success", text: `${residentName}'s draft is ready for review.` });
+      router.refresh();
+    } catch {
+      setToast({ tone: "error", text: "Compose pupdate could not reach the server." });
+    } finally {
+      setPending(false);
+    }
+  }
+
+  return (
+    <div className={styles.actionStack}>
+      <FeltButton disabled={pending} onClick={compose} tone="denim">
+        {pending ? "Composing…" : "Compose pupdate"}
+      </FeltButton>
+      <FeltToast toast={toast} />
+    </div>
+  );
+}
+
 type GmailStatus = { connected: boolean; email?: string };
 
 export function StaffTools() {

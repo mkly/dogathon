@@ -106,6 +106,7 @@
 .directoryNav :global(.felt-button) { flex: none; text-decoration: none; }
 
 .queueSection { margin-bottom: 52px; }
+.composeSection { margin-bottom: 52px; }
 
 .sectionTitle {
   display: flex;
@@ -118,6 +119,26 @@
 .sectionTitle h2,
 .settings h2 { font-size: clamp(1.6rem, 4vw, 2.1rem); }
 .queue { display: grid; gap: 22px; }
+
+.composeGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.composeItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 20px;
+}
+
+.composeItem h3 { margin: 0 0 6px; font-size: 1.15rem; font-weight: 900; }
+.composeItem p { margin: 0; font-size: 0.8rem; font-weight: 800; }
+.composeItem small { display: block; margin-top: 5px; font-size: 0.7rem; font-weight: 700; opacity: 0.66; }
+.composeItem .actionStack { flex: 0 0 156px; }
+.composeEmpty { padding: 26px; text-align: center; font-weight: 800; }
 
 .queueItem {
   display: grid;
@@ -192,6 +213,7 @@
   .headerActions { grid-column: 1 / -1; justify-content: space-between; }
   .staffTools { justify-content: space-between; }
   .stats { grid-template-columns: repeat(2, 1fr); }
+  .composeGrid { grid-template-columns: 1fr; }
   .queueItem { grid-template-columns: 104px 1fr; }
   .photo { width: 104px; }
   .draftPreview { grid-column: 1 / -1; }
@@ -207,6 +229,8 @@
   .stat { min-height: 112px; padding: 17px; }
   .directoryNav { align-items: stretch; flex-direction: column; margin-top: -8px; }
   .directoryNav :global(.felt-button) { text-align: center; }
+  .composeItem { align-items: stretch; flex-direction: column; }
+  .composeItem .actionStack { flex-basis: auto; }
   .queueItem { padding: 19px; }
   .settings { grid-template-columns: 1fr; gap: 26px; padding: 32px 24px; }
   .saveRow { align-items: stretch; flex-direction: column; }
