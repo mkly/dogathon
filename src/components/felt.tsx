@@ -4,10 +4,28 @@ import type {
   ImgHTMLAttributes,
 } from "react";
 
-type FeltTone = "oatmeal" | "mustard" | "brick" | "moss" | "denim" | "cream";
+type FeltTone =
+  | "oatmeal"
+  | "mustard"
+  | "brick"
+  | "moss"
+  | "denim"
+  | "denim-lt"
+  | "cream";
 
 function classes(...values: Array<string | undefined>) {
   return values.filter(Boolean).join(" ");
+}
+
+// Dashed hand-stitch ring from the sirius-proto mockups: an SVG rect pair
+// (dark offset "shadow" under a thread-colored dash) sized entirely in CSS.
+function Stitch({ fine = false }: { fine?: boolean }) {
+  return (
+    <svg aria-hidden="true" className={fine ? "stitch fine" : "stitch"}>
+      <rect className="shadow" />
+      <rect className="thread" />
+    </svg>
+  );
 }
 
 export type FeltPanelProps = HTMLAttributes<HTMLDivElement> & {
@@ -16,6 +34,7 @@ export type FeltPanelProps = HTMLAttributes<HTMLDivElement> & {
 };
 
 export function FeltPanel({
+  children,
   className,
   tone = "oatmeal",
   stitched = true,
@@ -23,24 +42,25 @@ export function FeltPanel({
 }: FeltPanelProps) {
   return (
     <div
-      className={classes(
-        "felt-panel",
-        `felt-${tone}`,
-        stitched ? "felt-stitched" : undefined,
-        className,
-      )}
+      className={classes("felt-panel", `felt-${tone}`, className)}
       {...props}
-    />
+    >
+      {stitched ? <Stitch /> : null}
+      {children}
+    </div>
   );
 }
 
 export type FeltButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   tone?: FeltTone;
+  stitched?: boolean;
 };
 
 export function FeltButton({
+  children,
   className,
   tone = "mustard",
+  stitched = false,
   type = "button",
   ...props
 }: FeltButtonProps) {
@@ -49,7 +69,10 @@ export function FeltButton({
       className={classes("felt-button", `felt-${tone}`, className)}
       type={type}
       {...props}
-    />
+    >
+      {stitched ? <Stitch fine /> : null}
+      {children}
+    </button>
   );
 }
 
@@ -78,6 +101,7 @@ export function PhotoPatch({
           <small>{alt}</small>
         </div>
       )}
+      <Stitch fine />
     </figure>
   );
 }
@@ -99,21 +123,39 @@ export function StitchBadge({
   );
 }
 
+// Ink-wobble text filters ported from the mockups' shared <defs>: #ink for
+// display headings, #ink-s (gentler displacement) for body copy.
 export function FeltFilters() {
   return (
     <svg aria-hidden="true" className="felt-filter-definitions">
-      <filter id="felt-fuzzy-edge">
+      <filter id="ink">
         <feTurbulence
-          baseFrequency="0.035"
+          baseFrequency="0.06"
           numOctaves="2"
-          result="feltNoise"
+          result="inkNoise"
           seed="7"
           type="fractalNoise"
         />
         <feDisplacementMap
           in="SourceGraphic"
-          in2="feltNoise"
-          scale="0.7"
+          in2="inkNoise"
+          scale="1.3"
+          xChannelSelector="R"
+          yChannelSelector="G"
+        />
+      </filter>
+      <filter id="ink-s">
+        <feTurbulence
+          baseFrequency="0.06"
+          numOctaves="2"
+          result="inkNoiseSoft"
+          seed="7"
+          type="fractalNoise"
+        />
+        <feDisplacementMap
+          in="SourceGraphic"
+          in2="inkNoiseSoft"
+          scale="0.6"
           xChannelSelector="R"
           yChannelSelector="G"
         />

@@ -1,9 +1,7 @@
 .main {
   min-height: 100svh;
   padding: 2rem 1rem 3rem;
-  background:
-    radial-gradient(circle at 15% 8%, rgb(217 165 33 / 18%), transparent 24rem),
-    var(--felt-oatmeal);
+  background: #fff;
 }
 
 .shell {
@@ -133,7 +131,7 @@
 
 .notePanel input[type="file"] {
   padding: 0.55rem;
-  background: var(--felt-oatmeal);
+  background: var(--felt-cream);
 }
 
 .notePanel input[type="file"]::file-selector-button {

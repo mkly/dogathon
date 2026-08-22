@@ -35,7 +35,7 @@ export default async function AdminPage() {
   return (
     <main className={styles.page}>
       <header className={styles.header}>
-        <Link className={`${styles.logo} felt-brick`} href="/">
+        <Link className={`${styles.logo} felt-panel felt-brick`} href="/">
           Sirius
         </Link>
         <div>

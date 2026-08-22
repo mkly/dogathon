@@ -16,11 +16,9 @@
 
 body {
   margin: 0;
-  background:
-    radial-gradient(circle at 15% 20%, rgb(217 165 33 / 10%), transparent 24rem),
-    linear-gradient(135deg, #f7f0e3, #e7ddca);
-  color: var(--text);
-  font-family: "Trebuchet MS", "Arial Rounded MT Bold", Arial, sans-serif;
+  background: #fff;
+  color: var(--felt-ink);
+  font-family: Nunito, sans-serif;
 }
 
 main {
