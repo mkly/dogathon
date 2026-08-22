@@ -1,4 +1,3 @@
-
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"
@@ -22,8 +21,8 @@ model User {
   username String?
 
   @@unique([email])
-  @@map("user")
   @@unique([username])
+  @@map("user")
 }
 
 model Session {
@@ -74,4 +73,103 @@ model Verification {
 
   @@index([identifier])
   @@map("verification")
+}
+
+enum ResidentStatus {
+  available
+  adopted
+}
+
+enum SponsorshipChannel {
+  email
+  sms
+  both
+}
+
+enum SponsorshipStatus {
+  active
+  ended
+}
+
+enum PupdateType {
+  regular
+  graduation
+}
+
+enum PupdateStatus {
+  draft
+  approved
+  sent
+}
+
+model Resident {
+  id             String          @id @default(cuid())
+  name           String          @unique
+  breed          String
+  dobText        String
+  ageText        String
+  sex            String
+  weightText     String
+  personality    String
+  careNotes      String[]
+  photoUrls      String[]
+  status         ResidentStatus  @default(available)
+  adoptedAt      DateTime?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  sponsorships   Sponsorship[]
+  volunteerNotes VolunteerNote[]
+  pupdates       Pupdate[]
+
+  @@index([status])
+}
+
+model Sponsorship {
+  id           String             @id @default(cuid())
+  residentId   String
+  sponsorName  String
+  sponsorEmail String
+  sponsorPhone String?
+  channel      SponsorshipChannel
+  monthlyUsd   Int                @default(25)
+  status       SponsorshipStatus  @default(active)
+  endedReason  String?
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  resident     Resident           @relation(fields: [residentId], references: [id], onDelete: Cascade)
+
+  @@index([residentId, status])
+}
+
+model VolunteerNote {
+  id         String   @id @default(cuid())
+  residentId String
+  note       String
+  photoUrl   String?
+  createdAt  DateTime @default(now())
+  resident   Resident @relation(fields: [residentId], references: [id], onDelete: Cascade)
+
+  @@index([residentId, createdAt])
+}
+
+model Pupdate {
+  id         String        @id @default(cuid())
+  residentId String
+  type       PupdateType   @default(regular)
+  subject    String
+  bodyText   String
+  smsText    String
+  status     PupdateStatus @default(draft)
+  sentAt     DateTime?
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+  resident   Resident      @relation(fields: [residentId], references: [id], onDelete: Cascade)
+
+  @@index([residentId, status])
+}
+
+model RescueSettings {
+  id               String @id @default("default")
+  sourceUrl        String @default("https://www.coppersdream.org/dogs-and-more-back-up")
+  pinnedPostscript String @default("")
 }
