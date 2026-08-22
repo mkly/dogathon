@@ -5,6 +5,7 @@ import { FeltButton, FeltPanel, PhotoPatch, StitchBadge } from "@/components/fel
 import { prisma } from "@/lib/prisma";
 
 import { submitVolunteerNote } from "./actions";
+import { volunteerErrorMessage } from "./errors";
 import styles from "./volunteer.module.css";
 
 export const dynamic = "force-dynamic";
@@ -33,6 +34,7 @@ export default async function VolunteerPage({ searchParams }: VolunteerPageProps
   ]);
 
   const submittedDog = residents.find((resident) => resident.id === dog);
+  const errorMessage = volunteerErrorMessage(error);
 
   if (submitted === "1") {
     return (
@@ -121,7 +123,7 @@ export default async function VolunteerPage({ searchParams }: VolunteerPageProps
             <small>Take one now or choose one from your phone. Max 8 MB.</small>
           </FeltPanel>
 
-          {error ? <p className={styles.error} role="alert">{error}</p> : null}
+          {errorMessage ? <p className={styles.error} role="alert">{errorMessage}</p> : null}
 
           <FeltButton className={styles.submit} disabled={residents.length === 0} tone="brick" type="submit">
             Send pup-date

@@ -8,6 +8,8 @@ import { redirect } from "next/navigation";
 
 import { prisma } from "@/lib/prisma";
 
+import type { VolunteerErrorCode } from "./errors";
+
 const MAX_PHOTO_BYTES = 8 * 1024 * 1024;
 const PHOTO_EXTENSIONS: Record<string, string> = {
   "image/gif": ".gif",
@@ -22,6 +24,10 @@ function volunteerUrl(params: Record<string, string>) {
   return `/volunteer?${new URLSearchParams(params).toString()}`;
 }
 
+function volunteerErrorUrl(error: VolunteerErrorCode) {
+  return volunteerUrl({ error });
+}
+
 export async function submitVolunteerNote(formData: FormData) {
   const residentId = String(formData.get("residentId") ?? "").trim();
   const note = String(formData.get("note") ?? "")
@@ -30,15 +36,15 @@ export async function submitVolunteerNote(formData: FormData) {
   const photo = formData.get("photo");
 
   if (!residentId) {
-    redirect(volunteerUrl({ error: "Choose a dog first." }));
+    redirect(volunteerErrorUrl("no-dog"));
   }
 
   if (!note) {
-    redirect(volunteerUrl({ error: "Add a quick note before submitting." }));
+    redirect(volunteerErrorUrl("no-note"));
   }
 
   if (note.length > 240) {
-    redirect(volunteerUrl({ error: "Keep the note to 240 characters or fewer." }));
+    redirect(volunteerErrorUrl("note-too-long"));
   }
 
   const resident = await prisma.resident.findFirst({
@@ -47,7 +53,7 @@ export async function submitVolunteerNote(formData: FormData) {
   });
 
   if (!resident) {
-    redirect(volunteerUrl({ error: "That dog is no longer available. Pick another." }));
+    redirect(volunteerErrorUrl("unavailable"));
   }
 
   let savedPhotoPath: string | undefined;
@@ -57,11 +63,11 @@ export async function submitVolunteerNote(formData: FormData) {
     const extension = PHOTO_EXTENSIONS[photo.type];
 
     if (!extension) {
-      redirect(volunteerUrl({ error: "Choose a JPG, PNG, WebP, GIF, HEIC, or HEIF photo." }));
+      redirect(volunteerErrorUrl("photo-type"));
     }
 
     if (photo.size > MAX_PHOTO_BYTES) {
-      redirect(volunteerUrl({ error: "Choose a photo smaller than 8 MB." }));
+      redirect(volunteerErrorUrl("photo-size"));
     }
 
     const uploadDirectory = path.join(process.cwd(), "public", "uploads");
