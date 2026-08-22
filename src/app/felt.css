@@ -10,6 +10,7 @@
   --felt-denim-lt: #7391ad;
   --felt-cream: #f8f2e7;
   --felt-thread: #efe7d6;
+  --felt-ground: #ede4d4;
 }
 
 .felt-oatmeal { --felt-color: var(--felt-oatmeal); --felt-contrast: var(--felt-ink); }
