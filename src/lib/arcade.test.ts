@@ -115,6 +115,12 @@ test("all Arcade helpers return structured calls without credentials", async () 
     assert.equal(status.authorized, false);
     assert.equal(status.status, "not_configured");
     assert.equal(status.url, null);
+
+    const scrape = calls[0] as DryRunCall;
+    assert.deepEqual(scrape.input, {
+      url: "https://example.com/dogs",
+      formats: ["html"],
+    });
   } finally {
     if (previousApiKey === undefined) delete process.env.ARCADE_API_KEY;
     else process.env.ARCADE_API_KEY = previousApiKey;

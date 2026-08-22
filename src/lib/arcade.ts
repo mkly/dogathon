@@ -61,7 +61,7 @@ function liveUserId(user?: string): string {
 }
 
 export async function scrapeUrl(url: string, user?: string) {
-  const input = { url, formats: ["markdown"] };
+  const input = { url, formats: ["html"] };
   const arcade = client();
   if (!arcade) {
     return dryRun("execute", TOOLS.firecrawlScrape, input, user);
