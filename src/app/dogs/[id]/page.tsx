@@ -22,6 +22,7 @@ export default async function DogPage({ params, searchParams }: DogPageProps) {
   if (!resident) notFound();
 
   const available = resident.status === "available";
+  const sponsored = query.sponsored === "1" && !query.error;
 
   return (
     <main className={`${styles.siteShell} ${styles.detailShell}`}>
@@ -61,7 +62,7 @@ export default async function DogPage({ params, searchParams }: DogPageProps) {
         </div>
       </section>
 
-      {query.sponsored === "1" && (
+      {sponsored && (
         <FeltPanel className={styles.confirmation} tone="moss">
           <StitchBadge tone="cream">You&apos;re on the team</StitchBadge>
           <h2>Thank you for sponsoring {resident.name}!</h2>
@@ -69,7 +70,7 @@ export default async function DogPage({ params, searchParams }: DogPageProps) {
         </FeltPanel>
       )}
 
-      {available ? (
+      {available && !sponsored ? (
         <FeltPanel className={styles.sponsorPanel} tone="oatmeal">
           <div className={styles.sponsorPitch}>
             <p className={styles.eyebrow}>A steady paw</p>
@@ -109,13 +110,13 @@ export default async function DogPage({ params, searchParams }: DogPageProps) {
             </FeltButton>
           </form>
         </FeltPanel>
-      ) : (
+      ) : !available ? (
         <FeltPanel className={styles.confirmation} tone="brick">
           <h2>{resident.name} has been adopted!</h2>
           <p>Their sponsorship chapter is complete. Meet another resident who could use your help.</p>
           <Link className={`felt-button felt-cream ${styles.cardLink}`} href="/">Meet the dogs</Link>
         </FeltPanel>
-      )}
+      ) : null}
     </main>
   );
 }
