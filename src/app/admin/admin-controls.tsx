@@ -1,9 +1,9 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { FeltButton, FeltField, StitchBadge } from "@/components/felt";
+import { FeltButton, FeltField, FeltPanel, StitchBadge } from "@/components/felt";
 import { pushToast } from "@/components/toast";
 import { MAX_SMS_LENGTH } from "@/lib/composer";
 
@@ -46,14 +46,43 @@ export function DraftEditor({
   subject: string;
 }) {
   const router = useRouter();
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const [savedDraft, setSavedDraft] = useState({
+    subject: initialSubject,
+    bodyText: initialBodyText,
+    smsText: initialSmsText,
+  });
   const [subject, setSubject] = useState(initialSubject);
   const [bodyText, setBodyText] = useState(initialBodyText);
   const [smsText, setSmsText] = useState(initialSmsText);
+  const [editorOpen, setEditorOpen] = useState(false);
   const [pending, setPending] = useState<"save" | "approve" | "deny" | null>(null);
   const smsTooLong = smsText.length > MAX_SMS_LENGTH;
 
-  async function persistDraft() {
-    if (smsTooLong) {
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+
+    if (editorOpen && !dialog.open) dialog.showModal();
+    if (!editorOpen && dialog.open) dialog.close();
+  }, [editorOpen]);
+
+  function openEditor() {
+    setSubject(savedDraft.subject);
+    setBodyText(savedDraft.bodyText);
+    setSmsText(savedDraft.smsText);
+    setEditorOpen(true);
+  }
+
+  function closeEditor() {
+    setSubject(savedDraft.subject);
+    setBodyText(savedDraft.bodyText);
+    setSmsText(savedDraft.smsText);
+    setEditorOpen(false);
+  }
+
+  async function persistDraft(draft: typeof savedDraft) {
+    if (draft.smsText.length > MAX_SMS_LENGTH) {
       pushToast("error", `SMS text must be ${MAX_SMS_LENGTH} characters or fewer.`);
       return false;
     }
@@ -61,7 +90,11 @@ export function DraftEditor({
     const response = await fetch(`/api/pupdates/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ subject, emailBody: bodyText, smsBody: smsText }),
+      body: JSON.stringify({
+        subject: draft.subject,
+        emailBody: draft.bodyText,
+        smsBody: draft.smsText,
+      }),
     });
     if (!response.ok) {
       pushToast("error", await responseError(response, "Save draft"));
@@ -73,7 +106,10 @@ export function DraftEditor({
   async function save() {
     setPending("save");
     try {
-      if (await persistDraft()) {
+      const editedDraft = { subject, bodyText, smsText };
+      if (await persistDraft(editedDraft)) {
+        setSavedDraft(editedDraft);
+        setEditorOpen(false);
         pushToast("success", "Draft changes saved.");
         router.refresh();
       }
@@ -89,7 +125,7 @@ export function DraftEditor({
 
     setPending("approve");
     try {
-      if (!(await persistDraft())) return;
+      if (!(await persistDraft(savedDraft))) return;
       const response = await fetch(`/api/pupdates/${id}/approve`, { method: "POST" });
       if (!response.ok) {
         pushToast("error", await responseError(response, "Approve and send"));
@@ -124,55 +160,19 @@ export function DraftEditor({
   }
 
   return (
-    <div className={styles.draftEditor}>
-      <label htmlFor={`subject-${id}`}>Subject</label>
-      <FeltField>
-        <input
-          id={`subject-${id}`}
-          onChange={(event) => setSubject(event.target.value)}
-          required
-          value={subject}
-        />
-      </FeltField>
-      <label htmlFor={`email-${id}`}>Email body</label>
-      <FeltField>
-        <textarea
-          id={`email-${id}`}
-          onChange={(event) => setBodyText(event.target.value)}
-          required
-          rows={7}
-          value={bodyText}
-        />
-      </FeltField>
-      <div className={styles.smsLabelRow}>
-        <label htmlFor={`sms-${id}`}>SMS text</label>
-        <span className={smsTooLong ? styles.smsError : undefined}>
-          {smsText.length}/{MAX_SMS_LENGTH}
-        </span>
+    <div className={styles.draftControls}>
+      <div className={styles.draftPreview}>
+        <p className={styles.draftSubject}>{savedDraft.subject}</p>
+        <p>{savedDraft.bodyText}</p>
+        <small>SMS: {savedDraft.smsText}</small>
       </div>
-      <FeltField>
-        <textarea
-          aria-describedby={smsTooLong ? `sms-error-${id}` : undefined}
-          aria-invalid={smsTooLong}
-          id={`sms-${id}`}
-          onChange={(event) => setSmsText(event.target.value)}
-          required
-          rows={4}
-          value={smsText}
-        />
-      </FeltField>
-      {smsTooLong && (
-        <p className={styles.smsError} id={`sms-error-${id}`} role="alert">
-          Shorten the SMS by {smsText.length - MAX_SMS_LENGTH} characters before saving.
-        </p>
-      )}
       <div className={styles.draftActions}>
-        <FeltButton disabled={pending !== null || smsTooLong} onClick={save} tone="mustard">
-          {pending === "save" ? "Saving…" : "Save changes"}
+        <FeltButton disabled={pending !== null} onClick={openEditor} tone="mustard">
+          Edit
         </FeltButton>
         <FeltButton
           aria-describedby={gmailConnected ? undefined : GMAIL_NOTICE_ID}
-          disabled={pending !== null || smsTooLong || !gmailConnected}
+          disabled={pending !== null || !gmailConnected}
           onClick={approve}
           title={gmailConnected ? undefined : gmailBlockedReason(gmailStatus)}
           tone="moss"
@@ -183,6 +183,81 @@ export function DraftEditor({
           {pending === "deny" ? "Discarding…" : "Deny & discard"}
         </FeltButton>
       </div>
+
+      <dialog
+        aria-labelledby={`edit-draft-title-${id}`}
+        className={styles.draftDialog}
+        onCancel={(event) => {
+          event.preventDefault();
+          closeEditor();
+        }}
+        onClose={() => setEditorOpen(false)}
+        ref={dialogRef}
+      >
+        <FeltPanel className={styles.dialogPanel} tone="oatmeal">
+          <div className={styles.dialogHeader}>
+            <div>
+              <p className={styles.eyebrow}>Draft pupdate</p>
+              <h2 id={`edit-draft-title-${id}`}>Edit message</h2>
+            </div>
+            <FeltButton aria-label="Close editor" onClick={closeEditor} tone="oatmeal">
+              ✕
+            </FeltButton>
+          </div>
+          <div className={styles.draftEditor}>
+            <label htmlFor={`subject-${id}`}>Subject</label>
+            <FeltField>
+              <input
+                autoFocus
+                id={`subject-${id}`}
+                onChange={(event) => setSubject(event.target.value)}
+                required
+                value={subject}
+              />
+            </FeltField>
+            <label htmlFor={`email-${id}`}>Email body</label>
+            <FeltField>
+              <textarea
+                id={`email-${id}`}
+                onChange={(event) => setBodyText(event.target.value)}
+                required
+                rows={7}
+                value={bodyText}
+              />
+            </FeltField>
+            <div className={styles.smsLabelRow}>
+              <label htmlFor={`sms-${id}`}>SMS text</label>
+              <span className={smsTooLong ? styles.smsError : undefined}>
+                {smsText.length}/{MAX_SMS_LENGTH}
+              </span>
+            </div>
+            <FeltField>
+              <textarea
+                aria-describedby={smsTooLong ? `sms-error-${id}` : undefined}
+                aria-invalid={smsTooLong}
+                id={`sms-${id}`}
+                onChange={(event) => setSmsText(event.target.value)}
+                required
+                rows={4}
+                value={smsText}
+              />
+            </FeltField>
+            {smsTooLong && (
+              <p className={styles.smsError} id={`sms-error-${id}`} role="alert">
+                Shorten the SMS by {smsText.length - MAX_SMS_LENGTH} characters before saving.
+              </p>
+            )}
+            <div className={styles.modalActions}>
+              <FeltButton disabled={pending === "save"} onClick={closeEditor} tone="oatmeal">
+                Cancel
+              </FeltButton>
+              <FeltButton disabled={pending !== null || smsTooLong} onClick={save} tone="mustard">
+                {pending === "save" ? "Saving…" : "Save changes"}
+              </FeltButton>
+            </div>
+          </div>
+        </FeltPanel>
+      </dialog>
     </div>
   );
 }
