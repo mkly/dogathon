@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "test": "node --test --experimental-strip-types src/**/*.test.ts",
+    "test": "node --test --experimental-strip-types \"src/**/*.test.ts\"",
     "start": "next start",
     "lint": "eslint .",
     "db:generate": "prisma generate",
