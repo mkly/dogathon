@@ -79,7 +79,7 @@ export default async function VolunteerPage({ searchParams }: VolunteerPageProps
                       type="radio"
                       value={resident.id}
                     />
-                    <FeltPanel className={styles.dogCard} tone="oatmeal">
+                    <FeltPanel className={styles.dogCard} stitched={false} tone="oatmeal">
                       <PhotoPatch
                         alt={resident.name}
                         className={styles.photo}
