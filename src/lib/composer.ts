@@ -2,7 +2,9 @@ export type PupdateType = "regular" | "graduation";
 
 export interface PupdateDog {
   name: string;
-  [key: string]: unknown;
+  breed?: string;
+  sex?: string;
+  ageText?: string;
 }
 
 export type PupdateNote = string | { note: string; [key: string]: unknown };
@@ -127,6 +129,9 @@ async function composeWithAnthropic(
   input: ComposePupdateInput,
   apiKey: string,
 ): Promise<ComposedPupdate> {
+  const regularUpdateGuidance = input.type === "regular"
+    ? " Treat the volunteer notes as the update: lead with what happened lately, such as activities, fun, or new friends. Use the dog profile only as light background flavor; do not turn the email into a profile or biography."
+    : "";
   const response = await fetch(ANTHROPIC_URL, {
     method: "POST",
     headers: {
@@ -138,7 +143,7 @@ async function composeWithAnthropic(
       model: ANTHROPIC_MODEL,
       max_tokens: 900,
       system:
-        "You write warm, short updates in a dog rescue's voice. Use only facts in the supplied JSON; never invent details. Return only a JSON object with subject, bodyText, and smsText strings. The SMS must be under 300 characters, use two short sentences, and include dogPageUrl.",
+        `You write warm, short updates in a dog rescue's voice. Use only facts in the supplied JSON; never invent details.${regularUpdateGuidance} Return only a JSON object with subject, bodyText, and smsText strings. The SMS must be under 300 characters, use two short sentences, and include dogPageUrl.`,
       messages: [
         {
           role: "user",

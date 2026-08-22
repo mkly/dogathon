@@ -39,7 +39,12 @@ export async function POST(request: Request) {
   const settings = await prisma.rescueSettings.findUnique({ where: { id: "default" } });
   const type = input.type ?? "regular";
   const composed = await composePupdate({
-    dog: resident,
+    dog: {
+      name: resident.name,
+      breed: resident.breed,
+      sex: resident.sex,
+      ageText: resident.ageText,
+    },
     notes: resident.volunteerNotes,
     pinnedPostscript: settings?.pinnedPostscript ?? "",
     type,
