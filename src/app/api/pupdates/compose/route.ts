@@ -54,6 +54,9 @@ export async function POST(request: Request) {
     data: {
       residentId: resident.id,
       type,
+      // pin the picture from the notes this draft was written from: the roster
+      // profile shot is the dog, but the update is about the day
+      photoUrl: resident.volunteerNotes.find((note) => note.photoUrl)?.photoUrl ?? null,
       ...composed,
     },
   });

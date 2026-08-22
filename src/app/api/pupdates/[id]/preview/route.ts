@@ -1,7 +1,6 @@
 import { requireApiSession } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
 import { renderPupdateEmail } from "@/lib/pupdate-email";
-import { pupdatePhotoUrl } from "@/lib/pupdate-photo";
 import { dogPageUrl } from "@/lib/pupdate-delivery";
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -28,7 +27,7 @@ export async function GET(request: Request, { params }: RouteContext) {
     bodyText: pupdate.bodyText,
     dogUrl: dogPageUrl(origin, pupdate.residentId),
     origin,
-    photoUrl: await pupdatePhotoUrl(pupdate, pupdate.resident.photoUrls[0] ?? null),
+    photoUrl: pupdate.photoUrl ?? pupdate.resident.photoUrls[0] ?? null,
     type: pupdate.type === "graduation" ? "graduation" : "regular",
   });
 

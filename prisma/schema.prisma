@@ -159,6 +159,9 @@ model Pupdate {
   subject    String
   bodyText   String
   smsText    String
+  /// The volunteer-note photo this update was written from, captured at compose
+  /// time so the email never falls back to the roster's profile shot.
+  photoUrl   String?
   status     PupdateStatus @default(draft)
   sentAt     DateTime?
   createdAt  DateTime      @default(now())
