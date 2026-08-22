@@ -6,7 +6,7 @@ export async function GET(request: Request) {
   if (unauthorized) return unauthorized;
 
   if (!process.env.ARCADE_API_KEY) {
-    return Response.json({ connected: false });
+    return Response.json({ connected: false, status: "not_configured" });
   }
 
   try {
@@ -15,7 +15,11 @@ export async function GET(request: Request) {
       ? process.env.ARCADE_USER_ID
       : undefined;
 
-    return Response.json({ connected: status.authorized, ...(email ? { email } : {}) });
+    return Response.json({
+      connected: status.authorized,
+      status: status.status,
+      ...(email ? { email } : {}),
+    });
   } catch (error) {
     console.error("Gmail status check failed", error);
     const message = error instanceof Error ? error.message : "Gmail status check failed";
