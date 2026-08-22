@@ -7,7 +7,7 @@ import { authClient } from "@/lib/auth-client";
 
 type Mode = "sign-in" | "sign-up";
 
-export function AuthForm() {
+export function AuthForm({ redirectTo = "/admin" }: { redirectTo?: string }) {
   const router = useRouter();
   const [mode, setMode] = useState<Mode>("sign-in");
   const [error, setError] = useState<string | null>(null);
@@ -19,18 +19,18 @@ export function AuthForm() {
     setPending(true);
 
     const form = new FormData(event.currentTarget);
-    const username = String(form.get("username") ?? "").trim();
+    const email = String(form.get("email") ?? "").trim();
+    const name = String(form.get("name") ?? "").trim();
     const password = String(form.get("password") ?? "");
 
     const result =
       mode === "sign-up"
         ? await authClient.signUp.email({
-            email: `${username.toLowerCase()}@dogathon.local`,
-            name: username,
-            username,
+            email,
+            name,
             password,
           })
-        : await authClient.signIn.username({ username, password });
+        : await authClient.signIn.email({ email, password });
 
     setPending(false);
 
@@ -39,6 +39,7 @@ export function AuthForm() {
       return;
     }
 
+    router.push(redirectTo);
     router.refresh();
   }
 
@@ -68,14 +69,20 @@ export function AuthForm() {
       </div>
 
       <form onSubmit={handleSubmit}>
-        <label htmlFor="username">Username</label>
+        {mode === "sign-up" && (
+          <>
+            <label htmlFor="name">Name</label>
+            <input autoComplete="name" id="name" minLength={2} name="name" required />
+          </>
+        )}
+
+        <label htmlFor="email">Email</label>
         <input
-          autoComplete="username"
-          id="username"
-          minLength={3}
-          name="username"
-          pattern="[A-Za-z0-9_]+"
+          autoComplete="email"
+          id="email"
+          name="email"
           required
+          type="email"
         />
 
         <label htmlFor="password">Password</label>

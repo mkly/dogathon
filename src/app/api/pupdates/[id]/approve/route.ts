@@ -1,9 +1,13 @@
 import { deliverPupdate, dogPageUrl } from "@/lib/pupdate-delivery";
+import { requireApiSession } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
 export async function POST(request: Request, { params }: RouteContext) {
+  const unauthorized = await requireApiSession(request.headers);
+  if (unauthorized) return unauthorized;
+
   const { id } = await params;
   const pupdate = await prisma.pupdate.findUnique({
     where: { id },

@@ -60,6 +60,17 @@
   gap: 12px;
 }
 
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.headerActions > :global(.primary) {
+  margin-top: 0;
+  white-space: nowrap;
+}
+
 .gmailGroup { display: flex; align-items: center; gap: 8px; }
 
 .stats {
@@ -177,7 +188,8 @@
 
 @media (max-width: 900px) {
   .header { grid-template-columns: auto 1fr; }
-  .staffTools { grid-column: 1 / -1; justify-content: space-between; }
+  .headerActions { grid-column: 1 / -1; justify-content: space-between; }
+  .staffTools { justify-content: space-between; }
   .stats { grid-template-columns: repeat(2, 1fr); }
   .queueItem { grid-template-columns: 104px 1fr; }
   .photo { width: 104px; }
@@ -189,7 +201,7 @@
   .page { padding: 20px 14px 36px; }
   .header { gap: 14px; }
   .logo { width: 108px; height: 50px; font-size: 1.25rem; }
-  .staffTools, .gmailGroup { align-items: stretch; flex-direction: column; }
+  .headerActions, .staffTools, .gmailGroup { align-items: stretch; flex-direction: column; }
   .stats { grid-template-columns: 1fr 1fr; gap: 12px; }
   .stat { min-height: 112px; padding: 17px; }
   .queueItem { padding: 19px; }

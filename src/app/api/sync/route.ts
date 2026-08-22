@@ -1,8 +1,12 @@
 import { NextResponse } from "next/server";
 
+import { requireApiSession } from "@/lib/auth-session";
 import { syncRoster } from "@/lib/roster-sync";
 
-export async function POST() {
+export async function POST(request: Request) {
+  const unauthorized = await requireApiSession(request.headers);
+  if (unauthorized) return unauthorized;
+
   try {
     return NextResponse.json(await syncRoster());
   } catch (error) {

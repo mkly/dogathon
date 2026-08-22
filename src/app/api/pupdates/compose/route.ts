@@ -1,4 +1,5 @@
 import { composePupdate } from "@/lib/composer";
+import { requireApiSession } from "@/lib/auth-session";
 import { dogPageUrl } from "@/lib/pupdate-delivery";
 import { prisma } from "@/lib/prisma";
 
@@ -8,6 +9,9 @@ type ComposeRequest = {
 };
 
 export async function POST(request: Request) {
+  const unauthorized = await requireApiSession(request.headers);
+  if (unauthorized) return unauthorized;
+
   let input: ComposeRequest;
   try {
     input = (await request.json()) as ComposeRequest;

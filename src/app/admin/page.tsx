@@ -1,6 +1,10 @@
 import Link from "next/link";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 
 import { FeltPanel, PhotoPatch, StitchBadge } from "@/components/felt";
+import { SignOutButton } from "@/components/sign-out-button";
+import { getSession } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
 
 import { ApproveButton, SettingsForm, StaffTools } from "./admin-controls";
@@ -9,6 +13,12 @@ import styles from "./admin.module.css";
 export const dynamic = "force-dynamic";
 
 export default async function AdminPage() {
+  const session = await getSession(await headers());
+
+  if (!session) {
+    redirect("/sign-in");
+  }
+
   const [drafts, storedSettings, activeSponsorCount, sponsoredDogCount] = await Promise.all([
     prisma.pupdate.findMany({
       where: { status: "draft" },
@@ -42,7 +52,10 @@ export default async function AdminPage() {
           <p className={styles.eyebrow}>Copper&apos;s Dream Rescue</p>
           <h1>Staff room</h1>
         </div>
-        <StaffTools />
+        <div className={styles.headerActions}>
+          <StaffTools />
+          <SignOutButton />
+        </div>
       </header>
 
       <section aria-label="Program statistics" className={styles.stats}>
