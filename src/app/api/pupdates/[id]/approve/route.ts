@@ -1,6 +1,7 @@
 import { deliverPupdate, dogPageUrl } from "@/lib/pupdate-delivery";
 import { requireApiSession } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
+import { renderPupdateEmail } from "@/lib/pupdate-email";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -35,10 +36,23 @@ export async function POST(request: Request, { params }: RouteContext) {
     return Response.json({ error: "Pupdate is already being approved" }, { status: 409 });
   }
 
+  const origin = new URL(request.url).origin;
+  const dogUrl = dogPageUrl(origin, pupdate.residentId);
   const deliveries = await deliverPupdate(
-    pupdate,
+    {
+      ...pupdate,
+      bodyHtml: renderPupdateEmail({
+        dogName: pupdate.resident.name,
+        subject: pupdate.subject,
+        bodyText: pupdate.bodyText,
+        dogUrl,
+        origin,
+        photoUrl: pupdate.resident.photoUrls[0] ?? null,
+        type: pupdate.type === "graduation" ? "graduation" : "regular",
+      }),
+    },
     pupdate.resident.sponsorships,
-    dogPageUrl(request.url, pupdate.residentId),
+    dogUrl,
   );
   const sentAt = new Date();
   const sent = await prisma.pupdate.update({

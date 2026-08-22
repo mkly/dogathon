@@ -182,6 +182,15 @@ export function DraftEditor({
         <FeltButton disabled={pending !== null} onClick={deny} tone="brick">
           {pending === "deny" ? "Discarding…" : "Deny & discard"}
         </FeltButton>
+        {/* the themed email as the sponsor will see it, not the plain draft text */}
+        <a
+          className={`felt-button felt-denim ${styles.previewLink}`}
+          href={`/api/pupdates/${id}/preview`}
+          rel="noreferrer"
+          target="_blank"
+        >
+          Preview email
+        </a>
       </div>
 
       <dialog

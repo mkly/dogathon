@@ -11,6 +11,8 @@ export type PupdateForDelivery = {
   subject: string;
   bodyText: string;
   smsText: string;
+  /** The themed HTML email. Falls back to bodyText when it is not supplied. */
+  bodyHtml?: string;
 };
 
 export type Delivery = {
@@ -73,7 +75,8 @@ export async function deliverPupdate(
             senders.email({
               to: sponsorship.sponsorEmail,
               subject: pupdate.subject,
-              body: pupdate.bodyText,
+              body: pupdate.bodyHtml ?? pupdate.bodyText,
+              contentType: pupdate.bodyHtml ? "html" : "plain",
             }),
           sponsorship.id,
           "email",

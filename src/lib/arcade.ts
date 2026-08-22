@@ -18,6 +18,8 @@ export type EmailInput = {
   to: string;
   subject: string;
   body: string;
+  /** Gmail defaults to `auto`; the themed pupdate needs its markup sent verbatim. */
+  contentType?: "plain" | "html";
 };
 
 export type SmsInput = {
@@ -74,8 +76,13 @@ export async function scrapeUrl(url: string, user?: string) {
   });
 }
 
-export async function sendEmail({ to, subject, body }: EmailInput, user?: string) {
-  const input = { recipient: to, subject, body };
+export async function sendEmail({ to, subject, body, contentType }: EmailInput, user?: string) {
+  const input = {
+    recipient: to,
+    subject,
+    body,
+    ...(contentType ? { content_type: contentType } : {}),
+  };
   const arcade = client();
   if (!arcade) {
     return dryRun("execute", TOOLS.gmailSend, input, user);
