@@ -81,11 +81,17 @@ export default async function AdminPage() {
           <span>a month, recurring</span>
           <small>active sponsorships × $25</small>
         </FeltPanel>
-        <FeltPanel className={styles.stat} tone="moss">
-          <strong>{activeSponsorCount}</strong>
-          <span>active sponsors</span>
-          <small>ready for the next pupdate</small>
-        </FeltPanel>
+        <Link
+          aria-label={`View active sponsors (${activeSponsorCount} active)`}
+          className={styles.statLink}
+          href="/admin/sponsors"
+        >
+          <FeltPanel className={styles.stat} tone="moss">
+            <strong>{activeSponsorCount}</strong>
+            <span>active sponsors</span>
+            <small>ready for the next pupdate</small>
+          </FeltPanel>
+        </Link>
         <FeltPanel className={styles.stat} tone="denim">
           <strong>{sponsoredDogCount}</strong>
           <span>dogs covered</span>
@@ -97,16 +103,6 @@ export default async function AdminPage() {
           <small>people love dog email</small>
         </FeltPanel>
       </section>
-
-      <nav aria-label="Staff directories" className={styles.directoryNav}>
-        <div>
-          <p className={styles.eyebrow}>Sponsor care</p>
-          <strong>Names, contact details, and sponsorship history</strong>
-        </div>
-        <Link className="felt-button felt-mustard" href="/admin/sponsors">
-          View sponsors
-        </Link>
-      </nav>
 
       <section className={styles.composeSection}>
         <div className={styles.sectionTitle}>
