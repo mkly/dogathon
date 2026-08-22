@@ -7,6 +7,7 @@ import { FeltButton, FeltField, StitchBadge } from "@/components/felt";
 import { pushToast } from "@/components/toast";
 
 import { saveSettings, type SettingsState } from "./actions";
+import { GMAIL_NOTICE_ID, gmailBlockedReason } from "./gmail-notice";
 import styles from "./admin.module.css";
 
 type SyncResult = {
@@ -61,16 +62,17 @@ export function ApproveButton({
 
   return (
     <div className={styles.actionStack}>
-      <FeltButton disabled={pending || !gmailConnected} onClick={approve} tone="moss">
+      <FeltButton
+        // the queue prints the reason once, above the list, instead of
+        // repeating the same red sentence under every draft
+        aria-describedby={gmailConnected ? undefined : GMAIL_NOTICE_ID}
+        disabled={pending || !gmailConnected}
+        onClick={approve}
+        title={gmailConnected ? undefined : gmailBlockedReason(gmailStatus)}
+        tone="moss"
+      >
         {pending ? "Sending…" : "Approve & send"}
       </FeltButton>
-      {!gmailConnected && (
-        <p className={styles.gmailHint}>
-          {gmailStatus === "not_configured"
-            ? "Gmail sending is not configured yet."
-            : "Connect Gmail in staff tools before approving and sending."}
-        </p>
-      )}
     </div>
   );
 }

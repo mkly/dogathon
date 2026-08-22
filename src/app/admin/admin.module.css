@@ -178,12 +178,20 @@
 .draftPreview p { display: -webkit-box; margin: 8px 0; overflow: hidden; font-size: 12px; font-weight: 600; line-height: 1.5; opacity: 0.85; -webkit-box-orient: vertical; -webkit-line-clamp: 5; }
 .draftPreview small { display: block; padding-top: 8px; border-top: 1px dashed rgb(61 51 43 / 24%); font-size: 11px; font-weight: 700; opacity: 0.6; }
 .actionStack { display: grid; gap: 10px; }
-.gmailHint {
-  margin: 0;
-  color: var(--felt-brick);
-  font-size: 0.72rem;
+/* one calm strip above the queue, in the dashed-notice idiom the directory
+   nav already uses -- not a red sentence under every draft */
+.queueNotice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: -6px 0 20px;
+  padding: 13px 18px;
+  border: 2px dashed rgb(61 51 43 / 24%);
+  border-radius: 12px 7px 11px 8px;
+  background: rgb(255 252 245 / 42%);
+  font-size: 0.83rem;
   font-weight: 800;
-  line-height: 1.35;
+  line-height: 1.4;
 }
 
 .empty { display: grid; min-height: 190px; place-items: center; gap: 4px; text-align: center; }

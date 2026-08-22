@@ -9,6 +9,7 @@ import { getSession } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
 
 import { ApproveButton, ComposeButton, SettingsForm, StaffTools } from "./admin-controls";
+import { GMAIL_NOTICE_ID, gmailBlockedReason } from "./gmail-notice";
 import styles from "./admin.module.css";
 
 export const dynamic = "force-dynamic";
@@ -183,6 +184,13 @@ export default async function AdminPage() {
           </div>
           <StitchBadge tone="brick">{drafts.length} {drafts.length === 1 ? "draft" : "drafts"}</StitchBadge>
         </div>
+
+        {!gmail.authorized && drafts.length > 0 && (
+          <p className={styles.queueNotice} id={GMAIL_NOTICE_ID}>
+            <span aria-hidden="true">✉️</span>
+            {gmailBlockedReason(gmail.status)} Approving is on hold until then.
+          </p>
+        )}
 
         <div className={styles.queue}>
           {drafts.length === 0 ? (
