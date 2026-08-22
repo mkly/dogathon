@@ -16,6 +16,11 @@ test("loads a checked-in roster path without requiring the network", async () =>
 });
 
 test("extracts nested Arcade content but rejects dry-run calls", () => {
+  const cleanedHtml = "<h3>Hattie</h3>";
+  const rawHtml = "<!doctype html><h3>Walnut</h3>";
+
+  assert.equal(extractScrapedText({ output: { data: { html: cleanedHtml } } }), cleanedHtml);
+  assert.equal(extractScrapedText({ data: { rawHtml } }), rawHtml);
   assert.equal(extractScrapedText({ output: { value: "# roster" } }), "# roster");
   assert.equal(extractScrapedText({ dryRun: true, input: { url: "https://example.test" } }), null);
 });

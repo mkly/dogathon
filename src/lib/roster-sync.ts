@@ -161,7 +161,7 @@ export function extractScrapedText(value: unknown): string | null {
   if ("dryRun" in value && value.dryRun === true) return null;
 
   const record = value as Record<string, unknown>;
-  for (const key of ["markdown", "content", "text", "value", "output", "data"]) {
+  for (const key of ["html", "rawHtml", "markdown", "content", "text", "value", "output", "data"]) {
     const candidate = record[key];
     if (typeof candidate === "string" && candidate.trim()) return candidate;
     const nested = extractScrapedText(candidate);
