@@ -1,7 +1,10 @@
+import Image from "next/image";
 import Link from "next/link";
 
 import { FeltPanel, PhotoPatch, StitchBadge } from "@/components/felt";
 import { prisma } from "@/lib/prisma";
+
+import feltPup from "../../public/mascot/felt-pup.png";
 
 import styles from "./public.module.css";
 
@@ -16,14 +19,21 @@ export default async function Home() {
   return (
     <main className={styles.siteShell}>
       <FeltPanel className={styles.hero} tone="moss">
-        <p className={styles.eyebrow}>Copper&apos;s Dream Dogathon</p>
-        <h1>
-          Put a little love behind a <span className="felt-hl">rescue dog</span>.
-        </h1>
-        <p className={styles.lede}>
-          Sponsor a resident for $25 a month until they&apos;re adopted. You&apos;ll
-          help with everyday care and get the good news from their journey.
-        </p>
+        <div className={styles.heroCopy}>
+          <p className={styles.eyebrow}>Copper&apos;s Dream Dogathon</p>
+          <h1>
+            Put a little love behind a{" "}
+            <span className={styles.noOrphan}>
+              <span className="felt-hl">rescue dog</span>.
+            </span>
+          </h1>
+          <p className={styles.lede}>
+            Sponsor a resident for $25 a month until they&apos;re adopted. You&apos;ll
+            help with everyday care and get the good news from their journey.
+          </p>
+        </div>
+        {/* decorative: the heading and lede already carry the meaning */}
+        <Image alt="" className={styles.mascot} priority src={feltPup} />
       </FeltPanel>
 
       {residents.length ? (
