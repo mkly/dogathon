@@ -103,7 +103,10 @@ export default async function AdminPage() {
                 <article className={styles.draftPreview}>
                   <strong>{draft.subject}</strong>
                   <p>{draft.bodyText}</p>
-                  {settings.pinnedPostscript && <small>P.S. {settings.pinnedPostscript}</small>}
+                  {settings.pinnedPostscript &&
+                    !draft.bodyText.includes(settings.pinnedPostscript) && (
+                      <small>P.S. {settings.pinnedPostscript}</small>
+                    )}
                 </article>
                 <ApproveButton id={draft.id} />
               </FeltPanel>

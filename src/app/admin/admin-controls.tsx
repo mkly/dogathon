@@ -179,7 +179,14 @@ export function SettingsForm({
         placeholder="A note that rides along with every pupdate…"
       />
       <label htmlFor="sourceUrl">Adoption-page source URL</label>
-      <input defaultValue={sourceUrl} id="sourceUrl" name="sourceUrl" required type="url" />
+      <input
+        defaultValue={sourceUrl}
+        id="sourceUrl"
+        name="sourceUrl"
+        placeholder="https://… or seed/dogs-page-A.html"
+        required
+        type="text"
+      />
       <div className={styles.saveRow}>
         <span className={styles.formMessage} data-status={state.status} role="status">
           {state.message}

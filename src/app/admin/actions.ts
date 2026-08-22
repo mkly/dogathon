@@ -9,28 +9,46 @@ export type SettingsState = {
   status: "idle" | "error" | "success";
 };
 
+// The sync pipeline accepts either a live adoption page or a checked-in capture
+// like seed/dogs-page-A.html, so the staff room has to let both through.
+function normalizeSourceUrl(raw: string): string | null {
+  if (!raw) return null;
+
+  if (/^[a-z][a-z0-9+.-]*:/i.test(raw)) {
+    let parsed: URL;
+    try {
+      parsed = new URL(raw);
+    } catch {
+      return null;
+    }
+    if (!["http:", "https:"].includes(parsed.protocol)) return null;
+    return parsed.toString();
+  }
+
+  // A local capture path: relative, no traversal, and an HTML file.
+  if (raw.startsWith("/") || raw.includes("..")) return null;
+  if (!/\.html?$/i.test(raw)) return null;
+  return raw;
+}
+
 export async function saveSettings(
   _previousState: SettingsState,
   formData: FormData,
 ): Promise<SettingsState> {
   const pinnedPostscript = String(formData.get("pinnedPostscript") ?? "").trim();
-  const sourceUrl = String(formData.get("sourceUrl") ?? "").trim();
+  const sourceUrl = normalizeSourceUrl(String(formData.get("sourceUrl") ?? "").trim());
 
-  let parsedUrl: URL;
-  try {
-    parsedUrl = new URL(sourceUrl);
-  } catch {
-    return { status: "error", message: "Enter a complete adoption-page URL." };
-  }
-
-  if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
-    return { status: "error", message: "The source must use http or https." };
+  if (!sourceUrl) {
+    return {
+      status: "error",
+      message: "Enter an http(s) adoption-page URL or a local capture path like seed/dogs-page-A.html.",
+    };
   }
 
   await prisma.rescueSettings.upsert({
     where: { id: "default" },
-    update: { pinnedPostscript, sourceUrl: parsedUrl.toString() },
-    create: { id: "default", pinnedPostscript, sourceUrl: parsedUrl.toString() },
+    update: { pinnedPostscript, sourceUrl },
+    create: { id: "default", pinnedPostscript, sourceUrl },
   });
 
   revalidatePath("/admin");
