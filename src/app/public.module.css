@@ -1,0 +1,250 @@
+.siteShell {
+  display: block;
+  width: min(100%, 76rem);
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 3rem 1.5rem 5rem;
+}
+
+.hero {
+  max-width: 52rem;
+  margin: 0 auto 3rem;
+  text-align: center;
+}
+
+.hero h1,
+.profileCopy h1 {
+  margin: 0.5rem 0 1rem;
+  color: var(--felt-ink);
+  font-size: clamp(2.5rem, 7vw, 5.25rem);
+  line-height: 0.96;
+  letter-spacing: -0.055em;
+}
+
+.eyebrow {
+  margin: 0;
+  color: #7c4f17;
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.lede {
+  max-width: 43rem;
+  margin: 0 auto;
+  color: #625448;
+  font-size: clamp(1.05rem, 2vw, 1.3rem);
+  line-height: 1.6;
+}
+
+.dogGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 19rem), 1fr));
+  gap: 2rem;
+}
+
+.dogCard {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 1.35rem;
+}
+
+.gridPhoto {
+  width: 100%;
+  rotate: -1deg;
+}
+
+.cardCopy {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  justify-items: start;
+  padding: 1.5rem 0.4rem 0.4rem;
+}
+
+.cardCopy h2 {
+  margin: 0.8rem 0 0;
+  font-size: 2rem;
+}
+
+.cardCopy p {
+  min-height: 2.5rem;
+  margin: 0.35rem 0 1rem;
+  font-weight: 700;
+}
+
+.cardLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--felt-ink);
+  text-decoration: none;
+}
+
+.emptyState,
+.confirmation {
+  max-width: 44rem;
+  margin: 2rem auto;
+  text-align: center;
+}
+
+.detailShell {
+  max-width: 68rem;
+}
+
+.backLink {
+  display: inline-block;
+  margin-bottom: 2rem;
+  color: #4e6740;
+  font-weight: 900;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+}
+
+.profile {
+  display: grid;
+  grid-template-columns: minmax(17rem, 0.9fr) minmax(20rem, 1.1fr);
+  gap: clamp(2rem, 7vw, 5rem);
+  align-items: center;
+}
+
+.gallery {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.heroPhoto {
+  grid-column: 1 / -1;
+  width: 100%;
+  rotate: -1.5deg;
+}
+
+.extraPhoto {
+  width: 100%;
+}
+
+.extraPhoto:nth-child(3) {
+  rotate: 1.5deg;
+}
+
+.profileCopy h1 {
+  font-size: clamp(3rem, 8vw, 5.5rem);
+}
+
+.dogFacts {
+  color: #725b48;
+  font-weight: 900;
+}
+
+.personality {
+  font-size: 1.2rem;
+  line-height: 1.65;
+}
+
+.profileCopy h2 {
+  margin-bottom: 0.4rem;
+}
+
+.careList {
+  padding-left: 1.25rem;
+  line-height: 1.7;
+}
+
+.confirmation {
+  position: relative;
+  z-index: 1;
+  margin-top: 4rem;
+}
+
+.confirmation h2 {
+  font-size: 1.8rem;
+}
+
+.sponsorPanel {
+  display: grid;
+  grid-template-columns: 0.85fr 1.15fr;
+  gap: 3rem;
+  max-width: 58rem;
+  margin: 4rem auto 0;
+}
+
+.sponsorPitch,
+.sponsorForm,
+.formError {
+  position: relative;
+  z-index: 1;
+}
+
+.sponsorPitch h2 {
+  margin: 0.5rem 0;
+  font-size: clamp(1.7rem, 4vw, 2.5rem);
+  line-height: 1.08;
+}
+
+.sponsorForm {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.sponsorForm label {
+  margin-top: 0.5rem;
+  font-weight: 900;
+}
+
+.sponsorForm label span {
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.sponsorForm input,
+.sponsorForm select {
+  width: 100%;
+  padding: 0.8rem 0.9rem;
+  border: 2px solid #a78f74;
+  border-radius: 10px 5px 9px 6px;
+  background: var(--felt-cream);
+  color: var(--felt-ink);
+  font: inherit;
+}
+
+.sponsorForm input:focus,
+.sponsorForm select:focus {
+  border-color: var(--felt-denim);
+  outline: 3px solid rgb(85 116 147 / 22%);
+}
+
+.sponsorButton {
+  margin-top: 1rem;
+}
+
+.formError {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 0.75rem;
+  border: 2px dashed #8c392e;
+  color: #742e25;
+  font-weight: 800;
+}
+
+@media (max-width: 700px) {
+  .siteShell {
+    padding: 2rem 1rem 4rem;
+  }
+
+  .profile,
+  .sponsorPanel {
+    grid-template-columns: 1fr;
+  }
+
+  .sponsorPanel {
+    gap: 1.25rem;
+    padding: 1.5rem;
+  }
+
+  .dogCard {
+    padding: 1rem;
+  }
+}
