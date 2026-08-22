@@ -4,7 +4,7 @@ import Link from "next/link";
 import { FeltPanel, PhotoPatch, StitchBadge } from "@/components/felt";
 import { prisma } from "@/lib/prisma";
 
-import feltPup from "../../public/mascot/felt-pup.png";
+import feltPup from "../../public/mascot/felt-pup-2.png";
 
 import styles from "./public.module.css";
 

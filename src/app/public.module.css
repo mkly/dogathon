@@ -9,10 +9,11 @@
 .hero {
   display: grid;
   width: 100%;
-  grid-template-columns: minmax(0, 1fr) minmax(150px, 250px);
+  grid-template-columns: minmax(0, 1fr) minmax(150px, 280px);
   align-items: center;
   gap: 28px;
-  margin: 0 0 24px;
+  /* headroom for the pup, who pokes out over the panel's top edge */
+  margin: 48px 0 24px;
   padding: 38px 45px;
   text-align: left;
 }
@@ -22,13 +23,16 @@
   z-index: 1;
 }
 
-/* the pup is a cut felt shape laid on the panel, not a framed photo */
+/* the pup is a cut felt shape laid on the panel, not a framed photo: he sits
+   on the bottom edge and his ears rise past the top one */
 .mascot {
   position: relative;
   z-index: 1;
+  align-self: end;
   width: 100%;
   height: auto;
-  rotate: 3deg;
+  margin-top: -96px;
+  margin-bottom: -38px;
   filter: drop-shadow(0 6px 6px rgb(61 51 43 / 32%));
 }
 
@@ -281,6 +285,9 @@
 
   .mascot {
     width: min(58%, 190px);
+    /* stacked: he still crowns the panel, ears over the top edge */
+    margin-top: -64px;
+    margin-bottom: -4px;
     justify-self: center;
     order: -1;
   }
