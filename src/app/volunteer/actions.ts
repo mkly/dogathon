@@ -1,8 +1,6 @@
 "use server";
 
 import { randomUUID } from "node:crypto";
-import { mkdir, unlink, writeFile } from "node:fs/promises";
-import path from "node:path";
 
 import { redirect } from "next/navigation";
 
@@ -60,13 +58,13 @@ export async function submitVolunteerNote(formData: FormData) {
     redirect(volunteerErrorUrl("unavailable"));
   }
 
-  let savedPhotoPath: string | undefined;
-  let photoUrl: string | undefined;
+  // Photos live in the database, not the filesystem — Vercel functions are
+  // read-only outside /tmp and anything under public/ is frozen at build time.
+  let photoData: Uint8Array<ArrayBuffer> | undefined;
+  let photoMime: string | undefined;
 
   if (photo instanceof File && photo.size > 0) {
-    const extension = PHOTO_EXTENSIONS[photo.type];
-
-    if (!extension) {
+    if (!PHOTO_EXTENSIONS[photo.type]) {
       redirect(volunteerErrorUrl("photo-type"));
     }
 
@@ -74,31 +72,21 @@ export async function submitVolunteerNote(formData: FormData) {
       redirect(volunteerErrorUrl("photo-size"));
     }
 
-    const uploadDirectory = path.join(process.cwd(), "public", "uploads");
-    const fileName = `${randomUUID()}${extension}`;
-    savedPhotoPath = path.join(uploadDirectory, fileName);
-    photoUrl = `/uploads/${fileName}`;
-
-    await mkdir(uploadDirectory, { recursive: true });
-    await writeFile(savedPhotoPath, Buffer.from(await photo.arrayBuffer()), {
-      flag: "wx",
-    });
+    photoData = new Uint8Array(await photo.arrayBuffer());
+    photoMime = photo.type;
   }
 
-  try {
-    await prisma.volunteerNote.create({
-      data: {
-        note,
-        photoUrl,
-        residentId,
-      },
-    });
-  } catch (error) {
-    if (savedPhotoPath) {
-      await unlink(savedPhotoPath).catch(() => undefined);
-    }
-    throw error;
-  }
+  const noteId = randomUUID();
+  await prisma.volunteerNote.create({
+    data: {
+      id: noteId,
+      note,
+      photoUrl: photoData ? `/api/volunteer-photos/${noteId}` : undefined,
+      photoData,
+      photoMime,
+      residentId,
+    },
+  });
 
   redirect(volunteerUrl({ dog: residentId, submitted: "1" }));
 }

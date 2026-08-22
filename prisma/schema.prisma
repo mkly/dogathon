@@ -146,6 +146,8 @@ model VolunteerNote {
   residentId String
   note       String
   photoUrl   String?
+  photoData  Bytes?
+  photoMime  String?
   createdAt  DateTime @default(now())
   resident   Resident @relation(fields: [residentId], references: [id], onDelete: Cascade)
 
