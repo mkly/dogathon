@@ -33,6 +33,7 @@ test("a configured local capture is the real source, not a scrape fallback", asy
   const roster = await loadRoster("seed/dogs-page-A.html");
 
   assert.equal(roster.usedFallbackCapture, false);
+  assert.equal(roster.source, "seed/dogs-page-A.html");
   assert.match(roster.text, /Hattie/);
 });
 
@@ -40,5 +41,6 @@ test("an unreachable remote source is flagged as a fallback capture", async () =
   const roster = await loadRoster("https://example.test/dogs-and-more");
 
   assert.equal(roster.usedFallbackCapture, true);
+  assert.equal(roster.source, "seed/dogs-page-A.html");
   assert.match(roster.text, /Walnut/);
 });

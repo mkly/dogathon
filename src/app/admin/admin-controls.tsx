@@ -8,7 +8,12 @@ import { FeltButton, FeltField, StitchBadge } from "@/components/felt";
 import { saveSettings, type SettingsState } from "./actions";
 import styles from "./admin.module.css";
 
-type Toast = { tone: "error" | "success"; text: string } | null;
+type Toast = { tone: "error" | "success" | "warning"; text: string } | null;
+
+type SyncResult = {
+  usedFallbackCapture: boolean;
+  source: string;
+};
 
 function routeError(action: string, status: number) {
   if (status === 404) {
@@ -29,7 +34,13 @@ function FeltToast({ toast }: { toast: Toast }) {
 
   return (
     <div
-      className={`${styles.toast} ${toast.tone === "error" ? styles.toastError : styles.toastSuccess}`}
+      className={`${styles.toast} ${
+        toast.tone === "error"
+          ? styles.toastError
+          : toast.tone === "warning"
+            ? styles.toastWarning
+            : styles.toastSuccess
+      }`}
       role="status"
     >
       {toast.text}
@@ -108,7 +119,10 @@ export function StaffTools() {
         setToast({ tone: "error", text: routeError("Roster sync", response.status) });
         return;
       }
-      setToast({ tone: "success", text: "Roster sync finished." });
+      const result = (await response.json()) as SyncResult;
+      setToast(result.usedFallbackCapture
+        ? { tone: "warning", text: `Roster synced from bundled capture (${result.source}).` }
+        : { tone: "success", text: `Roster synced from live source (${result.source}).` });
     } catch {
       setToast({ tone: "error", text: "Roster sync could not reach the server." });
     } finally {
