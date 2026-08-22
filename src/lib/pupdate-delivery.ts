@@ -16,6 +16,8 @@ export type PupdateForDelivery = {
 export type Delivery = {
   sponsorshipId: string;
   channel: "email" | "sms";
+  status: "sent" | "failed";
+  error?: string;
 };
 
 type Senders = {
@@ -31,6 +33,28 @@ function smsWithDogLink(body: string, link: string): string {
   return body.includes(link) ? body : `${body.trim()} ${link}`;
 }
 
+/**
+ * One send failure must not abandon the rest of the fan-out, nor strand the
+ * pupdate mid-approval, so every attempt is recorded rather than thrown.
+ */
+async function attempt(
+  send: () => Promise<unknown>,
+  sponsorshipId: string,
+  channel: Delivery["channel"],
+): Promise<Delivery> {
+  try {
+    await send();
+    return { sponsorshipId, channel, status: "sent" };
+  } catch (error) {
+    return {
+      sponsorshipId,
+      channel,
+      status: "failed",
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
 export async function deliverPupdate(
   pupdate: PupdateForDelivery,
   sponsorships: DeliverySponsorship[],
@@ -40,24 +64,38 @@ export async function deliverPupdate(
   const deliveries: Delivery[] = [];
 
   for (const sponsorship of sponsorships) {
+    const phone = sponsorship.sponsorPhone;
+
     if (sponsorship.channel === "email" || sponsorship.channel === "both") {
-      await senders.email({
-        to: sponsorship.sponsorEmail,
-        subject: pupdate.subject,
-        body: pupdate.bodyText,
-      });
-      deliveries.push({ sponsorshipId: sponsorship.id, channel: "email" });
+      deliveries.push(
+        await attempt(
+          () =>
+            senders.email({
+              to: sponsorship.sponsorEmail,
+              subject: pupdate.subject,
+              body: pupdate.bodyText,
+            }),
+          sponsorship.id,
+          "email",
+        ),
+      );
     }
 
     if (
       (sponsorship.channel === "sms" || sponsorship.channel === "both") &&
-      sponsorship.sponsorPhone
+      phone
     ) {
-      await senders.sms({
-        to: sponsorship.sponsorPhone,
-        body: smsWithDogLink(pupdate.smsText, dogUrl),
-      });
-      deliveries.push({ sponsorshipId: sponsorship.id, channel: "sms" });
+      deliveries.push(
+        await attempt(
+          () =>
+            senders.sms({
+              to: phone,
+              body: smsWithDogLink(pupdate.smsText, dogUrl),
+            }),
+          sponsorship.id,
+          "sms",
+        ),
+      );
     }
   }
 
