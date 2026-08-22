@@ -8,7 +8,7 @@ import { gmailAuthStatus } from "@/lib/arcade";
 import { getSession } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
 
-import { ApproveButton, ComposeButton, SettingsForm, StaffTools } from "./admin-controls";
+import { ComposeButton, DraftEditor, SettingsForm, StaffTools } from "./admin-controls";
 import { GMAIL_NOTICE_ID, gmailBlockedReason } from "./gmail-notice";
 import styles from "./admin.module.css";
 
@@ -215,18 +215,13 @@ export default async function AdminPage() {
                   <p>{draft.resident.personality}</p>
                   <small>goes to {draft.resident.sponsorships.length} sponsors</small>
                 </div>
-                <article className={styles.draftPreview}>
-                  <strong>{draft.subject}</strong>
-                  <p>{draft.bodyText}</p>
-                  {settings.pinnedPostscript &&
-                    !draft.bodyText.includes(settings.pinnedPostscript) && (
-                      <small>P.S. {settings.pinnedPostscript}</small>
-                    )}
-                </article>
-                <ApproveButton
+                <DraftEditor
+                  bodyText={draft.bodyText}
                   gmailConnected={gmail.authorized}
                   gmailStatus={gmail.status}
                   id={draft.id}
+                  smsText={draft.smsText}
+                  subject={draft.subject}
                 />
               </FeltPanel>
             ))

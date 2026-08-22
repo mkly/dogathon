@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 
 import { FeltButton, FeltField, StitchBadge } from "@/components/felt";
 import { pushToast } from "@/components/toast";
+import { MAX_SMS_LENGTH } from "@/lib/composer";
 
 import { saveSettings, type SettingsState } from "./actions";
 import { GMAIL_NOTICE_ID, gmailBlockedReason } from "./gmail-notice";
@@ -29,26 +30,69 @@ async function responseError(response: Response, action: string) {
     : routeError(action, response.status);
 }
 
-export function ApproveButton({
+export function DraftEditor({
+  bodyText: initialBodyText,
   gmailConnected,
   gmailStatus,
   id,
+  smsText: initialSmsText,
+  subject: initialSubject,
 }: {
+  bodyText: string;
   gmailConnected: boolean;
   gmailStatus?: string;
   id: string;
+  smsText: string;
+  subject: string;
 }) {
   const router = useRouter();
-  const [pending, setPending] = useState(false);
+  const [subject, setSubject] = useState(initialSubject);
+  const [bodyText, setBodyText] = useState(initialBodyText);
+  const [smsText, setSmsText] = useState(initialSmsText);
+  const [pending, setPending] = useState<"save" | "approve" | "deny" | null>(null);
+  const smsTooLong = smsText.length > MAX_SMS_LENGTH;
+
+  async function persistDraft() {
+    if (smsTooLong) {
+      pushToast("error", `SMS text must be ${MAX_SMS_LENGTH} characters or fewer.`);
+      return false;
+    }
+
+    const response = await fetch(`/api/pupdates/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ subject, emailBody: bodyText, smsBody: smsText }),
+    });
+    if (!response.ok) {
+      pushToast("error", await responseError(response, "Save draft"));
+      return false;
+    }
+    return true;
+  }
+
+  async function save() {
+    setPending("save");
+    try {
+      if (await persistDraft()) {
+        pushToast("success", "Draft changes saved.");
+        router.refresh();
+      }
+    } catch {
+      pushToast("error", "Save draft could not reach the server.");
+    } finally {
+      setPending(null);
+    }
+  }
 
   async function approve() {
     if (!gmailConnected) return;
 
-    setPending(true);
+    setPending("approve");
     try {
+      if (!(await persistDraft())) return;
       const response = await fetch(`/api/pupdates/${id}/approve`, { method: "POST" });
       if (!response.ok) {
-        pushToast("error", routeError("Approve and send", response.status));
+        pushToast("error", await responseError(response, "Approve and send"));
         return;
       }
       pushToast("success", "Approved and sent.");
@@ -56,23 +100,89 @@ export function ApproveButton({
     } catch {
       pushToast("error", "Approve and send could not reach the server.");
     } finally {
-      setPending(false);
+      setPending(null);
+    }
+  }
+
+  async function deny() {
+    if (!window.confirm("Discard this draft? This cannot be undone.")) return;
+
+    setPending("deny");
+    try {
+      const response = await fetch(`/api/pupdates/${id}`, { method: "DELETE" });
+      if (!response.ok) {
+        pushToast("error", await responseError(response, "Discard draft"));
+        return;
+      }
+      pushToast("success", "Draft discarded.");
+      router.refresh();
+    } catch {
+      pushToast("error", "Discard draft could not reach the server.");
+    } finally {
+      setPending(null);
     }
   }
 
   return (
-    <div className={styles.actionStack}>
-      <FeltButton
-        // the queue prints the reason once, above the list, instead of
-        // repeating the same red sentence under every draft
-        aria-describedby={gmailConnected ? undefined : GMAIL_NOTICE_ID}
-        disabled={pending || !gmailConnected}
-        onClick={approve}
-        title={gmailConnected ? undefined : gmailBlockedReason(gmailStatus)}
-        tone="moss"
-      >
-        {pending ? "Sending…" : "Approve & send"}
-      </FeltButton>
+    <div className={styles.draftEditor}>
+      <label htmlFor={`subject-${id}`}>Subject</label>
+      <FeltField>
+        <input
+          id={`subject-${id}`}
+          onChange={(event) => setSubject(event.target.value)}
+          required
+          value={subject}
+        />
+      </FeltField>
+      <label htmlFor={`email-${id}`}>Email body</label>
+      <FeltField>
+        <textarea
+          id={`email-${id}`}
+          onChange={(event) => setBodyText(event.target.value)}
+          required
+          rows={7}
+          value={bodyText}
+        />
+      </FeltField>
+      <div className={styles.smsLabelRow}>
+        <label htmlFor={`sms-${id}`}>SMS text</label>
+        <span className={smsTooLong ? styles.smsError : undefined}>
+          {smsText.length}/{MAX_SMS_LENGTH}
+        </span>
+      </div>
+      <FeltField>
+        <textarea
+          aria-describedby={smsTooLong ? `sms-error-${id}` : undefined}
+          aria-invalid={smsTooLong}
+          id={`sms-${id}`}
+          onChange={(event) => setSmsText(event.target.value)}
+          required
+          rows={4}
+          value={smsText}
+        />
+      </FeltField>
+      {smsTooLong && (
+        <p className={styles.smsError} id={`sms-error-${id}`} role="alert">
+          Shorten the SMS by {smsText.length - MAX_SMS_LENGTH} characters before saving.
+        </p>
+      )}
+      <div className={styles.draftActions}>
+        <FeltButton disabled={pending !== null || smsTooLong} onClick={save} tone="mustard">
+          {pending === "save" ? "Saving…" : "Save changes"}
+        </FeltButton>
+        <FeltButton
+          aria-describedby={gmailConnected ? undefined : GMAIL_NOTICE_ID}
+          disabled={pending !== null || smsTooLong || !gmailConnected}
+          onClick={approve}
+          title={gmailConnected ? undefined : gmailBlockedReason(gmailStatus)}
+          tone="moss"
+        >
+          {pending === "approve" ? "Saving & sending…" : "Approve & send"}
+        </FeltButton>
+        <FeltButton disabled={pending !== null} onClick={deny} tone="brick">
+          {pending === "deny" ? "Discarding…" : "Deny & discard"}
+        </FeltButton>
+      </div>
     </div>
   );
 }

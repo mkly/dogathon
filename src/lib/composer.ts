@@ -28,7 +28,7 @@ interface AnthropicResponse {
 
 const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
 const ANTHROPIC_MODEL = "claude-sonnet-5";
-const MAX_SMS_LENGTH = 299;
+export const MAX_SMS_LENGTH = 299;
 
 function cleanNotes(notes: PupdateNote[]): string[] {
   return notes
