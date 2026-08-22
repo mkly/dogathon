@@ -6,8 +6,8 @@ import "./felt.css";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Dogathon",
-  description: "A basic Next.js app with Better Auth and Prisma",
+  title: "Dogathon | Sponsor a rescue dog",
+  description: "Sponsor a rescue dog for $25 a month until adoption.",
 };
 
 export default function RootLayout({
