@@ -15,33 +15,31 @@ export default async function Home() {
 
   return (
     <main className={styles.siteShell}>
-      <header className={styles.hero}>
+      <FeltPanel className={styles.hero} tone="moss">
         <p className={styles.eyebrow}>Copper&apos;s Dream Dogathon</p>
-        <h1>Put a little love behind a rescue dog.</h1>
+        <h1>
+          Put a little love behind a <span className="felt-hl">rescue dog</span>.
+        </h1>
         <p className={styles.lede}>
           Sponsor a resident for $25 a month until they&apos;re adopted. You&apos;ll
           help with everyday care and get the good news from their journey.
         </p>
-      </header>
+      </FeltPanel>
 
       {residents.length ? (
         <section aria-label="Dogs available to sponsor" className={styles.dogGrid}>
-          {residents.map((resident, index) => (
-            <FeltPanel
-              className={styles.dogCard}
-              key={resident.id}
-              tone={index % 3 === 0 ? "mustard" : index % 3 === 1 ? "denim" : "moss"}
-            >
+          {residents.map((resident) => (
+            <FeltPanel className={styles.dogCard} key={resident.id} tone="oatmeal">
               <PhotoPatch
                 alt={`${resident.name}, ${resident.breed}`}
                 className={styles.gridPhoto}
                 src={resident.photoUrls[0]}
               />
               <div className={styles.cardCopy}>
-                <StitchBadge tone="cream">Available</StitchBadge>
+                <StitchBadge tone="oatmeal">Available</StitchBadge>
                 <h2>{resident.name}</h2>
                 <p>{resident.breed} · {resident.ageText}</p>
-                <Link className={`felt-button felt-cream ${styles.cardLink}`} href={`/dogs/${resident.id}`}>
+                <Link className={`felt-button felt-brick ${styles.cardLink}`} href={`/dogs/${resident.id}`}>
                   Meet {resident.name}
                 </Link>
               </div>
