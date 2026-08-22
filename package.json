@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "test:parser": "node --experimental-strip-types --test src/lib/parser.test.ts",
     "start": "next start",
     "lint": "eslint .",
     "db:generate": "prisma generate",
