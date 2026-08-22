@@ -19,6 +19,7 @@
 /AGENTS.md
 /CLAUDE.md
 NOTES.md
+deploy.sh
 
 # logs and editor files
 npm-debug.log*
