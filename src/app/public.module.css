@@ -247,36 +247,21 @@
   line-height: 1.08;
 }
 
+/* the fields are FeltField cut-outs, so the gap has to clear their stitch
+   rings (-8px) and focus outline (offset 9px) */
 .sponsorForm {
   display: grid;
-  gap: 0.5rem;
+  gap: 14px;
 }
 
 .sponsorForm label {
-  margin-top: 0.5rem;
+  margin-top: 8px;
   font-weight: 900;
 }
 
 .sponsorForm label span {
   font-size: 0.75rem;
   font-weight: 600;
-}
-
-.sponsorForm input,
-.sponsorForm select {
-  width: 100%;
-  padding: 0.8rem 0.9rem;
-  border: 2px solid #a78f74;
-  border-radius: 10px 5px 9px 6px;
-  background: var(--felt-cream);
-  color: var(--felt-ink);
-  font: inherit;
-}
-
-.sponsorForm input:focus,
-.sponsorForm select:focus {
-  border-color: var(--felt-denim);
-  outline: 3px solid rgb(85 116 147 / 22%);
 }
 
 .sponsorButton {

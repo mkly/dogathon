@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { createSponsorship } from "@/app/actions";
-import { FeltButton, FeltPanel, PhotoPatch, StitchBadge } from "@/components/felt";
+import { FeltButton, FeltField, FeltPanel, PhotoPatch, StitchBadge } from "@/components/felt";
 import { prisma } from "@/lib/prisma";
 
 import styles from "../../public.module.css";
@@ -90,20 +90,28 @@ export default async function DogPage({ params, searchParams }: DogPageProps) {
             <input name="residentId" type="hidden" value={resident.id} />
 
             <label htmlFor="sponsorName">Your name</label>
-            <input autoComplete="name" id="sponsorName" name="sponsorName" required />
+            <FeltField>
+              <input autoComplete="name" id="sponsorName" name="sponsorName" required />
+            </FeltField>
 
             <label htmlFor="sponsorEmail">Email</label>
-            <input autoComplete="email" id="sponsorEmail" name="sponsorEmail" required type="email" />
+            <FeltField>
+              <input autoComplete="email" id="sponsorEmail" name="sponsorEmail" required type="email" />
+            </FeltField>
 
             <label htmlFor="sponsorPhone">Phone <span>(optional for email updates)</span></label>
-            <input autoComplete="tel" id="sponsorPhone" name="sponsorPhone" type="tel" />
+            <FeltField>
+              <input autoComplete="tel" id="sponsorPhone" name="sponsorPhone" type="tel" />
+            </FeltField>
 
             <label htmlFor="channel">Send my updates by</label>
-            <select defaultValue="email" id="channel" name="channel">
-              <option value="email">Email</option>
-              <option value="sms">Text message</option>
-              <option value="both">Email and text</option>
-            </select>
+            <FeltField>
+              <select defaultValue="email" id="channel" name="channel">
+                <option value="email">Email</option>
+                <option value="sms">Text message</option>
+                <option value="both">Email and text</option>
+              </select>
+            </FeltField>
 
             <FeltButton className={styles.sponsorButton} tone="mustard" type="submit">
               Sponsor for $25/month until adopted
