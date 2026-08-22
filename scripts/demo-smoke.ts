@@ -12,16 +12,22 @@
  * Public-page beats (sponsor, volunteer note) go through the real no-JS form
  * posts that React renders for server actions, so the same code path a browser
  * uses is what gets verified. Staff beats hit the JSON routes the admin
- * buttons call. The staff settings flip (source URL A -> B) is written through
- * Prisma, mirroring what the admin Settings form saves.
+ * buttons call, which now require a session, so the run signs in first (and
+ * creates the staff account on the first run) and carries the cookie the way
+ * the browser does. Override the account with DEMO_STAFF_EMAIL /
+ * DEMO_STAFF_PASSWORD. The staff settings flip (source URL A -> B) is written
+ * through Prisma, mirroring what the admin Settings form saves.
  */
 import "dotenv/config";
 
 import { prisma } from "../src/lib/prisma.ts";
 
 const BASE_URL = process.env.DEMO_BASE_URL ?? "http://localhost:3000";
+const STAFF_EMAIL = process.env.DEMO_STAFF_EMAIL ?? "demo-staff@example.com";
+const STAFF_PASSWORD = process.env.DEMO_STAFF_PASSWORD ?? "demo-staff-password";
 
 let step = 0;
+let staffCookie = "";
 
 function ok(message: string) {
   step += 1;
@@ -70,18 +76,49 @@ async function submitActionForm(
 async function postJson(path: string, payload?: unknown) {
   const response = await fetch(`${BASE_URL}${path}`, {
     method: "POST",
-    ...(payload !== undefined
-      ? {
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify(payload),
-        }
-      : {}),
+    headers: {
+      ...(payload !== undefined ? { "content-type": "application/json" } : {}),
+      ...(staffCookie ? { cookie: staffCookie } : {}),
+    },
+    ...(payload !== undefined ? { body: JSON.stringify(payload) } : {}),
   });
   const body = (await response.json()) as Record<string, unknown>;
   if (!response.ok) {
     fail(`POST ${path} returned ${response.status}: ${JSON.stringify(body)}`);
   }
   return body;
+}
+
+/**
+ * Sign in the staff account the way the sign-in form does, creating it on the
+ * first run. Every staff route (/api/sync, compose, approve, the Arcade
+ * routes) rejects an anonymous request with a 401, so the cookie Better Auth
+ * hands back here is what the rest of the run posts with.
+ */
+async function signInStaff() {
+  for (const endpoint of ["/api/auth/sign-up/email", "/api/auth/sign-in/email"]) {
+    const response = await fetch(`${BASE_URL}${endpoint}`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        email: STAFF_EMAIL,
+        password: STAFF_PASSWORD,
+        ...(endpoint.endsWith("sign-up/email") ? { name: "Demo Staff" } : {}),
+      }),
+    });
+    // Set-Cookie carries attributes (Path, HttpOnly, ...); a request cookie
+    // header wants only the name=value pairs.
+    const cookie = (response.headers.getSetCookie?.() ?? [])
+      .map((value) => value.split(";")[0])
+      .join("; ");
+    if (response.ok && cookie) {
+      staffCookie = cookie;
+      return;
+    }
+  }
+  fail(
+    `Could not sign in ${STAFF_EMAIL}; set DEMO_STAFF_EMAIL / DEMO_STAFF_PASSWORD to a staff account`,
+  );
 }
 
 async function sponsorDog(
@@ -147,7 +184,11 @@ async function main() {
   }
   ok("Submitted a volunteer note from /volunteer");
 
-  // Beat 4: compose a pupdate and approve it; the send fans out per channel.
+  // Beat 4: the staff room is behind sign-in, so take a session before the
+  // staff routes; then compose a pupdate and approve it, fanning out per channel.
+  await signInStaff();
+  ok(`Signed in to the staff room as ${STAFF_EMAIL}`);
+
   const composed = (await postJson("/api/pupdates/compose", {
     residentId: biscuit.id,
   })) as { pupdate: { id: string; bodyText: string } };
