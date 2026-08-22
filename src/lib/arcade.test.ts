@@ -9,6 +9,8 @@ import {
   sendSms,
 } from "./arcade.ts";
 import type { DryRunCall } from "./arcade.ts";
+import { POST as authorizeGmail } from "../app/api/arcade/gmail/authorize/route.ts";
+import { GET as getGmailStatus } from "../app/api/arcade/gmail/status/route.ts";
 
 function isDryRunCall(value: unknown): value is DryRunCall {
   return (
@@ -88,6 +90,47 @@ test("all Arcade helpers return structured calls without credentials", async () 
     assert.equal(status.authorized, false);
     assert.equal(status.status, "not_configured");
     assert.equal(status.url, null);
+  } finally {
+    if (previousApiKey === undefined) delete process.env.ARCADE_API_KEY;
+    else process.env.ARCADE_API_KEY = previousApiKey;
+
+    if (previousUserId === undefined) delete process.env.ARCADE_USER_ID;
+    else process.env.ARCADE_USER_ID = previousUserId;
+  }
+});
+
+test("Gmail routes handle missing Arcade configuration", async () => {
+  const previousApiKey = process.env.ARCADE_API_KEY;
+  const previousUserId = process.env.ARCADE_USER_ID;
+
+  try {
+    delete process.env.ARCADE_API_KEY;
+    delete process.env.ARCADE_USER_ID;
+
+    const authorizeResponse = await authorizeGmail();
+    assert.equal(authorizeResponse.status, 503);
+    assert.deepEqual(await authorizeResponse.json(), {
+      error: "Gmail connection is not configured: ARCADE_API_KEY is missing",
+    });
+
+    const statusResponse = await getGmailStatus();
+    assert.equal(statusResponse.status, 200);
+    assert.deepEqual(await statusResponse.json(), { connected: false });
+
+    process.env.ARCADE_API_KEY = "configured-key";
+
+    const missingUserAuthorizeResponse = await authorizeGmail();
+    assert.equal(missingUserAuthorizeResponse.status, 503);
+    assert.deepEqual(await missingUserAuthorizeResponse.json(), {
+      error: "ARCADE_USER_ID is required when ARCADE_API_KEY is configured",
+    });
+
+    const missingUserStatusResponse = await getGmailStatus();
+    assert.equal(missingUserStatusResponse.status, 503);
+    assert.deepEqual(await missingUserStatusResponse.json(), {
+      connected: false,
+      error: "ARCADE_USER_ID is required when ARCADE_API_KEY is configured",
+    });
   } finally {
     if (previousApiKey === undefined) delete process.env.ARCADE_API_KEY;
     else process.env.ARCADE_API_KEY = previousApiKey;

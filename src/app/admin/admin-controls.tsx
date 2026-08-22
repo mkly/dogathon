@@ -17,6 +17,13 @@ function routeError(action: string, status: number) {
   return `${action} failed (${status}). Try again.`;
 }
 
+async function responseError(response: Response, action: string) {
+  const body = await response.json().catch(() => null) as { error?: unknown } | null;
+  return typeof body?.error === "string" && body.error
+    ? body.error
+    : routeError(action, response.status);
+}
+
 function FeltToast({ toast }: { toast: Toast }) {
   if (!toast) return null;
 
@@ -78,9 +85,7 @@ export function StaffTools() {
         if (!current) return;
         if (!response.ok) {
           setGmail({ connected: false });
-          if (response.status === 404) {
-            setToast({ tone: "error", text: routeError("Gmail status", response.status) });
-          }
+          setToast({ tone: "error", text: await responseError(response, "Gmail status") });
           return;
         }
         setGmail((await response.json()) as GmailStatus);
@@ -117,7 +122,7 @@ export function StaffTools() {
     try {
       const response = await fetch("/api/arcade/gmail/authorize", { method: "POST" });
       if (!response.ok) {
-        setToast({ tone: "error", text: routeError("Gmail connect", response.status) });
+        setToast({ tone: "error", text: await responseError(response, "Gmail connect") });
         return;
       }
       const body = (await response.json()) as { url?: string };
