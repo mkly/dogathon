@@ -18,6 +18,37 @@ files:
   - generator: hosts
     path: /etc/hosts
 
+  # Without this the container boots with eth0 up but unmanaged: no DHCP
+  # lease, no routes, and crabbox provisioning hangs before it can start.
+  - generator: dump
+    path: /etc/systemd/network/eth0.network
+    content: |-
+      [Match]
+      Name=eth0
+
+      [Network]
+      DHCP=true
+
+      [DHCPv4]
+      UseDomains=true
+
+  # ds-identify looks for /dev/lxd/sock, but incus exposes /dev/incus/sock,
+  # so cloud-init disables itself and never runs the crabbox user-data.
+  # Force the LXD datasource (a single-entry list skips detection).
+  - generator: dump
+    path: /etc/cloud/cloud.cfg.d/90_incus.cfg
+    content: |-
+      datasource_list: [ LXD ]
+
+  # At boot: point resolv.conf at systemd-resolved (the build leaves an empty
+  # file), and give cloud-init an lxd-named path to the incus guest socket.
+  - generator: dump
+    path: /etc/tmpfiles.d/incus-compat.conf
+    content: |-
+      L+ /etc/resolv.conf - - - - /run/systemd/resolve/stub-resolv.conf
+      d /dev/lxd 0755 root root -
+      L /dev/lxd/sock - - - - /dev/incus/sock
+
 packages:
   manager: apt
   update: true
@@ -29,7 +60,15 @@ packages:
       packages:
         - systemd
         - systemd-sysv
+        - systemd-resolved
         - dbus
+        # crabbox provisions instances through cloud-init user-data and then
+        # connects over SSH; its readiness check needs git, rsync, and jq.
+        - cloud-init
+        - openssh-server
+        - git
+        - rsync
+        - jq
         - ca-certificates
         - curl
         - gnupg
@@ -74,6 +113,7 @@ actions:
       npm install --global prisma@7.9.1
 
       systemctl enable postgresql.service
+      systemctl enable systemd-networkd.service systemd-resolved.service ssh.service
 
       node --version | grep -Eq '^v24\.'
       psql --version | grep -Eq ' 17\.'
