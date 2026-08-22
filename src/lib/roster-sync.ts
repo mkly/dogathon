@@ -53,6 +53,10 @@ export async function syncRoster(): Promise<SyncSummary> {
       dogs.filter((dog) => dog.adopted).map((dog) => dog.name),
     );
 
+    // A dog vanishing from the roster only means "adopted" when we actually
+    // read the configured source. After a scrape failure we are looking at a
+    // checked-in capture that knows nothing about the live roster, so absence
+    // proves nothing there and only explicit *Adopted markers count.
     const adoptionCandidates = before.filter(
       (resident) => resident.status === "available"
         && (explicitlyAdopted.has(resident.name)
@@ -69,10 +73,6 @@ export async function syncRoster(): Promise<SyncSummary> {
       await upsertDog(tx, dog);
     }
 
-    // A dog vanishing from the roster only means "adopted" when we actually
-    // read the configured source. After a scrape failure we are looking at a
-    // checked-in capture that knows nothing about the live roster, so absence
-    // proves nothing there and only explicit *Adopted markers count.
     let sponsorshipsClosed = 0;
 
     for (const resident of adoptionCandidates) {
