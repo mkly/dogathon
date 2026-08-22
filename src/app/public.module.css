@@ -108,6 +108,17 @@
   padding: 1.25rem 0.25rem 0.25rem;
 }
 
+/* flat status label: an oatmeal pill on an oatmeal card was only a bump */
+.cardStatus {
+  margin: 0;
+  color: var(--felt-ink);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.55;
+}
+
 .cardCopy h2 {
   margin: 0.6rem 0 0;
   font-size: 20px;

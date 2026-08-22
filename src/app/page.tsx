@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 
-import { FeltPanel, PhotoPatch, StitchBadge } from "@/components/felt";
+import { FeltPanel, PhotoPatch } from "@/components/felt";
 import { prisma } from "@/lib/prisma";
 
 import pawcastWordmark from "../../public/brand/pawcast-wordmark.png";
@@ -48,7 +48,7 @@ export default async function Home() {
                 src={resident.photoUrls[0]}
               />
               <div className={styles.cardCopy}>
-                <StitchBadge tone="oatmeal">Available</StitchBadge>
+                <span className={styles.cardStatus}>Available</span>
                 <h2>{resident.name}</h2>
                 <p>{resident.breed} · {resident.ageText}</p>
                 <Link className={`felt-button felt-brick ${styles.cardLink}`} href={`/dogs/${resident.id}`}>
