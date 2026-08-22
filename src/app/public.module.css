@@ -120,7 +120,8 @@
   justify-content: center;
   width: 100%;
   min-height: 44px;
-  color: var(--felt-cream);
+  /* follow the button's own tone -- cream text on a cream patch is invisible */
+  color: var(--felt-contrast, var(--felt-cream));
   font-size: 15px;
   font-weight: 900;
   text-decoration: none;
