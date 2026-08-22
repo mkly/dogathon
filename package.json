@@ -10,6 +10,7 @@
     "start": "next start",
     "lint": "eslint .",
     "test:arcade": "node --test --experimental-strip-types src/lib/arcade.test.ts",
+    "test:parser": "node --test --experimental-strip-types src/lib/parser.test.ts",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
