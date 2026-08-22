@@ -1,0 +1,40 @@
+.page {
+  display: grid;
+  min-height: 100svh;
+  padding: 2rem 1rem 3rem;
+  place-items: center;
+}
+
+.card {
+  display: grid;
+  width: min(100%, 27rem);
+  gap: 0.85rem;
+  padding: 2.25rem;
+  overflow: visible;
+  color: var(--felt-cream);
+}
+
+.eyebrow {
+  margin: 0;
+  color: var(--felt-thread);
+  font-size: 0.7rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.card h1 {
+  margin: 0.15rem 0 0;
+  color: var(--felt-cream);
+  font-size: clamp(1.9rem, 7vw, 2.5rem);
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -0.035em;
+}
+
+.lede {
+  margin: 0 0 0.35rem;
+  color: rgb(248 242 231 / 80%);
+  font-weight: 700;
+  line-height: 1.45;
+}

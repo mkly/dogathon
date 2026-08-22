@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
+import { FeltButton } from "@/components/felt";
 import { authClient } from "@/lib/auth-client";
 
 export function SignOutButton() {
@@ -17,8 +18,8 @@ export function SignOutButton() {
   }
 
   return (
-    <button className="primary" disabled={pending} onClick={signOut} type="button">
+    <FeltButton disabled={pending} onClick={signOut} tone="oatmeal">
       {pending ? "Signing out…" : "Sign out"}
-    </button>
+    </FeltButton>
   );
 }

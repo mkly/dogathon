@@ -3,7 +3,10 @@
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 
+import { FeltButton, FeltField } from "@/components/felt";
 import { authClient } from "@/lib/auth-client";
+
+import styles from "./auth-form.module.css";
 
 type Mode = "sign-in" | "sign-up";
 
@@ -45,61 +48,70 @@ export function AuthForm({ redirectTo = "/admin" }: { redirectTo?: string }) {
 
   return (
     <>
-      <div className="tabs" aria-label="Authentication mode">
-        <button
-          className={mode === "sign-in" ? "active" : "secondary"}
+      <div aria-label="Authentication mode" className={styles.tabs}>
+        <FeltButton
           onClick={() => {
             setMode("sign-in");
             setError(null);
           }}
-          type="button"
+          tone={mode === "sign-in" ? "mustard" : "denim-lt"}
         >
           Sign in
-        </button>
-        <button
-          className={mode === "sign-up" ? "active" : "secondary"}
+        </FeltButton>
+        <FeltButton
           onClick={() => {
             setMode("sign-up");
             setError(null);
           }}
-          type="button"
+          tone={mode === "sign-up" ? "mustard" : "denim-lt"}
         >
           Sign up
-        </button>
+        </FeltButton>
       </div>
 
-      <form onSubmit={handleSubmit}>
+      <form className={styles.form} onSubmit={handleSubmit}>
         {mode === "sign-up" && (
           <>
             <label htmlFor="name">Name</label>
-            <input autoComplete="name" id="name" minLength={2} name="name" required />
+            <FeltField>
+              <input autoComplete="name" id="name" minLength={2} name="name" required />
+            </FeltField>
           </>
         )}
 
         <label htmlFor="email">Email</label>
-        <input
-          autoComplete="email"
-          id="email"
-          name="email"
-          required
-          type="email"
-        />
+        <FeltField>
+          <input
+            autoComplete="email"
+            id="email"
+            name="email"
+            required
+            type="email"
+          />
+        </FeltField>
 
         <label htmlFor="password">Password</label>
-        <input
-          autoComplete={mode === "sign-up" ? "new-password" : "current-password"}
-          id="password"
-          minLength={8}
-          name="password"
-          required
-          type="password"
-        />
+        <FeltField>
+          <input
+            autoComplete={mode === "sign-up" ? "new-password" : "current-password"}
+            id="password"
+            minLength={8}
+            name="password"
+            required
+            type="password"
+          />
+        </FeltField>
 
-        {error && <p className="error">{error}</p>}
+        {error && <p className={styles.error}>{error}</p>}
 
-        <button className="primary" disabled={pending} type="submit">
+        <FeltButton
+          className={styles.submit}
+          disabled={pending}
+          tone="brick"
+          type="submit"
+        >
           {pending ? "Please wait…" : mode === "sign-up" ? "Create account" : "Sign in"}
-        </button>
+        </FeltButton>
       </form>
     </>
   );

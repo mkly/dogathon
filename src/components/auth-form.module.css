@@ -1,0 +1,38 @@
+.tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 0.35rem 0 0.6rem;
+}
+
+.form {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.form label {
+  margin: 0.55rem 0 0.1rem;
+  color: var(--felt-cream);
+  font-size: 0.7rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.submit {
+  min-height: 3.25rem;
+  margin-top: 1.1rem;
+  font-size: 1.05rem;
+}
+
+.error {
+  margin: 0.9rem 0 0;
+  padding: 0.7rem 0.9rem;
+  border: 2px dashed var(--felt-brick);
+  border-radius: 11px 5px 10px 6px;
+  color: #7b2820;
+  background: #fff0e9;
+  font-size: 0.82rem;
+  font-weight: 800;
+  line-height: 1.35;
+}
