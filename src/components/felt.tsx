@@ -76,6 +76,29 @@ export function FeltButton({
   );
 }
 
+// form field: a cut-out hole in the felt holding a chrome-less control, with
+// the fine stitch ring running outside the edge (mockups' .ps-field)
+export type FeltFieldProps = HTMLAttributes<HTMLDivElement> & {
+  tone?: FeltTone;
+};
+
+export function FeltField({
+  children,
+  className,
+  tone = "cream",
+  ...props
+}: FeltFieldProps) {
+  return (
+    <div
+      className={classes("felt-field", "felt-inset", `felt-${tone}`, className)}
+      {...props}
+    >
+      <Stitch fine />
+      {children}
+    </div>
+  );
+}
+
 export type PhotoPatchProps = HTMLAttributes<HTMLElement> & {
   alt: string;
   src?: string;

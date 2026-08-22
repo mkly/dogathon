@@ -3,7 +3,7 @@
 import { useActionState, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { FeltButton, StitchBadge } from "@/components/felt";
+import { FeltButton, FeltField, StitchBadge } from "@/components/felt";
 
 import { saveSettings, type SettingsState } from "./actions";
 import styles from "./admin.module.css";
@@ -176,22 +176,26 @@ export function SettingsForm({
   return (
     <form action={formAction} className={styles.settingsForm}>
       <label htmlFor="pinnedPostscript">This month&apos;s postscript</label>
-      <textarea
-        defaultValue={pinnedPostscript}
-        id="pinnedPostscript"
-        maxLength={2000}
-        name="pinnedPostscript"
-        placeholder="A note that rides along with every pupdate…"
-      />
+      <FeltField>
+        <textarea
+          defaultValue={pinnedPostscript}
+          id="pinnedPostscript"
+          maxLength={2000}
+          name="pinnedPostscript"
+          placeholder="A note that rides along with every pupdate…"
+        />
+      </FeltField>
       <label htmlFor="sourceUrl">Adoption-page source URL</label>
-      <input
-        defaultValue={sourceUrl}
-        id="sourceUrl"
-        name="sourceUrl"
-        placeholder="https://… or seed/dogs-page-A.html"
-        required
-        type="text"
-      />
+      <FeltField>
+        <input
+          defaultValue={sourceUrl}
+          id="sourceUrl"
+          name="sourceUrl"
+          placeholder="https://… or seed/dogs-page-A.html"
+          required
+          type="text"
+        />
+      </FeltField>
       <div className={styles.saveRow}>
         <span className={styles.formMessage} data-status={state.status} role="status">
           {state.message}

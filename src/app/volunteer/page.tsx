@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { FeltButton, FeltPanel, PhotoPatch, StitchBadge } from "@/components/felt";
+import { FeltButton, FeltField, FeltPanel, PhotoPatch, StitchBadge } from "@/components/felt";
 import { prisma } from "@/lib/prisma";
 
 import { submitVolunteerNote } from "./actions";
@@ -97,29 +97,33 @@ export default async function VolunteerPage({ searchParams }: VolunteerPageProps
             )}
           </fieldset>
 
-          <FeltPanel className={styles.notePanel} tone="cream">
+          <FeltPanel className={styles.notePanel} tone="denim">
             <label className={styles.inputLabel} htmlFor="note">
               2. Add one quick note
             </label>
-            <input
-              id="note"
-              maxLength={240}
-              name="note"
-              placeholder="Vet visit went well!"
-              required
-              type="text"
-            />
+            <FeltField>
+              <input
+                id="note"
+                maxLength={240}
+                name="note"
+                placeholder="Vet visit went well!"
+                required
+                type="text"
+              />
+            </FeltField>
 
             <label className={styles.inputLabel} htmlFor="photo">
               Photo <span>(optional)</span>
             </label>
-            <input
-              accept="image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif"
-              capture="environment"
-              id="photo"
-              name="photo"
-              type="file"
-            />
+            <FeltField className={styles.photoField}>
+              <input
+                accept="image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif"
+                capture="environment"
+                id="photo"
+                name="photo"
+                type="file"
+              />
+            </FeltField>
             <small>Take one now or choose one from your phone. Max 8 MB.</small>
           </FeltPanel>
 

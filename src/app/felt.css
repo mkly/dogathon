@@ -252,6 +252,38 @@ svg.stitch.fine rect.thread { stroke-width: 1.4; }
 .photo-patch-placeholder span { font-size: 2.5rem; }
 .photo-patch-placeholder small { font-weight: 800; }
 
+/* the control sitting in the hole carries no chrome of its own */
+.felt-field > input,
+.felt-field > textarea,
+.felt-field > select {
+  display: block;
+  width: 100%;
+  padding: 14px 18px;
+  border: 0;
+  outline: none;
+  color: var(--felt-ink);
+  background: none;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.felt-field > textarea {
+  height: 110px;
+  resize: none;
+}
+
+.felt-field ::placeholder {
+  color: rgb(61 51 43 / 45%);
+}
+
+/* the hole itself takes the focus ring, clear of the stitch at -8px */
+.felt-field:focus-within {
+  outline: 3px solid var(--felt-mustard);
+  outline-offset: 9px;
+}
+
 /* mustard inline highlight, e.g. "their person" in the hero */
 .felt-hl {
   --felt-color: var(--felt-mustard);
