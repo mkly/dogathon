@@ -39,14 +39,23 @@ export default async function SponsorsPage() {
 
   for (const sponsorship of sponsorships) {
     const key = sponsorship.sponsorEmail.trim().toLocaleLowerCase();
-    grouped.set(key, [...(grouped.get(key) ?? []), sponsorship]);
+    const records = grouped.get(key);
+
+    if (records) {
+      records.push(sponsorship);
+    } else {
+      grouped.set(key, [sponsorship]);
+    }
   }
 
-  const sponsors = Array.from(grouped.entries()).map(([email, records]) => ({
-    email,
-    records,
-    latest: records.at(-1)!,
-  }));
+  const sponsors = Array.from(grouped.entries()).map(([email, records]) => {
+    // The query sorts by raw email first, so mixed-case duplicates of one
+    // address can land out of date order inside a group; re-sort so the card
+    // shows the same newest contact details as the detail page.
+    records.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+
+    return { email, records, latest: records.at(-1)! };
+  });
 
   return (
     <main className={styles.page}>
