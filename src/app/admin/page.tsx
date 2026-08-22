@@ -7,7 +7,7 @@ import { SignOutButton } from "@/components/sign-out-button";
 import { getSession } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
 
-import { ApproveButton, SettingsForm, StaffTools } from "./admin-controls";
+import { ApproveButton, ComposeButton, SettingsForm, StaffTools } from "./admin-controls";
 import styles from "./admin.module.css";
 
 export const dynamic = "force-dynamic";
@@ -19,22 +19,37 @@ export default async function AdminPage() {
     redirect("/sign-in");
   }
 
-  const [drafts, storedSettings, activeSponsorCount, sponsoredDogCount] = await Promise.all([
-    prisma.pupdate.findMany({
-      where: { status: "draft" },
-      orderBy: { createdAt: "asc" },
-      include: {
-        resident: {
-          include: {
-            sponsorships: { where: { status: "active" }, select: { id: true } },
+  const [drafts, noteResidents, storedSettings, activeSponsorCount, sponsoredDogCount] =
+    await Promise.all([
+      prisma.pupdate.findMany({
+        where: { status: "draft" },
+        orderBy: { createdAt: "asc" },
+        include: {
+          resident: {
+            include: {
+              sponsorships: { where: { status: "active" }, select: { id: true } },
+            },
           },
         },
-      },
-    }),
-    prisma.rescueSettings.findUnique({ where: { id: "default" } }),
-    prisma.sponsorship.count({ where: { status: "active" } }),
-    prisma.resident.count({ where: { sponsorships: { some: { status: "active" } } } }),
-  ]);
+      }),
+      prisma.resident.findMany({
+        where: { volunteerNotes: { some: {} } },
+        orderBy: { name: "asc" },
+        select: {
+          id: true,
+          name: true,
+          volunteerNotes: {
+            orderBy: { createdAt: "desc" },
+            select: { createdAt: true },
+            take: 1,
+          },
+          _count: { select: { volunteerNotes: true } },
+        },
+      }),
+      prisma.rescueSettings.findUnique({ where: { id: "default" } }),
+      prisma.sponsorship.count({ where: { status: "active" } }),
+      prisma.resident.count({ where: { sponsorships: { some: { status: "active" } } } }),
+    ]);
 
   const settings = storedSettings ?? {
     pinnedPostscript: "",
@@ -79,6 +94,52 @@ export default async function AdminPage() {
           <span>updates opened</span>
           <small>people love dog email</small>
         </FeltPanel>
+      </section>
+
+      <section className={styles.composeSection}>
+        <div className={styles.sectionTitle}>
+          <div>
+            <p className={styles.eyebrow}>Volunteer notebook</p>
+            <h2>Notes ready for a pupdate</h2>
+          </div>
+          <StitchBadge tone="mustard">
+            {noteResidents.length} {noteResidents.length === 1 ? "dog" : "dogs"}
+          </StitchBadge>
+        </div>
+
+        {noteResidents.length === 0 ? (
+          <FeltPanel className={styles.composeEmpty} tone="oatmeal">
+            No volunteer notes are waiting yet.
+          </FeltPanel>
+        ) : (
+          <div className={styles.composeGrid}>
+            {noteResidents.map((resident) => {
+              const latestNote = resident.volunteerNotes[0]?.createdAt;
+
+              return (
+                <FeltPanel className={styles.composeItem} key={resident.id} tone="oatmeal">
+                  <div>
+                    <h3>{resident.name}</h3>
+                    <p>
+                      {resident._count.volunteerNotes}{" "}
+                      {resident._count.volunteerNotes === 1 ? "volunteer note" : "volunteer notes"}
+                    </p>
+                    {latestNote && (
+                      <small>
+                        Latest {latestNote.toLocaleString("en-US", {
+                          dateStyle: "medium",
+                          timeStyle: "short",
+                          timeZone: "America/Los_Angeles",
+                        })} PT
+                      </small>
+                    )}
+                  </div>
+                  <ComposeButton residentId={resident.id} residentName={resident.name} />
+                </FeltPanel>
+              );
+            })}
+          </div>
+        )}
       </section>
 
       <section className={styles.queueSection}>
