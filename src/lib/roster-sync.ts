@@ -10,6 +10,7 @@ export type SyncSummary = {
   created: number;
   updated: number;
   adopted: number;
+  restored: number;
   sponsorshipsClosed: number;
   usedFallbackCapture: boolean;
   source: string;
@@ -69,8 +70,18 @@ export async function syncRoster(): Promise<SyncSummary> {
       usedFallbackCapture,
     );
 
+    // The mirror image of the adoption rule, with the same evidence standard:
+    // a dog we read on the live configured source without an Adopted marker is
+    // demonstrably not adopted, so a wrongly-adopted resident heals on the
+    // next good sync. A fallback capture proves nothing and never restores.
+    const restoreCandidates = usedFallbackCapture ? [] : before.filter(
+      (resident) => resident.status === "adopted"
+        && rosterNames.has(resident.name)
+        && !explicitlyAdopted.has(resident.name),
+    );
+
     for (const dog of dogs) {
-      await upsertDog(tx, dog);
+      await upsertDog(tx, dog, !usedFallbackCapture);
     }
 
     let sponsorshipsClosed = 0;
@@ -103,6 +114,7 @@ export async function syncRoster(): Promise<SyncSummary> {
       created: dogs.filter((dog) => !existingNames.has(dog.name)).length,
       updated: dogs.filter((dog) => existingNames.has(dog.name)).length,
       adopted: adoptionCandidates.length,
+      restored: restoreCandidates.length,
       sponsorshipsClosed,
       usedFallbackCapture,
       source,
@@ -128,7 +140,7 @@ export function assertPlausibleAdoptionCount(
 
 type SyncTransaction = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 
-async function upsertDog(tx: SyncTransaction, dog: DogRecord) {
+async function upsertDog(tx: SyncTransaction, dog: DogRecord, liveSource: boolean) {
   const profile = {
     breed: dog.breed,
     dobText: dog.dobText,
@@ -150,6 +162,12 @@ async function upsertDog(tx: SyncTransaction, dog: DogRecord) {
     },
     update: {
       ...profile,
+      // Presence on the live source without an Adopted marker restores an
+      // adopted resident to available. Explicit markers stay with the adoption
+      // pass above, which owns the sponsorship-ending side effects.
+      ...(liveSource && !dog.adopted
+        ? { status: "available" as const, adoptedAt: null }
+        : {}),
     },
   });
 }
