@@ -28,6 +28,14 @@ export default async function DogPage({ params, searchParams }: DogPageProps) {
     <main className={`${styles.siteShell} ${styles.detailShell}`}>
       <Link className={styles.backLink} href="/">← All residents</Link>
 
+      {sponsored && (
+        <FeltPanel className={styles.confirmation} tone="moss">
+          <StitchBadge tone="cream">You&apos;re on the team</StitchBadge>
+          <h2>Thank you for sponsoring {resident.name}!</h2>
+          <p>Your $25 monthly sponsorship is active until {resident.name} is adopted.</p>
+        </FeltPanel>
+      )}
+
       <section className={styles.profile}>
         <div className={styles.gallery}>
           {resident.photoUrls.length ? resident.photoUrls.slice(0, 3).map((photo, index) => (
@@ -61,14 +69,6 @@ export default async function DogPage({ params, searchParams }: DogPageProps) {
           )}
         </div>
       </section>
-
-      {sponsored && (
-        <FeltPanel className={styles.confirmation} tone="moss">
-          <StitchBadge tone="cream">You&apos;re on the team</StitchBadge>
-          <h2>Thank you for sponsoring {resident.name}!</h2>
-          <p>Your $25 monthly sponsorship is active until {resident.name} is adopted.</p>
-        </FeltPanel>
-      )}
 
       {available && !sponsored ? (
         <FeltPanel className={styles.sponsorPanel} tone="oatmeal">
