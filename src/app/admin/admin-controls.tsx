@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { FeltButton, FeltField, StitchBadge } from "@/components/felt";
 
 import { saveSettings, type SettingsState } from "./actions";
-import { composeAndRefresh } from "./compose-and-refresh";
 import styles from "./admin.module.css";
 
 type Toast = { tone: "error" | "success" | "warning"; text: string } | null;
@@ -97,19 +96,17 @@ export function ComposeButton({
     setPending(true);
     setToast(null);
     try {
-      const response = await composeAndRefresh(
-        () => fetch("/api/pupdates/compose", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ residentId }),
-        }),
-        () => router.refresh(),
-      );
+      const response = await fetch("/api/pupdates/compose", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ residentId }),
+      });
       if (!response.ok) {
         setToast({ tone: "error", text: await responseError(response, "Compose pupdate") });
         return;
       }
       setToast({ tone: "success", text: `${residentName}'s draft is ready for review.` });
+      router.refresh();
     } catch {
       setToast({ tone: "error", text: "Compose pupdate could not reach the server." });
     } finally {
