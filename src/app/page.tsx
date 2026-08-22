@@ -20,7 +20,6 @@ export default async function Home() {
     <main className={styles.siteShell}>
       <FeltPanel className={styles.hero} tone="moss">
         <div className={styles.heroCopy}>
-          <p className={styles.eyebrow}>Copper&apos;s Dream Dogathon</p>
           <h1>
             Put a little love behind a{" "}
             <span className={styles.noOrphan}>
