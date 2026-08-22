@@ -96,10 +96,13 @@ async function postJson(path: string, payload?: unknown) {
  * hands back here is what the rest of the run posts with.
  */
 async function signInStaff() {
+  const attempts: string[] = [];
   for (const endpoint of ["/api/auth/sign-up/email", "/api/auth/sign-in/email"]) {
     const response = await fetch(`${BASE_URL}${endpoint}`, {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      // Better Auth rejects a cookie-setting request with no Origin, so send
+      // the one a browser on this origin would.
+      headers: { "content-type": "application/json", origin: BASE_URL },
       body: JSON.stringify({
         email: STAFF_EMAIL,
         password: STAFF_PASSWORD,
@@ -115,9 +118,10 @@ async function signInStaff() {
       staffCookie = cookie;
       return;
     }
+    attempts.push(`${endpoint} -> ${response.status} ${await response.text()}`);
   }
   fail(
-    `Could not sign in ${STAFF_EMAIL}; set DEMO_STAFF_EMAIL / DEMO_STAFF_PASSWORD to a staff account`,
+    `Could not sign in ${STAFF_EMAIL}; set DEMO_STAFF_EMAIL / DEMO_STAFF_PASSWORD to a staff account (${attempts.join(" | ")})`,
   );
 }
 
