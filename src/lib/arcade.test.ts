@@ -11,6 +11,31 @@ import {
 import type { DryRunCall } from "./arcade.ts";
 import { POST as authorizeGmail } from "../app/api/arcade/gmail/authorize/route.ts";
 import { GET as getGmailStatus } from "../app/api/arcade/gmail/status/route.ts";
+import { auth } from "./auth.ts";
+
+/** The Gmail routes are staff-only, so exercising them needs a signed-in call. */
+function staffRequest() {
+  return new Request("http://localhost:3000/api/arcade/gmail", { method: "POST" });
+}
+
+function stubStaffSession() {
+  const restore = auth.api.getSession;
+  auth.api.getSession = (async () => ({
+    session: { id: "test-session" },
+    user: { id: "test-staff", email: "staff@example.com" },
+  })) as typeof auth.api.getSession;
+  return () => {
+    auth.api.getSession = restore;
+  };
+}
+
+test("Gmail routes reject callers without a staff session", async () => {
+  const authorizeResponse = await authorizeGmail(staffRequest());
+  assert.equal(authorizeResponse.status, 401);
+
+  const statusResponse = await getGmailStatus(staffRequest());
+  assert.equal(statusResponse.status, 401);
+});
 
 function isDryRunCall(value: unknown): value is DryRunCall {
   return (
@@ -102,36 +127,38 @@ test("all Arcade helpers return structured calls without credentials", async () 
 test("Gmail routes handle missing Arcade configuration", async () => {
   const previousApiKey = process.env.ARCADE_API_KEY;
   const previousUserId = process.env.ARCADE_USER_ID;
+  const restoreSession = stubStaffSession();
 
   try {
     delete process.env.ARCADE_API_KEY;
     delete process.env.ARCADE_USER_ID;
 
-    const authorizeResponse = await authorizeGmail();
+    const authorizeResponse = await authorizeGmail(staffRequest());
     assert.equal(authorizeResponse.status, 503);
     assert.deepEqual(await authorizeResponse.json(), {
       error: "Gmail connection is not configured: ARCADE_API_KEY is missing",
     });
 
-    const statusResponse = await getGmailStatus();
+    const statusResponse = await getGmailStatus(staffRequest());
     assert.equal(statusResponse.status, 200);
     assert.deepEqual(await statusResponse.json(), { connected: false });
 
     process.env.ARCADE_API_KEY = "configured-key";
 
-    const missingUserAuthorizeResponse = await authorizeGmail();
+    const missingUserAuthorizeResponse = await authorizeGmail(staffRequest());
     assert.equal(missingUserAuthorizeResponse.status, 503);
     assert.deepEqual(await missingUserAuthorizeResponse.json(), {
       error: "ARCADE_USER_ID is required when ARCADE_API_KEY is configured",
     });
 
-    const missingUserStatusResponse = await getGmailStatus();
+    const missingUserStatusResponse = await getGmailStatus(staffRequest());
     assert.equal(missingUserStatusResponse.status, 503);
     assert.deepEqual(await missingUserStatusResponse.json(), {
       connected: false,
       error: "ARCADE_USER_ID is required when ARCADE_API_KEY is configured",
     });
   } finally {
+    restoreSession();
     if (previousApiKey === undefined) delete process.env.ARCADE_API_KEY;
     else process.env.ARCADE_API_KEY = previousApiKey;
 
