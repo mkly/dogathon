@@ -112,11 +112,17 @@ export default async function AdminPage() {
             <small>ready for the next pupdate</small>
           </FeltPanel>
         </Link>
-        <FeltPanel className={styles.stat} tone="denim">
-          <strong>{sponsoredDogCount}</strong>
-          <span>dogs covered</span>
-          <small>with at least one active sponsor</small>
-        </FeltPanel>
+        <Link
+          aria-label={`View dogs covered (${sponsoredDogCount} with active sponsors)`}
+          className={styles.statLink}
+          href="/admin/dogs-covered"
+        >
+          <FeltPanel className={styles.stat} tone="denim">
+            <strong>{sponsoredDogCount}</strong>
+            <span>dogs covered</span>
+            <small>with at least one active sponsor</small>
+          </FeltPanel>
+        </Link>
         <FeltPanel className={styles.stat} tone="brick">
           <strong>92%</strong>
           <span>updates opened</span>
