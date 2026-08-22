@@ -1,7 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 
+import { getSession } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
 
 export type SettingsState = {
@@ -35,6 +38,12 @@ export async function saveSettings(
   _previousState: SettingsState,
   formData: FormData,
 ): Promise<SettingsState> {
+  const session = await getSession(await headers());
+
+  if (!session) {
+    redirect("/sign-in");
+  }
+
   const pinnedPostscript = String(formData.get("pinnedPostscript") ?? "").trim();
   const sourceUrl = normalizeSourceUrl(String(formData.get("sourceUrl") ?? "").trim());
 
