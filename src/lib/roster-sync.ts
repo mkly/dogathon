@@ -16,6 +16,19 @@ export type SyncSummary = {
 };
 
 const DEFAULT_CAPTURE = "dogs-page-A.html";
+// A live scrape should never make most of the current roster disappear at once.
+// Require a human to investigate instead of treating that disappearance as adoption.
+const MAX_LIVE_ADOPTION_FRACTION = 0.5;
+
+export class RosterSyncRefusal extends Error {
+  readonly reason: string;
+
+  constructor(reason: string) {
+    super(reason);
+    this.name = "RosterSyncRefusal";
+    this.reason = reason;
+  }
+}
 
 export async function syncRoster(): Promise<SyncSummary> {
   const settings = await prisma.rescueSettings.upsert({
@@ -40,6 +53,18 @@ export async function syncRoster(): Promise<SyncSummary> {
       dogs.filter((dog) => dog.adopted).map((dog) => dog.name),
     );
 
+    const adoptionCandidates = before.filter(
+      (resident) => resident.status === "available"
+        && (explicitlyAdopted.has(resident.name)
+          || (!usedFallbackCapture && !rosterNames.has(resident.name))),
+    );
+
+    assertPlausibleAdoptionCount(
+      before.filter((resident) => resident.status === "available").length,
+      adoptionCandidates.length,
+      usedFallbackCapture,
+    );
+
     for (const dog of dogs) {
       await upsertDog(tx, dog);
     }
@@ -48,11 +73,6 @@ export async function syncRoster(): Promise<SyncSummary> {
     // read the configured source. After a scrape failure we are looking at a
     // checked-in capture that knows nothing about the live roster, so absence
     // proves nothing there and only explicit *Adopted markers count.
-    const adoptionCandidates = before.filter(
-      (resident) => resident.status === "available"
-        && (explicitlyAdopted.has(resident.name)
-          || (!usedFallbackCapture && !rosterNames.has(resident.name))),
-    );
     let sponsorshipsClosed = 0;
 
     for (const resident of adoptionCandidates) {
@@ -88,6 +108,22 @@ export async function syncRoster(): Promise<SyncSummary> {
       source,
     };
   }, { maxWait: 10_000, timeout: 60_000 });
+}
+
+export function assertPlausibleAdoptionCount(
+  availableResidents: number,
+  adoptionCandidates: number,
+  usedFallbackCapture: boolean,
+) {
+  // A bundled capture only adopts dogs carrying an explicit adoption marker,
+  // so preserve that intentionally conservative fallback behavior.
+  if (usedFallbackCapture || availableResidents === 0) return;
+
+  if (adoptionCandidates / availableResidents > MAX_LIVE_ADOPTION_FRACTION) {
+    throw new RosterSyncRefusal(
+      `The parsed roster would adopt ${adoptionCandidates} of ${availableResidents} available residents. Please verify the roster source and try again.`,
+    );
+  }
 }
 
 type SyncTransaction = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
