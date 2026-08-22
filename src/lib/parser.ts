@@ -96,7 +96,7 @@ async function parseWithAnthropic(
       max_tokens: 12_000,
       messages: [{
         role: "user",
-        content: `Extract the rescue dogs from the page below. Return only a JSON array. Each item must have exactly these fields: name, breed, dobText, ageText, sex, weightText, personality, careNotes (string array), photoUrls (string array), and adopted (boolean). Preserve the page's wording. A heading containing an Adopted marker means adopted is true. Do not include navigation, footer, or courtesy-listing headings.\n\n${semanticPageText(source)}`,
+        content: `Extract the rescue dogs from the page below. Return only a JSON array. Each item must have exactly these fields: name, breed, dobText, ageText, sex, weightText, personality, careNotes (string array), photoUrls (string array), and adopted (boolean). Preserve the page's wording. A heading containing an Adopted marker means adopted is true. Photos appear as [photo: URL] markers; put the markers that follow a dog's heading in that dog's photoUrls. Do not include navigation, footer, or courtesy-listing headings.\n\n${semanticPageText(source)}`,
       }],
     }),
   });
@@ -114,7 +114,12 @@ async function parseWithAnthropic(
   const parsed = JSON.parse(extractJsonArray(text)) as unknown;
   if (!Array.isArray(parsed)) throw new Error("Anthropic response was not an array");
 
-  return parsed.map(normalizeRecord).filter((dog) => dog.name && dog.photoUrls.length);
+  const dogs = parsed.map(normalizeRecord).filter((dog) => dog.name && dog.photoUrls.length);
+  // An empty roster reads downstream as "every dog was adopted", so treat it as
+  // a failed parse and let the deterministic path answer instead.
+  if (!dogs.length) throw new Error("Anthropic response contained no usable dog records");
+
+  return dogs;
 }
 
 function normalizeRecord(value: unknown): DogRecord {
@@ -200,8 +205,15 @@ function semanticPageText(source: string): string {
     source
       .replace(/<script\b[\s\S]*?<\/script>/gi, "")
       .replace(/<style\b[\s\S]*?<\/style>/gi, "")
-      .replace(/<noscript\b[\s\S]*?<\/noscript>/gi, ""),
+      .replace(/<noscript\b[\s\S]*?<\/noscript>/gi, "")
+      // Photos live in tag attributes, which tag stripping would otherwise drop.
+      .replace(/<img\b[^>]*>/gi, imagePlaceholder),
   ).slice(0, 180_000);
+}
+
+function imagePlaceholder(tag: string): string {
+  const src = tag.match(/\bsrc\s*=\s*["']([^"']+)["']/i)?.[1];
+  return src ? `\n[photo: ${decodeEntities(src).split("?")[0]}]\n` : " ";
 }
 
 function htmlToText(value: string): string {
