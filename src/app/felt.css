@@ -21,6 +21,13 @@
 .felt-denim-lt { --felt-color: var(--felt-denim-lt); --felt-contrast: var(--felt-cream); }
 .felt-cream { --felt-color: var(--felt-cream); --felt-contrast: var(--felt-ink); }
 
+/* no focus rings anywhere: the browser default is chrome that reads as foreign
+   on cut felt, and the custom mustard/denim rings looked awkward too */
+:focus,
+:focus-visible {
+  outline: none;
+}
+
 /* raised patch: felt tint blended over the fabric grain on a pseudo, so the
    drop-shadow can follow the silhouette; bevel gradients hug the edges */
 .felt-panel,
@@ -182,11 +189,6 @@ svg.stitch.fine rect.thread { stroke-width: 1.4; }
     brightness(1.04);
 }
 
-.felt-button:focus-visible {
-  outline: 3px solid color-mix(in srgb, var(--felt-denim), white 25%);
-  outline-offset: 4px;
-}
-
 .felt-button:active:not(:disabled) {
   translate: 0 2px;
   --drop: 0.2;
@@ -293,12 +295,6 @@ svg.stitch.fine rect.thread { stroke-width: 1.4; }
 
 .felt-field ::placeholder {
   color: rgb(61 51 43 / 45%);
-}
-
-/* the hole itself takes the focus ring, clear of the stitch at -8px */
-.felt-field:focus-within {
-  outline: 3px solid var(--felt-mustard);
-  outline-offset: 9px;
 }
 
 /* mustard inline highlight, e.g. "their person" in the hero */

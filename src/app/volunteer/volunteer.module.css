@@ -87,11 +87,6 @@
   translate: 0 -3px;
 }
 
-.dogChoice input:focus-visible + .dogCard {
-  outline: 3px solid var(--felt-mustard);
-  outline-offset: 3px;
-}
-
 .photo {
   width: 100%;
 }

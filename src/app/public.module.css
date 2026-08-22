@@ -261,7 +261,7 @@
 }
 
 /* the fields are FeltField cut-outs, so the gap has to clear their stitch
-   rings (-8px) and focus outline (offset 9px) */
+   rings at -8px */
 .sponsorForm {
   display: grid;
   gap: 14px;

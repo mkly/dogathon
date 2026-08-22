@@ -101,11 +101,6 @@
 
 .statLink:hover .stat { translate: 0 -2px; }
 
-.statLink:focus-visible {
-  outline: 3px solid color-mix(in srgb, var(--felt-denim), white 25%);
-  outline-offset: 4px;
-}
-
 .queueSection { margin-bottom: 52px; }
 .composeSection { margin-bottom: 52px; }
 
