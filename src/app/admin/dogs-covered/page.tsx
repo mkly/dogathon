@@ -40,6 +40,11 @@ export default async function DogsCoveredPage() {
     (total, resident) => total + resident.sponsorships.length,
     0,
   );
+  // The /admin stat card counts only dogs with a live sponsor, so spell out that
+  // slice here too: this page also keeps dogs whose sponsorships have all ended.
+  const activelyCoveredCount = residents.filter((resident) =>
+    resident.sponsorships.some(({ status }) => status === "active"),
+  ).length;
 
   return (
     <main className={styles.page}>
@@ -57,7 +62,8 @@ export default async function DogsCoveredPage() {
       <div className={styles.summary}>
         <p>
           {residents.length} {residents.length === 1 ? "dog" : "dogs"} · {sponsorshipCount}{" "}
-          {sponsorshipCount === 1 ? "sponsorship" : "sponsorships"}
+          {sponsorshipCount === 1 ? "sponsorship" : "sponsorships"} · {activelyCoveredCount}{" "}
+          actively covered
         </p>
         <StitchBadge tone="moss">staff only</StitchBadge>
       </div>
