@@ -29,8 +29,8 @@ export default async function DogPage({ params, searchParams }: DogPageProps) {
       <Link className={styles.backLink} href="/">← All residents</Link>
 
       {sponsored && (
-        <FeltPanel className={styles.confirmation} tone="moss">
-          <StitchBadge tone="cream">You&apos;re on the team</StitchBadge>
+        <FeltPanel className={`${styles.confirmation} ${styles.confirmationTop}`} tone="moss">
+          <StitchBadge tone="cream">You&apos;re a hero!</StitchBadge>
           <h2>Thank you for sponsoring {resident.name}!</h2>
           <p>Your $25 monthly sponsorship is active until {resident.name} is adopted.</p>
         </FeltPanel>

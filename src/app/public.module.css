@@ -235,6 +235,13 @@
   margin-top: 4rem;
 }
 
+/* The sponsorship thank-you sits above the profile, so the bottom-of-page
+   breathing room flips: hug the back link, then clear the profile below. */
+.confirmationTop {
+  margin-top: 0;
+  margin-bottom: 3rem;
+}
+
 .confirmation h2 {
   font-size: 1.8rem;
 }
