@@ -28,3 +28,4 @@ npm-debug.log*
 
 # runtime volunteer photo uploads
 /public/uploads/
+.vercel

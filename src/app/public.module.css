@@ -21,7 +21,7 @@
   align-items: center;
   gap: 28px;
   /* headroom for the pup, who pokes out over the panel's top edge */
-  margin: 48px 0 24px;
+  margin: 14px 0 24px;
   padding: 38px 45px;
   text-align: left;
 }
