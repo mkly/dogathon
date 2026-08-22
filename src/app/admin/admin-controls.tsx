@@ -34,7 +34,7 @@ export function ApproveButton({
   id,
 }: {
   gmailConnected: boolean;
-  gmailStatus: string;
+  gmailStatus?: string;
   id: string;
 }) {
   const router = useRouter();
