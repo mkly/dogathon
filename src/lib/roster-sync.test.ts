@@ -5,6 +5,7 @@ import test from "node:test";
 import {
   extractScrapedText,
   graduationDraft,
+  loadRoster,
   loadRosterSource,
 } from "./roster-sync.ts";
 
@@ -26,4 +27,18 @@ test("graduation drafts are queued and sponsor-specific", () => {
   assert.equal(draft.status, "draft");
   assert.match(draft.bodyText, /Sam/);
   assert.match(draft.bodyText, /sponsorship has ended/i);
+});
+
+test("a configured local capture is the real source, not a scrape fallback", async () => {
+  const roster = await loadRoster("seed/dogs-page-A.html");
+
+  assert.equal(roster.usedFallbackCapture, false);
+  assert.match(roster.text, /Hattie/);
+});
+
+test("an unreachable remote source is flagged as a fallback capture", async () => {
+  const roster = await loadRoster("https://example.test/dogs-and-more");
+
+  assert.equal(roster.usedFallbackCapture, true);
+  assert.match(roster.text, /Walnut/);
 });

@@ -21,8 +21,8 @@ export async function syncRoster(): Promise<SyncSummary> {
     update: {},
     create: {},
   });
-  const source = await loadRosterSource(settings.sourceUrl);
-  const dogs = await parseDogRoster(source);
+  const { text, usedFallbackCapture } = await loadRoster(settings.sourceUrl);
+  const dogs = await parseDogRoster(text);
 
   if (dogs.length === 0) {
     throw new Error("Roster sync refused to adopt every resident after parsing an empty roster");
@@ -42,9 +42,14 @@ export async function syncRoster(): Promise<SyncSummary> {
       await upsertDog(tx, dog);
     }
 
+    // A dog vanishing from the roster only means "adopted" when we actually
+    // read the configured source. After a scrape failure we are looking at a
+    // checked-in capture that knows nothing about the live roster, so absence
+    // proves nothing there and only explicit *Adopted markers count.
     const adoptionCandidates = before.filter(
       (resident) => resident.status === "available"
-        && (explicitlyAdopted.has(resident.name) || !rosterNames.has(resident.name)),
+        && (explicitlyAdopted.has(resident.name)
+          || (!usedFallbackCapture && !rosterNames.has(resident.name))),
     );
     let sponsorshipsClosed = 0;
 
@@ -78,7 +83,7 @@ export async function syncRoster(): Promise<SyncSummary> {
       adopted: adoptionCandidates.length,
       sponsorshipsClosed,
     };
-  });
+  }, { maxWait: 10_000, timeout: 60_000 });
 }
 
 type SyncTransaction = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
@@ -109,19 +114,32 @@ async function upsertDog(tx: SyncTransaction, dog: DogRecord) {
   });
 }
 
-export async function loadRosterSource(sourceUrl: string): Promise<string> {
+export type RosterSource = {
+  text: string;
+  /** True when a scrape failure forced the checked-in demo capture. */
+  usedFallbackCapture: boolean;
+};
+
+export async function loadRoster(sourceUrl: string): Promise<RosterSource> {
   const localPath = resolveLocalSource(sourceUrl);
-  if (localPath) return readFile(localPath, "utf8");
+  if (localPath) return { text: await readFile(localPath, "utf8"), usedFallbackCapture: false };
 
   try {
     const result = await scrapeUrl(sourceUrl);
     const scraped = extractScrapedText(result);
-    if (scraped) return scraped;
+    if (scraped) return { text: scraped, usedFallbackCapture: false };
   } catch (error) {
     console.warn("Roster scrape failed; using the checked-in capture.", error);
   }
 
-  return readFile(fallbackCapturePath(sourceUrl), "utf8");
+  return {
+    text: await readFile(fallbackCapturePath(sourceUrl), "utf8"),
+    usedFallbackCapture: true,
+  };
+}
+
+export async function loadRosterSource(sourceUrl: string): Promise<string> {
+  return (await loadRoster(sourceUrl)).text;
 }
 
 export function extractScrapedText(value: unknown): string | null {
