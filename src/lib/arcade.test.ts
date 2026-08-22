@@ -77,12 +77,17 @@ test("all Arcade helpers return structured calls without credentials", async () 
         },
         {
           dryRun: true,
-          operation: "authorize",
+          operation: "status",
           toolName: "Gmail.SendEmail",
           userId: "volunteer@example.com",
         },
       ],
     );
+
+    const status = calls[4] as Awaited<ReturnType<typeof gmailAuthStatus>>;
+    assert.equal(status.authorized, false);
+    assert.equal(status.status, "not_configured");
+    assert.equal(status.url, null);
   } finally {
     if (previousApiKey === undefined) delete process.env.ARCADE_API_KEY;
     else process.env.ARCADE_API_KEY = previousApiKey;

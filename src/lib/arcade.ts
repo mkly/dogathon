@@ -8,7 +8,7 @@ const TOOLS = {
 
 export type DryRunCall = {
   dryRun: true;
-  operation: "authorize" | "execute";
+  operation: "authorize" | "execute" | "status";
   toolName: (typeof TOOLS)[keyof typeof TOOLS];
   userId: string;
   input: Record<string, unknown>;
@@ -118,7 +118,13 @@ export async function gmailAuthorizeUrl(user?: string) {
 export async function gmailAuthStatus(user?: string) {
   const arcade = client();
   if (!arcade) {
-    return dryRun("authorize", TOOLS.gmailSend, {}, user);
+    // Mirror the live return shape so callers can read `authorized` either way.
+    return {
+      ...dryRun("status", TOOLS.gmailSend, {}, user),
+      authorized: false as const,
+      status: "not_configured" as const,
+      url: null,
+    };
   }
 
   const response = await arcade.tools.authorize({
