@@ -1,0 +1,226 @@
+.main {
+  min-height: 100svh;
+  padding: 2rem 1rem 3rem;
+  background:
+    radial-gradient(circle at 15% 8%, rgb(217 165 33 / 18%), transparent 24rem),
+    var(--felt-oatmeal);
+}
+
+.shell {
+  width: min(100%, 46rem);
+  margin: 0 auto;
+}
+
+.header {
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+.header h1 {
+  margin: 0.9rem 0 0.45rem;
+  color: var(--felt-ink);
+  font-size: clamp(2rem, 9vw, 3.25rem);
+  line-height: 0.95;
+}
+
+.header p {
+  max-width: 34rem;
+  margin: 0 auto;
+  color: rgb(61 51 43 / 76%);
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.form {
+  gap: 1.4rem;
+}
+
+.fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.fieldset legend,
+.inputLabel {
+  margin: 0 0 0.75rem;
+  color: var(--felt-ink);
+  font-size: 1rem;
+  font-weight: 900;
+}
+
+.dogGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+  gap: 0.9rem;
+}
+
+.dogChoice {
+  min-width: 0;
+  margin: 0;
+  cursor: pointer;
+}
+
+.dogChoice input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.dogCard {
+  display: grid;
+  gap: 0.6rem;
+  padding: 0.65rem;
+  border: 3px solid transparent;
+  border-radius: 18px 8px 16px 9px / 9px 16px 8px 18px;
+  color: var(--felt-ink);
+  background: rgb(248 242 231 / 55%);
+  text-align: center;
+  transition: transform 120ms ease, background-color 120ms ease;
+}
+
+.dogChoice input:checked + .dogCard {
+  border-color: var(--felt-denim);
+  background: var(--felt-cream);
+  box-shadow: 0 5px 0 rgb(85 116 147 / 35%);
+  transform: translateY(-3px);
+}
+
+.dogChoice input:focus-visible + .dogCard {
+  outline: 3px solid var(--felt-mustard);
+  outline-offset: 3px;
+}
+
+.photo {
+  width: 100%;
+  padding: 8px;
+  box-shadow: 0 3px 0 #d7cbb9, 0 6px 9px rgb(61 51 43 / 18%);
+}
+
+.photo::after {
+  inset: 4px;
+}
+
+.photo img,
+.photo div {
+  aspect-ratio: 1;
+}
+
+.notePanel {
+  display: grid;
+  gap: 0.6rem;
+  padding: 1.5rem;
+  overflow: visible;
+}
+
+.notePanel label:not(:first-child) {
+  margin-top: 0.65rem;
+}
+
+.inputLabel span,
+.notePanel small {
+  color: rgb(61 51 43 / 65%);
+  font-weight: 700;
+}
+
+.notePanel input {
+  min-height: 3.25rem;
+  border: 2px solid rgb(61 51 43 / 35%);
+  border-radius: 12px 5px 11px 6px / 6px 11px 5px 12px;
+}
+
+.notePanel input[type="file"] {
+  padding: 0.55rem;
+  background: var(--felt-oatmeal);
+}
+
+.notePanel input[type="file"]::file-selector-button {
+  margin-right: 0.75rem;
+  padding: 0.6rem 0.75rem;
+  border: 0;
+  border-radius: 9px 4px 8px 5px;
+  color: var(--felt-cream);
+  background: var(--felt-denim);
+  font: inherit;
+  font-weight: 900;
+}
+
+.submit {
+  width: 100%;
+  min-height: 4rem;
+  font-size: 1.15rem;
+}
+
+.error {
+  margin: -0.25rem 0 0;
+  padding: 0.8rem 1rem;
+  border: 2px dashed var(--felt-brick);
+  border-radius: 10px;
+  color: #7b2820;
+  background: #fff0e9;
+  font-weight: 800;
+}
+
+.empty {
+  padding: 1.5rem;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.confirmation {
+  width: min(100%, 29rem);
+  margin: auto;
+  padding: 2.5rem 2rem;
+  color: var(--felt-cream);
+  text-align: center;
+}
+
+.confirmationMark {
+  display: grid;
+  width: 5rem;
+  height: 5rem;
+  margin: 1.5rem auto 1rem;
+  border: 3px dashed var(--felt-thread);
+  border-radius: 50%;
+  place-items: center;
+  font-size: 3rem;
+  font-weight: 900;
+}
+
+.confirmation h1 {
+  margin: 0;
+}
+
+.confirmation p {
+  margin: 0.75rem 0 1.5rem;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.againLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
+@media (max-width: 390px) {
+  .main {
+    padding: 1.25rem 0.75rem 2rem;
+  }
+
+  .dogGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.6rem;
+  }
+
+  .dogCard {
+    padding: 0.45rem;
+  }
+
+  .notePanel {
+    padding: 1.25rem 1rem;
+  }
+}
