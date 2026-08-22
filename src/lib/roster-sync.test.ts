@@ -3,10 +3,12 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import {
+  assertPlausibleAdoptionCount,
   extractScrapedText,
   graduationDraft,
   loadRoster,
   loadRosterSource,
+  RosterSyncRefusal,
 } from "./roster-sync.ts";
 
 test("loads a checked-in roster path without requiring the network", async () => {
@@ -32,6 +34,22 @@ test("graduation drafts are queued and sponsor-specific", () => {
   assert.equal(draft.status, "draft");
   assert.match(draft.bodyText, /Sam/);
   assert.match(draft.bodyText, /sponsorship has ended/i);
+});
+
+test("refuses a live sync that would adopt most available residents", () => {
+  assert.throws(
+    () => assertPlausibleAdoptionCount(10, 6, false),
+    (error) => error instanceof RosterSyncRefusal
+      && /adopt 6 of 10 available residents/.test(error.reason),
+  );
+});
+
+test("allows a plausible live adoption count", () => {
+  assert.doesNotThrow(() => assertPlausibleAdoptionCount(10, 2, false));
+});
+
+test("preserves explicit adoption handling for fallback captures", () => {
+  assert.doesNotThrow(() => assertPlausibleAdoptionCount(10, 10, true));
 });
 
 test("a configured local capture is the real source, not a scrape fallback", async () => {

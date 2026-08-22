@@ -335,7 +335,16 @@ export function StaffTools({ initialGmail }: { initialGmail: GmailStatus }) {
     try {
       const response = await fetch("/api/sync", { method: "POST" });
       if (!response.ok) {
-        pushToast("error", routeError("Roster sync", response.status));
+        const failure = await response.json().catch(() => null) as {
+          refused?: boolean;
+          reason?: unknown;
+        } | null;
+        if (failure?.refused) {
+          const detail = typeof failure.reason === "string" ? ` ${failure.reason}` : "";
+          pushToast("error", `Unable to sync at this time.${detail}`);
+        } else {
+          pushToast("error", routeError("Roster sync", response.status));
+        }
         return;
       }
       const result = (await response.json()) as SyncResult;
