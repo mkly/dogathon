@@ -81,6 +81,16 @@ export default async function AdminPage() {
         </FeltPanel>
       </section>
 
+      <nav aria-label="Staff directories" className={styles.directoryNav}>
+        <div>
+          <p className={styles.eyebrow}>Sponsor care</p>
+          <strong>Names, contact details, and sponsorship history</strong>
+        </div>
+        <Link className="felt-button felt-mustard" href="/admin/sponsors">
+          View sponsors
+        </Link>
+      </nav>
+
       <section className={styles.queueSection}>
         <div className={styles.sectionTitle}>
           <div>
