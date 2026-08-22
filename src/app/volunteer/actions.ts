@@ -48,7 +48,11 @@ export async function submitVolunteerNote(formData: FormData) {
   }
 
   const resident = await prisma.resident.findFirst({
-    where: { id: residentId, status: "available" },
+    where: {
+      id: residentId,
+      status: "available",
+      sponsorships: { some: { status: "active" } },
+    },
     select: { id: true },
   });
 

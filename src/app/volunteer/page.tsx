@@ -27,7 +27,7 @@ export default async function VolunteerPage({ searchParams }: VolunteerPageProps
   const [{ dog, error, submitted }, residents] = await Promise.all([
     searchParams,
     prisma.resident.findMany({
-      where: { status: "available" },
+      where: { status: "available", sponsorships: { some: { status: "active" } } },
       orderBy: { name: "asc" },
       select: { id: true, name: true, photoUrls: true },
     }),
@@ -92,7 +92,7 @@ export default async function VolunteerPage({ searchParams }: VolunteerPageProps
               </div>
             ) : (
               <FeltPanel className={styles.empty} tone="oatmeal">
-                No available dogs are loaded yet. Ask a staff member to sync the roster.
+                No dogs have active sponsors right now, so there’s no one to send a pup-date to yet.
               </FeltPanel>
             )}
           </fieldset>
