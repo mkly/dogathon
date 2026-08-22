@@ -1,0 +1,75 @@
+/* Fixed stack in the bottom-left corner. The viewport itself is inert so it
+   never swallows clicks on the page underneath. */
+.viewport {
+  position: fixed;
+  z-index: 50;
+  bottom: 18px;
+  left: 18px;
+  display: grid;
+  width: min(24rem, calc(100vw - 36px));
+  gap: 12px;
+  pointer-events: none;
+}
+
+.toast {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 10px;
+  padding: 14px 16px;
+  animation: toast-in 220ms ease-out both;
+  pointer-events: auto;
+}
+
+.text {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 800;
+  line-height: 1.4;
+}
+
+.dismiss {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 18%);
+  color: inherit;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  place-items: center;
+}
+
+.dismiss:hover { background: rgb(255 255 255 / 30%); }
+
+.dismiss:focus-visible {
+  outline: 2px solid var(--felt-cream);
+  outline-offset: 2px;
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    translate: -14px 6px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast { animation: none; }
+}
+
+@media (max-width: 620px) {
+  .viewport {
+    right: 14px;
+    bottom: 14px;
+    left: 14px;
+    width: auto;
+  }
+}

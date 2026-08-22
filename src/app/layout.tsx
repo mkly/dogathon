@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Nunito } from "next/font/google";
 
 import { FeltFilters } from "@/components/felt";
+import { ToastViewport } from "@/components/toast";
 
 import "./felt.css";
 import "./globals.css";
@@ -29,6 +30,7 @@ export default function RootLayout({
       <body className={nunito.className}>
         <FeltFilters />
         {children}
+        <ToastViewport />
       </body>
     </html>
   );

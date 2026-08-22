@@ -51,7 +51,6 @@
 .eyebrowLight { color: var(--felt-thread); }
 
 .staffTools {
-  position: relative;
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -147,11 +146,8 @@
 .composeItem .composeBreed { margin: 0 0 6px; font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; opacity: 0.6; }
 .composeItem p { margin: 0; font-size: 0.8rem; font-weight: 800; }
 .composeItem small { display: block; margin-top: 5px; font-size: 0.7rem; font-weight: 700; opacity: 0.66; }
-/* the stack fills the copy column so the button hugs its label while a status
-   toast still has the full width to wrap in */
 .composeItem .actionStack { grid-column: 2; justify-items: start; }
 .composeItem .actionStack :global(.felt-button) { white-space: nowrap; }
-.composeItem .toast { justify-self: stretch; }
 .composeEmpty { padding: 26px; text-align: center; font-weight: 800; }
 
 .queueItem {
@@ -200,26 +196,8 @@
 .settingsForm { display: grid; gap: 14px; }
 .settingsForm label { margin: 6px 0 0; font-size: 0.7rem; font-weight: 900; letter-spacing: 0.08em; text-transform: uppercase; }
 
-.saveRow { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-top: 8px; }
-.formMessage { font-size: 0.78rem; font-weight: 800; }
-.formMessage[data-status="error"] { color: #ffe0da; }
+.saveRow { display: flex; align-items: center; justify-content: flex-end; gap: 14px; margin-top: 8px; }
 
-.toast {
-  z-index: 5;
-  padding: 8px 10px;
-  border: 2px dashed var(--felt-thread);
-  border-radius: 11px 5px 10px 6px;
-  color: var(--felt-cream);
-  font-size: 0.72rem;
-  font-weight: 800;
-  line-height: 1.3;
-  box-shadow: 0 4px 8px rgb(61 51 43 / 22%);
-}
-
-.staffTools > .toast { position: absolute; top: calc(100% + 10px); right: 0; width: 230px; }
-.toastError { background: var(--felt-brick); }
-.toastWarning { background: var(--felt-mustard); color: var(--ink); }
-.toastSuccess { background: var(--felt-moss); }
 .footer { margin-top: 42px; text-align: center; font-size: 13px; font-weight: 700; opacity: 0.6; }
 
 @media (max-width: 900px) {

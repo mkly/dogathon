@@ -4,11 +4,10 @@ import { useActionState, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { FeltButton, FeltField, StitchBadge } from "@/components/felt";
+import { pushToast } from "@/components/toast";
 
 import { saveSettings, type SettingsState } from "./actions";
 import styles from "./admin.module.css";
-
-type Toast = { tone: "error" | "success" | "warning"; text: string } | null;
 
 type SyncResult = {
   usedFallbackCapture: boolean;
@@ -29,43 +28,22 @@ async function responseError(response: Response, action: string) {
     : routeError(action, response.status);
 }
 
-function FeltToast({ toast }: { toast: Toast }) {
-  if (!toast) return null;
-
-  return (
-    <div
-      className={`${styles.toast} ${
-        toast.tone === "error"
-          ? styles.toastError
-          : toast.tone === "warning"
-            ? styles.toastWarning
-            : styles.toastSuccess
-      }`}
-      role="status"
-    >
-      {toast.text}
-    </div>
-  );
-}
-
 export function ApproveButton({ id }: { id: string }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
-  const [toast, setToast] = useState<Toast>(null);
 
   async function approve() {
     setPending(true);
-    setToast(null);
     try {
       const response = await fetch(`/api/pupdates/${id}/approve`, { method: "POST" });
       if (!response.ok) {
-        setToast({ tone: "error", text: routeError("Approve and send", response.status) });
+        pushToast("error", routeError("Approve and send", response.status));
         return;
       }
-      setToast({ tone: "success", text: "Approved and sent." });
+      pushToast("success", "Approved and sent.");
       router.refresh();
     } catch {
-      setToast({ tone: "error", text: "Approve and send could not reach the server." });
+      pushToast("error", "Approve and send could not reach the server.");
     } finally {
       setPending(false);
     }
@@ -76,7 +54,6 @@ export function ApproveButton({ id }: { id: string }) {
       <FeltButton disabled={pending} onClick={approve} tone="moss">
         {pending ? "Sending…" : "Approve & send"}
       </FeltButton>
-      <FeltToast toast={toast} />
     </div>
   );
 }
@@ -90,11 +67,9 @@ export function ComposeButton({
 }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
-  const [toast, setToast] = useState<Toast>(null);
 
   async function compose() {
     setPending(true);
-    setToast(null);
     try {
       const response = await fetch("/api/pupdates/compose", {
         method: "POST",
@@ -102,13 +77,13 @@ export function ComposeButton({
         body: JSON.stringify({ residentId }),
       });
       if (!response.ok) {
-        setToast({ tone: "error", text: await responseError(response, "Compose pupdate") });
+        pushToast("error", await responseError(response, "Compose pupdate"));
         return;
       }
-      setToast({ tone: "success", text: `${residentName}'s draft is ready for review.` });
+      pushToast("success", `${residentName}'s draft is ready for review.`);
       router.refresh();
     } catch {
-      setToast({ tone: "error", text: "Compose pupdate could not reach the server." });
+      pushToast("error", "Compose pupdate could not reach the server.");
     } finally {
       setPending(false);
     }
@@ -119,7 +94,6 @@ export function ComposeButton({
       <FeltButton disabled={pending} onClick={compose} tone="denim">
         {pending ? "Composing…" : "Compose pupdate"}
       </FeltButton>
-      <FeltToast toast={toast} />
     </div>
   );
 }
@@ -129,7 +103,6 @@ type GmailStatus = { connected: boolean; email?: string };
 export function StaffTools() {
   const [gmail, setGmail] = useState<GmailStatus | null>(null);
   const [pending, setPending] = useState<"gmail" | "sync" | null>(null);
-  const [toast, setToast] = useState<Toast>(null);
 
   useEffect(() => {
     let current = true;
@@ -139,7 +112,7 @@ export function StaffTools() {
         if (!current) return;
         if (!response.ok) {
           setGmail({ connected: false });
-          setToast({ tone: "error", text: await responseError(response, "Gmail status") });
+          pushToast("error", await responseError(response, "Gmail status"));
           return;
         }
         setGmail((await response.json()) as GmailStatus);
@@ -155,19 +128,20 @@ export function StaffTools() {
 
   async function syncNow() {
     setPending("sync");
-    setToast(null);
     try {
       const response = await fetch("/api/sync", { method: "POST" });
       if (!response.ok) {
-        setToast({ tone: "error", text: routeError("Roster sync", response.status) });
+        pushToast("error", routeError("Roster sync", response.status));
         return;
       }
       const result = (await response.json()) as SyncResult;
-      setToast(result.usedFallbackCapture
-        ? { tone: "warning", text: `Roster synced from bundled capture (${result.source}).` }
-        : { tone: "success", text: `Roster synced from live source (${result.source}).` });
+      if (result.usedFallbackCapture) {
+        pushToast("warning", `Roster synced from bundled capture (${result.source}).`);
+      } else {
+        pushToast("success", `Roster synced from live source (${result.source}).`);
+      }
     } catch {
-      setToast({ tone: "error", text: "Roster sync could not reach the server." });
+      pushToast("error", "Roster sync could not reach the server.");
     } finally {
       setPending(null);
     }
@@ -175,21 +149,20 @@ export function StaffTools() {
 
   async function connectGmail() {
     setPending("gmail");
-    setToast(null);
     try {
       const response = await fetch("/api/arcade/gmail/authorize", { method: "POST" });
       if (!response.ok) {
-        setToast({ tone: "error", text: await responseError(response, "Gmail connect") });
+        pushToast("error", await responseError(response, "Gmail connect"));
         return;
       }
       const body = (await response.json()) as { url?: string };
       if (!body.url) {
-        setToast({ tone: "error", text: "Gmail connect returned no authorization URL." });
+        pushToast("error", "Gmail connect returned no authorization URL.");
         return;
       }
       window.location.assign(body.url);
     } catch {
-      setToast({ tone: "error", text: "Gmail connect could not reach the server." });
+      pushToast("error", "Gmail connect could not reach the server.");
     } finally {
       setPending(null);
     }
@@ -214,7 +187,6 @@ export function StaffTools() {
       <FeltButton disabled={pending === "sync"} onClick={syncNow} tone="mustard">
         {pending === "sync" ? "Syncing…" : "Sync now"}
       </FeltButton>
-      <FeltToast toast={toast} />
     </div>
   );
 }
@@ -229,6 +201,12 @@ export function SettingsForm({
   sourceUrl: string;
 }) {
   const [state, formAction, pending] = useActionState(saveSettings, initialSettingsState);
+
+  // The server action reports through the same corner stack as everything else.
+  useEffect(() => {
+    if (state.status === "idle") return;
+    pushToast(state.status, state.message);
+  }, [state]);
 
   return (
     <form action={formAction} className={styles.settingsForm}>
@@ -254,9 +232,6 @@ export function SettingsForm({
         />
       </FeltField>
       <div className={styles.saveRow}>
-        <span className={styles.formMessage} data-status={state.status} role="status">
-          {state.message}
-        </span>
         <FeltButton disabled={pending} tone="mustard" type="submit">
           {pending ? "Pinning…" : "Save & pin 📌"}
         </FeltButton>
