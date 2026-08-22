@@ -80,7 +80,7 @@ export default async function AdminPage() {
           <small>active sponsorships × $25</small>
         </FeltPanel>
         <Link
-          aria-label="View active sponsors"
+          aria-label={`View active sponsors (${activeSponsorCount} active)`}
           className={styles.statLink}
           href="/admin/sponsors"
         >
