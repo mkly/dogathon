@@ -172,6 +172,7 @@
 
 .staffTools > .toast { position: absolute; top: calc(100% + 10px); right: 0; width: 230px; }
 .toastError { background: var(--felt-brick); }
+.toastWarning { background: var(--felt-mustard); color: var(--ink); }
 .toastSuccess { background: var(--felt-moss); }
 .footer { margin-top: 42px; text-align: center; font-size: 0.8rem; font-weight: 800; opacity: 0.58; }
 

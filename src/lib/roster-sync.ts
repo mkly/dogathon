@@ -11,6 +11,8 @@ export type SyncSummary = {
   updated: number;
   adopted: number;
   sponsorshipsClosed: number;
+  usedFallbackCapture: boolean;
+  source: string;
 };
 
 const DEFAULT_CAPTURE = "dogs-page-A.html";
@@ -21,7 +23,7 @@ export async function syncRoster(): Promise<SyncSummary> {
     update: {},
     create: {},
   });
-  const { text, usedFallbackCapture } = await loadRoster(settings.sourceUrl);
+  const { text, usedFallbackCapture, source } = await loadRoster(settings.sourceUrl);
   const dogs = await parseDogRoster(text);
 
   if (dogs.length === 0) {
@@ -82,6 +84,8 @@ export async function syncRoster(): Promise<SyncSummary> {
       updated: dogs.filter((dog) => existingNames.has(dog.name)).length,
       adopted: adoptionCandidates.length,
       sponsorshipsClosed,
+      usedFallbackCapture,
+      source,
     };
   }, { maxWait: 10_000, timeout: 60_000 });
 }
@@ -118,23 +122,33 @@ export type RosterSource = {
   text: string;
   /** True when a scrape failure forced the checked-in demo capture. */
   usedFallbackCapture: boolean;
+  /** The configured source or bundled capture that supplied the roster. */
+  source: string;
 };
 
 export async function loadRoster(sourceUrl: string): Promise<RosterSource> {
   const localPath = resolveLocalSource(sourceUrl);
-  if (localPath) return { text: await readFile(localPath, "utf8"), usedFallbackCapture: false };
+  if (localPath) {
+    return {
+      text: await readFile(localPath, "utf8"),
+      usedFallbackCapture: false,
+      source: sourceUrl,
+    };
+  }
 
   try {
     const result = await scrapeUrl(sourceUrl);
     const scraped = extractScrapedText(result);
-    if (scraped) return { text: scraped, usedFallbackCapture: false };
+    if (scraped) return { text: scraped, usedFallbackCapture: false, source: sourceUrl };
   } catch (error) {
     console.warn("Roster scrape failed; using the checked-in capture.", error);
   }
 
+  const capture = fallbackCapture(sourceUrl);
   return {
-    text: await readFile(fallbackCapturePath(sourceUrl), "utf8"),
+    text: await readFile(seedCapturePath(capture), "utf8"),
     usedFallbackCapture: true,
+    source: `seed/${capture}`,
   };
 }
 
@@ -162,9 +176,8 @@ function resolveLocalSource(sourceUrl: string): string | null {
   return seedCapturePath(path.basename(sourcePath));
 }
 
-function fallbackCapturePath(sourceUrl: string): string {
-  const capture = /dogs-page-B\.html/i.test(sourceUrl) ? "dogs-page-B.html" : DEFAULT_CAPTURE;
-  return seedCapturePath(capture);
+function fallbackCapture(sourceUrl: string): string {
+  return /dogs-page-B\.html/i.test(sourceUrl) ? "dogs-page-B.html" : DEFAULT_CAPTURE;
 }
 
 function seedCapturePath(capture: string): string {
