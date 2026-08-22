@@ -153,6 +153,19 @@
   text-align: center;
 }
 
+.footer {
+  margin-top: 42px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 700;
+  opacity: 0.6;
+}
+
+.footer a {
+  color: inherit;
+  text-underline-offset: 3px;
+}
+
 .detailShell {
   max-width: 68rem;
 }

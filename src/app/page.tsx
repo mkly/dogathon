@@ -64,6 +64,10 @@ export default async function Home() {
           <p>Check back soon to meet the next residents looking for a sponsor.</p>
         </FeltPanel>
       )}
+
+      <footer className={styles.footer}>
+        <Link href="/admin">staff room</Link>
+      </footer>
     </main>
   );
 }
