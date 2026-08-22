@@ -127,17 +127,28 @@
 }
 
 .composeItem {
-  display: flex;
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr);
+  align-content: center;
   align-items: center;
-  justify-content: space-between;
-  gap: 18px;
+  min-height: 148px;
+  gap: 14px 18px;
   padding: 20px;
 }
 
-.composeItem h3 { margin: 0 0 6px; font-size: 1.15rem; font-weight: 900; }
+.composePhoto { width: 84px; }
+.composePhoto img { aspect-ratio: 1; }
+.composeCopy { min-width: 0; }
+
+.composeItem h3 { margin: 0 0 2px; font-size: 1.15rem; font-weight: 900; }
+.composeItem .composeBreed { margin: 0 0 6px; font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; opacity: 0.6; }
 .composeItem p { margin: 0; font-size: 0.8rem; font-weight: 800; }
 .composeItem small { display: block; margin-top: 5px; font-size: 0.7rem; font-weight: 700; opacity: 0.66; }
-.composeItem .actionStack { flex: 0 0 156px; }
+/* the stack fills the copy column so the button hugs its label while a status
+   toast still has the full width to wrap in */
+.composeItem .actionStack { grid-column: 2; justify-items: start; }
+.composeItem .actionStack :global(.felt-button) { white-space: nowrap; }
+.composeItem .toast { justify-self: stretch; }
 .composeEmpty { padding: 26px; text-align: center; font-weight: 800; }
 
 .queueItem {
@@ -229,8 +240,10 @@
   .stat { min-height: 112px; padding: 17px; }
   .directoryNav { align-items: stretch; flex-direction: column; margin-top: -8px; }
   .directoryNav :global(.felt-button) { text-align: center; }
-  .composeItem { align-items: stretch; flex-direction: column; }
-  .composeItem .actionStack { flex-basis: auto; }
+  .composeItem { grid-template-columns: 72px minmax(0, 1fr); }
+  .composePhoto { width: 72px; }
+  .composeItem .actionStack { grid-column: 1 / -1; justify-items: stretch; }
+  .composeItem .actionStack :global(.felt-button) { text-align: center; }
   .queueItem { padding: 19px; }
   .settings { grid-template-columns: 1fr; gap: 26px; padding: 32px 24px; }
   .saveRow { align-items: stretch; flex-direction: column; }

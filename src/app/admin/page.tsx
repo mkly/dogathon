@@ -38,6 +38,8 @@ export default async function AdminPage() {
         select: {
           id: true,
           name: true,
+          breed: true,
+          photoUrls: true,
           volunteerNotes: {
             orderBy: { createdAt: "desc" },
             select: { createdAt: true },
@@ -128,8 +130,14 @@ export default async function AdminPage() {
 
               return (
                 <FeltPanel className={styles.composeItem} key={resident.id} tone="oatmeal">
-                  <div>
+                  <PhotoPatch
+                    alt={`${resident.name} portrait`}
+                    className={styles.composePhoto}
+                    src={resident.photoUrls[0]}
+                  />
+                  <div className={styles.composeCopy}>
                     <h3>{resident.name}</h3>
+                    <p className={styles.composeBreed}>{resident.breed}</p>
                     <p>
                       {resident._count.volunteerNotes}{" "}
                       {resident._count.volunteerNotes === 1 ? "volunteer note" : "volunteer notes"}

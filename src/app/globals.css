@@ -32,10 +32,14 @@ body::before {
   pointer-events: none;
 }
 
+/* Page shells are laid out by their own module CSS. This only guarantees a
+   full-height, padded canvas -- children stretch, they are not centred: the
+   old place-items: center shrink-wrapped every section to its max-content
+   width, so panels never lined up with each other. */
 main {
   display: grid;
+  align-content: start;
   min-height: 100vh;
-  place-items: center;
   padding: 24px;
 }
 
