@@ -97,9 +97,6 @@ export default async function SponsorsPage() {
                   <p>{latest.sponsorPhone ? <a href={`tel:${latest.sponsorPhone}`}>{latest.sponsorPhone}</a> : "No phone provided"}</p>
                   <p>Updates: {latest.channel}</p>
                 </div>
-                <Link className={`felt-button felt-mustard ${styles.detailLink}`} href={`/admin/sponsors/${encodeURIComponent(email)}`}>
-                  View details
-                </Link>
               </div>
 
               <div className={styles.tableWrap}>
