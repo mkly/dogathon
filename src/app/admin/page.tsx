@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 
 import { FeltPanel, PhotoPatch, StitchBadge } from "@/components/felt";
 import { SignOutButton } from "@/components/sign-out-button";
+import { gmailAuthStatus } from "@/lib/arcade";
 import { getSession } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
 
@@ -12,6 +13,15 @@ import styles from "./admin.module.css";
 
 export const dynamic = "force-dynamic";
 
+async function getGmailStatus() {
+  try {
+    return await gmailAuthStatus();
+  } catch (error) {
+    console.error("Gmail status check failed", error);
+    return { authorized: false as const, status: "unavailable" };
+  }
+}
+
 export default async function AdminPage() {
   const session = await getSession(await headers());
 
@@ -19,7 +29,7 @@ export default async function AdminPage() {
     redirect("/sign-in");
   }
 
-  const [drafts, noteResidents, storedSettings, activeSponsorCount, sponsoredDogCount] =
+  const [drafts, noteResidents, storedSettings, activeSponsorCount, sponsoredDogCount, gmail] =
     await Promise.all([
       prisma.pupdate.findMany({
         where: { status: "draft" },
@@ -51,6 +61,7 @@ export default async function AdminPage() {
       prisma.rescueSettings.findUnique({ where: { id: "default" } }),
       prisma.sponsorship.count({ where: { status: "active" } }),
       prisma.resident.count({ where: { sponsorships: { some: { status: "active" } } } }),
+      getGmailStatus(),
     ]);
 
   const settings = storedSettings ?? {
@@ -70,7 +81,15 @@ export default async function AdminPage() {
           <h1>Staff room</h1>
         </div>
         <div className={styles.headerActions}>
-          <StaffTools />
+          <StaffTools
+            initialGmail={{
+              connected: gmail.authorized,
+              status: gmail.status,
+              ...(gmail.authorized && process.env.ARCADE_USER_ID?.includes("@")
+                ? { email: process.env.ARCADE_USER_ID }
+                : {}),
+            }}
+          />
           <SignOutButton />
         </div>
       </header>
@@ -196,7 +215,11 @@ export default async function AdminPage() {
                       <small>P.S. {settings.pinnedPostscript}</small>
                     )}
                 </article>
-                <ApproveButton id={draft.id} />
+                <ApproveButton
+                  gmailConnected={gmail.authorized}
+                  gmailStatus={gmail.status}
+                  id={draft.id}
+                />
               </FeltPanel>
             ))
           )}

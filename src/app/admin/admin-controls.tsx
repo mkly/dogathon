@@ -28,11 +28,21 @@ async function responseError(response: Response, action: string) {
     : routeError(action, response.status);
 }
 
-export function ApproveButton({ id }: { id: string }) {
+export function ApproveButton({
+  gmailConnected,
+  gmailStatus,
+  id,
+}: {
+  gmailConnected: boolean;
+  gmailStatus: string;
+  id: string;
+}) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
 
   async function approve() {
+    if (!gmailConnected) return;
+
     setPending(true);
     try {
       const response = await fetch(`/api/pupdates/${id}/approve`, { method: "POST" });
@@ -51,9 +61,16 @@ export function ApproveButton({ id }: { id: string }) {
 
   return (
     <div className={styles.actionStack}>
-      <FeltButton disabled={pending} onClick={approve} tone="moss">
+      <FeltButton disabled={pending || !gmailConnected} onClick={approve} tone="moss">
         {pending ? "Sending…" : "Approve & send"}
       </FeltButton>
+      {!gmailConnected && (
+        <p className={styles.gmailHint}>
+          {gmailStatus === "not_configured"
+            ? "Gmail sending is not configured yet."
+            : "Connect Gmail in staff tools before approving and sending."}
+        </p>
+      )}
     </div>
   );
 }
@@ -98,10 +115,10 @@ export function ComposeButton({
   );
 }
 
-type GmailStatus = { connected: boolean; email?: string };
+type GmailStatus = { connected: boolean; email?: string; status?: string };
 
-export function StaffTools() {
-  const [gmail, setGmail] = useState<GmailStatus | null>(null);
+export function StaffTools({ initialGmail }: { initialGmail: GmailStatus }) {
+  const [gmail, setGmail] = useState<GmailStatus | null>(initialGmail);
   const [pending, setPending] = useState<"gmail" | "sync" | null>(null);
 
   useEffect(() => {

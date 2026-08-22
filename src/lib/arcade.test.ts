@@ -141,7 +141,10 @@ test("Gmail routes handle missing Arcade configuration", async () => {
 
     const statusResponse = await getGmailStatus(staffRequest());
     assert.equal(statusResponse.status, 200);
-    assert.deepEqual(await statusResponse.json(), { connected: false });
+    assert.deepEqual(await statusResponse.json(), {
+      connected: false,
+      status: "not_configured",
+    });
 
     process.env.ARCADE_API_KEY = "configured-key";
 
