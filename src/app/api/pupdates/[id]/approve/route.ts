@@ -2,6 +2,7 @@ import { deliverPupdate, dogPageUrl } from "@/lib/pupdate-delivery";
 import { requireApiSession } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
 import { renderPupdateEmail } from "@/lib/pupdate-email";
+import { pupdatePhotoUrl } from "@/lib/pupdate-photo";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -47,7 +48,7 @@ export async function POST(request: Request, { params }: RouteContext) {
         bodyText: pupdate.bodyText,
         dogUrl,
         origin,
-        photoUrl: pupdate.resident.photoUrls[0] ?? null,
+        photoUrl: await pupdatePhotoUrl(pupdate, pupdate.resident.photoUrls[0] ?? null),
         type: pupdate.type === "graduation" ? "graduation" : "regular",
       }),
     },
