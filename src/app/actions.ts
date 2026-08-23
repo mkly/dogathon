@@ -4,8 +4,6 @@ import { redirect } from "next/navigation";
 
 import { prisma } from "@/lib/prisma";
 
-const channels = new Set(["email", "sms", "both"]);
-
 function text(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
 }
@@ -14,17 +12,9 @@ export async function createSponsorship(formData: FormData) {
   const residentId = text(formData, "residentId");
   const sponsorName = text(formData, "sponsorName");
   const sponsorEmail = text(formData, "sponsorEmail");
-  const sponsorPhone = text(formData, "sponsorPhone");
-  const channel = text(formData, "channel");
   const dogPath = `/dogs/${encodeURIComponent(residentId)}`;
 
-  if (
-    !residentId ||
-    !sponsorName ||
-    !sponsorEmail.includes("@") ||
-    !channels.has(channel) ||
-    ((channel === "sms" || channel === "both") && !sponsorPhone)
-  ) {
+  if (!residentId || !sponsorName || !sponsorEmail.includes("@")) {
     redirect(`${dogPath}?error=invalid`);
   }
 
@@ -42,8 +32,9 @@ export async function createSponsorship(formData: FormData) {
       residentId,
       sponsorName,
       sponsorEmail,
-      sponsorPhone: sponsorPhone || null,
-      channel: channel as "email" | "sms" | "both",
+      // sign-up is email-only; staff add a phone number by hand when a sponsor asks for texts
+      sponsorPhone: null,
+      channel: "email",
       monthlyUsd: 25,
       status: "active",
     },

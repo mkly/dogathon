@@ -75,14 +75,14 @@ export default async function DogPage({ params, searchParams }: DogPageProps) {
           <div className={styles.sponsorPitch}>
             <p className={styles.eyebrow}>A steady paw</p>
             <h2>Sponsor {resident.name} for $25/month until adopted</h2>
-            <p>Choose how you&apos;d like to receive little updates from the rescue.</p>
+            <p>We&apos;ll send little email updates from the rescue as {resident.name} settles in.</p>
           </div>
 
           {query.error && (
             <p className={styles.formError} role="alert">
               {query.error === "unavailable"
                 ? `${resident.name} is no longer available to sponsor.`
-                : "Please complete the required fields. A phone number is required for text updates."}
+                : "Please complete the required fields."}
             </p>
           )}
 
@@ -97,20 +97,6 @@ export default async function DogPage({ params, searchParams }: DogPageProps) {
             <label htmlFor="sponsorEmail">Email</label>
             <FeltField>
               <input autoComplete="email" id="sponsorEmail" name="sponsorEmail" required type="email" />
-            </FeltField>
-
-            <label htmlFor="sponsorPhone">Phone <span>(optional for email updates)</span></label>
-            <FeltField>
-              <input autoComplete="tel" id="sponsorPhone" name="sponsorPhone" type="tel" />
-            </FeltField>
-
-            <label htmlFor="channel">Send my updates by</label>
-            <FeltField>
-              <select defaultValue="email" id="channel" name="channel">
-                <option value="email">Email</option>
-                <option value="sms">Text message</option>
-                <option value="both">Email and text</option>
-              </select>
             </FeltField>
 
             <FeltButton className={styles.sponsorButton} tone="mustard" type="submit">
