@@ -47,7 +47,9 @@ export default async function AdminPage() {
         },
       }),
       prisma.resident.findMany({
-        where: { volunteerNotes: { some: {} } },
+        // once a draft exists the dog moves to the approval queue below,
+        // so keep it out of the compose list until that draft is resolved
+        where: { volunteerNotes: { some: {} }, pupdates: { none: { status: "draft" } } },
         orderBy: { name: "asc" },
         select: {
           id: true,
