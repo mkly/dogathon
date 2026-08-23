@@ -29,7 +29,12 @@ export async function POST(request: Request) {
   const resident = await prisma.resident.findUnique({
     where: { id: input.residentId },
     include: {
-      volunteerNotes: { orderBy: { createdAt: "desc" }, take: 10 },
+      volunteerNotes: {
+        orderBy: { createdAt: "desc" },
+        take: 10,
+        // never pull photoData bytes into the compose payload
+        select: { note: true, photoUrl: true, createdAt: true },
+      },
     },
   });
   if (!resident) {
@@ -38,18 +43,24 @@ export async function POST(request: Request) {
 
   const settings = await prisma.rescueSettings.findUnique({ where: { id: "default" } });
   const type = input.type ?? "regular";
-  const composed = await composePupdate({
-    dog: {
-      name: resident.name,
-      breed: resident.breed,
-      sex: resident.sex,
-      ageText: resident.ageText,
-    },
-    notes: resident.volunteerNotes,
-    pinnedPostscript: settings?.pinnedPostscript ?? "",
-    type,
-    dogPageUrl: dogPageUrl(request.url, resident.id),
-  });
+  let composed;
+  try {
+    composed = await composePupdate({
+      dog: {
+        name: resident.name,
+        breed: resident.breed,
+        sex: resident.sex,
+        ageText: resident.ageText,
+      },
+      notes: resident.volunteerNotes,
+      pinnedPostscript: settings?.pinnedPostscript ?? "",
+      type,
+      dogPageUrl: dogPageUrl(request.url, resident.id),
+    });
+  } catch (error) {
+    console.error("Pupdate composition failed", error);
+    return Response.json({ error: "Drafting the pupdate failed. Please try again." }, { status: 502 });
+  }
   const pupdate = await prisma.pupdate.create({
     data: {
       residentId: resident.id,
