@@ -1,9 +1,14 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
+import {
+  createToolCallingChatCompletion,
+  type ChatCompletionAssistantMessage,
+  type ChatCompletionMessage,
+  type ChatCompletionTool,
+} from "./chat-completions.ts";
 import type { DogRecord } from "./parser.ts";
 import { parseDogRoster } from "./parser.ts";
-import { scrapeUrl } from "./arcade.ts";
 import { prisma } from "./prisma.ts";
 
 export type SyncSummary = {
@@ -17,6 +22,8 @@ export type SyncSummary = {
 };
 
 const DEFAULT_CAPTURE = "dogs-page-A.html";
+const DEFAULT_FIRECRAWL_BASE_URL = "https://api.firecrawl.dev/v2";
+const MAX_ROSTER_AGENT_STEPS = 4;
 // A live scrape should never make most of the current roster disappear at once.
 // Require a human to investigate instead of treating that disappearance as adoption.
 const MAX_LIVE_ADOPTION_FRACTION = 0.5;
@@ -198,9 +205,8 @@ export async function loadRoster(sourceUrl: string): Promise<RosterSource> {
   }
 
   try {
-    const result = await scrapeUrl(sourceUrl);
-    const scraped = extractScrapedText(result);
-    if (scraped) return { text: scraped, usedFallbackCapture: false, source: sourceUrl };
+    const text = await discoverRoster(sourceUrl);
+    return { text, usedFallbackCapture: false, source: sourceUrl };
   } catch (error) {
     console.warn("Roster scrape failed; using the checked-in capture.", error);
   }
@@ -215,6 +221,157 @@ export async function loadRoster(sourceUrl: string): Promise<RosterSource> {
 
 export async function loadRosterSource(sourceUrl: string): Promise<string> {
   return (await loadRoster(sourceUrl)).text;
+}
+
+type RosterToolName = "firecrawl_map" | "firecrawl_scrape";
+type RosterModel = (
+  messages: ChatCompletionMessage[],
+  tools: ChatCompletionTool[],
+) => Promise<ChatCompletionAssistantMessage>;
+type FirecrawlCaller = (name: RosterToolName, input: Record<string, unknown>) => Promise<unknown>;
+
+export type RosterDiscoveryOptions = {
+  model?: RosterModel;
+  firecrawl?: FirecrawlCaller;
+};
+
+const ROSTER_TOOLS: ChatCompletionTool[] = [
+  {
+    type: "function",
+    function: {
+      name: "firecrawl_map",
+      description: "Find pages on the rescue website that may contain the adoptable-dog roster.",
+      parameters: {
+        type: "object",
+        properties: {
+          url: { type: "string", description: "The rescue website URL to map." },
+          search: { type: "string", description: "Optional terms such as adoptable dogs." },
+          limit: { type: "integer", minimum: 1, maximum: 25 },
+        },
+        required: ["url"],
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "firecrawl_scrape",
+      description: "Fetch one page as clean markdown for roster parsing.",
+      parameters: {
+        type: "object",
+        properties: { url: { type: "string", description: "The page URL to scrape." } },
+        required: ["url"],
+        additionalProperties: false,
+      },
+    },
+  },
+];
+
+export async function discoverRoster(
+  sourceUrl: string,
+  options: RosterDiscoveryOptions = {},
+): Promise<string> {
+  const model = options.model ?? defaultRosterModel;
+  const firecrawl = options.firecrawl ?? requestFirecrawl;
+  const messages: ChatCompletionMessage[] = [
+    {
+      role: "system",
+      content: "Find the rescue's current adoptable-dog roster. Use map when the supplied page may not be the roster, then scrape the most relevant page or pages. When the scraped content is sufficient, reply with a short completion message. Do not invent roster content.",
+    },
+    {
+      role: "user",
+      content: `Find the current dog roster starting from ${sourceUrl}`,
+    },
+  ];
+  const documents: string[] = [];
+
+  for (let step = 0; step < MAX_ROSTER_AGENT_STEPS; step += 1) {
+    const response = await model(messages, ROSTER_TOOLS);
+    messages.push(response);
+    const calls = response.tool_calls ?? [];
+    if (calls.length === 0) break;
+
+    for (const call of calls) {
+      const name = rosterToolName(call.function.name);
+      const input = parseToolInput(call.function.arguments);
+      assertRelatedUrl(sourceUrl, input.url);
+      const result = await firecrawl(name, input);
+      if (name === "firecrawl_scrape") {
+        const text = extractScrapedText(result);
+        if (text) documents.push(text);
+      }
+      messages.push({
+        role: "tool",
+        tool_call_id: call.id,
+        content: truncateToolResult(result),
+      });
+    }
+  }
+
+  if (documents.length === 0) {
+    throw new Error("Roster discovery completed without scraping roster content");
+  }
+  return documents.join("\n\n");
+}
+
+async function defaultRosterModel(
+  messages: ChatCompletionMessage[],
+  tools: ChatCompletionTool[],
+): Promise<ChatCompletionAssistantMessage> {
+  return createToolCallingChatCompletion({ messages, tools, maxTokens: 1_000 });
+}
+
+export async function requestFirecrawl(
+  name: RosterToolName,
+  input: Record<string, unknown>,
+  options: { apiKey?: string; baseUrl?: string; fetch?: typeof fetch } = {},
+): Promise<unknown> {
+  const apiKey = (options.apiKey ?? process.env.FIRECRAWL_API_KEY)?.trim();
+  if (!apiKey) throw new Error("FIRECRAWL_API_KEY is required to fetch a live roster");
+  const baseUrl = (options.baseUrl ?? process.env.FIRECRAWL_BASE_URL ?? DEFAULT_FIRECRAWL_BASE_URL)
+    .replace(/\/+$/u, "");
+  const endpoint = name === "firecrawl_map" ? "map" : "scrape";
+  const body = name === "firecrawl_map"
+    ? { ...input, limit: input.limit ?? 25 }
+    : { ...input, formats: ["markdown"], onlyMainContent: true };
+  const response = await (options.fetch ?? fetch)(`${baseUrl}/${endpoint}`, {
+    method: "POST",
+    headers: { authorization: `Bearer ${apiKey}`, "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const payload = (await response.json()) as { success?: boolean; error?: string };
+  if (!response.ok || payload.success === false) {
+    throw new Error(payload.error ?? `Firecrawl ${endpoint} request failed (${response.status})`);
+  }
+  return payload;
+}
+
+function rosterToolName(value: string): RosterToolName {
+  if (value === "firecrawl_map" || value === "firecrawl_scrape") return value;
+  throw new Error(`Unsupported roster tool: ${value}`);
+}
+
+function parseToolInput(value: string): Record<string, unknown> {
+  const input = JSON.parse(value) as unknown;
+  if (!input || typeof input !== "object" || Array.isArray(input)) {
+    throw new Error("Roster tool arguments must be a JSON object");
+  }
+  return input as Record<string, unknown>;
+}
+
+function assertRelatedUrl(sourceUrl: string, candidate: unknown) {
+  if (typeof candidate !== "string") throw new Error("Roster tool URL must be a string");
+  const source = new URL(sourceUrl);
+  const requested = new URL(candidate);
+  if (source.hostname !== requested.hostname) {
+    throw new Error(`Roster tool refused unrelated host: ${requested.hostname}`);
+  }
+}
+
+function truncateToolResult(value: unknown): string {
+  const serialized = JSON.stringify(value);
+  return serialized.length <= 30_000 ? serialized : `${serialized.slice(0, 30_000)}\n[truncated]`;
 }
 
 export function extractScrapedText(value: unknown): string | null {
