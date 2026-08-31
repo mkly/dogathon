@@ -112,6 +112,71 @@ test("calls the direct Firecrawl v2 endpoints with bearer authentication", async
   });
 });
 
+test("reports a refused tool call back to the model and keeps scraped content", async () => {
+  const toolReplies: string[] = [];
+  let step = 0;
+  const call = (id: string, name: string, args: Record<string, unknown>) => ({
+    id,
+    type: "function" as const,
+    function: { name, arguments: JSON.stringify(args) },
+  });
+
+  const text = await discoverRoster("https://rescue.example/dogs", {
+    model: async (messages) => {
+      const last = messages.at(-1);
+      if (last?.role === "tool") toolReplies.push(last.content);
+      step += 1;
+      if (step === 1) {
+        return {
+          role: "assistant",
+          content: null,
+          tool_calls: [call("scrape-off", "firecrawl_scrape", { url: "https://elsewhere.test/dogs" })],
+        };
+      }
+      if (step === 2) {
+        return {
+          role: "assistant",
+          content: null,
+          tool_calls: [call("scrape-www", "firecrawl_scrape", { url: "https://www.rescue.example/dogs" })],
+        };
+      }
+      return { role: "assistant", content: "Done." };
+    },
+    firecrawl: async () => ({ success: true, data: { markdown: "# Hattie" } }),
+  });
+
+  assert.equal(text, "# Hattie");
+  assert.match(toolReplies[0] ?? "", /refused unrelated host: elsewhere\.test/);
+});
+
+test("scrapes subdomains of the configured source but refuses other protocols", async () => {
+  const toolReplies: string[] = [];
+  let step = 0;
+
+  const text = await discoverRoster("https://www.rescue.example/", {
+    model: async (messages) => {
+      const last = messages.at(-1);
+      if (last?.role === "tool") toolReplies.push(last.content);
+      step += 1;
+      if (step > 2) return { role: "assistant", content: "Done." };
+      const url = step === 1 ? "file:///etc/passwd" : "https://adopt.rescue.example/dogs";
+      return {
+        role: "assistant",
+        content: null,
+        tool_calls: [{
+          id: `scrape-${step}`,
+          type: "function",
+          function: { name: "firecrawl_scrape", arguments: JSON.stringify({ url }) },
+        }],
+      };
+    },
+    firecrawl: async () => ({ success: true, data: { markdown: "# Walnut" } }),
+  });
+
+  assert.equal(text, "# Walnut");
+  assert.match(toolReplies[0] ?? "", /unsupported protocol: file:/);
+});
+
 test("stops roster discovery after four model steps", async () => {
   let modelCalls = 0;
 

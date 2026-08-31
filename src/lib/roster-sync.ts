@@ -293,19 +293,23 @@ export async function discoverRoster(
     if (calls.length === 0) break;
 
     for (const call of calls) {
-      const name = rosterToolName(call.function.name);
-      const input = parseToolInput(call.function.arguments);
-      assertRelatedUrl(sourceUrl, input.url);
-      const result = await firecrawl(name, input);
-      if (name === "firecrawl_scrape") {
-        const text = extractScrapedText(result);
-        if (text) documents.push(text);
+      let content: string;
+      try {
+        const name = rosterToolName(call.function.name);
+        const input = parseToolInput(call.function.arguments);
+        assertRelatedUrl(sourceUrl, input.url);
+        const result = await firecrawl(name, input);
+        if (name === "firecrawl_scrape") {
+          const text = extractScrapedText(result);
+          if (text) documents.push(text);
+        }
+        content = truncateToolResult(result);
+      } catch (error) {
+        // Report a refused or failed call back to the model so the remaining
+        // steps can pick another page instead of discarding what was scraped.
+        content = `Tool call failed: ${error instanceof Error ? error.message : String(error)}`;
       }
-      messages.push({
-        role: "tool",
-        tool_call_id: call.id,
-        content: truncateToolResult(result),
-      });
+      messages.push({ role: "tool", tool_call_id: call.id, content });
     }
   }
 
@@ -364,9 +368,20 @@ function assertRelatedUrl(sourceUrl: string, candidate: unknown) {
   if (typeof candidate !== "string") throw new Error("Roster tool URL must be a string");
   const source = new URL(sourceUrl);
   const requested = new URL(candidate);
-  if (source.hostname !== requested.hostname) {
+  if (requested.protocol !== "http:" && requested.protocol !== "https:") {
+    throw new Error(`Roster tool refused unsupported protocol: ${requested.protocol}`);
+  }
+  if (!isRelatedHost(source.hostname, requested.hostname)) {
     throw new Error(`Roster tool refused unrelated host: ${requested.hostname}`);
   }
+}
+
+// Rescue sites routinely map to a `www.` or `adopt.` host of the configured
+// source, so keep those in scope while still refusing unrelated domains.
+function isRelatedHost(sourceHost: string, requestedHost: string): boolean {
+  const base = sourceHost.toLowerCase().replace(/^www\./u, "");
+  const requested = requestedHost.toLowerCase();
+  return requested === base || requested.endsWith(`.${base}`);
 }
 
 function truncateToolResult(value: unknown): string {
