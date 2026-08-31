@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server";
 
-import { requireApiSession } from "@/lib/auth-session";
+import { requireApiOrganization } from "@/lib/organization-access";
 import { RosterSyncRefusal, syncRoster } from "@/lib/roster-sync";
 
 export async function POST(request: Request) {
-  const unauthorized = await requireApiSession(request.headers);
-  if (unauthorized) return unauthorized;
+  const access = await requireApiOrganization(request.headers, ["owner", "admin"]);
+  if (!access.ok) return access.response;
 
   try {
-    return NextResponse.json(await syncRoster());
+    return NextResponse.json(await syncRoster(access.context.orgId));
   } catch (error) {
     if (error instanceof RosterSyncRefusal) {
       return NextResponse.json(

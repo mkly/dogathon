@@ -8,15 +8,17 @@ datasource db {
 }
 
 model User {
-  id            String    @id
+  id            String       @id
   name          String
   email         String
-  emailVerified Boolean   @default(false)
+  emailVerified Boolean      @default(false)
   image         String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
   sessions      Session[]
   accounts      Account[]
+  members       Member[]
+  invitations   Invitation[]
 
   username String?
 
@@ -26,19 +28,70 @@ model User {
 }
 
 model Session {
-  id        String   @id
-  expiresAt DateTime
-  token     String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  ipAddress String?
-  userAgent String?
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                   String   @id
+  expiresAt            DateTime
+  token                String
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  ipAddress            String?
+  userAgent            String?
+  userId               String
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  activeOrganizationId String?
 
   @@unique([token])
   @@index([userId])
   @@map("session")
+}
+
+model Organization {
+  id             String          @id
+  name           String
+  slug           String
+  logo           String?
+  metadata       String?
+  createdAt      DateTime
+  members        Member[]
+  invitations    Invitation[]
+  residents      Resident[]
+  sponsorships   Sponsorship[]
+  volunteerNotes VolunteerNote[]
+  pupdates       Pupdate[]
+  settings       RescueSettings?
+
+  @@unique([slug])
+  @@map("organization")
+}
+
+model Member {
+  id             String       @id
+  organizationId String
+  userId         String
+  role           String
+  createdAt      DateTime
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
+  @@index([userId])
+  @@map("member")
+}
+
+model Invitation {
+  id             String       @id
+  organizationId String
+  email          String
+  role           String
+  status         String
+  inviterId      String
+  expiresAt      DateTime
+  createdAt      DateTime
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  inviter        User         @relation(fields: [inviterId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([email])
+  @@map("invitation")
 }
 
 model Account {
@@ -104,7 +157,8 @@ enum PupdateStatus {
 
 model Resident {
   id             String          @id @default(cuid())
-  name           String          @unique
+  orgId          String
+  name           String
   breed          String
   dobText        String
   ageText        String
@@ -120,12 +174,16 @@ model Resident {
   sponsorships   Sponsorship[]
   volunteerNotes VolunteerNote[]
   pupdates       Pupdate[]
+  organization   Organization    @relation(fields: [orgId], references: [id], onDelete: Cascade)
 
-  @@index([status])
+  @@unique([orgId, name])
+  @@unique([id, orgId])
+  @@index([orgId, status])
 }
 
 model Sponsorship {
   id           String             @id @default(cuid())
+  orgId        String
   residentId   String
   sponsorName  String
   sponsorEmail String
@@ -136,45 +194,57 @@ model Sponsorship {
   endedReason  String?
   createdAt    DateTime           @default(now())
   updatedAt    DateTime           @updatedAt
-  resident     Resident           @relation(fields: [residentId], references: [id], onDelete: Cascade)
+  organization Organization       @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  resident     Resident           @relation(fields: [residentId, orgId], references: [id, orgId], onDelete: Cascade)
 
-  @@index([residentId, status])
+  @@unique([id, orgId])
+  @@index([orgId, status])
+  @@index([residentId, orgId, status])
 }
 
 model VolunteerNote {
-  id         String   @id @default(cuid())
-  residentId String
-  note       String
-  photoUrl   String?
-  photoData  Bytes?
-  photoMime  String?
-  createdAt  DateTime @default(now())
-  resident   Resident @relation(fields: [residentId], references: [id], onDelete: Cascade)
+  id           String       @id @default(cuid())
+  orgId        String
+  residentId   String
+  note         String
+  photoUrl     String?
+  photoData    Bytes?
+  photoMime    String?
+  createdAt    DateTime     @default(now())
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  resident     Resident     @relation(fields: [residentId, orgId], references: [id, orgId], onDelete: Cascade)
 
-  @@index([residentId, createdAt])
+  @@unique([id, orgId])
+  @@index([orgId, createdAt])
+  @@index([residentId, orgId, createdAt])
 }
 
 model Pupdate {
-  id         String        @id @default(cuid())
-  residentId String
-  type       PupdateType   @default(regular)
-  subject    String
-  bodyText   String
-  smsText    String
+  id           String        @id @default(cuid())
+  orgId        String
+  residentId   String
+  type         PupdateType   @default(regular)
+  subject      String
+  bodyText     String
+  smsText      String
   /// The volunteer-note photo this update was written from, captured at compose
   /// time so the email never falls back to the roster's profile shot.
-  photoUrl   String?
-  status     PupdateStatus @default(draft)
-  sentAt     DateTime?
-  createdAt  DateTime      @default(now())
-  updatedAt  DateTime      @updatedAt
-  resident   Resident      @relation(fields: [residentId], references: [id], onDelete: Cascade)
+  photoUrl     String?
+  status       PupdateStatus @default(draft)
+  sentAt       DateTime?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  organization Organization  @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  resident     Resident      @relation(fields: [residentId, orgId], references: [id, orgId], onDelete: Cascade)
 
-  @@index([residentId, status])
+  @@unique([id, orgId])
+  @@index([orgId, status])
+  @@index([residentId, orgId, status])
 }
 
 model RescueSettings {
-  id               String @id @default("default")
-  sourceUrl        String @default("https://www.coppersdream.org/dogs-and-more-back-up")
-  pinnedPostscript String @default("")
+  orgId            String       @id
+  sourceUrl        String       @default("https://www.coppersdream.org/dogs-and-more-back-up")
+  pinnedPostscript String       @default("")
+  organization     Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
 }

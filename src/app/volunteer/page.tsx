@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 
 import { FeltButton, FeltField, FeltPanel, PhotoPatch, StitchBadge } from "@/components/felt";
 import { prisma } from "@/lib/prisma";
+import { getOrganizationContext } from "@/lib/organization-access";
 
 import { submitVolunteerNote } from "./actions";
 import { volunteerErrorMessage } from "./errors";
@@ -24,10 +27,17 @@ type VolunteerPageProps = {
 };
 
 export default async function VolunteerPage({ searchParams }: VolunteerPageProps) {
+  const context = await getOrganizationContext(await headers());
+  if (!context) redirect("/sign-in?next=/volunteer");
+
   const [{ dog, error, submitted }, residents] = await Promise.all([
     searchParams,
     prisma.resident.findMany({
-      where: { status: "available", sponsorships: { some: { status: "active" } } },
+      where: {
+        orgId: context.orgId,
+        status: "available",
+        sponsorships: { some: { orgId: context.orgId, status: "active" } },
+      },
       orderBy: { name: "asc" },
       select: { id: true, name: true, photoUrls: true },
     }),

@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 import { FeltPanel, PhotoPatch, StitchBadge } from "@/components/felt";
 import { SignOutButton } from "@/components/sign-out-button";
 import { gmailAuthStatus } from "@/lib/arcade";
-import { getSession } from "@/lib/auth-session";
+import { getOrganizationContext } from "@/lib/organization-access";
 import { prisma } from "@/lib/prisma";
 
 import pawcastWordmark from "../../../public/brand/pawcast-wordmark.png";
@@ -27,21 +27,24 @@ async function getGmailStatus() {
 }
 
 export default async function AdminPage() {
-  const session = await getSession(await headers());
+  const context = await getOrganizationContext(await headers(), ["owner", "admin"]);
 
-  if (!session) {
-    redirect("/sign-in");
+  if (!context) {
+    redirect("/organizations");
   }
 
   const [drafts, noteResidents, storedSettings, activeSponsorCount, sponsoredDogCount, gmail] =
     await Promise.all([
       prisma.pupdate.findMany({
-        where: { status: "draft" },
+        where: { orgId: context.orgId, status: "draft" },
         orderBy: { createdAt: "asc" },
         include: {
           resident: {
             include: {
-              sponsorships: { where: { status: "active" }, select: { id: true } },
+              sponsorships: {
+                where: { orgId: context.orgId, status: "active" },
+                select: { id: true },
+              },
             },
           },
         },
@@ -49,7 +52,11 @@ export default async function AdminPage() {
       prisma.resident.findMany({
         // once a draft exists the dog moves to the approval queue below,
         // so keep it out of the compose list until that draft is resolved
-        where: { volunteerNotes: { some: {} }, pupdates: { none: { status: "draft" } } },
+        where: {
+          orgId: context.orgId,
+          volunteerNotes: { some: { orgId: context.orgId } },
+          pupdates: { none: { orgId: context.orgId, status: "draft" } },
+        },
         orderBy: { name: "asc" },
         select: {
           id: true,
@@ -64,9 +71,14 @@ export default async function AdminPage() {
           _count: { select: { volunteerNotes: true } },
         },
       }),
-      prisma.rescueSettings.findUnique({ where: { id: "default" } }),
-      prisma.sponsorship.count({ where: { status: "active" } }),
-      prisma.resident.count({ where: { sponsorships: { some: { status: "active" } } } }),
+      prisma.rescueSettings.findUnique({ where: { orgId: context.orgId } }),
+      prisma.sponsorship.count({ where: { orgId: context.orgId, status: "active" } }),
+      prisma.resident.count({
+        where: {
+          orgId: context.orgId,
+          sponsorships: { some: { orgId: context.orgId, status: "active" } },
+        },
+      }),
       getGmailStatus(),
     ]);
 

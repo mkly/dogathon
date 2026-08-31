@@ -1,5 +1,5 @@
 import { composePupdate } from "@/lib/composer";
-import { requireApiSession } from "@/lib/auth-session";
+import { requireApiOrganization } from "@/lib/organization-access";
 import { dogPageUrl } from "@/lib/pupdate-delivery";
 import { prisma } from "@/lib/prisma";
 
@@ -9,8 +9,9 @@ type ComposeRequest = {
 };
 
 export async function POST(request: Request) {
-  const unauthorized = await requireApiSession(request.headers);
-  if (unauthorized) return unauthorized;
+  const access = await requireApiOrganization(request.headers, ["owner", "admin"]);
+  if (!access.ok) return access.response;
+  const { orgId } = access.context;
 
   let input: ComposeRequest;
   try {
@@ -26,8 +27,8 @@ export async function POST(request: Request) {
     return Response.json({ error: "type must be regular or graduation" }, { status: 400 });
   }
 
-  const resident = await prisma.resident.findUnique({
-    where: { id: input.residentId },
+  const resident = await prisma.resident.findFirst({
+    where: { id: input.residentId, orgId },
     include: {
       volunteerNotes: {
         orderBy: { createdAt: "desc" },
@@ -41,7 +42,7 @@ export async function POST(request: Request) {
     return Response.json({ error: "Resident not found" }, { status: 404 });
   }
 
-  const settings = await prisma.rescueSettings.findUnique({ where: { id: "default" } });
+  const settings = await prisma.rescueSettings.findUnique({ where: { orgId } });
   const type = input.type ?? "regular";
   let composed;
   try {
@@ -63,6 +64,7 @@ export async function POST(request: Request) {
   }
   const pupdate = await prisma.pupdate.create({
     data: {
+      orgId,
       residentId: resident.id,
       type,
       // pin the picture from the notes this draft was written from: the roster

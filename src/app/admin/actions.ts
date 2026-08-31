@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
-import { getSession } from "@/lib/auth-session";
+import { getOrganizationContext } from "@/lib/organization-access";
 import { prisma } from "@/lib/prisma";
 
 export type SettingsState = {
@@ -38,10 +38,10 @@ export async function saveSettings(
   _previousState: SettingsState,
   formData: FormData,
 ): Promise<SettingsState> {
-  const session = await getSession(await headers());
+  const context = await getOrganizationContext(await headers(), ["owner", "admin"]);
 
-  if (!session) {
-    redirect("/sign-in");
+  if (!context) {
+    redirect("/organizations");
   }
 
   const pinnedPostscript = String(formData.get("pinnedPostscript") ?? "").trim();
@@ -55,9 +55,9 @@ export async function saveSettings(
   }
 
   await prisma.rescueSettings.upsert({
-    where: { id: "default" },
+    where: { orgId: context.orgId },
     update: { pinnedPostscript, sourceUrl },
-    create: { id: "default", pinnedPostscript, sourceUrl },
+    create: { orgId: context.orgId, pinnedPostscript, sourceUrl },
   });
 
   revalidatePath("/admin");

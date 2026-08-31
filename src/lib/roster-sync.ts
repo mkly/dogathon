@@ -31,11 +31,11 @@ export class RosterSyncRefusal extends Error {
   }
 }
 
-export async function syncRoster(): Promise<SyncSummary> {
+export async function syncRoster(orgId: string): Promise<SyncSummary> {
   const settings = await prisma.rescueSettings.upsert({
-    where: { id: "default" },
+    where: { orgId },
     update: {},
-    create: {},
+    create: { orgId },
   });
   const { text, usedFallbackCapture, source } = await loadRoster(settings.sourceUrl);
   const dogs = await parseDogRoster(text);
@@ -46,6 +46,7 @@ export async function syncRoster(): Promise<SyncSummary> {
 
   return prisma.$transaction(async (tx) => {
     const before = await tx.resident.findMany({
+      where: { orgId },
       select: { id: true, name: true, status: true },
     });
     const existingNames = new Set(before.map((resident) => resident.name));
@@ -81,29 +82,29 @@ export async function syncRoster(): Promise<SyncSummary> {
     );
 
     for (const dog of dogs) {
-      await upsertDog(tx, dog, !usedFallbackCapture);
+      await upsertDog(tx, orgId, dog, !usedFallbackCapture);
     }
 
     let sponsorshipsClosed = 0;
 
     for (const resident of adoptionCandidates) {
       await tx.resident.update({
-        where: { id: resident.id },
+        where: { id_orgId: { id: resident.id, orgId } },
         data: { status: "adopted", adoptedAt: new Date() },
       });
 
       const sponsorships = await tx.sponsorship.findMany({
-        where: { residentId: resident.id, status: "active" },
+        where: { residentId: resident.id, orgId, status: "active" },
         select: { id: true, sponsorName: true },
       });
 
       for (const sponsorship of sponsorships) {
         await tx.sponsorship.update({
-          where: { id: sponsorship.id },
+          where: { id_orgId: { id: sponsorship.id, orgId } },
           data: { status: "ended", endedReason: "adopted" },
         });
         await tx.pupdate.create({
-          data: graduationDraft(resident.id, resident.name, sponsorship.sponsorName),
+          data: { ...graduationDraft(resident.id, resident.name, sponsorship.sponsorName), orgId },
         });
       }
 
@@ -140,7 +141,12 @@ export function assertPlausibleAdoptionCount(
 
 type SyncTransaction = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 
-async function upsertDog(tx: SyncTransaction, dog: DogRecord, liveSource: boolean) {
+async function upsertDog(
+  tx: SyncTransaction,
+  orgId: string,
+  dog: DogRecord,
+  liveSource: boolean,
+) {
   const profile = {
     breed: dog.breed,
     dobText: dog.dobText,
@@ -153,8 +159,9 @@ async function upsertDog(tx: SyncTransaction, dog: DogRecord, liveSource: boolea
   };
 
   await tx.resident.upsert({
-    where: { name: dog.name },
+    where: { orgId_name: { orgId, name: dog.name } },
     create: {
+      orgId,
       name: dog.name,
       ...profile,
       status: dog.adopted ? "adopted" : "available",

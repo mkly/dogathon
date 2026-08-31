@@ -12,6 +12,7 @@ import type { DryRunCall } from "./arcade.ts";
 import { POST as authorizeGmail } from "../app/api/arcade/gmail/authorize/route.ts";
 import { GET as getGmailStatus } from "../app/api/arcade/gmail/status/route.ts";
 import { auth } from "./auth.ts";
+import { prisma } from "./prisma.ts";
 
 /** The Gmail routes are staff-only, so exercising them needs a signed-in call. */
 function staffRequest() {
@@ -20,21 +21,28 @@ function staffRequest() {
 
 function stubStaffSession() {
   const restore = auth.api.getSession;
+  const restoreMembership = prisma.member.findUnique;
   auth.api.getSession = (async () => ({
-    session: { id: "test-session" },
+    session: { id: "test-session", activeOrganizationId: "test-org" },
     user: { id: "test-staff", email: "staff@example.com" },
   })) as typeof auth.api.getSession;
+  prisma.member.findUnique = (async () => ({
+    organizationId: "test-org",
+    role: "admin",
+    userId: "test-staff",
+  })) as unknown as typeof prisma.member.findUnique;
   return () => {
     auth.api.getSession = restore;
+    prisma.member.findUnique = restoreMembership;
   };
 }
 
-test("Gmail routes reject callers without a staff session", async () => {
+test("Gmail routes reject callers without an active organization membership", async () => {
   const authorizeResponse = await authorizeGmail(staffRequest());
-  assert.equal(authorizeResponse.status, 401);
+  assert.equal(authorizeResponse.status, 403);
 
   const statusResponse = await getGmailStatus(staffRequest());
-  assert.equal(statusResponse.status, 401);
+  assert.equal(statusResponse.status, 403);
 });
 
 function isDryRunCall(value: unknown): value is DryRunCall {

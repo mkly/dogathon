@@ -25,6 +25,7 @@ import { prisma } from "../src/lib/prisma.ts";
 const BASE_URL = process.env.DEMO_BASE_URL ?? "http://localhost:3000";
 const STAFF_EMAIL = process.env.DEMO_STAFF_EMAIL ?? "demo-staff@example.com";
 const STAFF_PASSWORD = process.env.DEMO_STAFF_PASSWORD ?? "demo-staff-password";
+const DEMO_ORG_ID = "demo-org-coppers-dream";
 
 let step = 0;
 let staffCookie = "";
@@ -39,7 +40,9 @@ function fail(message: string): never {
 }
 
 async function pageHtml(path: string): Promise<string> {
-  const response = await fetch(`${BASE_URL}${path}`);
+  const response = await fetch(`${BASE_URL}${path}`, {
+    headers: staffCookie ? { cookie: staffCookie } : undefined,
+  });
   if (!response.ok) fail(`GET ${path} returned ${response.status}`);
   return response.text();
 }
@@ -63,6 +66,7 @@ async function submitActionForm(
 
   const response = await fetch(`${BASE_URL}${path}`, {
     method: "POST",
+    headers: staffCookie ? { cookie: staffCookie } : undefined,
     body,
     redirect: "manual",
   });
@@ -116,6 +120,22 @@ async function signInStaff() {
       .join("; ");
     if (response.ok && cookie) {
       staffCookie = cookie;
+      const user = await prisma.user.findUniqueOrThrow({ where: { email: STAFF_EMAIL } });
+      await prisma.member.upsert({
+        where: { organizationId_userId: { organizationId: DEMO_ORG_ID, userId: user.id } },
+        update: { role: "owner" },
+        create: {
+          id: `demo-member-${user.id}`,
+          organizationId: DEMO_ORG_ID,
+          userId: user.id,
+          role: "owner",
+          createdAt: new Date(),
+        },
+      });
+      await prisma.session.updateMany({
+        where: { userId: user.id },
+        data: { activeOrganizationId: DEMO_ORG_ID },
+      });
       return;
     }
     attempts.push(`${endpoint} -> ${response.status} ${await response.text()}`);
@@ -130,6 +150,7 @@ async function sponsorDog(
   sponsor: { name: string; email: string; phone?: string; channel: string },
 ) {
   const location = await submitActionForm(`/dogs/${residentId}`, {
+    orgId: DEMO_ORG_ID,
     residentId,
     sponsorName: sponsor.name,
     sponsorEmail: sponsor.email,
@@ -140,7 +161,7 @@ async function sponsorDog(
     fail(`Sponsorship form did not confirm; redirected to ${location}`);
   }
   const record = await prisma.sponsorship.findFirst({
-    where: { residentId, sponsorEmail: sponsor.email, status: "active" },
+    where: { orgId: DEMO_ORG_ID, residentId, sponsorEmail: sponsor.email, status: "active" },
   });
   if (!record) fail(`No active sponsorship row for ${sponsor.email}`);
   return record;
@@ -148,9 +169,9 @@ async function sponsorDog(
 
 async function setSourceCapture(capture: "A" | "B") {
   await prisma.rescueSettings.upsert({
-    where: { id: "default" },
+    where: { orgId: DEMO_ORG_ID },
     update: { sourceUrl: `seed/dogs-page-${capture}.html` },
-    create: { id: "default", sourceUrl: `seed/dogs-page-${capture}.html` },
+    create: { orgId: DEMO_ORG_ID, sourceUrl: `seed/dogs-page-${capture}.html` },
   });
 }
 
@@ -158,7 +179,9 @@ async function main() {
   console.log(`Demo smoke against ${BASE_URL}`);
 
   // Beat 1-2: Biscuit is on the public grid and gets a new sponsor.
-  const biscuit = await prisma.resident.findUnique({ where: { name: "Biscuit" } });
+  const biscuit = await prisma.resident.findUnique({
+    where: { orgId_name: { orgId: DEMO_ORG_ID, name: "Biscuit" } },
+  });
   if (!biscuit || biscuit.status !== "available") {
     fail("Seeded resident Biscuit is missing or not available; run npm run seed");
   }
@@ -174,6 +197,9 @@ async function main() {
   });
   ok("Sponsored Biscuit from the public dog page");
 
+  await signInStaff();
+  ok(`Signed in to the staff room as ${STAFF_EMAIL}`);
+
   // Beat 3: a volunteer drops a one-line note from the phone page.
   const noteText = `Smoke test note ${Date.now()}`;
   const noteLocation = await submitActionForm("/volunteer", {
@@ -183,16 +209,15 @@ async function main() {
   if (!noteLocation.includes("submitted=1")) {
     fail(`Volunteer form did not confirm; redirected to ${noteLocation}`);
   }
-  if (!(await prisma.volunteerNote.findFirst({ where: { residentId: biscuit.id, note: noteText } }))) {
+  if (!(await prisma.volunteerNote.findFirst({
+    where: { orgId: DEMO_ORG_ID, residentId: biscuit.id, note: noteText },
+  }))) {
     fail("Volunteer note row was not created");
   }
   ok("Submitted a volunteer note from /volunteer");
 
   // Beat 4: the staff room is behind sign-in, so take a session before the
   // staff routes; then compose a pupdate and approve it, fanning out per channel.
-  await signInStaff();
-  ok(`Signed in to the staff room as ${STAFF_EMAIL}`);
-
   const composed = (await postJson("/api/pupdates/compose", {
     residentId: biscuit.id,
   })) as { pupdate: { id: string; bodyText: string } };
@@ -206,7 +231,7 @@ async function main() {
     deliveries: Array<{ channel: string; status: string }>;
   };
   const activeSponsors = await prisma.sponsorship.count({
-    where: { residentId: biscuit.id, status: "active" },
+    where: { orgId: DEMO_ORG_ID, residentId: biscuit.id, status: "active" },
   });
   if (approved.pupdate.status !== "sent") fail("Approved pupdate is not marked sent");
   if (approved.deliveries.length < activeSponsors) {
@@ -220,14 +245,18 @@ async function main() {
   // Beat 5a: sync the roster from capture A; the grid fills with ~33 dogs.
   await setSourceCapture("A");
   const syncA = (await postJson("/api/sync")) as { created: number; updated: number };
-  const available = await prisma.resident.count({ where: { status: "available" } });
+  const available = await prisma.resident.count({
+    where: { orgId: DEMO_ORG_ID, status: "available" },
+  });
   if (syncA.created + syncA.updated < 30) {
     fail(`Sync A processed only ${syncA.created + syncA.updated} dogs`);
   }
   // Capture A carries ~33 dogs, but a few are already marked adopted in it
   // (and seeded Biscuit, absent from the roster, is adopted on sync).
   if (available < 25) fail(`Only ${available} dogs are available after sync A`);
-  const hattie = await prisma.resident.findUnique({ where: { name: "Hattie" } });
+  const hattie = await prisma.resident.findUnique({
+    where: { orgId_name: { orgId: DEMO_ORG_ID, name: "Hattie" } },
+  });
   if (!hattie || hattie.status !== "available") fail("Hattie is not available after sync A");
   if (!(await pageHtml("/")).includes("Hattie")) fail("Public grid does not show Hattie after sync A");
   ok(`Synced capture A; ${available} dogs on the public grid`);
@@ -251,7 +280,7 @@ async function main() {
   if (syncB.sponsorshipsClosed < 1) fail("Sync B closed no sponsorships");
 
   const hattieAfter = await prisma.resident.findUnique({
-    where: { id: hattie.id },
+    where: { id: hattie.id, orgId: DEMO_ORG_ID },
     include: {
       sponsorships: true,
       pupdates: { where: { type: "graduation", status: "draft" } },

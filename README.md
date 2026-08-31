@@ -1,10 +1,10 @@
 # Dogathon
 
-A minimal Next.js app using PostgreSQL, Prisma, and Better Auth with username/password authentication.
+A multitenant Next.js app using PostgreSQL, Prisma, and Better Auth organizations.
 
 ## Run locally
 
-1. Copy `.env.example` to `.env` and replace `BETTER_AUTH_SECRET` with a random value of at least 32 characters.
+1. Copy `.env.example` to `.env` and replace `BETTER_AUTH_SECRET` with a random value of at least 32 characters. Set `INVITATION_EMAIL_WEBHOOK_URL` to an endpoint that accepts the invitation JSON payload when you want real email delivery; local development logs invitation links when it is unset.
 2. Start PostgreSQL:
 
    ```bash
@@ -18,9 +18,10 @@ A minimal Next.js app using PostgreSQL, Prisma, and Better Auth with username/pa
    npm run db:migrate -- --name init
    ```
 
-4. Start the app:
+4. Seed the demo organization, then start the app:
 
    ```bash
+   npm run seed
    npm run dev
    ```
 
@@ -74,7 +75,7 @@ npm run dev
    one-liner, and send the pup-date.
 4. **Staff room** — the staff room is behind sign-in: create a staff account
    once at [/sign-in](http://localhost:3000/sign-in) (Sign up, email +
-   password), which lands you in [/admin](http://localhost:3000/admin). Compose
+   password), then create or accept an organization at `/organizations`. Compose
    a draft from the fresh notes — the staff API needs your session cookie, so
    run it from the browser console on /admin:
    `await fetch('/api/pupdates/compose', {method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({residentId:'demo-resident-biscuit'})})`
@@ -105,8 +106,9 @@ the staff beats and creates that account on its first run; override it with
 
 ## Accounts
 
-Staff sign in with email and password at `/sign-in` (Better Auth, email
-verification disabled); `/admin`, the admin settings action, and the staff API
-routes (`/api/sync`, `/api/pupdates/*`, `/api/arcade/gmail/*`) all reject
-anonymous requests. Volunteers get no account at all — `/volunteer` and its
-submit stay open on the shared link, as do the public sponsor pages.
+Users sign in with email and password at `/sign-in` (Better Auth, email
+verification disabled). Organization owners can invite admins or volunteers;
+the Better Auth `member` role is the volunteer role. Admin pages, actions, and
+staff APIs require an owner/admin membership in the session's active
+organization. `/volunteer` and its submit action require any active membership.
+Every domain read and write is scoped to that organization.

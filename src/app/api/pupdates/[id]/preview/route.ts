@@ -1,4 +1,4 @@
-import { requireApiSession } from "@/lib/auth-session";
+import { requireApiOrganization } from "@/lib/organization-access";
 import { prisma } from "@/lib/prisma";
 import { renderPupdateEmail } from "@/lib/pupdate-email";
 import { dogPageUrl } from "@/lib/pupdate-delivery";
@@ -7,12 +7,13 @@ type RouteContext = { params: Promise<{ id: string }> };
 
 /** Renders the sponsor email exactly as it will be sent, for staff to eyeball. */
 export async function GET(request: Request, { params }: RouteContext) {
-  const unauthorized = await requireApiSession(request.headers);
-  if (unauthorized) return unauthorized;
+  const access = await requireApiOrganization(request.headers, ["owner", "admin"]);
+  if (!access.ok) return access.response;
+  const { orgId } = access.context;
 
   const { id } = await params;
-  const pupdate = await prisma.pupdate.findUnique({
-    where: { id },
+  const pupdate = await prisma.pupdate.findFirst({
+    where: { id, orgId },
     include: { resident: { select: { name: true, photoUrls: true } } },
   });
 
