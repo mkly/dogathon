@@ -130,7 +130,7 @@
   display: grid;
   width: 1.35rem;
   height: 1.35rem;
-  border: 2px solid currentcolor;
+  border: 2px solid rgb(61 51 43 / 25%);
   border-radius: 50%;
   place-items: center;
   color: transparent;
@@ -139,6 +139,7 @@
 }
 
 .dogChoice input:checked + .dogCard .pickMark {
+  border-color: var(--felt-denim);
   color: var(--felt-denim);
   background: var(--felt-cream);
 }
