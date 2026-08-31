@@ -23,8 +23,10 @@ function validateDraft(input: DraftInput) {
   const bodyText = input.emailBody.trim();
   const smsText = input.smsBody.trim();
 
-  if (!subject || !bodyText || !smsText) {
-    return { error: "Subject, email body, and SMS text cannot be empty" };
+  // Composition no longer writes SMS text, so an empty legacy value is valid
+  // until the delivery task drops the column.
+  if (!subject || !bodyText) {
+    return { error: "Subject and email body cannot be empty" };
   }
   if (smsText.length > MAX_SMS_LENGTH) {
     return { error: `SMS text must be ${MAX_SMS_LENGTH} characters or fewer` };

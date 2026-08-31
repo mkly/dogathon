@@ -19,7 +19,7 @@ type ChatCompletionResponse = {
 
 function requiredSetting(value: string | undefined, name: string): string {
   const setting = value?.trim();
-  if (!setting) throw new Error(`${name} is required when OPENAI_API_KEY is configured`);
+  if (!setting) throw new Error(`${name} is required to reach the chat-completions endpoint`);
   return setting;
 }
 

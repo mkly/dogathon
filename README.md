@@ -32,7 +32,8 @@ Configure the variables from `.env.example` as Vercel project environment
 variables before deploying. In particular, `DATABASE_URL` must point to a
 production PostgreSQL database, `BETTER_AUTH_SECRET` must be a production
 secret, and `BETTER_AUTH_URL` must be the deployed app URL. Configure the
-Arcade and Anthropic variables when those integrations are enabled. Vercel's
+Arcade and OpenAI-compatible model variables when those integrations are
+enabled. Vercel's
 install step runs the existing `postinstall` script, which generates the Prisma
 client.
 
