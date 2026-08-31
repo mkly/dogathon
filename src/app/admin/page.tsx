@@ -11,6 +11,7 @@ import { prisma } from "@/lib/prisma";
 
 import pawcastWordmark from "../../../public/brand/pawcast-wordmark.png";
 
+import { beginStripeOnboarding } from "./actions";
 import { ComposeButton, DraftEditor, SettingsForm, StaffTools } from "./admin-controls";
 import { GMAIL_NOTICE_ID, gmailBlockedReason } from "./gmail-notice";
 import styles from "./admin.module.css";
@@ -33,7 +34,7 @@ export default async function AdminPage() {
     redirect("/organizations");
   }
 
-  const [drafts, noteResidents, storedSettings, activeSponsorCount, sponsoredDogCount, gmail] =
+  const [drafts, noteResidents, storedSettings, activeSponsorCount, sponsoredDogCount, gmail, organization] =
     await Promise.all([
       prisma.pupdate.findMany({
         where: { orgId: context.orgId, status: "draft" },
@@ -80,6 +81,14 @@ export default async function AdminPage() {
         },
       }),
       getGmailStatus(),
+      prisma.organization.findUnique({
+        where: { id: context.orgId },
+        select: {
+          stripeAccountId: true,
+          stripeDetailsSubmitted: true,
+          stripeChargesEnabled: true,
+        },
+      }),
     ]);
 
   const settings = storedSettings ?? {
@@ -145,6 +154,29 @@ export default async function AdminPage() {
           <small>people love dog email</small>
         </FeltPanel>
       </section>
+
+      <FeltPanel className={styles.settings} tone="mustard">
+        <div className={styles.settingsIntro}>
+          <p className={styles.eyebrow}>Stripe Connect</p>
+          <h2>Monthly sponsorship payments</h2>
+          <p>
+            {organization?.stripeChargesEnabled
+              ? "Connected and ready to accept $25 monthly sponsorships."
+              : organization?.stripeDetailsSubmitted
+                ? "Stripe has your details and is still enabling payments."
+                : organization?.stripeAccountId
+                  ? "Finish the Stripe onboarding form to accept sponsorships."
+                  : "Connect this rescue to Stripe before sponsors can check out."}
+          </p>
+        </div>
+        {!organization?.stripeChargesEnabled && context.role === "owner" && (
+          <form action={beginStripeOnboarding}>
+            <button className="felt-button felt-brick" type="submit">
+              {organization?.stripeAccountId ? "Continue Stripe onboarding" : "Connect Stripe"}
+            </button>
+          </form>
+        )}
+      </FeltPanel>
 
       <section className={styles.composeSection}>
         <div className={styles.sectionTitle}>

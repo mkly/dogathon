@@ -27,14 +27,24 @@ A multitenant Next.js app using PostgreSQL, Prisma, and Better Auth organization
 
 Open [http://localhost:3000](http://localhost:3000).
 
+## Stripe Connect billing
+
+Set `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` to test-mode values. In the
+Stripe Dashboard, create a Connect webhook endpoint at `/api/stripe/webhook`
+for `account.updated`, `checkout.session.completed`, and
+`customer.subscription.deleted` events on connected accounts. An organization
+owner can then open the staff room and use **Connect Stripe** to onboard an
+Express account. Sponsorship Checkout sessions and subscriptions are created
+on that organization's connected account.
+
 ## Deploy to Vercel
 
 Configure the variables from `.env.example` as Vercel project environment
 variables before deploying. In particular, `DATABASE_URL` must point to a
 production PostgreSQL database, `BETTER_AUTH_SECRET` must be a production
 secret, and `BETTER_AUTH_URL` must be the deployed app URL. Configure the
-Arcade and OpenAI-compatible model variables when those integrations are
-enabled. Vercel's
+Stripe test keys plus the Arcade and OpenAI-compatible model variables when
+those integrations are enabled. Vercel's
 install step runs the existing `postinstall` script, which generates the Prisma
 client.
 
