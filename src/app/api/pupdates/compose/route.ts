@@ -30,6 +30,7 @@ export async function POST(request: Request) {
   const resident = await prisma.resident.findFirst({
     where: { id: input.residentId, orgId },
     include: {
+      organization: { select: { slug: true } },
       volunteerNotes: {
         orderBy: { createdAt: "desc" },
         take: 10,
@@ -56,7 +57,7 @@ export async function POST(request: Request) {
       notes: resident.volunteerNotes,
       pinnedPostscript: settings?.pinnedPostscript ?? "",
       type,
-      dogPageUrl: dogPageUrl(request.url, resident.id),
+      dogPageUrl: dogPageUrl(request.url, resident.organization.slug, resident.id),
     });
   } catch (error) {
     console.error("Pupdate composition failed", error);

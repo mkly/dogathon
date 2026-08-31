@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { authorizeOrganization, forOrganization } from "./organization-access.ts";
+import {
+  authorizeOrganization,
+  authorizeOrganizationId,
+  forOrganization,
+} from "./organization-access.ts";
 
 const session = {
   session: { activeOrganizationId: "org-a" },
@@ -29,6 +33,18 @@ test("rejects cross-organization membership and disallowed roles", () => {
       ["owner", "admin"],
     ),
     null,
+  );
+});
+
+test("authorizes the organization named by a route independently of the active organization", () => {
+  assert.deepEqual(
+    authorizeOrganizationId(
+      session,
+      { organizationId: "org-b", userId: "user-a", role: "admin" },
+      "org-b",
+      ["owner", "admin"],
+    ),
+    { orgId: "org-b", userId: "user-a", role: "admin" },
   );
 });
 

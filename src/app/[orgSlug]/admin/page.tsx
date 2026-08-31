@@ -1,15 +1,15 @@
 import Image from "next/image";
 import Link from "next/link";
 import { headers } from "next/headers";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 import { FeltPanel, PhotoPatch, StitchBadge } from "@/components/felt";
 import { SignOutButton } from "@/components/sign-out-button";
 import { gmailAuthStatus } from "@/lib/arcade";
-import { getOrganizationContext } from "@/lib/organization-access";
+import { getOrganizationAccessBySlug } from "@/lib/organization-access";
 import { prisma } from "@/lib/prisma";
 
-import pawcastWordmark from "../../../public/brand/pawcast-wordmark.png";
+import pawcastWordmark from "../../../../public/brand/pawcast-wordmark.png";
 
 import { ComposeButton, DraftEditor, SettingsForm, StaffTools } from "./admin-controls";
 import { GMAIL_NOTICE_ID, gmailBlockedReason } from "./gmail-notice";
@@ -26,12 +26,18 @@ async function getGmailStatus() {
   }
 }
 
-export default async function AdminPage() {
-  const context = await getOrganizationContext(await headers(), ["owner", "admin"]);
+type AdminPageProps = { params: Promise<{ orgSlug: string }> };
 
-  if (!context) {
-    redirect("/organizations");
+export default async function AdminPage({ params }: AdminPageProps) {
+  const { orgSlug } = await params;
+  const access = await getOrganizationAccessBySlug(await headers(), orgSlug, ["owner", "admin"]);
+
+  if (!access) notFound();
+  if (!access.context) {
+    const next = encodeURIComponent(`/${orgSlug}/admin`);
+    redirect(access.authenticated ? "/organizations" : `/sign-in?next=${next}`);
   }
+  const { context } = access;
 
   const [drafts, noteResidents, storedSettings, activeSponsorCount, sponsoredDogCount, gmail] =
     await Promise.all([
@@ -91,7 +97,7 @@ export default async function AdminPage() {
   return (
     <main className={styles.page}>
       <header className={styles.header}>
-        <Link className={styles.logo} href="/">
+        <Link className={styles.logo} href={`/${orgSlug}`}>
           <Image alt="Pawcast" priority src={pawcastWordmark} />
         </Link>
         <div>
@@ -99,6 +105,7 @@ export default async function AdminPage() {
         </div>
         <div className={styles.headerActions}>
           <StaffTools
+            orgSlug={orgSlug}
             initialGmail={{
               connected: gmail.authorized,
               status: gmail.status,
@@ -120,7 +127,7 @@ export default async function AdminPage() {
         <Link
           aria-label={`View active sponsors (${activeSponsorCount} active)`}
           className={styles.statLink}
-          href="/admin/sponsors"
+          href={`/${orgSlug}/admin/sponsors`}
         >
           <FeltPanel className={styles.stat} tone="moss">
             <strong>{activeSponsorCount}</strong>
@@ -131,7 +138,7 @@ export default async function AdminPage() {
         <Link
           aria-label={`View dogs covered (${sponsoredDogCount} with active sponsors)`}
           className={styles.statLink}
-          href="/admin/dogs-covered"
+          href={`/${orgSlug}/admin/dogs-covered`}
         >
           <FeltPanel className={styles.stat} tone="denim">
             <strong>{sponsoredDogCount}</strong>
@@ -190,7 +197,7 @@ export default async function AdminPage() {
                       </small>
                     )}
                   </div>
-                  <ComposeButton residentId={resident.id} residentName={resident.name} />
+                  <ComposeButton orgSlug={orgSlug} residentId={resident.id} residentName={resident.name} />
                 </FeltPanel>
               );
             })}
@@ -242,6 +249,7 @@ export default async function AdminPage() {
                   gmailConnected={gmail.authorized}
                   gmailStatus={gmail.status}
                   id={draft.id}
+                  orgSlug={orgSlug}
                   smsText={draft.smsText}
                   subject={draft.subject}
                 />
@@ -260,7 +268,7 @@ export default async function AdminPage() {
             to look for the current adoption roster.
           </p>
         </div>
-        <SettingsForm pinnedPostscript={settings.pinnedPostscript} sourceUrl={settings.sourceUrl} />
+        <SettingsForm orgSlug={orgSlug} pinnedPostscript={settings.pinnedPostscript} sourceUrl={settings.sourceUrl} />
       </FeltPanel>
 
       <footer className={styles.footer}>the staff room · nobody wrote a single email today</footer>

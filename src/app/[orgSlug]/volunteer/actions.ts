@@ -3,9 +3,9 @@
 import { randomUUID } from "node:crypto";
 
 import { headers } from "next/headers";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
-import { getOrganizationContext } from "@/lib/organization-access";
+import { getOrganizationAccessBySlug } from "@/lib/organization-access";
 import { prisma } from "@/lib/prisma";
 
 import type { VolunteerErrorCode } from "./errors";
@@ -20,17 +20,23 @@ const PHOTO_EXTENSIONS: Record<string, string> = {
   "image/webp": ".webp",
 };
 
-function volunteerUrl(params: Record<string, string>) {
-  return `/volunteer?${new URLSearchParams(params).toString()}`;
+function volunteerUrl(orgSlug: string, params: Record<string, string>) {
+  return `/${encodeURIComponent(orgSlug)}/volunteer?${new URLSearchParams(params).toString()}`;
 }
 
-function volunteerErrorUrl(error: VolunteerErrorCode) {
-  return volunteerUrl({ error });
+function volunteerErrorUrl(orgSlug: string, error: VolunteerErrorCode) {
+  return volunteerUrl(orgSlug, { error });
 }
 
 export async function submitVolunteerNote(formData: FormData) {
-  const context = await getOrganizationContext(await headers());
-  if (!context) redirect("/sign-in?next=/volunteer");
+  const orgSlug = String(formData.get("orgSlug") ?? "").trim();
+  const access = await getOrganizationAccessBySlug(await headers(), orgSlug);
+  if (!access) notFound();
+  if (!access.context) {
+    const next = encodeURIComponent(`/${orgSlug}/volunteer`);
+    redirect(access.authenticated ? "/organizations" : `/sign-in?next=${next}`);
+  }
+  const { context } = access;
 
   const residentId = String(formData.get("residentId") ?? "").trim();
   const note = String(formData.get("note") ?? "")
@@ -39,15 +45,15 @@ export async function submitVolunteerNote(formData: FormData) {
   const photo = formData.get("photo");
 
   if (!residentId) {
-    redirect(volunteerErrorUrl("no-dog"));
+    redirect(volunteerErrorUrl(orgSlug, "no-dog"));
   }
 
   if (!note) {
-    redirect(volunteerErrorUrl("no-note"));
+    redirect(volunteerErrorUrl(orgSlug, "no-note"));
   }
 
   if (note.length > 240) {
-    redirect(volunteerErrorUrl("note-too-long"));
+    redirect(volunteerErrorUrl(orgSlug, "note-too-long"));
   }
 
   const resident = await prisma.resident.findFirst({
@@ -61,7 +67,7 @@ export async function submitVolunteerNote(formData: FormData) {
   });
 
   if (!resident) {
-    redirect(volunteerErrorUrl("unavailable"));
+    redirect(volunteerErrorUrl(orgSlug, "unavailable"));
   }
 
   // Photos live in the database, not the filesystem — Vercel functions are
@@ -71,11 +77,11 @@ export async function submitVolunteerNote(formData: FormData) {
 
   if (photo instanceof File && photo.size > 0) {
     if (!PHOTO_EXTENSIONS[photo.type]) {
-      redirect(volunteerErrorUrl("photo-type"));
+      redirect(volunteerErrorUrl(orgSlug, "photo-type"));
     }
 
     if (photo.size > MAX_PHOTO_BYTES) {
-      redirect(volunteerErrorUrl("photo-size"));
+      redirect(volunteerErrorUrl(orgSlug, "photo-size"));
     }
 
     photoData = new Uint8Array(await photo.arrayBuffer());
@@ -97,5 +103,5 @@ export async function submitVolunteerNote(formData: FormData) {
     },
   });
 
-  redirect(volunteerUrl({ dog: residentId, submitted: "1" }));
+  redirect(volunteerUrl(orgSlug, { dog: residentId, submitted: "1" }));
 }

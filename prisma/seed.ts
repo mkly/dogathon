@@ -128,7 +128,104 @@ async function main() {
     },
   });
 
-  console.log("Seeded Copper's Dream, Biscuit, care history, sponsorships, and settings.");
+  const secondOrganization = await prisma.organization.upsert({
+    where: { slug: "happy-tails" },
+    update: { name: "Happy Tails Rescue" },
+    create: {
+      id: "demo-org-happy-tails",
+      name: "Happy Tails Rescue",
+      slug: "happy-tails",
+      createdAt: new Date(),
+    },
+  });
+
+  const juniper = await prisma.resident.upsert({
+    where: { orgId_name: { orgId: secondOrganization.id, name: "Juniper" } },
+    update: {
+      breed: "Terrier mix",
+      dobText: "2022",
+      ageText: "Young adult",
+      sex: "Female",
+      weightText: "Small",
+      personality: "Bright, bouncy, and happiest with a tennis ball.",
+      careNotes: ["Prefers a quiet spot for meals."],
+      photoUrls: [photoUrls[1] ?? photoUrls[0]],
+      status: "available",
+      adoptedAt: null,
+    },
+    create: {
+      id: "demo-resident-juniper",
+      orgId: secondOrganization.id,
+      name: "Juniper",
+      breed: "Terrier mix",
+      dobText: "2022",
+      ageText: "Young adult",
+      sex: "Female",
+      weightText: "Small",
+      personality: "Bright, bouncy, and happiest with a tennis ball.",
+      careNotes: ["Prefers a quiet spot for meals."],
+      photoUrls: [photoUrls[1] ?? photoUrls[0]],
+    },
+  });
+
+  await prisma.sponsorship.upsert({
+    where: {
+      id_orgId: { id: "demo-sponsorship-happy-tails", orgId: secondOrganization.id },
+    },
+    update: {
+      orgId: secondOrganization.id,
+      residentId: juniper.id,
+      sponsorName: "Sam Chen",
+      sponsorEmail: "sam@example.com",
+      sponsorPhone: null,
+      channel: "email",
+      monthlyUsd: 25,
+      status: "active",
+      endedReason: null,
+    },
+    create: {
+      id: "demo-sponsorship-happy-tails",
+      orgId: secondOrganization.id,
+      residentId: juniper.id,
+      sponsorName: "Sam Chen",
+      sponsorEmail: "sam@example.com",
+      sponsorPhone: null,
+      channel: "email",
+    },
+  });
+
+  await prisma.volunteerNote.upsert({
+    where: {
+      id_orgId: { id: "demo-note-happy-tails", orgId: secondOrganization.id },
+    },
+    update: {
+      orgId: secondOrganization.id,
+      residentId: juniper.id,
+      note: "Learned to bring the tennis ball back.",
+      photoUrl: null,
+    },
+    create: {
+      id: "demo-note-happy-tails",
+      orgId: secondOrganization.id,
+      residentId: juniper.id,
+      note: "Learned to bring the tennis ball back.",
+    },
+  });
+
+  await prisma.rescueSettings.upsert({
+    where: { orgId: secondOrganization.id },
+    update: {
+      sourceUrl: "seed/dogs-page-A.html",
+      pinnedPostscript: "Happy Tails adoption hours are Saturday afternoons.",
+    },
+    create: {
+      orgId: secondOrganization.id,
+      sourceUrl: "seed/dogs-page-A.html",
+      pinnedPostscript: "Happy Tails adoption hours are Saturday afternoons.",
+    },
+  });
+
+  console.log("Seeded two organizations with distinct rosters, care history, sponsorships, and settings.");
 }
 
 main()

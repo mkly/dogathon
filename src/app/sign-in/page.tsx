@@ -9,11 +9,18 @@ import styles from "./sign-in.module.css";
 
 export const dynamic = "force-dynamic";
 
-export default async function SignInPage() {
+type SignInPageProps = { searchParams: Promise<{ next?: string }> };
+
+function safeNextPath(value: string | undefined) {
+  return value?.startsWith("/") && !value.startsWith("//") ? value : "/organizations";
+}
+
+export default async function SignInPage({ searchParams }: SignInPageProps) {
+  const redirectTo = safeNextPath((await searchParams).next);
   const session = await getSession(await headers());
 
   if (session) {
-    redirect("/organizations");
+    redirect(redirectTo);
   }
 
   return (
@@ -24,7 +31,7 @@ export default async function SignInPage() {
         <p className={styles.lede}>
           Sign in with your staff account to open the admin room.
         </p>
-        <AuthForm />
+        <AuthForm redirectTo={redirectTo} />
       </FeltPanel>
     </main>
   );

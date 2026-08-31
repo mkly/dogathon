@@ -6,19 +6,19 @@ import { FeltButton, FeltField, FeltPanel, PhotoPatch, StitchBadge } from "@/com
 import { prisma } from "@/lib/prisma";
 import { getPublicOrganization } from "@/lib/public-organization";
 
-import styles from "../../public.module.css";
+import styles from "../../../public.module.css";
 
 export const dynamic = "force-dynamic";
 
 type DogPageProps = {
-  params: Promise<{ id: string }>;
+  params: Promise<{ id: string; orgSlug: string }>;
   searchParams: Promise<{ error?: string; sponsored?: string }>;
 };
 
 export default async function DogPage({ params, searchParams }: DogPageProps) {
-  const { id } = await params;
+  const { id, orgSlug } = await params;
   const query = await searchParams;
-  const organization = await getPublicOrganization();
+  const organization = await getPublicOrganization(orgSlug);
   if (!organization) notFound();
   const resident = await prisma.resident.findFirst({ where: { id, orgId: organization.id } });
 
@@ -29,7 +29,7 @@ export default async function DogPage({ params, searchParams }: DogPageProps) {
 
   return (
     <main className={`${styles.siteShell} ${styles.detailShell}`}>
-      <Link className={styles.backLink} href="/">← All residents</Link>
+      <Link className={styles.backLink} href={`/${orgSlug}`}>← All residents</Link>
 
       {sponsored && (
         <FeltPanel className={`${styles.confirmation} ${styles.confirmationTop}`} tone="moss">
@@ -90,7 +90,7 @@ export default async function DogPage({ params, searchParams }: DogPageProps) {
           )}
 
           <form action={createSponsorship} className={styles.sponsorForm}>
-            <input name="orgId" type="hidden" value={organization.id} />
+            <input name="orgSlug" type="hidden" value={orgSlug} />
             <input name="residentId" type="hidden" value={resident.id} />
 
             <label htmlFor="sponsorName">Your name</label>
@@ -112,7 +112,7 @@ export default async function DogPage({ params, searchParams }: DogPageProps) {
         <FeltPanel className={styles.confirmation} tone="brick">
           <h2>{resident.name} has been adopted!</h2>
           <p>Their sponsorship chapter is complete. Meet another resident who could use your help.</p>
-          <Link className={`felt-button felt-cream ${styles.cardLink}`} href="/">Meet the dogs</Link>
+          <Link className={`felt-button felt-cream ${styles.cardLink}`} href={`/${orgSlug}`}>Meet the dogs</Link>
         </FeltPanel>
       ) : null}
     </main>

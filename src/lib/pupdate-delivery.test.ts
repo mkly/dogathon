@@ -1,7 +1,14 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { deliverPupdate } from "./pupdate-delivery.ts";
+import { deliverPupdate, dogPageUrl } from "./pupdate-delivery.ts";
+
+test("builds an organization-scoped dog URL", () => {
+  assert.equal(
+    dogPageUrl("https://rescue.example", "second-chance", "dog/one"),
+    "https://rescue.example/second-chance/dogs/dog%2Fone",
+  );
+});
 
 test("fans out one dry-run delivery for every selected sponsor channel", async () => {
   const emailCalls: Array<{ to: string; subject: string; body: string }> = [];

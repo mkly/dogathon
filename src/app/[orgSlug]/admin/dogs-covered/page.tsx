@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { headers } from "next/headers";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 import { FeltPanel, PhotoPatch, StitchBadge } from "@/components/felt";
-import { getOrganizationContext } from "@/lib/organization-access";
+import { getOrganizationAccessBySlug } from "@/lib/organization-access";
 import { prisma } from "@/lib/prisma";
 
 import styles from "./dogs-covered.module.css";
@@ -23,12 +23,15 @@ function formatDate(date: Date) {
   }).format(date);
 }
 
-export default async function DogsCoveredPage() {
-  const context = await getOrganizationContext(await headers(), ["owner", "admin"]);
+type DogsCoveredPageProps = { params: Promise<{ orgSlug: string }> };
 
-  if (!context) {
-    redirect("/organizations");
-  }
+export default async function DogsCoveredPage({ params }: DogsCoveredPageProps) {
+  const { orgSlug } = await params;
+  const access = await getOrganizationAccessBySlug(await headers(), orgSlug, ["owner", "admin"]);
+
+  if (!access) notFound();
+  if (!access.context) redirect("/organizations");
+  const { context } = access;
 
   const residents = await prisma.resident.findMany({
     where: { orgId: context.orgId, sponsorships: { some: { orgId: context.orgId } } },
@@ -56,7 +59,7 @@ export default async function DogsCoveredPage() {
           <h1>Dogs covered</h1>
           <p>Every sponsored resident and the people supporting them.</p>
         </div>
-        <Link className={`felt-button felt-denim ${styles.backLink}`} href="/admin">
+        <Link className={`felt-button felt-denim ${styles.backLink}`} href={`/${orgSlug}/admin`}>
           Back to staff room
         </Link>
       </header>
@@ -106,7 +109,7 @@ export default async function DogsCoveredPage() {
                   </div>
                   <Link
                     className={`felt-button felt-mustard ${styles.detailLink}`}
-                    href={`/dogs/${resident.id}`}
+                    href={`/${orgSlug}/dogs/${resident.id}`}
                   >
                     View dog page
                   </Link>

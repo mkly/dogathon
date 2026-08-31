@@ -35,6 +35,7 @@ export function DraftEditor({
   gmailConnected,
   gmailStatus,
   id,
+  orgSlug,
   smsText: initialSmsText,
   subject: initialSubject,
 }: {
@@ -42,6 +43,7 @@ export function DraftEditor({
   gmailConnected: boolean;
   gmailStatus?: string;
   id: string;
+  orgSlug: string;
   smsText: string;
   subject: string;
 }) {
@@ -89,7 +91,7 @@ export function DraftEditor({
 
     const response = await fetch(`/api/pupdates/${id}`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "X-Organization-Slug": orgSlug },
       body: JSON.stringify({
         subject: draft.subject,
         emailBody: draft.bodyText,
@@ -126,7 +128,10 @@ export function DraftEditor({
     setPending("approve");
     try {
       if (!(await persistDraft(savedDraft))) return;
-      const response = await fetch(`/api/pupdates/${id}/approve`, { method: "POST" });
+      const response = await fetch(`/api/pupdates/${id}/approve`, {
+        method: "POST",
+        headers: { "X-Organization-Slug": orgSlug },
+      });
       if (!response.ok) {
         pushToast("error", await responseError(response, "Approve and send"));
         return;
@@ -145,7 +150,10 @@ export function DraftEditor({
 
     setPending("deny");
     try {
-      const response = await fetch(`/api/pupdates/${id}`, { method: "DELETE" });
+      const response = await fetch(`/api/pupdates/${id}`, {
+        method: "DELETE",
+        headers: { "X-Organization-Slug": orgSlug },
+      });
       if (!response.ok) {
         pushToast("error", await responseError(response, "Discard draft"));
         return;
@@ -185,7 +193,7 @@ export function DraftEditor({
         {/* the themed email as the sponsor will see it, not the plain draft text */}
         <a
           className={`felt-button felt-denim ${styles.previewLink}`}
-          href={`/api/pupdates/${id}/preview`}
+          href={`/api/pupdates/${id}/preview?org=${encodeURIComponent(orgSlug)}`}
           rel="noreferrer"
           target="_blank"
         >
@@ -272,9 +280,11 @@ export function DraftEditor({
 }
 
 export function ComposeButton({
+  orgSlug,
   residentId,
   residentName,
 }: {
+  orgSlug: string;
   residentId: string;
   residentName: string;
 }) {
@@ -286,7 +296,7 @@ export function ComposeButton({
     try {
       const response = await fetch("/api/pupdates/compose", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "X-Organization-Slug": orgSlug },
         body: JSON.stringify({ residentId }),
       });
       if (!response.ok) {
@@ -313,14 +323,17 @@ export function ComposeButton({
 
 type GmailStatus = { connected: boolean; email?: string; status?: string };
 
-export function StaffTools({ initialGmail }: { initialGmail: GmailStatus }) {
+export function StaffTools({ initialGmail, orgSlug }: { initialGmail: GmailStatus; orgSlug: string }) {
   const [gmail, setGmail] = useState<GmailStatus | null>(initialGmail);
   const [pending, setPending] = useState<"gmail" | "sync" | null>(null);
 
   useEffect(() => {
     let current = true;
 
-    fetch("/api/arcade/gmail/status", { cache: "no-store" })
+    fetch("/api/arcade/gmail/status", {
+      cache: "no-store",
+      headers: { "X-Organization-Slug": orgSlug },
+    })
       .then(async (response) => {
         if (!current) return;
         if (!response.ok) {
@@ -337,12 +350,15 @@ export function StaffTools({ initialGmail }: { initialGmail: GmailStatus }) {
     return () => {
       current = false;
     };
-  }, []);
+  }, [orgSlug]);
 
   async function syncNow() {
     setPending("sync");
     try {
-      const response = await fetch("/api/sync", { method: "POST" });
+      const response = await fetch("/api/sync", {
+        method: "POST",
+        headers: { "X-Organization-Slug": orgSlug },
+      });
       if (!response.ok) {
         const failure = await response.json().catch(() => null) as {
           refused?: boolean;
@@ -372,7 +388,10 @@ export function StaffTools({ initialGmail }: { initialGmail: GmailStatus }) {
   async function connectGmail() {
     setPending("gmail");
     try {
-      const response = await fetch("/api/arcade/gmail/authorize", { method: "POST" });
+      const response = await fetch("/api/arcade/gmail/authorize", {
+        method: "POST",
+        headers: { "X-Organization-Slug": orgSlug },
+      });
       if (!response.ok) {
         pushToast("error", await responseError(response, "Gmail connect"));
         return;
@@ -416,9 +435,11 @@ export function StaffTools({ initialGmail }: { initialGmail: GmailStatus }) {
 const initialSettingsState: SettingsState = { status: "idle", message: "" };
 
 export function SettingsForm({
+  orgSlug,
   pinnedPostscript,
   sourceUrl,
 }: {
+  orgSlug: string;
   pinnedPostscript: string;
   sourceUrl: string;
 }) {
@@ -432,6 +453,7 @@ export function SettingsForm({
 
   return (
     <form action={formAction} className={styles.settingsForm}>
+      <input name="orgSlug" type="hidden" value={orgSlug} />
       <label htmlFor="pinnedPostscript">This month&apos;s postscript</label>
       <FeltField>
         <textarea

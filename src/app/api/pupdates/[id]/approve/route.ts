@@ -14,6 +14,7 @@ export async function POST(request: Request, { params }: RouteContext) {
   const pupdate = await prisma.pupdate.findFirst({
     where: { id, orgId },
     include: {
+      organization: { select: { slug: true } },
       resident: {
         include: {
           sponsorships: { where: { orgId, status: "active" }, orderBy: { createdAt: "asc" } },
@@ -38,7 +39,7 @@ export async function POST(request: Request, { params }: RouteContext) {
   }
 
   const origin = new URL(request.url).origin;
-  const dogUrl = dogPageUrl(origin, pupdate.residentId);
+  const dogUrl = dogPageUrl(origin, pupdate.organization.slug, pupdate.residentId);
   const deliveries = await deliverPupdate(
     {
       ...pupdate,

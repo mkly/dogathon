@@ -1,6 +1,6 @@
 "use server";
 
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 import { prisma } from "@/lib/prisma";
 
@@ -10,17 +10,23 @@ function text(formData: FormData, key: string) {
 
 export async function createSponsorship(formData: FormData) {
   const residentId = text(formData, "residentId");
-  const orgId = text(formData, "orgId");
+  const orgSlug = text(formData, "orgSlug");
   const sponsorName = text(formData, "sponsorName");
   const sponsorEmail = text(formData, "sponsorEmail");
-  const dogPath = `/dogs/${encodeURIComponent(residentId)}`;
+  const dogPath = `/${encodeURIComponent(orgSlug)}/dogs/${encodeURIComponent(residentId)}`;
 
-  if (!residentId || !orgId || !sponsorName || !sponsorEmail.includes("@")) {
+  if (!residentId || !orgSlug || !sponsorName || !sponsorEmail.includes("@")) {
     redirect(`${dogPath}?error=invalid`);
   }
 
+  const organization = await prisma.organization.findUnique({
+    where: { slug: orgSlug },
+    select: { id: true },
+  });
+  if (!organization) notFound();
+
   const resident = await prisma.resident.findFirst({
-    where: { id: residentId, orgId },
+    where: { id: residentId, orgId: organization.id },
     select: { status: true },
   });
 
@@ -30,7 +36,7 @@ export async function createSponsorship(formData: FormData) {
 
   await prisma.sponsorship.create({
     data: {
-      orgId,
+      orgId: organization.id,
       residentId,
       sponsorName,
       sponsorEmail,
