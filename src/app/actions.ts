@@ -13,9 +13,16 @@ export async function createSponsorship(formData: FormData) {
   const orgSlug = text(formData, "orgSlug");
   const sponsorName = text(formData, "sponsorName");
   const sponsorEmail = text(formData, "sponsorEmail");
+
+  // Without both segments the path collapses to "//dogs/..." — a scheme-relative
+  // URL the browser would read as another host, so send those back to the index.
+  if (!orgSlug || !residentId) {
+    redirect("/");
+  }
+
   const dogPath = `/${encodeURIComponent(orgSlug)}/dogs/${encodeURIComponent(residentId)}`;
 
-  if (!residentId || !orgSlug || !sponsorName || !sponsorEmail.includes("@")) {
+  if (!sponsorName || !sponsorEmail.includes("@")) {
     redirect(`${dogPath}?error=invalid`);
   }
 
