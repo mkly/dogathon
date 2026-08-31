@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 
 import { FeltButton, FeltField, FeltPanel, StitchBadge } from "@/components/felt";
 import { pushToast } from "@/components/toast";
-import { MAX_SMS_LENGTH } from "@/lib/composer";
+import { MAX_SMS_LENGTH } from "@/lib/pupdate-sms";
 
 import { saveSettings, type SettingsState } from "./actions";
 import { GMAIL_NOTICE_ID, gmailBlockedReason } from "./gmail-notice";

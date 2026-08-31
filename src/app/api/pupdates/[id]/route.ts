@@ -1,5 +1,5 @@
 import { requireApiSession } from "@/lib/auth-session";
-import { MAX_SMS_LENGTH } from "@/lib/composer";
+import { MAX_SMS_LENGTH } from "@/lib/pupdate-sms";
 import { prisma } from "@/lib/prisma";
 
 type RouteContext = { params: Promise<{ id: string }> };

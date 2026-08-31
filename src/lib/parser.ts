@@ -1,3 +1,5 @@
+import { createChatCompletion, hasChatCompletionCredentials } from "./chat-completions.ts";
+
 export type DogRecord = {
   name: string;
   breed: string;
@@ -16,26 +18,24 @@ export type ParseDogRosterOptions = {
   deterministic?: boolean;
   fetch?: typeof fetch;
   model?: string;
+  baseUrl?: string;
 };
 
-const DEFAULT_MODEL = "claude-sonnet-5";
 const FIELD_NAMES = ["Personality", "Breed", "Age", "Weight", "Sex"];
 
 /**
- * Parse a hand-authored rescue roster. Anthropic is the primary parser when a
- * key is configured; local parsing keeps imports, tests, and demos offline.
+ * Parse a hand-authored rescue roster. A configured chat-completions endpoint
+ * is the primary parser; local parsing keeps imports, tests, and demos offline.
  */
 export async function parseDogRoster(
   source: string,
   options: ParseDogRosterOptions = {},
 ): Promise<DogRecord[]> {
-  const apiKey = options.apiKey ?? process.env.ANTHROPIC_API_KEY;
-
-  if (apiKey && !options.deterministic) {
+  if (hasChatCompletionCredentials(options.apiKey) && !options.deterministic) {
     try {
-      return await parseWithAnthropic(source, apiKey, options);
+      return await parseWithModel(source, options);
     } catch (error) {
-      console.warn("Anthropic roster parsing failed; using deterministic parser.", error);
+      console.warn("Model roster parsing failed; using deterministic parser.", error);
     }
   }
 
@@ -78,46 +78,29 @@ export function parseDogRosterDeterministic(source: string): DogRecord[] {
   });
 }
 
-async function parseWithAnthropic(
+async function parseWithModel(
   source: string,
-  apiKey: string,
   options: ParseDogRosterOptions,
 ): Promise<DogRecord[]> {
-  const fetcher = options.fetch ?? fetch;
-  const response = await fetcher("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "anthropic-version": "2023-06-01",
-      "content-type": "application/json",
-      "x-api-key": apiKey,
-    },
-    body: JSON.stringify({
-      model: options.model ?? DEFAULT_MODEL,
-      max_tokens: 12_000,
-      messages: [{
+  const text = await createChatCompletion({
+    apiKey: options.apiKey,
+    baseUrl: options.baseUrl,
+    model: options.model,
+    fetch: options.fetch,
+    maxTokens: 12_000,
+    messages: [{
         role: "user",
         content: `Extract the rescue dogs from the page below. Return only a JSON array. Each item must have exactly these fields: name, breed, dobText, ageText, sex, weightText, personality, careNotes (string array), photoUrls (string array), and adopted (boolean). Preserve the page's wording. A heading containing an Adopted marker means adopted is true. Photos appear as [photo: URL] markers; put the markers that follow a dog's heading in that dog's photoUrls. Do not include navigation, footer, or courtesy-listing headings.\n\n${semanticPageText(source)}`,
       }],
-    }),
   });
 
-  if (!response.ok) {
-    throw new Error(`Anthropic returned ${response.status}: ${await response.text()}`);
-  }
-
-  const payload = await response.json() as {
-    content?: Array<{ type?: string; text?: string }>;
-  };
-  const text = payload.content?.find((item) => item.type === "text")?.text;
-  if (!text) throw new Error("Anthropic response did not contain text");
-
   const parsed = JSON.parse(extractJsonArray(text)) as unknown;
-  if (!Array.isArray(parsed)) throw new Error("Anthropic response was not an array");
+  if (!Array.isArray(parsed)) throw new Error("Model response was not an array");
 
   const dogs = parsed.map(normalizeRecord).filter((dog) => dog.name && dog.photoUrls.length);
   // An empty roster reads downstream as "every dog was adopted", so treat it as
   // a failed parse and let the deterministic path answer instead.
-  if (!dogs.length) throw new Error("Anthropic response contained no usable dog records");
+  if (!dogs.length) throw new Error("Model response contained no usable dog records");
 
   return dogs;
 }
@@ -255,6 +238,6 @@ function decodeEntities(value: string): string {
 function extractJsonArray(value: string): string {
   const start = value.indexOf("[");
   const end = value.lastIndexOf("]");
-  if (start < 0 || end <= start) throw new Error("Anthropic response did not contain a JSON array");
+  if (start < 0 || end <= start) throw new Error("Model response did not contain a JSON array");
   return value.slice(start, end + 1);
 }

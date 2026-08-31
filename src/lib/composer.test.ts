@@ -3,21 +3,29 @@ import { after, afterEach, before, test } from "node:test";
 
 import { composePupdate } from "./composer.ts";
 
-const originalApiKey = process.env.ANTHROPIC_API_KEY;
+const originalEnvironment = {
+  OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+  OPENAI_BASE_URL: process.env.OPENAI_BASE_URL,
+  OPENAI_MODEL: process.env.OPENAI_MODEL,
+};
 const originalFetch = globalThis.fetch;
 
 before(() => {
-  delete process.env.ANTHROPIC_API_KEY;
+  delete process.env.OPENAI_API_KEY;
 });
 
 afterEach(() => {
-  delete process.env.ANTHROPIC_API_KEY;
+  delete process.env.OPENAI_API_KEY;
+  delete process.env.OPENAI_BASE_URL;
+  delete process.env.OPENAI_MODEL;
   globalThis.fetch = originalFetch;
 });
 
 after(() => {
-  if (originalApiKey === undefined) delete process.env.ANTHROPIC_API_KEY;
-  else process.env.ANTHROPIC_API_KEY = originalApiKey;
+  for (const [name, value] of Object.entries(originalEnvironment)) {
+    if (value === undefined) delete process.env[name];
+    else process.env[name] = value;
+  }
   globalThis.fetch = originalFetch;
 });
 
@@ -34,24 +42,24 @@ test("composes a grounded regular pupdate without credentials", async () => {
   assert.match(draft.bodyText, /vet visit went well/u);
   assert.match(draft.bodyText, /Teeth cleaned/u);
   assert.ok(draft.bodyText.endsWith("Come meet us at Saturday's adoption fair."));
-  assert.match(draft.smsText, /\{\{dogPageUrl\}\}/u);
-  assert.ok(draft.smsText.length < 300);
 });
 
-test("frames volunteer notes as the news in Anthropic regular-update prompts", async () => {
-  process.env.ANTHROPIC_API_KEY = "test-key";
+test("uses the configured chat-completions endpoint and model", async () => {
+  process.env.OPENAI_API_KEY = "test-key";
+  process.env.OPENAI_BASE_URL = "https://model.example/v1/";
+  process.env.OPENAI_MODEL = "rescue-writer";
+  let requestUrl = "";
+  let requestHeaders: Headers | undefined;
   let requestBody: Record<string, unknown> | undefined;
-  globalThis.fetch = async (_input, init) => {
+  globalThis.fetch = async (input, init) => {
+    requestUrl = String(input);
+    requestHeaders = new Headers(init?.headers);
     requestBody = JSON.parse(String(init?.body)) as Record<string, unknown>;
     return Response.json({
-      content: [{
-        type: "text",
-        text: JSON.stringify({
-          subject: "Biscuit made a new friend",
-          bodyText: "Biscuit had fun meeting a new friend at the park.",
-          smsText: "Biscuit made a new friend. See the update: {{dogPageUrl}}",
-        }),
-      }],
+      choices: [{ message: { content: JSON.stringify({
+        subject: "Biscuit made a new friend",
+        bodyText: "Biscuit had fun meeting a new friend at the park.",
+      }) } }],
     });
   };
 
@@ -64,11 +72,16 @@ test("frames volunteer notes as the news in Anthropic regular-update prompts", a
   });
 
   assert.ok(requestBody);
-  assert.match(String(requestBody.system), /Treat the volunteer notes as the update/u);
-  assert.match(String(requestBody.system), /do not turn the email into a profile or biography/u);
+  assert.ok(requestHeaders);
+  assert.equal(requestUrl, "https://model.example/v1/chat/completions");
+  assert.equal(requestHeaders.get("authorization"), "Bearer test-key");
+  assert.equal(requestBody.model, "rescue-writer");
 
-  const messages = requestBody.messages as Array<{ content: string }>;
-  const promptInput = JSON.parse(messages[0].content) as { dog: Record<string, unknown> };
+  const messages = requestBody.messages as Array<{ role: string; content: string }>;
+  assert.equal(messages[0].role, "system");
+  assert.match(messages[0].content, /Treat the volunteer notes as the update/u);
+  assert.match(messages[0].content, /do not turn the email into a profile or biography/u);
+  const promptInput = JSON.parse(messages[1].content) as { dog: Record<string, unknown> };
   assert.deepEqual(promptInput.dog, {
     name: "Biscuit",
     breed: "Corgi mix",
@@ -91,7 +104,4 @@ test("supports a graduation pupdate", async () => {
   assert.match(draft.subject, /home/u);
   assert.match(draft.bodyText, /Biscuit/u);
   assert.match(draft.bodyText, /went home with a family/u);
-  assert.match(draft.smsText, /adopted today/u);
-  assert.match(draft.smsText, /https:\/\/rescue\.example\/dogs\/biscuit/u);
-  assert.ok(draft.smsText.length < 300);
 });
