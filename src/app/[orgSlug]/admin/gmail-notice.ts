@@ -1,9 +1,7 @@
 /** Shared by the server-rendered queue notice and the disabled Approve buttons
  *  it explains, so the two never drift apart. */
-export const GMAIL_NOTICE_ID = "gmail-approval-notice";
+export const EMAIL_CONNECTOR_NOTICE_ID = "email-connector-approval-notice";
 
-export function gmailBlockedReason(gmailStatus?: string) {
-  return gmailStatus === "not_configured"
-    ? "Gmail sending is not configured on this server yet."
-    : "Connect Gmail in staff tools to send approved pupdates.";
+export function emailConnectorBlockedReason() {
+  return "Connect and verify an organization email account before sending approved pupdates.";
 }

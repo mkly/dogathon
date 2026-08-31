@@ -5,27 +5,24 @@ import { notFound, redirect } from "next/navigation";
 
 import { FeltPanel, PhotoPatch, StitchBadge } from "@/components/felt";
 import { SignOutButton } from "@/components/sign-out-button";
-import { gmailAuthStatus } from "@/lib/arcade";
+import { getEmailConnectorStatus } from "@/lib/email-connectors";
 import { getOrganizationAccessBySlug } from "@/lib/organization-access";
 import { prisma } from "@/lib/prisma";
 
 import pawcastWordmark from "../../../../public/brand/pawcast-wordmark.png";
 
 import { beginStripeOnboarding } from "./actions";
-import { ComposeButton, DraftEditor, SettingsForm, StaffTools } from "./admin-controls";
-import { GMAIL_NOTICE_ID, gmailBlockedReason } from "./gmail-notice";
+import {
+  ComposeButton,
+  DraftEditor,
+  EmailConnectorSettings,
+  SettingsForm,
+  StaffTools,
+} from "./admin-controls";
+import { EMAIL_CONNECTOR_NOTICE_ID, emailConnectorBlockedReason } from "./gmail-notice";
 import styles from "./admin.module.css";
 
 export const dynamic = "force-dynamic";
-
-async function getGmailStatus() {
-  try {
-    return await gmailAuthStatus();
-  } catch (error) {
-    console.error("Gmail status check failed", error);
-    return { authorized: false as const, status: "unavailable" };
-  }
-}
 
 type AdminPageProps = { params: Promise<{ orgSlug: string }> };
 
@@ -40,7 +37,15 @@ export default async function AdminPage({ params }: AdminPageProps) {
   }
   const { context } = access;
 
-  const [drafts, noteResidents, storedSettings, activeSponsorCount, sponsoredDogCount, gmail, organization] =
+  const [
+    drafts,
+    noteResidents,
+    storedSettings,
+    activeSponsorCount,
+    sponsoredDogCount,
+    emailConnector,
+    organization,
+  ] =
     await Promise.all([
       prisma.pupdate.findMany({
         where: { orgId: context.orgId, status: "draft" },
@@ -86,7 +91,7 @@ export default async function AdminPage({ params }: AdminPageProps) {
           sponsorships: { some: { orgId: context.orgId, status: "active" } },
         },
       }),
-      getGmailStatus(),
+      getEmailConnectorStatus(context.orgId),
       prisma.organization.findUnique({
         where: { id: context.orgId },
         select: {
@@ -113,16 +118,7 @@ export default async function AdminPage({ params }: AdminPageProps) {
           <h1>Staff room</h1>
         </div>
         <div className={styles.headerActions}>
-          <StaffTools
-            orgSlug={orgSlug}
-            initialGmail={{
-              connected: gmail.authorized,
-              status: gmail.status,
-              ...(gmail.authorized && process.env.ARCADE_USER_ID?.includes("@")
-                ? { email: process.env.ARCADE_USER_ID }
-                : {}),
-            }}
-          />
+          <StaffTools orgSlug={orgSlug} />
           <SignOutButton />
         </div>
       </header>
@@ -247,10 +243,10 @@ export default async function AdminPage({ params }: AdminPageProps) {
           <StitchBadge tone="brick">{drafts.length} {drafts.length === 1 ? "draft" : "drafts"}</StitchBadge>
         </div>
 
-        {!gmail.authorized && drafts.length > 0 && (
-          <p className={styles.queueNotice} id={GMAIL_NOTICE_ID}>
+        {!emailConnector.connected && drafts.length > 0 && (
+          <p className={styles.queueNotice} id={EMAIL_CONNECTOR_NOTICE_ID}>
             <span aria-hidden="true">✉️</span>
-            {gmailBlockedReason(gmail.status)} Approving is on hold until then.
+            {emailConnectorBlockedReason()} Approving is on hold until then.
           </p>
         )}
 
@@ -279,8 +275,7 @@ export default async function AdminPage({ params }: AdminPageProps) {
                 </div>
                 <DraftEditor
                   bodyText={draft.bodyText}
-                  gmailConnected={gmail.authorized}
-                  gmailStatus={gmail.status}
+                  emailConnected={emailConnector.connected}
                   id={draft.id}
                   orgSlug={orgSlug}
                   smsText={draft.smsText}
@@ -291,6 +286,8 @@ export default async function AdminPage({ params }: AdminPageProps) {
           )}
         </div>
       </section>
+
+      <EmailConnectorSettings initialConnector={emailConnector} orgSlug={orgSlug} />
 
       <FeltPanel className={styles.settings} tone="denim">
         <div className={styles.settingsIntro}>

@@ -1,5 +1,6 @@
-import { deliverPupdate, dogPageUrl } from "@/lib/pupdate-delivery";
+import { getEmailConnectorStatus } from "@/lib/email-connectors";
 import { requireApiOrganization } from "@/lib/organization-access";
+import { deliverPupdate, dogPageUrl } from "@/lib/pupdate-delivery";
 import { prisma } from "@/lib/prisma";
 import { renderPupdateEmail } from "@/lib/pupdate-email";
 
@@ -30,6 +31,14 @@ export async function POST(request: Request, { params }: RouteContext) {
     return Response.json({ error: "Only draft pupdates can be approved" }, { status: 409 });
   }
 
+  const emailConnector = await getEmailConnectorStatus(orgId);
+  if (!emailConnector.connected) {
+    return Response.json(
+      { error: "Connect and verify an organization email account before approving pupdates" },
+      { status: 409 },
+    );
+  }
+
   const claimed = await prisma.pupdate.updateMany({
     where: { id, orgId, status: "draft" },
     data: { status: "approved" },
@@ -41,6 +50,7 @@ export async function POST(request: Request, { params }: RouteContext) {
   const origin = new URL(request.url).origin;
   const dogUrl = dogPageUrl(origin, pupdate.organization.slug, pupdate.residentId);
   const deliveries = await deliverPupdate(
+    orgId,
     {
       ...pupdate,
       bodyHtml: renderPupdateEmail({
@@ -54,7 +64,6 @@ export async function POST(request: Request, { params }: RouteContext) {
       }),
     },
     pupdate.resident.sponsorships,
-    dogUrl,
   );
   const sentAt = new Date();
   const sent = await prisma.pupdate.update({

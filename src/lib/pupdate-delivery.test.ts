@@ -10,134 +10,81 @@ test("builds an organization-scoped dog URL", () => {
   );
 });
 
-test("fans out one dry-run delivery for every selected sponsor channel", async () => {
-  const emailCalls: Array<{ to: string; subject: string; body: string }> = [];
-  const smsCalls: Array<{ to: string; body: string }> = [];
+const pupdate = {
+  subject: "A pupdate from Biscuit",
+  bodyText: "Biscuit had a great walk.",
+  smsText: "Legacy composer text",
+};
 
+test("delivers exactly one organization email to every sponsor, including legacy SMS preferences", async () => {
+  const calls: Array<{ orgId: string; to: string; subject: string; body: string }> = [];
   const deliveries = await deliverPupdate(
-    {
-      subject: "A pupdate from Biscuit",
-      bodyText: "Biscuit had a great walk.",
-      smsText: "Biscuit had a great walk.",
-    },
+    "org-a",
+    pupdate,
     [
-      {
-        id: "email-sponsor",
-        sponsorEmail: "email@example.com",
-        sponsorPhone: null,
-        channel: "email",
-      },
-      {
-        id: "both-sponsor",
-        sponsorEmail: "both@example.com",
-        sponsorPhone: "+15551234567",
-        channel: "both",
-      },
-      {
-        id: "sms-sponsor",
-        sponsorEmail: "sms@example.com",
-        sponsorPhone: "+15557654321",
-        channel: "sms",
-      },
+      { id: "email", sponsorEmail: "email@example.com", sponsorPhone: null, channel: "email" },
+      { id: "both", sponsorEmail: "both@example.com", sponsorPhone: "+15551234567", channel: "both" },
+      { id: "sms", sponsorEmail: "sms@example.com", sponsorPhone: "+15557654321", channel: "sms" },
     ],
-    "https://rescue.example/dogs/biscuit",
-    {
-      email: async (input) => {
-        emailCalls.push(input);
-        return { dryRun: true } as never;
-      },
-      sms: async (input) => {
-        smsCalls.push(input);
-        return { dryRun: true } as never;
-      },
+    async (orgId, input) => {
+      calls.push({ orgId, to: input.to, subject: input.subject, body: input.body });
     },
   );
 
-  assert.deepEqual(
-    deliveries.map(({ sponsorshipId, channel }) => `${sponsorshipId}:${channel}`),
-    ["email-sponsor:email", "both-sponsor:email", "both-sponsor:sms", "sms-sponsor:sms"],
-  );
-  assert.ok(deliveries.every((delivery) => delivery.status === "sent"));
-  assert.equal(emailCalls.length, 2);
-  assert.equal(smsCalls.length, 2);
-  assert.ok(smsCalls.every((call) => call.body.endsWith("https://rescue.example/dogs/biscuit")));
+  assert.deepEqual(deliveries, [
+    { sponsorshipId: "email", channel: "email", status: "sent" },
+    { sponsorshipId: "both", channel: "email", status: "sent" },
+    { sponsorshipId: "sms", channel: "email", status: "sent" },
+  ]);
+  assert.deepEqual(calls.map(({ orgId, to }) => ({ orgId, to })), [
+    { orgId: "org-a", to: "email@example.com" },
+    { orgId: "org-a", to: "both@example.com" },
+    { orgId: "org-a", to: "sms@example.com" },
+  ]);
 });
 
-test("delivers through the real credential-free Arcade wrappers", async () => {
-  const previousApiKey = process.env.ARCADE_API_KEY;
-  delete process.env.ARCADE_API_KEY;
-
-  try {
-    const deliveries = await deliverPupdate(
-      {
-        subject: "A pupdate from Biscuit",
-        bodyText: "Biscuit had a great walk.",
-        smsText: "Biscuit had a great walk.",
-      },
-      [
-        {
-          id: "both-sponsor",
-          sponsorEmail: "both@example.com",
-          sponsorPhone: "+15551234567",
-          channel: "both",
-        },
-      ],
-      "https://rescue.example/dogs/biscuit",
-    );
-
-    assert.deepEqual(deliveries, [
-      { sponsorshipId: "both-sponsor", channel: "email", status: "sent" },
-      { sponsorshipId: "both-sponsor", channel: "sms", status: "sent" },
-    ]);
-  } finally {
-    if (previousApiKey === undefined) delete process.env.ARCADE_API_KEY;
-    else process.env.ARCADE_API_KEY = previousApiKey;
-  }
-});
-
-test("records a failed send and still delivers to the remaining sponsors", async () => {
-  const smsCalls: Array<{ to: string; body: string }> = [];
-
+test("records a failed email and continues with the remaining sponsors", async () => {
   const deliveries = await deliverPupdate(
-    {
-      subject: "A pupdate from Biscuit",
-      bodyText: "Biscuit had a great walk.",
-      smsText: "Biscuit had a great walk.",
-    },
+    "org-a",
+    pupdate,
     [
-      {
-        id: "broken-sponsor",
-        sponsorEmail: "broken@example.com",
-        sponsorPhone: null,
-        channel: "email",
-      },
-      {
-        id: "sms-sponsor",
-        sponsorEmail: "sms@example.com",
-        sponsorPhone: "+15557654321",
-        channel: "sms",
-      },
+      { id: "broken", sponsorEmail: "broken@example.com", sponsorPhone: null, channel: "email" },
+      { id: "working", sponsorEmail: "working@example.com", sponsorPhone: null, channel: "email" },
     ],
-    "https://rescue.example/dogs/biscuit",
-    {
-      email: async () => {
-        throw new Error("Gmail is not connected");
-      },
-      sms: async (input) => {
-        smsCalls.push(input);
-        return { dryRun: true } as never;
-      },
+    async (_orgId, input) => {
+      if (input.to === "broken@example.com") throw new Error("Connector rejected the message");
     },
   );
 
   assert.deepEqual(deliveries, [
     {
-      sponsorshipId: "broken-sponsor",
+      sponsorshipId: "broken",
       channel: "email",
       status: "failed",
-      error: "Gmail is not connected",
+      error: "Connector rejected the message",
     },
-    { sponsorshipId: "sms-sponsor", channel: "sms", status: "sent" },
+    { sponsorshipId: "working", channel: "email", status: "sent" },
   ]);
-  assert.equal(smsCalls.length, 1);
+});
+
+test("carries a described send through the delivery record", async () => {
+  const described = {
+    dryRun: true as const,
+    connector: "gmail" as const,
+    from: "rescue@example.com",
+    to: "email@example.com",
+    subject: "A pupdate from Biscuit",
+    body: "Biscuit had a great walk.",
+    contentType: "plain" as const,
+  };
+  const deliveries = await deliverPupdate(
+    "org-a",
+    pupdate,
+    [{ id: "email", sponsorEmail: "email@example.com", sponsorPhone: null, channel: "email" }],
+    async () => described,
+  );
+
+  assert.deepEqual(deliveries, [
+    { sponsorshipId: "email", channel: "email", status: "sent", describedSend: described },
+  ]);
 });

@@ -1,4 +1,8 @@
-import { sendEmail, sendSms } from "./arcade.ts";
+import {
+  sendOrganizationEmail,
+  type DescribedSend,
+  type EmailInput,
+} from "./email-connectors.ts";
 
 export type DeliverySponsorship = {
   id: string;
@@ -17,15 +21,17 @@ export type PupdateForDelivery = {
 
 export type Delivery = {
   sponsorshipId: string;
-  channel: "email" | "sms";
+  channel: "email";
   status: "sent" | "failed";
   error?: string;
+  /** Present when no credential was configured and the send was only described. */
+  describedSend?: DescribedSend;
 };
 
-type Senders = {
-  email: typeof sendEmail;
-  sms: typeof sendSms;
-};
+type EmailSender = (
+  orgId: string,
+  input: EmailInput,
+) => Promise<DescribedSend | null | void>;
 
 export function dogPageUrl(origin: string, orgSlug: string, residentId: string): string {
   return new URL(
@@ -34,22 +40,23 @@ export function dogPageUrl(origin: string, orgSlug: string, residentId: string):
   ).toString();
 }
 
-function smsWithDogLink(body: string, link: string): string {
-  return body.includes(link) ? body : `${body.trim()} ${link}`;
-}
-
 /**
  * One send failure must not abandon the rest of the fan-out, nor strand the
  * pupdate mid-approval, so every attempt is recorded rather than thrown.
  */
 async function attempt(
-  send: () => Promise<unknown>,
+  send: () => Promise<DescribedSend | null | void>,
   sponsorshipId: string,
   channel: Delivery["channel"],
 ): Promise<Delivery> {
   try {
-    await send();
-    return { sponsorshipId, channel, status: "sent" };
+    const described = await send();
+    return {
+      sponsorshipId,
+      channel,
+      status: "sent",
+      ...(described ? { describedSend: described } : {}),
+    };
   } catch (error) {
     return {
       sponsorshipId,
@@ -61,48 +68,27 @@ async function attempt(
 }
 
 export async function deliverPupdate(
+  orgId: string,
   pupdate: PupdateForDelivery,
   sponsorships: DeliverySponsorship[],
-  dogUrl: string,
-  senders: Senders = { email: sendEmail, sms: sendSms },
+  sendEmail: EmailSender = sendOrganizationEmail,
 ): Promise<Delivery[]> {
   const deliveries: Delivery[] = [];
 
   for (const sponsorship of sponsorships) {
-    const phone = sponsorship.sponsorPhone;
-
-    if (sponsorship.channel === "email" || sponsorship.channel === "both") {
-      deliveries.push(
-        await attempt(
-          () =>
-            senders.email({
-              to: sponsorship.sponsorEmail,
-              subject: pupdate.subject,
-              body: pupdate.bodyHtml ?? pupdate.bodyText,
-              contentType: pupdate.bodyHtml ? "html" : "plain",
-            }),
-          sponsorship.id,
-          "email",
-        ),
-      );
-    }
-
-    if (
-      (sponsorship.channel === "sms" || sponsorship.channel === "both") &&
-      phone
-    ) {
-      deliveries.push(
-        await attempt(
-          () =>
-            senders.sms({
-              to: phone,
-              body: smsWithDogLink(pupdate.smsText, dogUrl),
-            }),
-          sponsorship.id,
-          "sms",
-        ),
-      );
-    }
+    deliveries.push(
+      await attempt(
+        () =>
+          sendEmail(orgId, {
+            to: sponsorship.sponsorEmail,
+            subject: pupdate.subject,
+            body: pupdate.bodyHtml ?? pupdate.bodyText,
+            contentType: pupdate.bodyHtml ? "html" : "plain",
+          }),
+        sponsorship.id,
+        "email",
+      ),
+    );
   }
 
   return deliveries;
