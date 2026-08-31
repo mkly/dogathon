@@ -79,7 +79,7 @@ export default async function VolunteerPage({ params, searchParams }: VolunteerP
         <header className={styles.header}>
           <StitchBadge tone="denim">Volunteer check-in</StitchBadge>
           <h1>How’s a pup doing?</h1>
-          <p>Pick a dog, share one quick note, and add a photo if you have one.</p>
+          <p>Three quick steps, made for the phone in your pocket.</p>
         </header>
 
         <form action={submitVolunteerNote} className={styles.form}>
@@ -103,7 +103,10 @@ export default async function VolunteerPage({ params, searchParams }: VolunteerP
                         className={styles.photo}
                         src={resident.photoUrls[0]}
                       />
-                      <strong>{resident.name}</strong>
+                      <span className={styles.dogName}>
+                        <span aria-hidden="true" className={styles.pickMark}>✓</span>
+                        <strong>{resident.name}</strong>
+                      </span>
                     </FeltPanel>
                   </label>
                 ))}
@@ -120,18 +123,18 @@ export default async function VolunteerPage({ params, searchParams }: VolunteerP
               2. Add one quick note
             </label>
             <FeltField>
-              <input
+              <textarea
                 id="note"
                 maxLength={240}
                 name="note"
                 placeholder="Vet visit went well!"
                 required
-                type="text"
+                rows={3}
               />
             </FeltField>
 
             <label className={styles.inputLabel} htmlFor="photo">
-              Photo <span>(optional)</span>
+              3. Add a photo <span>(optional)</span>
             </label>
             <FeltField className={styles.photoField}>
               <input

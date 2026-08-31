@@ -1,23 +1,29 @@
 .main {
   min-height: 100svh;
-  padding: 2rem 1rem 3rem;
+  padding:
+    max(1rem, env(safe-area-inset-top))
+    max(0.75rem, env(safe-area-inset-right))
+    max(2rem, env(safe-area-inset-bottom))
+    max(0.75rem, env(safe-area-inset-left));
 }
 
 .shell {
   width: min(100%, 46rem);
+  min-width: 0;
   margin: 0 auto;
 }
 
 .header {
-  margin-bottom: 1.5rem;
+  margin-bottom: 1.25rem;
   text-align: center;
 }
 
 .header h1 {
-  margin: 0.9rem 0 0.45rem;
+  margin: 0.75rem 0 0.4rem;
   color: var(--felt-ink);
-  font-size: clamp(2rem, 9vw, 3.25rem);
-  line-height: 0.95;
+  font-size: clamp(2rem, 10vw, 2.65rem);
+  line-height: 1;
+  text-wrap: balance;
 }
 
 .header p {
@@ -29,7 +35,8 @@
 }
 
 .form {
-  gap: 1.4rem;
+  min-width: 0;
+  gap: 1.2rem;
 }
 
 .fieldset {
@@ -41,7 +48,8 @@
 
 .fieldset legend,
 .inputLabel {
-  margin: 0 0 0.75rem;
+  display: block;
+  margin: 0 0 0.65rem;
   color: var(--felt-ink);
   font-size: 1rem;
   font-weight: 900;
@@ -49,20 +57,23 @@
 
 .dogGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
-  gap: 0.9rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
 }
 
 .dogChoice {
+  position: relative;
   min-width: 0;
   margin: 0;
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .dogChoice input {
   position: absolute;
   width: 1px;
   height: 1px;
+  margin: 0;
   opacity: 0;
 }
 
@@ -70,12 +81,13 @@
   --pil: 1.4;
   --drop: 0.7;
   display: grid;
-  gap: 0.55rem;
-  padding: 16px;
+  min-height: 100%;
+  gap: 0.5rem;
+  padding: 0.55rem;
   border-radius: 18px;
   font-weight: 900;
   text-align: center;
-  transition: translate 120ms ease;
+  transition: filter 120ms ease, translate 120ms ease;
 }
 
 /* the picked dog is the same cut patch, lifted off the mat and re-dyed denim */
@@ -87,8 +99,13 @@
   translate: 0 -3px;
 }
 
+.dogChoice input:focus-visible + .dogCard {
+  box-shadow: 0 0 0 3px var(--felt-ground), 0 0 0 6px var(--felt-mustard);
+}
+
 .photo {
   width: 100%;
+  margin: 0;
 }
 
 .photo img,
@@ -96,10 +113,42 @@
   aspect-ratio: 1;
 }
 
+.dogName {
+  display: grid;
+  grid-template-columns: 1.35rem minmax(0, 1fr) 1.35rem;
+  align-items: center;
+  min-height: 2.75rem;
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+}
+
+.dogName::after {
+  content: "";
+}
+
+.pickMark {
+  display: grid;
+  width: 1.35rem;
+  height: 1.35rem;
+  border: 2px solid rgb(61 51 43 / 25%);
+  border-radius: 50%;
+  place-items: center;
+  color: transparent;
+  font-size: 0.85rem;
+  line-height: 1;
+}
+
+.dogChoice input:checked + .dogCard .pickMark {
+  border-color: var(--felt-denim);
+  color: var(--felt-denim);
+  background: var(--felt-cream);
+}
+
 .notePanel {
   display: grid;
-  gap: 0.85rem;
-  padding: 1.75rem;
+  min-width: 0;
+  gap: 0.75rem;
+  padding: 1.25rem 1rem;
   overflow: visible;
 }
 
@@ -117,14 +166,32 @@
   font-weight: 700;
 }
 
+.notePanel :global(.felt-field) {
+  min-width: 0;
+}
+
+.notePanel textarea {
+  min-height: 6.75rem;
+  resize: vertical;
+}
+
 /* the file control needs its own padding so the button clears the cut edge */
 .photoField > input[type="file"] {
-  padding: 10px 12px;
+  width: 100%;
+  min-width: 0;
+  min-height: 3.5rem;
+  padding: 0.45rem;
+  overflow: hidden;
+  font-size: 0.8rem;
+  line-height: 2.4rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .photoField > input[type="file"]::file-selector-button {
-  margin-right: 0.75rem;
-  padding: 0.55rem 0.85rem;
+  min-height: 2.6rem;
+  margin-right: 0.55rem;
+  padding: 0.55rem 0.7rem;
   border: 0;
   border-radius: 9px 4px 8px 5px;
   color: var(--felt-cream);
@@ -132,12 +199,18 @@
   font: inherit;
   font-size: 13px;
   font-weight: 900;
+  cursor: pointer;
 }
 
 .submit {
   width: 100%;
   min-height: 4rem;
   font-size: 1.15rem;
+}
+
+.submit:focus-visible,
+.againLink:focus-visible {
+  box-shadow: 0 0 0 3px var(--felt-ground), 0 0 0 6px var(--felt-denim);
 }
 
 .error {
@@ -159,7 +232,7 @@
 .confirmation {
   width: min(100%, 29rem);
   margin: auto;
-  padding: 2.5rem 2rem;
+  padding: 2rem 1.25rem;
   color: var(--felt-cream);
   text-align: center;
 }
@@ -190,24 +263,38 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  min-height: 3rem;
   text-decoration: none;
 }
 
-@media (max-width: 390px) {
+@media (min-width: 42rem) {
   .main {
-    padding: 1.25rem 0.75rem 2rem;
+    padding: 2.5rem 1.5rem 3.5rem;
+  }
+
+  .header {
+    margin-bottom: 1.75rem;
+  }
+
+  .header h1 {
+    margin-top: 0.9rem;
+    font-size: 3.25rem;
   }
 
   .dogGrid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.6rem;
+    grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+    gap: 0.9rem;
   }
 
   .dogCard {
-    padding: 0.45rem;
+    padding: 1rem;
   }
 
   .notePanel {
-    padding: 1.25rem 1rem;
+    padding: 1.75rem;
+  }
+
+  .confirmation {
+    padding: 2.5rem 2rem;
   }
 }
