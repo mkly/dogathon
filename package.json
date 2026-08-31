@@ -9,7 +9,6 @@
     "test": "node --import tsx --test \"src/**/*.test.ts\"",
     "start": "next start",
     "lint": "eslint .",
-    "test:arcade": "node --import tsx --test src/lib/arcade.test.ts",
     "test:parser": "node --import tsx --test src/lib/parser.test.ts",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
@@ -18,7 +17,6 @@
     "postinstall": "prisma generate"
   },
   "dependencies": {
-    "@arcadeai/arcadejs": "^2.4.1",
     "@prisma/adapter-pg": "^7.9.1",
     "@prisma/client": "^7.9.1",
     "better-auth": "^1.7.1",

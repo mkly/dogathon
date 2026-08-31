@@ -47,8 +47,7 @@ secret, and `BETTER_AUTH_URL` must be the deployed app URL. Set
 organization connects email, and configure the Google and/or Microsoft OAuth
 client variables for those connector choices; plain SMTP needs no app-wide
 provider credentials. Configure the Stripe test keys plus the Firecrawl and
-OpenAI-compatible model variables when those integrations are enabled. Arcade
-remains optional for roster crawling. Vercel's
+OpenAI-compatible model variables when those integrations are enabled. Vercel's
 install step runs the existing `postinstall` script, which generates the Prisma
 client.
 

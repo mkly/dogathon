@@ -95,9 +95,9 @@ async function postJson(path: string, payload?: unknown) {
 
 /**
  * Sign in the staff account the way the sign-in form does, creating it on the
- * first run. Every staff route (/api/sync, compose, approve, the Arcade
- * routes) rejects an anonymous request with a 401, so the cookie Better Auth
- * hands back here is what the rest of the run posts with.
+ * first run. Every staff route (/api/sync, compose, and approve) rejects an
+ * anonymous request with a 401, so the cookie Better Auth hands back here is
+ * what the rest of the run posts with.
  */
 async function signInStaff() {
   const attempts: string[] = [];
