@@ -1,4 +1,8 @@
-import { sendOrganizationEmail, type EmailInput } from "./email-connectors.ts";
+import {
+  sendOrganizationEmail,
+  type DescribedSend,
+  type EmailInput,
+} from "./email-connectors.ts";
 
 export type DeliverySponsorship = {
   id: string;
@@ -20,9 +24,14 @@ export type Delivery = {
   channel: "email";
   status: "sent" | "failed";
   error?: string;
+  /** Present when no credential was configured and the send was only described. */
+  describedSend?: DescribedSend;
 };
 
-type EmailSender = (orgId: string, input: EmailInput) => Promise<unknown>;
+type EmailSender = (
+  orgId: string,
+  input: EmailInput,
+) => Promise<DescribedSend | null | void>;
 
 export function dogPageUrl(origin: string, residentId: string): string {
   return new URL(`/dogs/${encodeURIComponent(residentId)}`, origin).toString();
@@ -33,13 +42,18 @@ export function dogPageUrl(origin: string, residentId: string): string {
  * pupdate mid-approval, so every attempt is recorded rather than thrown.
  */
 async function attempt(
-  send: () => Promise<unknown>,
+  send: () => Promise<DescribedSend | null | void>,
   sponsorshipId: string,
   channel: Delivery["channel"],
 ): Promise<Delivery> {
   try {
-    await send();
-    return { sponsorshipId, channel, status: "sent" };
+    const described = await send();
+    return {
+      sponsorshipId,
+      channel,
+      status: "sent",
+      ...(described ? { describedSend: described } : {}),
+    };
   } catch (error) {
     return {
       sponsorshipId,

@@ -14,8 +14,8 @@ import {
 
 const originalEnvironment = {
   encryption: process.env.EMAIL_CONNECTOR_ENCRYPTION_KEY,
-  gmailId: process.env.GMAIL_CLIENT_ID,
-  gmailSecret: process.env.GMAIL_CLIENT_SECRET,
+  gmailId: process.env.GOOGLE_CLIENT_ID,
+  gmailSecret: process.env.GOOGLE_CLIENT_SECRET,
   microsoftId: process.env.MICROSOFT_CLIENT_ID,
   microsoftSecret: process.env.MICROSOFT_CLIENT_SECRET,
   microsoftTenant: process.env.MICROSOFT_TENANT_ID,
@@ -23,8 +23,8 @@ const originalEnvironment = {
 
 before(() => {
   process.env.EMAIL_CONNECTOR_ENCRYPTION_KEY = Buffer.alloc(32, 7).toString("base64");
-  process.env.GMAIL_CLIENT_ID = "gmail-client";
-  process.env.GMAIL_CLIENT_SECRET = "gmail-secret";
+  process.env.GOOGLE_CLIENT_ID = "gmail-client";
+  process.env.GOOGLE_CLIENT_SECRET = "gmail-secret";
   process.env.MICROSOFT_CLIENT_ID = "microsoft-client";
   process.env.MICROSOFT_CLIENT_SECRET = "microsoft-secret";
   process.env.MICROSOFT_TENANT_ID = "organizations";
@@ -36,8 +36,8 @@ after(() => {
     else process.env[key] = value;
   };
   restore("EMAIL_CONNECTOR_ENCRYPTION_KEY", originalEnvironment.encryption);
-  restore("GMAIL_CLIENT_ID", originalEnvironment.gmailId);
-  restore("GMAIL_CLIENT_SECRET", originalEnvironment.gmailSecret);
+  restore("GOOGLE_CLIENT_ID", originalEnvironment.gmailId);
+  restore("GOOGLE_CLIENT_SECRET", originalEnvironment.gmailSecret);
   restore("MICROSOFT_CLIENT_ID", originalEnvironment.microsoftId);
   restore("MICROSOFT_CLIENT_SECRET", originalEnvironment.microsoftSecret);
   restore("MICROSOFT_TENANT_ID", originalEnvironment.microsoftTenant);
@@ -139,6 +139,75 @@ test("sends through Gmail and Microsoft provider APIs", async () => {
   );
   assert.match(calls[1]!.url, /graph\.microsoft\.com\/v1\.0\/me\/sendMail/u);
   assert.match(String(calls[1]!.init?.body), /sponsor@example\.com/u);
+});
+
+test("describes the send for every connector type when its credentials are unset", async () => {
+  const refuse = (() => {
+    throw new Error("the dry-run path must not transmit");
+  }) as unknown as typeof fetch;
+  const refuseTransport = () => {
+    throw new Error("the dry-run path must not open a socket");
+  };
+  const message = {
+    to: "sponsor@example.com",
+    subject: "Biscuit update",
+    body: "<p>Hello</p>",
+    contentType: "html" as const,
+  };
+
+  delete process.env.GOOGLE_CLIENT_ID;
+  delete process.env.GOOGLE_CLIENT_SECRET;
+  delete process.env.MICROSOFT_CLIENT_ID;
+  delete process.env.MICROSOFT_CLIENT_SECRET;
+  try {
+    for (const provider of ["gmail", "microsoft"] as const) {
+      assert.deepEqual(
+        await sendEmailWithConnector(connector(provider), message, { fetch: refuse }),
+        {
+          dryRun: true,
+          connector: provider,
+          from: "rescue@example.com",
+          to: "sponsor@example.com",
+          subject: "Biscuit update",
+          body: "<p>Hello</p>",
+          contentType: "html",
+        },
+      );
+    }
+  } finally {
+    process.env.GOOGLE_CLIENT_ID = "gmail-client";
+    process.env.GOOGLE_CLIENT_SECRET = "gmail-secret";
+    process.env.MICROSOFT_CLIENT_ID = "microsoft-client";
+    process.env.MICROSOFT_CLIENT_SECRET = "microsoft-secret";
+  }
+
+  // SMTP carries no app-level env credentials, so an unconfigured org connector
+  // is what "credentials unset" means for it.
+  const smtp = await sendEmailWithConnector(
+    connector("smtp", {
+      accessTokenEncrypted: null,
+      refreshTokenEncrypted: null,
+      accessTokenExpiresAt: null,
+    }),
+    message,
+    { fetch: refuse, transportFactory: refuseTransport },
+  );
+  assert.equal(smtp?.connector, "smtp");
+  assert.equal(smtp?.dryRun, true);
+
+  // A fully configured SMTP org still stays offline without the encryption key
+  // that would let the stored password be read.
+  const withoutKey = { ...connector("smtp"), smtpHost: "smtp.example.com", smtpPort: 587, smtpSecure: false, smtpUser: "u", smtpPasswordEncrypted: encryptEmailSecret("p") };
+  const key = process.env.EMAIL_CONNECTOR_ENCRYPTION_KEY;
+  delete process.env.EMAIL_CONNECTOR_ENCRYPTION_KEY;
+  try {
+    assert.equal(
+      (await sendEmailWithConnector(withoutKey, message, { fetch: refuse, transportFactory: refuseTransport }))?.dryRun,
+      true,
+    );
+  } finally {
+    process.env.EMAIL_CONNECTOR_ENCRYPTION_KEY = key;
+  }
 });
 
 test("verifies and sends through a password-authenticated SMTP server", async () => {

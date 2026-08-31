@@ -59,3 +59,25 @@ test("records a failed email and continues with the remaining sponsors", async (
     { sponsorshipId: "working", channel: "email", status: "sent" },
   ]);
 });
+
+test("carries a described send through the delivery record", async () => {
+  const described = {
+    dryRun: true as const,
+    connector: "gmail" as const,
+    from: "rescue@example.com",
+    to: "email@example.com",
+    subject: "A pupdate from Biscuit",
+    body: "Biscuit had a great walk.",
+    contentType: "plain" as const,
+  };
+  const deliveries = await deliverPupdate(
+    "org-a",
+    pupdate,
+    [{ id: "email", sponsorEmail: "email@example.com", sponsorPhone: null, channel: "email" }],
+    async () => described,
+  );
+
+  assert.deepEqual(deliveries, [
+    { sponsorshipId: "email", channel: "email", status: "sent", describedSend: described },
+  ]);
+});

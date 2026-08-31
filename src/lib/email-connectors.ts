@@ -13,6 +13,20 @@ export type EmailInput = {
   contentType?: "plain" | "html";
 };
 
+/**
+ * The absent-credential convention: with nothing configured to send through,
+ * delivery describes the message instead of transmitting it. See .env.example.
+ */
+export type DescribedSend = {
+  dryRun: true;
+  connector: EmailConnectorKind;
+  from: string;
+  to: string;
+  subject: string;
+  body: string;
+  contentType: "plain" | "html";
+};
+
 export type StoredEmailConnector = {
   orgId: string;
   type: EmailConnectorKind;
@@ -69,6 +83,11 @@ function encryptionKey(): Buffer {
   return key;
 }
 
+function hasEncryptionKey(): boolean {
+  const encoded = process.env.EMAIL_CONNECTOR_ENCRYPTION_KEY;
+  return Boolean(encoded) && Buffer.from(encoded!, "base64").length === 32;
+}
+
 export function encryptEmailSecret(value: string): string {
   const iv = randomBytes(12);
   const cipher = createCipheriv("aes-256-gcm", encryptionKey(), iv);
@@ -114,10 +133,10 @@ function microsoftTenant(): string {
 
 function oauthCredentials(provider: Exclude<EmailConnectorKind, "smtp">) {
   if (provider === "gmail") {
-    const clientId = process.env.GMAIL_CLIENT_ID;
-    const clientSecret = process.env.GMAIL_CLIENT_SECRET;
+    const clientId = process.env.GOOGLE_CLIENT_ID;
+    const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
     if (!clientId || !clientSecret) {
-      throw new Error("GMAIL_CLIENT_ID and GMAIL_CLIENT_SECRET are required");
+      throw new Error("GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET are required");
     }
     return { clientId, clientSecret };
   }
@@ -128,6 +147,34 @@ function oauthCredentials(provider: Exclude<EmailConnectorKind, "smtp">) {
     throw new Error("MICROSOFT_CLIENT_ID and MICROSOFT_CLIENT_SECRET are required");
   }
   return { clientId, clientSecret };
+}
+
+function hasOAuthCredentials(provider: Exclude<EmailConnectorKind, "smtp">): boolean {
+  return provider === "gmail"
+    ? Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET)
+    : Boolean(process.env.MICROSOFT_CLIENT_ID && process.env.MICROSOFT_CLIENT_SECRET);
+}
+
+function describeSend(connector: StoredEmailConnector, input: EmailInput): DescribedSend {
+  return {
+    dryRun: true,
+    connector: connector.type,
+    from: connector.fromEmail,
+    to: input.to,
+    subject: input.subject,
+    body: input.body,
+    contentType: input.contentType === "html" ? "html" : "plain",
+  };
+}
+
+function smtpCredentialsPresent(connector: StoredEmailConnector): boolean {
+  return Boolean(
+    connector.smtpHost &&
+      connector.smtpPort &&
+      connector.smtpSecure !== null &&
+      connector.smtpUser &&
+      connector.smtpPasswordEncrypted,
+  );
 }
 
 export function oauthCallbackUrl(origin: string, provider: Exclude<EmailConnectorKind, "smtp">) {
@@ -352,7 +399,7 @@ export async function sendEmailWithConnector(
   connector: StoredEmailConnector,
   input: EmailInput,
   dependencies: { fetch?: Fetcher; transportFactory?: TransportFactory } = {},
-): Promise<void> {
+): Promise<DescribedSend | null> {
   if (!input.to.includes("@") || /[\r\n]/u.test(input.to) || /[\r\n]/u.test(connector.fromEmail)) {
     throw new Error("Email connector received an invalid email address");
   }
@@ -361,7 +408,10 @@ export async function sendEmailWithConnector(
   }
 
   const fetcher = dependencies.fetch ?? fetch;
+  if (!hasEncryptionKey()) return describeSend(connector, input);
+
   if (connector.type === "smtp") {
+    if (!smtpCredentialsPresent(connector)) return describeSend(connector, input);
     const config = smtpConfiguration(connector);
     await smtpTransport(config, dependencies.transportFactory ?? defaultTransportFactory).sendMail({
       from: config.fromEmail,
@@ -369,7 +419,11 @@ export async function sendEmailWithConnector(
       subject: input.subject,
       ...(input.contentType === "html" ? { html: input.body } : { text: input.body }),
     });
-    return;
+    return null;
+  }
+
+  if (!hasOAuthCredentials(connector.type) || !connector.refreshTokenEncrypted) {
+    return describeSend(connector, input);
   }
 
   let accessToken = connector.accessTokenEncrypted
@@ -405,7 +459,7 @@ export async function sendEmailWithConnector(
       }),
       "Gmail send",
     );
-    return;
+    return null;
   }
 
   const response = await fetcher("https://graph.microsoft.com/v1.0/me/sendMail", {
@@ -429,14 +483,18 @@ export async function sendEmailWithConnector(
     const detail = await response.text();
     throw new Error(`Microsoft send failed (${response.status})${detail ? `: ${detail}` : ""}`);
   }
+  return null;
 }
 
-export async function sendOrganizationEmail(orgId: string, input: EmailInput): Promise<void> {
+export async function sendOrganizationEmail(
+  orgId: string,
+  input: EmailInput,
+): Promise<DescribedSend | null> {
   const connector = await prisma.emailConnector.findUnique({ where: { orgId } });
   if (!connector || !connector.verifiedAt) {
     throw new Error("This organization has no verified email connector");
   }
-  await sendEmailWithConnector(connector, input);
+  return sendEmailWithConnector(connector, input);
 }
 
 export async function getEmailConnectorStatus(orgId: string) {
