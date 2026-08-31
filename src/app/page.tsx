@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { FeltPanel, PhotoPatch } from "@/components/felt";
 import { prisma } from "@/lib/prisma";
+import { getPublicOrganization } from "@/lib/public-organization";
 
 import pawcastWordmark from "../../public/brand/pawcast-wordmark.png";
 import feltPup from "../../public/mascot/felt-pup-2.png";
@@ -12,14 +13,17 @@ import styles from "./public.module.css";
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
+  const organization = await getPublicOrganization();
   const residents = await prisma.resident.findMany({
-    where: { status: "available" },
+    where: { orgId: organization?.id ?? "", status: "available" },
     orderBy: { name: "asc" },
   });
 
   return (
     <main className={styles.siteShell}>
       <Image alt="Pawcast" className={styles.wordmark} priority src={pawcastWordmark} />
+
+      {organization && <p>{organization.name}</p>}
 
       <FeltPanel className={styles.hero} tone="moss">
         <div className={styles.heroCopy}>

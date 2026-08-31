@@ -10,7 +10,7 @@ import styles from "./auth-form.module.css";
 
 type Mode = "sign-in" | "sign-up";
 
-export function AuthForm({ redirectTo = "/admin" }: { redirectTo?: string }) {
+export function AuthForm({ redirectTo = "/organizations" }: { redirectTo?: string }) {
   const router = useRouter();
   const [mode, setMode] = useState<Mode>("sign-in");
   const [error, setError] = useState<string | null>(null);

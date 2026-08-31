@@ -2,8 +2,10 @@
 
 import { randomUUID } from "node:crypto";
 
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
+import { getOrganizationContext } from "@/lib/organization-access";
 import { prisma } from "@/lib/prisma";
 
 import type { VolunteerErrorCode } from "./errors";
@@ -27,6 +29,9 @@ function volunteerErrorUrl(error: VolunteerErrorCode) {
 }
 
 export async function submitVolunteerNote(formData: FormData) {
+  const context = await getOrganizationContext(await headers());
+  if (!context) redirect("/sign-in?next=/volunteer");
+
   const residentId = String(formData.get("residentId") ?? "").trim();
   const note = String(formData.get("note") ?? "")
     .replace(/\s+/g, " ")
@@ -48,6 +53,7 @@ export async function submitVolunteerNote(formData: FormData) {
   const resident = await prisma.resident.findFirst({
     where: {
       id: residentId,
+      orgId: context.orgId,
       status: "available",
       sponsorships: { some: { status: "active" } },
     },
@@ -80,8 +86,11 @@ export async function submitVolunteerNote(formData: FormData) {
   await prisma.volunteerNote.create({
     data: {
       id: noteId,
+      orgId: context.orgId,
       note,
-      photoUrl: photoData ? `/api/volunteer-photos/${noteId}` : undefined,
+      photoUrl: photoData
+        ? `/api/volunteer-photos/${noteId}?org=${encodeURIComponent(context.orgId)}`
+        : undefined,
       photoData,
       photoMime,
       residentId,

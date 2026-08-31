@@ -24,8 +24,19 @@ async function main() {
     throw new Error("seed/photo-urls.json must contain at least one photo URL");
   }
 
+  const organization = await prisma.organization.upsert({
+    where: { slug: "coppers-dream" },
+    update: { name: "Copper's Dream Rescue" },
+    create: {
+      id: "demo-org-coppers-dream",
+      name: "Copper's Dream Rescue",
+      slug: "coppers-dream",
+      createdAt: new Date(),
+    },
+  });
+
   const biscuit = await prisma.resident.upsert({
-    where: { name: "Biscuit" },
+    where: { orgId_name: { orgId: organization.id, name: "Biscuit" } },
     update: {
       breed: "Mixed breed",
       dobText: "Unknown",
@@ -40,6 +51,7 @@ async function main() {
     },
     create: {
       id: "demo-resident-biscuit",
+      orgId: organization.id,
       name: "Biscuit",
       breed: "Mixed breed",
       dobText: "Unknown",
@@ -71,8 +83,11 @@ async function main() {
 
   for (const sponsorship of sponsorships) {
     await prisma.sponsorship.upsert({
-      where: { id: sponsorship.id },
+      where: {
+        id_orgId: { id: sponsorship.id, orgId: organization.id },
+      },
       update: {
+        orgId: organization.id,
         residentId: biscuit.id,
         ...sponsorship,
         monthlyUsd: 25,
@@ -80,6 +95,7 @@ async function main() {
         endedReason: null,
       },
       create: {
+        orgId: organization.id,
         residentId: biscuit.id,
         ...sponsorship,
       },
@@ -94,25 +110,25 @@ async function main() {
 
   for (const [id, note] of notes) {
     await prisma.volunteerNote.upsert({
-      where: { id },
-      update: { residentId: biscuit.id, note, photoUrl: null },
-      create: { id, residentId: biscuit.id, note },
+      where: { id_orgId: { id, orgId: organization.id } },
+      update: { orgId: organization.id, residentId: biscuit.id, note, photoUrl: null },
+      create: { id, orgId: organization.id, residentId: biscuit.id, note },
     });
   }
 
   await prisma.rescueSettings.upsert({
-    where: { id: "default" },
+    where: { orgId: organization.id },
     update: {
       sourceUrl: "https://www.coppersdream.org/dogs-and-more-back-up",
       pinnedPostscript: "Come meet the dogs at our next adoption fair!",
     },
     create: {
-      id: "default",
+      orgId: organization.id,
       pinnedPostscript: "Come meet the dogs at our next adoption fair!",
     },
   });
 
-  console.log("Seeded Biscuit, care history, sponsorships, and rescue settings.");
+  console.log("Seeded Copper's Dream, Biscuit, care history, sponsorships, and settings.");
 }
 
 main()

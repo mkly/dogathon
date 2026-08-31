@@ -1,4 +1,4 @@
-import { requireApiSession } from "@/lib/auth-session";
+import { requireApiOrganization } from "@/lib/organization-access";
 import { MAX_SMS_LENGTH } from "@/lib/pupdate-sms";
 import { prisma } from "@/lib/prisma";
 
@@ -36,8 +36,9 @@ function validateDraft(input: DraftInput) {
 }
 
 export async function PATCH(request: Request, { params }: RouteContext) {
-  const unauthorized = await requireApiSession(request.headers);
-  if (unauthorized) return unauthorized;
+  const access = await requireApiOrganization(request.headers, ["owner", "admin"]);
+  if (!access.ok) return access.response;
+  const { orgId } = access.context;
 
   let input: DraftInput;
   try {
@@ -53,31 +54,32 @@ export async function PATCH(request: Request, { params }: RouteContext) {
 
   const { id } = await params;
   const updated = await prisma.pupdate.updateMany({
-    where: { id, status: "draft" },
+    where: { id, orgId, status: "draft" },
     data: validated.data,
   });
 
   if (updated.count !== 1) {
-    const exists = await prisma.pupdate.findUnique({ where: { id }, select: { id: true } });
+    const exists = await prisma.pupdate.findFirst({ where: { id, orgId }, select: { id: true } });
     return Response.json(
       { error: exists ? "Only draft pupdates can be edited" : "Pupdate not found" },
       { status: exists ? 409 : 404 },
     );
   }
 
-  const pupdate = await prisma.pupdate.findUnique({ where: { id } });
+  const pupdate = await prisma.pupdate.findFirst({ where: { id, orgId } });
   return Response.json({ pupdate });
 }
 
 export async function DELETE(request: Request, { params }: RouteContext) {
-  const unauthorized = await requireApiSession(request.headers);
-  if (unauthorized) return unauthorized;
+  const access = await requireApiOrganization(request.headers, ["owner", "admin"]);
+  if (!access.ok) return access.response;
+  const { orgId } = access.context;
 
   const { id } = await params;
-  const deleted = await prisma.pupdate.deleteMany({ where: { id, status: "draft" } });
+  const deleted = await prisma.pupdate.deleteMany({ where: { id, orgId, status: "draft" } });
 
   if (deleted.count !== 1) {
-    const exists = await prisma.pupdate.findUnique({ where: { id }, select: { id: true } });
+    const exists = await prisma.pupdate.findFirst({ where: { id, orgId }, select: { id: true } });
     return Response.json(
       { error: exists ? "Only draft pupdates can be denied" : "Pupdate not found" },
       { status: exists ? 409 : 404 },

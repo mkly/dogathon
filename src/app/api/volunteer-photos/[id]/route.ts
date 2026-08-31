@@ -6,10 +6,12 @@ type RouteContext = { params: Promise<{ id: string }> };
  * Serves a volunteer note's photo from the database. Public on purpose:
  * these photos are embedded in sponsor emails, which cannot authenticate.
  */
-export async function GET(_request: Request, { params }: RouteContext) {
+export async function GET(request: Request, { params }: RouteContext) {
   const { id } = await params;
-  const note = await prisma.volunteerNote.findUnique({
-    where: { id },
+  const orgId = new URL(request.url).searchParams.get("org");
+  if (!orgId) return Response.json({ error: "Photo not found" }, { status: 404 });
+  const note = await prisma.volunteerNote.findFirst({
+    where: { id, orgId },
     select: { photoData: true, photoMime: true },
   });
 

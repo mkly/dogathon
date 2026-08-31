@@ -1,21 +1,22 @@
 import { deliverPupdate, dogPageUrl } from "@/lib/pupdate-delivery";
-import { requireApiSession } from "@/lib/auth-session";
+import { requireApiOrganization } from "@/lib/organization-access";
 import { prisma } from "@/lib/prisma";
 import { renderPupdateEmail } from "@/lib/pupdate-email";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
 export async function POST(request: Request, { params }: RouteContext) {
-  const unauthorized = await requireApiSession(request.headers);
-  if (unauthorized) return unauthorized;
+  const access = await requireApiOrganization(request.headers, ["owner", "admin"]);
+  if (!access.ok) return access.response;
+  const { orgId } = access.context;
 
   const { id } = await params;
-  const pupdate = await prisma.pupdate.findUnique({
-    where: { id },
+  const pupdate = await prisma.pupdate.findFirst({
+    where: { id, orgId },
     include: {
       resident: {
         include: {
-          sponsorships: { where: { status: "active" }, orderBy: { createdAt: "asc" } },
+          sponsorships: { where: { orgId, status: "active" }, orderBy: { createdAt: "asc" } },
         },
       },
     },
@@ -29,7 +30,7 @@ export async function POST(request: Request, { params }: RouteContext) {
   }
 
   const claimed = await prisma.pupdate.updateMany({
-    where: { id, status: "draft" },
+    where: { id, orgId, status: "draft" },
     data: { status: "approved" },
   });
   if (claimed.count !== 1) {
@@ -56,7 +57,7 @@ export async function POST(request: Request, { params }: RouteContext) {
   );
   const sentAt = new Date();
   const sent = await prisma.pupdate.update({
-    where: { id },
+    where: { id_orgId: { id, orgId } },
     data: { status: "sent", sentAt },
   });
 

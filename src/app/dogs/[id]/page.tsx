@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { createSponsorship } from "@/app/actions";
 import { FeltButton, FeltField, FeltPanel, PhotoPatch, StitchBadge } from "@/components/felt";
 import { prisma } from "@/lib/prisma";
+import { getPublicOrganization } from "@/lib/public-organization";
 
 import styles from "../../public.module.css";
 
@@ -17,7 +18,9 @@ type DogPageProps = {
 export default async function DogPage({ params, searchParams }: DogPageProps) {
   const { id } = await params;
   const query = await searchParams;
-  const resident = await prisma.resident.findUnique({ where: { id } });
+  const organization = await getPublicOrganization();
+  if (!organization) notFound();
+  const resident = await prisma.resident.findFirst({ where: { id, orgId: organization.id } });
 
   if (!resident) notFound();
 
@@ -87,6 +90,7 @@ export default async function DogPage({ params, searchParams }: DogPageProps) {
           )}
 
           <form action={createSponsorship} className={styles.sponsorForm}>
+            <input name="orgId" type="hidden" value={organization.id} />
             <input name="residentId" type="hidden" value={resident.id} />
 
             <label htmlFor="sponsorName">Your name</label>

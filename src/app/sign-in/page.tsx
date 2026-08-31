@@ -13,7 +13,7 @@ export default async function SignInPage() {
   const session = await getSession(await headers());
 
   if (session) {
-    redirect("/admin");
+    redirect("/organizations");
   }
 
   return (

@@ -1,9 +1,9 @@
 import { gmailAuthStatus } from "@/lib/arcade";
-import { requireApiSession } from "@/lib/auth-session";
+import { requireApiOrganization } from "@/lib/organization-access";
 
 export async function GET(request: Request) {
-  const unauthorized = await requireApiSession(request.headers);
-  if (unauthorized) return unauthorized;
+  const access = await requireApiOrganization(request.headers, ["owner", "admin"]);
+  if (!access.ok) return access.response;
 
   if (!process.env.ARCADE_API_KEY) {
     return Response.json({ connected: false, status: "not_configured" });

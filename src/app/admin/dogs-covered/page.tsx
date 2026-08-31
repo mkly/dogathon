@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { FeltPanel, PhotoPatch, StitchBadge } from "@/components/felt";
-import { getSession } from "@/lib/auth-session";
+import { getOrganizationContext } from "@/lib/organization-access";
 import { prisma } from "@/lib/prisma";
 
 import styles from "./dogs-covered.module.css";
@@ -24,15 +24,17 @@ function formatDate(date: Date) {
 }
 
 export default async function DogsCoveredPage() {
-  const session = await getSession(await headers());
+  const context = await getOrganizationContext(await headers(), ["owner", "admin"]);
 
-  if (!session) {
-    redirect("/sign-in");
+  if (!context) {
+    redirect("/organizations");
   }
 
   const residents = await prisma.resident.findMany({
-    where: { sponsorships: { some: {} } },
-    include: { sponsorships: { orderBy: { createdAt: "asc" } } },
+    where: { orgId: context.orgId, sponsorships: { some: { orgId: context.orgId } } },
+    include: {
+      sponsorships: { where: { orgId: context.orgId }, orderBy: { createdAt: "asc" } },
+    },
     orderBy: { name: "asc" },
   });
 

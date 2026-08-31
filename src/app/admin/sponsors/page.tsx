@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { FeltPanel, StitchBadge } from "@/components/felt";
-import { getSession } from "@/lib/auth-session";
+import { getOrganizationContext } from "@/lib/organization-access";
 import { prisma } from "@/lib/prisma";
 
 import styles from "./sponsors.module.css";
@@ -24,13 +24,14 @@ function formatDate(date: Date) {
 }
 
 export default async function SponsorsPage() {
-  const session = await getSession(await headers());
+  const context = await getOrganizationContext(await headers(), ["owner", "admin"]);
 
-  if (!session) {
-    redirect("/sign-in");
+  if (!context) {
+    redirect("/organizations");
   }
 
   const sponsorships = await prisma.sponsorship.findMany({
+    where: { orgId: context.orgId },
     include: { resident: { select: { name: true } } },
     orderBy: [{ sponsorEmail: "asc" }, { createdAt: "asc" }],
   });

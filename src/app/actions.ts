@@ -10,16 +10,17 @@ function text(formData: FormData, key: string) {
 
 export async function createSponsorship(formData: FormData) {
   const residentId = text(formData, "residentId");
+  const orgId = text(formData, "orgId");
   const sponsorName = text(formData, "sponsorName");
   const sponsorEmail = text(formData, "sponsorEmail");
   const dogPath = `/dogs/${encodeURIComponent(residentId)}`;
 
-  if (!residentId || !sponsorName || !sponsorEmail.includes("@")) {
+  if (!residentId || !orgId || !sponsorName || !sponsorEmail.includes("@")) {
     redirect(`${dogPath}?error=invalid`);
   }
 
-  const resident = await prisma.resident.findUnique({
-    where: { id: residentId },
+  const resident = await prisma.resident.findFirst({
+    where: { id: residentId, orgId },
     select: { status: true },
   });
 
@@ -29,6 +30,7 @@ export async function createSponsorship(formData: FormData) {
 
   await prisma.sponsorship.create({
     data: {
+      orgId,
       residentId,
       sponsorName,
       sponsorEmail,
