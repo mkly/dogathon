@@ -8,7 +8,7 @@ import { pushToast } from "@/components/toast";
 import { MAX_SMS_LENGTH } from "@/lib/pupdate-sms";
 
 import { saveSettings, type SettingsState } from "./actions";
-import { GMAIL_NOTICE_ID, gmailBlockedReason } from "./gmail-notice";
+import { EMAIL_CONNECTOR_NOTICE_ID, emailConnectorBlockedReason } from "./gmail-notice";
 import styles from "./admin.module.css";
 
 type SyncResult = {
@@ -32,15 +32,13 @@ async function responseError(response: Response, action: string) {
 
 export function DraftEditor({
   bodyText: initialBodyText,
-  gmailConnected,
-  gmailStatus,
+  emailConnected,
   id,
   smsText: initialSmsText,
   subject: initialSubject,
 }: {
   bodyText: string;
-  gmailConnected: boolean;
-  gmailStatus?: string;
+  emailConnected: boolean;
   id: string;
   smsText: string;
   subject: string;
@@ -121,7 +119,7 @@ export function DraftEditor({
   }
 
   async function approve() {
-    if (!gmailConnected) return;
+    if (!emailConnected) return;
 
     setPending("approve");
     try {
@@ -171,10 +169,10 @@ export function DraftEditor({
           Edit
         </FeltButton>
         <FeltButton
-          aria-describedby={gmailConnected ? undefined : GMAIL_NOTICE_ID}
-          disabled={pending !== null || !gmailConnected}
+          aria-describedby={emailConnected ? undefined : EMAIL_CONNECTOR_NOTICE_ID}
+          disabled={pending !== null || !emailConnected}
           onClick={approve}
-          title={gmailConnected ? undefined : gmailBlockedReason(gmailStatus)}
+          title={emailConnected ? undefined : emailConnectorBlockedReason()}
           tone="moss"
         >
           {pending === "approve" ? "Saving & sending…" : "Approve & send"}
@@ -311,36 +309,11 @@ export function ComposeButton({
   );
 }
 
-type GmailStatus = { connected: boolean; email?: string; status?: string };
-
-export function StaffTools({ initialGmail }: { initialGmail: GmailStatus }) {
-  const [gmail, setGmail] = useState<GmailStatus | null>(initialGmail);
-  const [pending, setPending] = useState<"gmail" | "sync" | null>(null);
-
-  useEffect(() => {
-    let current = true;
-
-    fetch("/api/arcade/gmail/status", { cache: "no-store" })
-      .then(async (response) => {
-        if (!current) return;
-        if (!response.ok) {
-          setGmail({ connected: false });
-          pushToast("error", await responseError(response, "Gmail status"));
-          return;
-        }
-        setGmail((await response.json()) as GmailStatus);
-      })
-      .catch(() => {
-        if (current) setGmail({ connected: false });
-      });
-
-    return () => {
-      current = false;
-    };
-  }, []);
+export function StaffTools() {
+  const [pending, setPending] = useState(false);
 
   async function syncNow() {
-    setPending("sync");
+    setPending(true);
     try {
       const response = await fetch("/api/sync", { method: "POST" });
       if (!response.ok) {
@@ -365,51 +338,157 @@ export function StaffTools({ initialGmail }: { initialGmail: GmailStatus }) {
     } catch {
       pushToast("error", "Roster sync could not reach the server.");
     } finally {
-      setPending(null);
-    }
-  }
-
-  async function connectGmail() {
-    setPending("gmail");
-    try {
-      const response = await fetch("/api/arcade/gmail/authorize", { method: "POST" });
-      if (!response.ok) {
-        pushToast("error", await responseError(response, "Gmail connect"));
-        return;
-      }
-      const body = (await response.json()) as { url?: string };
-      if (!body.url) {
-        pushToast("error", "Gmail connect returned no authorization URL.");
-        return;
-      }
-      window.location.assign(body.url);
-    } catch {
-      pushToast("error", "Gmail connect could not reach the server.");
-    } finally {
-      setPending(null);
+      setPending(false);
     }
   }
 
   return (
     <div className={styles.staffTools}>
-      <div className={styles.gmailGroup}>
-        <StitchBadge tone={gmail?.connected ? "moss" : "brick"}>
-          {gmail === null
-            ? "Checking Gmail…"
-            : gmail.connected
-              ? `Sending as ${gmail.email ?? "connected Gmail"}`
-              : "Gmail not connected"}
-        </StitchBadge>
-        {!gmail?.connected && (
-          <FeltButton disabled={pending === "gmail"} onClick={connectGmail} tone="denim">
-            {pending === "gmail" ? "Connecting…" : "Connect Gmail"}
-          </FeltButton>
-        )}
-      </div>
-      <FeltButton disabled={pending === "sync"} onClick={syncNow} tone="mustard">
-        {pending === "sync" ? "Syncing…" : "Sync now"}
+      <FeltButton disabled={pending} onClick={syncNow} tone="mustard">
+        {pending ? "Syncing…" : "Sync now"}
       </FeltButton>
     </div>
+  );
+}
+
+type ConnectorStatus = {
+  connected: boolean;
+  type: "gmail" | "microsoft" | "smtp" | null;
+  fromEmail: string | null;
+};
+
+export function EmailConnectorSettings({ initialConnector }: { initialConnector: ConnectorStatus }) {
+  const [connector, setConnector] = useState(initialConnector);
+  const [pending, setPending] = useState<"gmail" | "microsoft" | "smtp" | "disconnect" | null>(null);
+
+  async function connectOAuth(provider: "gmail" | "microsoft") {
+    setPending(provider);
+    try {
+      const response = await fetch(`/api/email-connectors/${provider}/authorize`, { method: "POST" });
+      if (!response.ok) {
+        pushToast("error", await responseError(response, `Connect ${provider}`));
+        return;
+      }
+      const body = (await response.json()) as { url?: string };
+      if (!body.url) {
+        pushToast("error", "The email provider returned no authorization URL.");
+        return;
+      }
+      window.location.assign(body.url);
+    } catch {
+      pushToast("error", `Could not start the ${provider} connection.`);
+    } finally {
+      setPending(null);
+    }
+  }
+
+  async function saveSmtp(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const formElement = event.currentTarget;
+    setPending("smtp");
+    try {
+      const form = new FormData(formElement);
+      const response = await fetch("/api/email-connectors/smtp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          host: form.get("smtpHost"),
+          port: form.get("smtpPort"),
+          secure: form.get("smtpSecure") === "on",
+          user: form.get("smtpUser"),
+          password: form.get("smtpPassword"),
+          fromEmail: form.get("smtpFromEmail"),
+        }),
+      });
+      if (!response.ok) {
+        pushToast("error", await responseError(response, "Verify SMTP"));
+        return;
+      }
+      const status = (await response.json()) as ConnectorStatus;
+      setConnector(status);
+      formElement.reset();
+      pushToast("success", "SMTP verified and saved for this organization.");
+    } catch {
+      pushToast("error", "SMTP verification could not reach the server.");
+    } finally {
+      setPending(null);
+    }
+  }
+
+  async function disconnect() {
+    setPending("disconnect");
+    try {
+      const response = await fetch("/api/email-connectors", { method: "DELETE" });
+      if (!response.ok) {
+        pushToast("error", await responseError(response, "Disconnect email"));
+        return;
+      }
+      setConnector({ connected: false, type: null, fromEmail: null });
+      pushToast("success", "Organization email disconnected.");
+    } catch {
+      pushToast("error", "Email disconnect could not reach the server.");
+    } finally {
+      setPending(null);
+    }
+  }
+
+  const providerLabel = connector.type === "microsoft"
+    ? "Microsoft 365"
+    : connector.type === "gmail"
+      ? "Gmail"
+      : "SMTP";
+
+  return (
+    <FeltPanel className={styles.connectorSettings} tone="oatmeal">
+      <div className={styles.connectorHeader}>
+        <div>
+          <p className={styles.eyebrow}>Organization email</p>
+          <h2>Choose one sending connection</h2>
+          <p>Connecting a provider replaces this organization&apos;s previous email connection.</p>
+        </div>
+        <div className={styles.connectorStatus}>
+          <StitchBadge tone={connector.connected ? "moss" : "brick"}>
+            {connector.connected
+              ? `${providerLabel}: ${connector.fromEmail}`
+              : "No verified connector"}
+          </StitchBadge>
+          {connector.connected && (
+            <FeltButton disabled={pending !== null} onClick={disconnect} tone="brick">
+              {pending === "disconnect" ? "Disconnecting…" : "Disconnect"}
+            </FeltButton>
+          )}
+        </div>
+      </div>
+      <div className={styles.oauthChoices}>
+        <FeltButton disabled={pending !== null} onClick={() => connectOAuth("gmail")} tone="denim">
+          {pending === "gmail" ? "Opening Gmail…" : "Connect Gmail"}
+        </FeltButton>
+        <FeltButton disabled={pending !== null} onClick={() => connectOAuth("microsoft")} tone="denim">
+          {pending === "microsoft" ? "Opening Microsoft…" : "Connect Microsoft 365"}
+        </FeltButton>
+      </div>
+      <form className={styles.smtpForm} onSubmit={saveSmtp}>
+        <h3>Plain SMTP with password authentication</h3>
+        <label htmlFor="smtpHost">Host</label>
+        <FeltField><input id="smtpHost" name="smtpHost" required /></FeltField>
+        <label htmlFor="smtpPort">Port</label>
+        <FeltField><input defaultValue="587" id="smtpPort" max="65535" min="1" name="smtpPort" required type="number" /></FeltField>
+        <label htmlFor="smtpUser">Username</label>
+        <FeltField><input autoComplete="username" id="smtpUser" name="smtpUser" required /></FeltField>
+        <label htmlFor="smtpPassword">Password</label>
+        <FeltField><input autoComplete="new-password" id="smtpPassword" name="smtpPassword" required type="password" /></FeltField>
+        <label htmlFor="smtpFromEmail">From email</label>
+        <FeltField><input id="smtpFromEmail" name="smtpFromEmail" required type="email" /></FeltField>
+        <label className={styles.smtpSecure} htmlFor="smtpSecure">
+          <input id="smtpSecure" name="smtpSecure" type="checkbox" /> TLS from connection start (usually port 465)
+        </label>
+        <div className={styles.saveRow}>
+          <FeltButton disabled={pending !== null} tone="mustard" type="submit">
+            {pending === "smtp" ? "Verifying…" : "Verify & use SMTP"}
+          </FeltButton>
+        </div>
+      </form>
+    </FeltPanel>
   );
 }
 

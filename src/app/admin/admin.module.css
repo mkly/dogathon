@@ -67,8 +67,6 @@
   white-space: nowrap;
 }
 
-.gmailGroup { display: flex; align-items: center; gap: 8px; }
-
 .stats {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -237,6 +235,37 @@
   color: var(--felt-cream);
 }
 
+.connectorSettings {
+  display: grid;
+  gap: 24px;
+  margin-bottom: 28px;
+  padding: 30px 34px;
+}
+
+.connectorHeader {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.connectorHeader h2 { margin: 0; font-size: 1.65rem; }
+.connectorHeader p:last-child { max-width: 620px; margin: 8px 0 0; font-size: 0.85rem; font-weight: 700; }
+.connectorStatus { display: flex; align-items: center; gap: 10px; }
+.oauthChoices { display: flex; flex-wrap: wrap; gap: 12px; }
+.smtpForm {
+  display: grid;
+  grid-template-columns: minmax(90px, 140px) minmax(0, 1fr);
+  align-items: center;
+  gap: 10px 16px;
+  padding-top: 20px;
+  border-top: 2px dashed rgb(61 51 43 / 20%);
+}
+.smtpForm h3 { grid-column: 1 / -1; margin: 0 0 8px; font-size: 1rem; }
+.smtpForm > label:not(.smtpSecure) { font-size: 0.7rem; font-weight: 900; letter-spacing: 0.08em; text-transform: uppercase; }
+.smtpSecure { grid-column: 2; display: flex; align-items: center; gap: 8px; font-size: 0.78rem; font-weight: 800; }
+.smtpForm .saveRow { grid-column: 2; }
+
 .settings h2 { color: var(--felt-cream); }
 .settingsIntro > p:last-child { margin: 16px 0 0; font-size: 0.88rem; font-weight: 700; line-height: 1.55; opacity: 0.88; }
 .settingsForm { display: grid; gap: 14px; }
@@ -262,7 +291,7 @@
   .page { padding: 20px 14px 36px; }
   .header { gap: 14px; }
   .logo { width: 132px; }
-  .headerActions, .staffTools, .gmailGroup { align-items: stretch; flex-direction: column; }
+  .headerActions, .staffTools { align-items: stretch; flex-direction: column; }
   .stats { grid-template-columns: 1fr 1fr; gap: 12px; }
   .stat { min-height: 112px; padding: 17px; }
   .composeItem { grid-template-columns: 72px minmax(0, 1fr); }
@@ -273,5 +302,8 @@
   .dialogPanel { padding: 22px 18px; }
   .modalActions { align-items: stretch; flex-direction: column-reverse; }
   .settings { grid-template-columns: 1fr; gap: 26px; padding: 32px 24px; }
+  .connectorHeader, .connectorStatus { align-items: stretch; flex-direction: column; }
+  .smtpForm { grid-template-columns: 1fr; }
+  .smtpForm > *, .smtpForm .saveRow, .smtpSecure { grid-column: 1; }
   .saveRow { align-items: stretch; flex-direction: column; }
 }

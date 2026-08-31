@@ -32,11 +32,20 @@ Open [http://localhost:3000](http://localhost:3000).
 Configure the variables from `.env.example` as Vercel project environment
 variables before deploying. In particular, `DATABASE_URL` must point to a
 production PostgreSQL database, `BETTER_AUTH_SECRET` must be a production
-secret, and `BETTER_AUTH_URL` must be the deployed app URL. Configure the
-Arcade and OpenAI-compatible model variables when those integrations are
-enabled. Vercel's
+secret, and `BETTER_AUTH_URL` must be the deployed app URL. Set
+`EMAIL_CONNECTOR_ENCRYPTION_KEY` to 32 random bytes encoded as base64 before an
+organization connects email. Configure the Gmail and/or Microsoft OAuth client
+variables for those connector choices; plain SMTP needs no app-wide provider
+credentials. Arcade remains optional for roster crawling, and the
+OpenAI-compatible variables enable pupdate composition. Vercel's
 install step runs the existing `postinstall` script, which generates the Prisma
 client.
+
+Register these exact OAuth redirect URLs with the enabled providers, replacing
+the origin with the deployed app URL:
+
+- `/api/email-connectors/gmail/callback`
+- `/api/email-connectors/microsoft/callback`
 
 Then authenticate the Vercel CLI with `npx vercel login`, or provide a
 `VERCEL_TOKEN` for non-interactive environments, and run:
@@ -50,10 +59,12 @@ to production. Additional Vercel CLI options may be passed as arguments.
 
 ## Demo
 
-The whole demo runs offline: with no `ARCADE_API_KEY` every email/SMS send and
-page scrape is a logged dry run, and the roster syncs from the checked-in
-captures in `seed/`. Real Arcade sends are a bonus when credentials are
-present in `.env`.
+The roster demo can run offline: with no `ARCADE_API_KEY`, page scraping is a
+logged dry run and the roster syncs from the checked-in captures in `seed/`.
+Pupdate delivery requires the active organization to configure exactly one
+verified Gmail, Microsoft 365, or password-authenticated SMTP connector in the
+staff room. Connector access tokens, refresh tokens, and SMTP passwords are
+encrypted before they are stored.
 
 ### Setup
 
@@ -80,9 +91,9 @@ npm run dev
    a draft from the fresh notes — the staff API needs your session cookie, so
    run it from the browser console on /admin:
    `await fetch('/api/pupdates/compose', {method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({residentId:'demo-resident-biscuit'})})`
-   — then approve it in /admin. The send fans out once per sponsor channel with
-   the pinned postscript stitched on — dry-run logs unless Arcade credentials
-   are set.
+   — then configure an organization email connector and approve it in /admin.
+   The send fans out one email per sponsor with the pinned postscript stitched
+   on.
 5. **Adoption day** — in the staff-room settings, set the source URL to
    `seed/dogs-page-A.html` and press **Sync now**: the roster of ~33 dogs
    syncs in and the available ones fill the public grid. Sponsor Hattie, flip the source to `seed/dogs-page-B.html`

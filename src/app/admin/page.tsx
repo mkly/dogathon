@@ -5,26 +5,23 @@ import { redirect } from "next/navigation";
 
 import { FeltPanel, PhotoPatch, StitchBadge } from "@/components/felt";
 import { SignOutButton } from "@/components/sign-out-button";
-import { gmailAuthStatus } from "@/lib/arcade";
+import { getEmailConnectorStatus } from "@/lib/email-connectors";
 import { getOrganizationContext } from "@/lib/organization-access";
 import { prisma } from "@/lib/prisma";
 
 import pawcastWordmark from "../../../public/brand/pawcast-wordmark.png";
 
-import { ComposeButton, DraftEditor, SettingsForm, StaffTools } from "./admin-controls";
-import { GMAIL_NOTICE_ID, gmailBlockedReason } from "./gmail-notice";
+import {
+  ComposeButton,
+  DraftEditor,
+  EmailConnectorSettings,
+  SettingsForm,
+  StaffTools,
+} from "./admin-controls";
+import { EMAIL_CONNECTOR_NOTICE_ID, emailConnectorBlockedReason } from "./gmail-notice";
 import styles from "./admin.module.css";
 
 export const dynamic = "force-dynamic";
-
-async function getGmailStatus() {
-  try {
-    return await gmailAuthStatus();
-  } catch (error) {
-    console.error("Gmail status check failed", error);
-    return { authorized: false as const, status: "unavailable" };
-  }
-}
 
 export default async function AdminPage() {
   const context = await getOrganizationContext(await headers(), ["owner", "admin"]);
@@ -33,7 +30,7 @@ export default async function AdminPage() {
     redirect("/organizations");
   }
 
-  const [drafts, noteResidents, storedSettings, activeSponsorCount, sponsoredDogCount, gmail] =
+  const [drafts, noteResidents, storedSettings, activeSponsorCount, sponsoredDogCount, emailConnector] =
     await Promise.all([
       prisma.pupdate.findMany({
         where: { orgId: context.orgId, status: "draft" },
@@ -79,7 +76,7 @@ export default async function AdminPage() {
           sponsorships: { some: { orgId: context.orgId, status: "active" } },
         },
       }),
-      getGmailStatus(),
+      getEmailConnectorStatus(context.orgId),
     ]);
 
   const settings = storedSettings ?? {
@@ -98,15 +95,7 @@ export default async function AdminPage() {
           <h1>Staff room</h1>
         </div>
         <div className={styles.headerActions}>
-          <StaffTools
-            initialGmail={{
-              connected: gmail.authorized,
-              status: gmail.status,
-              ...(gmail.authorized && process.env.ARCADE_USER_ID?.includes("@")
-                ? { email: process.env.ARCADE_USER_ID }
-                : {}),
-            }}
-          />
+          <StaffTools />
           <SignOutButton />
         </div>
       </header>
@@ -207,10 +196,10 @@ export default async function AdminPage() {
           <StitchBadge tone="brick">{drafts.length} {drafts.length === 1 ? "draft" : "drafts"}</StitchBadge>
         </div>
 
-        {!gmail.authorized && drafts.length > 0 && (
-          <p className={styles.queueNotice} id={GMAIL_NOTICE_ID}>
+        {!emailConnector.connected && drafts.length > 0 && (
+          <p className={styles.queueNotice} id={EMAIL_CONNECTOR_NOTICE_ID}>
             <span aria-hidden="true">✉️</span>
-            {gmailBlockedReason(gmail.status)} Approving is on hold until then.
+            {emailConnectorBlockedReason()} Approving is on hold until then.
           </p>
         )}
 
@@ -239,8 +228,7 @@ export default async function AdminPage() {
                 </div>
                 <DraftEditor
                   bodyText={draft.bodyText}
-                  gmailConnected={gmail.authorized}
-                  gmailStatus={gmail.status}
+                  emailConnected={emailConnector.connected}
                   id={draft.id}
                   smsText={draft.smsText}
                   subject={draft.subject}
@@ -250,6 +238,8 @@ export default async function AdminPage() {
           )}
         </div>
       </section>
+
+      <EmailConnectorSettings initialConnector={emailConnector} />
 
       <FeltPanel className={styles.settings} tone="denim">
         <div className={styles.settingsIntro}>

@@ -58,9 +58,37 @@ model Organization {
   volunteerNotes VolunteerNote[]
   pupdates       Pupdate[]
   settings       RescueSettings?
+  emailConnector EmailConnector?
 
   @@unique([slug])
   @@map("organization")
+}
+
+enum EmailConnectorType {
+  gmail
+  microsoft
+  smtp
+}
+
+model EmailConnector {
+  orgId                 String              @id
+  type                  EmailConnectorType
+  fromEmail             String
+  accessTokenEncrypted  String?
+  refreshTokenEncrypted String?
+  accessTokenExpiresAt  DateTime?
+  smtpHost              String?
+  smtpPort              Int?
+  smtpSecure            Boolean?
+  smtpUser              String?
+  smtpPasswordEncrypted String?
+  oauthProvider         EmailConnectorType?
+  oauthStateHash        String?
+  oauthStateExpiresAt   DateTime?
+  verifiedAt            DateTime?
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+  organization          Organization        @relation(fields: [orgId], references: [id], onDelete: Cascade)
 }
 
 model Member {
