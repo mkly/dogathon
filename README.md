@@ -33,8 +33,8 @@ Configure the variables from `.env.example` as Vercel project environment
 variables before deploying. In particular, `DATABASE_URL` must point to a
 production PostgreSQL database, `BETTER_AUTH_SECRET` must be a production
 secret, and `BETTER_AUTH_URL` must be the deployed app URL. Configure the
-Arcade and OpenAI-compatible model variables when those integrations are
-enabled. Vercel's
+Arcade email, Firecrawl, and OpenAI-compatible model variables when those
+integrations are enabled. Vercel's
 install step runs the existing `postinstall` script, which generates the Prisma
 client.
 
@@ -50,10 +50,10 @@ to production. Additional Vercel CLI options may be passed as arguments.
 
 ## Demo
 
-The whole demo runs offline: with no `ARCADE_API_KEY` every email/SMS send and
-page scrape is a logged dry run, and the roster syncs from the checked-in
-captures in `seed/`. Real Arcade sends are a bonus when credentials are
-present in `.env`.
+The whole demo runs offline: with no delivery credentials, sends use the
+development fallback, and without both `FIRECRAWL_API_KEY` and the configured
+OpenAI-compatible model credentials, the roster syncs from the checked-in
+captures in `seed/`.
 
 ### Setup
 

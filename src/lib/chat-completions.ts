@@ -1,11 +1,30 @@
-export type ChatCompletionMessage = {
-  role: "system" | "user" | "assistant";
-  content: string;
+export type ChatCompletionToolCall = {
+  id: string;
+  type: "function";
+  function: {
+    name: string;
+    arguments: string;
+  };
+};
+
+export type ChatCompletionMessage =
+  | { role: "system" | "user"; content: string }
+  | { role: "assistant"; content: string | null; tool_calls?: ChatCompletionToolCall[] }
+  | { role: "tool"; content: string; tool_call_id: string };
+
+export type ChatCompletionTool = {
+  type: "function";
+  function: {
+    name: string;
+    description: string;
+    parameters: Record<string, unknown>;
+  };
 };
 
 export type ChatCompletionOptions = {
   messages: ChatCompletionMessage[];
   maxTokens: number;
+  tools?: ChatCompletionTool[];
   apiKey?: string;
   baseUrl?: string;
   model?: string;
@@ -13,8 +32,14 @@ export type ChatCompletionOptions = {
 };
 
 type ChatCompletionResponse = {
-  choices?: Array<{ message?: { content?: string | null } }>;
+  choices?: Array<{ message?: { content?: string | null; tool_calls?: ChatCompletionToolCall[] } }>;
   error?: { message?: string };
+};
+
+export type ChatCompletionAssistantMessage = {
+  role: "assistant";
+  content: string | null;
+  tool_calls?: ChatCompletionToolCall[];
 };
 
 function requiredSetting(value: string | undefined, name: string): string {
@@ -27,7 +52,9 @@ export function hasChatCompletionCredentials(apiKey?: string): boolean {
   return Boolean((apiKey ?? process.env.OPENAI_API_KEY)?.trim());
 }
 
-export async function createChatCompletion(options: ChatCompletionOptions): Promise<string> {
+async function requestChatCompletion(
+  options: ChatCompletionOptions,
+): Promise<ChatCompletionAssistantMessage> {
   const apiKey = requiredSetting(options.apiKey ?? process.env.OPENAI_API_KEY, "OPENAI_API_KEY");
   const baseUrl = requiredSetting(options.baseUrl ?? process.env.OPENAI_BASE_URL, "OPENAI_BASE_URL");
   const model = requiredSetting(options.model ?? process.env.OPENAI_MODEL, "OPENAI_MODEL");
@@ -42,6 +69,7 @@ export async function createChatCompletion(options: ChatCompletionOptions): Prom
       model,
       max_tokens: options.maxTokens,
       messages: options.messages,
+      ...(options.tools ? { tools: options.tools, tool_choice: "auto" } : {}),
     }),
   });
 
@@ -50,7 +78,23 @@ export async function createChatCompletion(options: ChatCompletionOptions): Prom
     throw new Error(payload.error?.message ?? `Chat completion request failed (${response.status})`);
   }
 
-  const content = payload.choices?.[0]?.message?.content?.trim();
-  if (!content) throw new Error("Chat completion response contained no text");
-  return content;
+  const message = payload.choices?.[0]?.message;
+  if (!message) throw new Error("Chat completion response contained no message");
+  const content = message.content?.trim() || null;
+  if (!content && !message.tool_calls?.length) {
+    throw new Error("Chat completion response contained no text or tool calls");
+  }
+  return { role: "assistant", content, tool_calls: message.tool_calls };
+}
+
+export async function createChatCompletion(options: ChatCompletionOptions): Promise<string> {
+  const message = await requestChatCompletion(options);
+  if (!message.content) throw new Error("Chat completion response contained no text");
+  return message.content;
+}
+
+export function createToolCallingChatCompletion(
+  options: ChatCompletionOptions,
+): Promise<ChatCompletionAssistantMessage> {
+  return requestChatCompletion(options);
 }
