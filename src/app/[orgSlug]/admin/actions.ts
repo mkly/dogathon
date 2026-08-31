@@ -2,9 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
-import { getOrganizationContext } from "@/lib/organization-access";
+import { getOrganizationAccessBySlug } from "@/lib/organization-access";
 import { prisma } from "@/lib/prisma";
 import { createConnectOnboardingLink } from "@/lib/stripe-billing";
 
@@ -51,11 +51,12 @@ export async function saveSettings(
   _previousState: SettingsState,
   formData: FormData,
 ): Promise<SettingsState> {
-  const context = await getOrganizationContext(await headers(), ["owner", "admin"]);
+  const orgSlug = String(formData.get("orgSlug") ?? "").trim();
+  const access = await getOrganizationAccessBySlug(await headers(), orgSlug, ["owner", "admin"]);
 
-  if (!context) {
-    redirect("/organizations");
-  }
+  if (!access) notFound();
+  if (!access.context) redirect("/organizations");
+  const { context } = access;
 
   const pinnedPostscript = String(formData.get("pinnedPostscript") ?? "").trim();
   const sourceUrl = normalizeSourceUrl(String(formData.get("sourceUrl") ?? "").trim());
@@ -73,6 +74,6 @@ export async function saveSettings(
     create: { orgId: context.orgId, pinnedPostscript, sourceUrl },
   });
 
-  revalidatePath("/admin");
+  revalidatePath(`/${orgSlug}/admin`);
   return { status: "success", message: "Staff-room settings saved." };
 }

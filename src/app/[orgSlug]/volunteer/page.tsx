@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { headers } from "next/headers";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 import { FeltButton, FeltField, FeltPanel, PhotoPatch, StitchBadge } from "@/components/felt";
 import { prisma } from "@/lib/prisma";
-import { getOrganizationContext } from "@/lib/organization-access";
+import { getOrganizationAccessBySlug } from "@/lib/organization-access";
 
 import { submitVolunteerNote } from "./actions";
 import { volunteerErrorMessage } from "./errors";
@@ -19,6 +19,7 @@ export const metadata: Metadata = {
 };
 
 type VolunteerPageProps = {
+  params: Promise<{ orgSlug: string }>;
   searchParams: Promise<{
     dog?: string;
     error?: string;
@@ -26,9 +27,15 @@ type VolunteerPageProps = {
   }>;
 };
 
-export default async function VolunteerPage({ searchParams }: VolunteerPageProps) {
-  const context = await getOrganizationContext(await headers());
-  if (!context) redirect("/sign-in?next=/volunteer");
+export default async function VolunteerPage({ params, searchParams }: VolunteerPageProps) {
+  const { orgSlug } = await params;
+  const access = await getOrganizationAccessBySlug(await headers(), orgSlug);
+  if (!access) notFound();
+  if (!access.context) {
+    const next = encodeURIComponent(`/${orgSlug}/volunteer`);
+    redirect(access.authenticated ? "/organizations" : `/sign-in?next=${next}`);
+  }
+  const { context } = access;
 
   const [{ dog, error, submitted }, residents] = await Promise.all([
     searchParams,
@@ -58,7 +65,7 @@ export default async function VolunteerPage({ searchParams }: VolunteerPageProps
               ? `${submittedDog.name}’s care team can see your note now.`
               : "The care team can see your note now."}
           </p>
-          <Link className={`felt-button felt-mustard ${styles.againLink}`} href="/volunteer">
+          <Link className={`felt-button felt-mustard ${styles.againLink}`} href={`/${orgSlug}/volunteer`}>
             Submit another
           </Link>
         </FeltPanel>
@@ -76,6 +83,7 @@ export default async function VolunteerPage({ searchParams }: VolunteerPageProps
         </header>
 
         <form action={submitVolunteerNote} className={styles.form}>
+          <input name="orgSlug" type="hidden" value={orgSlug} />
           <fieldset className={styles.fieldset}>
             <legend>1. Pick a dog</legend>
             {residents.length > 0 ? (

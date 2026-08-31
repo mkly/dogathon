@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 import { auth } from "@/lib/auth";
 import { getOrganizationContext } from "@/lib/organization-access";
+import { prisma } from "@/lib/prisma";
 
 function value(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
@@ -26,7 +27,12 @@ export async function setActiveOrganization(formData: FormData) {
   if (!organizationId) redirect("/organizations?error=invalid-organization");
 
   await auth.api.setActiveOrganization({ body: { organizationId }, headers: requestHeaders });
-  redirect("/admin");
+  const organization = await prisma.organization.findUnique({
+    where: { id: organizationId },
+    select: { slug: true },
+  });
+  if (!organization) redirect("/organizations?error=invalid-organization");
+  redirect(`/${organization.slug}/admin`);
 }
 
 export async function inviteOrganizationMember(formData: FormData) {
@@ -56,5 +62,10 @@ export async function acceptOrganizationInvitation(formData: FormData) {
     body: { organizationId: accepted.member.organizationId },
     headers: requestHeaders,
   });
-  redirect("/admin");
+  const organization = await prisma.organization.findUnique({
+    where: { id: accepted.member.organizationId },
+    select: { slug: true },
+  });
+  if (!organization) redirect("/organizations?error=invalid-organization");
+  redirect(`/${organization.slug}/admin`);
 }

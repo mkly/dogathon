@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 
 import { FeltPanel, StitchBadge } from "@/components/felt";
-import { getOrganizationContext } from "@/lib/organization-access";
+import { getOrganizationAccessBySlug } from "@/lib/organization-access";
 import { prisma } from "@/lib/prisma";
 
 import styles from "../sponsors.module.css";
@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 };
 
 type SponsorDetailPageProps = {
-  params: Promise<{ email: string }>;
+  params: Promise<{ email: string; orgSlug: string }>;
 };
 
 function formatDate(date: Date) {
@@ -28,13 +28,13 @@ function formatDate(date: Date) {
 }
 
 export default async function SponsorDetailPage({ params }: SponsorDetailPageProps) {
-  const context = await getOrganizationContext(await headers(), ["owner", "admin"]);
+  const { email, orgSlug } = await params;
+  const access = await getOrganizationAccessBySlug(await headers(), orgSlug, ["owner", "admin"]);
 
-  if (!context) {
-    redirect("/organizations");
-  }
+  if (!access) notFound();
+  if (!access.context) redirect("/organizations");
+  const { context } = access;
 
-  const { email } = await params;
   const sponsorships = await prisma.sponsorship.findMany({
     where: { orgId: context.orgId, sponsorEmail: { equals: email, mode: "insensitive" } },
     include: { resident: { select: { name: true } } },
@@ -55,7 +55,7 @@ export default async function SponsorDetailPage({ params }: SponsorDetailPagePro
           <h1>{latest.sponsorName}</h1>
           <p>Full contact details and sponsorship history.</p>
         </div>
-        <Link className={`felt-button felt-denim ${styles.backLink}`} href="/admin/sponsors">
+        <Link className={`felt-button felt-denim ${styles.backLink}`} href={`/${orgSlug}/admin/sponsors`}>
           Back to sponsors
         </Link>
       </header>

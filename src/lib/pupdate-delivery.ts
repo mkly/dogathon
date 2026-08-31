@@ -27,8 +27,11 @@ type Senders = {
   sms: typeof sendSms;
 };
 
-export function dogPageUrl(origin: string, residentId: string): string {
-  return new URL(`/dogs/${encodeURIComponent(residentId)}`, origin).toString();
+export function dogPageUrl(origin: string, orgSlug: string, residentId: string): string {
+  return new URL(
+    `/${encodeURIComponent(orgSlug)}/dogs/${encodeURIComponent(residentId)}`,
+    origin,
+  ).toString();
 }
 
 function smsWithDogLink(body: string, link: string): string {

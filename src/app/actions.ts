@@ -1,7 +1,8 @@
 "use server";
 
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
+import { prisma } from "@/lib/prisma";
 import { createStripeCheckout, ResidentUnavailableError } from "@/lib/stripe-billing";
 
 function text(formData: FormData, key: string) {
@@ -10,15 +11,20 @@ function text(formData: FormData, key: string) {
 
 export async function createSponsorship(formData: FormData) {
   const residentId = text(formData, "residentId");
-  const orgId = text(formData, "orgId");
+  const orgSlug = text(formData, "orgSlug");
   const sponsorName = text(formData, "sponsorName");
   const sponsorEmail = text(formData, "sponsorEmail");
-  const dogPath = `/dogs/${encodeURIComponent(residentId)}`;
+
+  // Without both segments the path collapses to "//dogs/..." — a scheme-relative
+  // URL the browser would read as another host, so send those back to the index.
+  if (!orgSlug || !residentId) {
+    redirect("/");
+  }
+
+  const dogPath = `/${encodeURIComponent(orgSlug)}/dogs/${encodeURIComponent(residentId)}`;
 
   if (
-    !residentId
-    || !orgId
-    || !sponsorName
+    !sponsorName
     || sponsorName.length > 100
     || !sponsorEmail.includes("@")
     || sponsorEmail.length > 254
@@ -26,11 +32,17 @@ export async function createSponsorship(formData: FormData) {
     redirect(`${dogPath}?error=invalid`);
   }
 
+  const organization = await prisma.organization.findUnique({
+    where: { slug: orgSlug },
+    select: { id: true },
+  });
+  if (!organization) notFound();
+
   const appUrl = process.env.BETTER_AUTH_URL?.replace(/\/$/, "") ?? "http://localhost:3000";
   let checkoutUrl: string;
   try {
     const session = await createStripeCheckout({
-      orgId,
+      orgId: organization.id,
       residentId,
       sponsorName,
       sponsorEmail,
