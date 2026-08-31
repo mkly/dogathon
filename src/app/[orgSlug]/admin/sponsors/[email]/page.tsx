@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 
-import { FeltPanel, StitchBadge } from "@/components/felt";
+import { AdminBadge, AdminLink, AdminSurface } from "@/components/admin-ui";
 import { getOrganizationAccessBySlug } from "@/lib/organization-access";
 import { prisma } from "@/lib/prisma";
 
@@ -48,19 +47,19 @@ export default async function SponsorDetailPage({ params }: SponsorDetailPagePro
   const latest = sponsorships.at(-1)!;
 
   return (
-    <main className={styles.page}>
+    <main className={`admin-shell ${styles.page}`}>
       <header className={styles.header}>
         <div>
           <p className={styles.eyebrow}>Sponsor record</p>
           <h1>{latest.sponsorName}</h1>
           <p>Full contact details and sponsorship history.</p>
         </div>
-        <Link className={`felt-button felt-denim ${styles.backLink}`} href={`/${orgSlug}/admin/sponsors`}>
+        <AdminLink className={styles.backLink} href={`/${orgSlug}/admin/sponsors`}>
           Back to sponsors
-        </Link>
+        </AdminLink>
       </header>
 
-      <FeltPanel className={styles.profile} tone="denim">
+      <AdminSurface className={styles.profile} tone="denim">
         <div className={styles.profileItem}>
           <small>Email</small>
           <a href={`mailto:${latest.sponsorEmail}`}>{latest.sponsorEmail}</a>
@@ -73,14 +72,14 @@ export default async function SponsorDetailPage({ params }: SponsorDetailPagePro
           <small>Preferred updates</small>
           <strong>{latest.channel}</strong>
         </div>
-      </FeltPanel>
+      </AdminSurface>
 
       <section aria-labelledby="history-heading">
         <div className={styles.historyTitle}>
           <h2 id="history-heading">Sponsorship history</h2>
-          <StitchBadge tone="mustard">{sponsorships.length} {sponsorships.length === 1 ? "dog" : "dogs"}</StitchBadge>
+          <AdminBadge tone="mustard">{sponsorships.length} {sponsorships.length === 1 ? "dog" : "dogs"}</AdminBadge>
         </div>
-        <FeltPanel className={styles.historyPanel} tone="oatmeal">
+        <AdminSurface className={styles.historyPanel} tone="oatmeal">
           <div className={styles.tableWrap}>
             <table className={styles.table}>
               <thead>
@@ -107,7 +106,7 @@ export default async function SponsorDetailPage({ params }: SponsorDetailPagePro
               </tbody>
             </table>
           </div>
-        </FeltPanel>
+        </AdminSurface>
       </section>
     </main>
   );

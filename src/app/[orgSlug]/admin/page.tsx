@@ -3,7 +3,8 @@ import Link from "next/link";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 
-import { FeltPanel, PhotoPatch, StitchBadge } from "@/components/felt";
+import { AdminBadge, AdminButton, AdminSurface } from "@/components/admin-ui";
+import { PhotoPatch } from "@/components/felt";
 import { SignOutButton } from "@/components/sign-out-button";
 import { gmailAuthStatus } from "@/lib/arcade";
 import { getOrganizationAccessBySlug } from "@/lib/organization-access";
@@ -104,7 +105,7 @@ export default async function AdminPage({ params }: AdminPageProps) {
   const monthlyRecurring = activeSponsorCount * 25;
 
   return (
-    <main className={styles.page}>
+    <main className={`admin-shell ${styles.page}`}>
       <header className={styles.header}>
         <Link className={styles.logo} href={`/${orgSlug}`}>
           <Image alt="Pawcast" priority src={pawcastWordmark} />
@@ -128,41 +129,41 @@ export default async function AdminPage({ params }: AdminPageProps) {
       </header>
 
       <section aria-label="Program statistics" className={styles.stats}>
-        <FeltPanel className={styles.stat} tone="mustard">
+        <AdminSurface className={styles.stat} tone="mustard">
           <strong>${monthlyRecurring.toLocaleString()}</strong>
           <span>a month, recurring</span>
           <small>active sponsorships × $25</small>
-        </FeltPanel>
+        </AdminSurface>
         <Link
           aria-label={`View active sponsors (${activeSponsorCount} active)`}
           className={styles.statLink}
           href={`/${orgSlug}/admin/sponsors`}
         >
-          <FeltPanel className={styles.stat} tone="moss">
+          <AdminSurface className={styles.stat} tone="moss">
             <strong>{activeSponsorCount}</strong>
             <span>active sponsors</span>
             <small>ready for the next pupdate</small>
-          </FeltPanel>
+          </AdminSurface>
         </Link>
         <Link
           aria-label={`View dogs covered (${sponsoredDogCount} with active sponsors)`}
           className={styles.statLink}
           href={`/${orgSlug}/admin/dogs-covered`}
         >
-          <FeltPanel className={styles.stat} tone="denim">
+          <AdminSurface className={styles.stat} tone="denim">
             <strong>{sponsoredDogCount}</strong>
             <span>dogs covered</span>
             <small>with at least one active sponsor</small>
-          </FeltPanel>
+          </AdminSurface>
         </Link>
-        <FeltPanel className={styles.stat} tone="brick">
+        <AdminSurface className={styles.stat} tone="brick">
           <strong>92%</strong>
           <span>updates opened</span>
           <small>people love dog email</small>
-        </FeltPanel>
+        </AdminSurface>
       </section>
 
-      <FeltPanel className={styles.settings} tone="mustard">
+      <AdminSurface className={styles.settings} tone="mustard">
         <div className={styles.settingsIntro}>
           <p className={styles.eyebrow}>Stripe Connect</p>
           <h2>Monthly sponsorship payments</h2>
@@ -179,12 +180,12 @@ export default async function AdminPage({ params }: AdminPageProps) {
         {!organization?.stripeChargesEnabled && context.role === "owner" && (
           <form action={beginStripeOnboarding}>
             <input name="orgSlug" type="hidden" value={orgSlug} />
-            <button className="felt-button felt-brick" type="submit">
+            <AdminButton tone="brick" type="submit">
               {organization?.stripeAccountId ? "Continue Stripe onboarding" : "Connect Stripe"}
-            </button>
+            </AdminButton>
           </form>
         )}
-      </FeltPanel>
+      </AdminSurface>
 
       <section className={styles.composeSection}>
         <div className={styles.sectionTitle}>
@@ -192,22 +193,22 @@ export default async function AdminPage({ params }: AdminPageProps) {
             <p className={styles.eyebrow}>Volunteer notebook</p>
             <h2>Notes ready for a pupdate</h2>
           </div>
-          <StitchBadge tone="mustard">
+          <AdminBadge tone="mustard">
             {noteResidents.length} {noteResidents.length === 1 ? "dog" : "dogs"}
-          </StitchBadge>
+          </AdminBadge>
         </div>
 
         {noteResidents.length === 0 ? (
-          <FeltPanel className={styles.composeEmpty} tone="oatmeal">
+          <AdminSurface className={styles.composeEmpty} tone="oatmeal">
             No volunteer notes are waiting yet.
-          </FeltPanel>
+          </AdminSurface>
         ) : (
           <div className={styles.composeGrid}>
             {noteResidents.map((resident) => {
               const latestNote = resident.volunteerNotes[0]?.createdAt;
 
               return (
-                <FeltPanel className={styles.composeItem} key={resident.id} tone="oatmeal">
+                <AdminSurface className={styles.composeItem} key={resident.id} tone="oatmeal">
                   <PhotoPatch
                     alt={`${resident.name} portrait`}
                     className={styles.composePhoto}
@@ -231,7 +232,7 @@ export default async function AdminPage({ params }: AdminPageProps) {
                     )}
                   </div>
                   <ComposeButton orgSlug={orgSlug} residentId={resident.id} residentName={resident.name} />
-                </FeltPanel>
+                </AdminSurface>
               );
             })}
           </div>
@@ -244,7 +245,7 @@ export default async function AdminPage({ params }: AdminPageProps) {
             <p className={styles.eyebrow}>Approval queue</p>
             <h2>Waiting for your OK</h2>
           </div>
-          <StitchBadge tone="brick">{drafts.length} {drafts.length === 1 ? "draft" : "drafts"}</StitchBadge>
+          <AdminBadge tone="brick">{drafts.length} {drafts.length === 1 ? "draft" : "drafts"}</AdminBadge>
         </div>
 
         {!gmail.authorized && drafts.length > 0 && (
@@ -256,23 +257,23 @@ export default async function AdminPage({ params }: AdminPageProps) {
 
         <div className={styles.queue}>
           {drafts.length === 0 ? (
-            <FeltPanel className={styles.empty} tone="oatmeal">
+            <AdminSurface className={styles.empty} tone="oatmeal">
               <span aria-hidden="true">🐾</span>
               <h3>The queue is clear</h3>
               <p>Fresh volunteer notes will become drafts here.</p>
-            </FeltPanel>
+            </AdminSurface>
           ) : (
             drafts.map((draft) => (
-              <FeltPanel className={styles.queueItem} key={draft.id} tone="oatmeal">
+              <AdminSurface className={styles.queueItem} key={draft.id} tone="oatmeal">
                 <PhotoPatch
                   alt={`${draft.resident.name} portrait`}
                   className={styles.photo}
                   src={draft.resident.photoUrls[0]}
                 />
                 <div className={styles.dogSummary}>
-                  <StitchBadge tone={draft.type === "graduation" ? "mustard" : "denim"}>
+                  <AdminBadge tone={draft.type === "graduation" ? "mustard" : "denim"}>
                     {draft.type}
-                  </StitchBadge>
+                  </AdminBadge>
                   <h3>{draft.resident.name}</h3>
                   <p>{draft.resident.personality}</p>
                   <small>goes to {draft.resident.sponsorships.length} sponsors</small>
@@ -286,13 +287,13 @@ export default async function AdminPage({ params }: AdminPageProps) {
                   smsText={draft.smsText}
                   subject={draft.subject}
                 />
-              </FeltPanel>
+              </AdminSurface>
             ))
           )}
         </div>
       </section>
 
-      <FeltPanel className={styles.settings} tone="denim">
+      <AdminSurface className={styles.settings} tone="denim">
         <div className={styles.settingsIntro}>
           <p className={styles.eyebrowLight}>Staff settings</p>
           <h2>Pinned to every email this month</h2>
@@ -302,7 +303,7 @@ export default async function AdminPage({ params }: AdminPageProps) {
           </p>
         </div>
         <SettingsForm orgSlug={orgSlug} pinnedPostscript={settings.pinnedPostscript} sourceUrl={settings.sourceUrl} />
-      </FeltPanel>
+      </AdminSurface>
 
       <footer className={styles.footer}>the staff room · nobody wrote a single email today</footer>
     </main>

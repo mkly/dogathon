@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 
-import { FeltPanel, PhotoPatch, StitchBadge } from "@/components/felt";
+import { AdminBadge, AdminLink, AdminSurface } from "@/components/admin-ui";
+import { PhotoPatch } from "@/components/felt";
 import { getOrganizationAccessBySlug } from "@/lib/organization-access";
 import { prisma } from "@/lib/prisma";
 
@@ -52,16 +52,16 @@ export default async function DogsCoveredPage({ params }: DogsCoveredPageProps) 
   ).length;
 
   return (
-    <main className={styles.page}>
+    <main className={`admin-shell ${styles.page}`}>
       <header className={styles.header}>
         <div>
           <p className={styles.eyebrow}>Private staff directory</p>
           <h1>Dogs covered</h1>
           <p>Every sponsored resident and the people supporting them.</p>
         </div>
-        <Link className={`felt-button felt-denim ${styles.backLink}`} href={`/${orgSlug}/admin`}>
+        <AdminLink className={styles.backLink} href={`/${orgSlug}/admin`}>
           Back to staff room
-        </Link>
+        </AdminLink>
       </header>
 
       <div className={styles.summary}>
@@ -70,15 +70,15 @@ export default async function DogsCoveredPage({ params }: DogsCoveredPageProps) 
           {sponsorshipCount === 1 ? "sponsorship" : "sponsorships"} · {activelyCoveredCount}{" "}
           actively covered
         </p>
-        <StitchBadge tone="moss">staff only</StitchBadge>
+        <AdminBadge tone="moss">staff only</AdminBadge>
       </div>
 
       {residents.length === 0 ? (
-        <FeltPanel className={styles.empty} tone="oatmeal">
+        <AdminSurface className={styles.empty} tone="oatmeal">
           <span aria-hidden="true">🐾</span>
           <h2>No dogs covered yet</h2>
           <p>Residents will appear here when their first sponsorship begins.</p>
-        </FeltPanel>
+        </AdminSurface>
       ) : (
         <section aria-label="Dogs covered directory" className={styles.dogList}>
           {residents.map((resident) => {
@@ -87,7 +87,7 @@ export default async function DogsCoveredPage({ params }: DogsCoveredPageProps) 
             );
 
             return (
-              <FeltPanel className={styles.dogCard} key={resident.id} tone="oatmeal">
+              <AdminSurface className={styles.dogCard} key={resident.id} tone="oatmeal">
                 <div className={styles.dogHeading}>
                   <PhotoPatch
                     alt={`${resident.name} portrait`}
@@ -98,21 +98,22 @@ export default async function DogsCoveredPage({ params }: DogsCoveredPageProps) 
                     <h2>{resident.name}</h2>
                     <p>{resident.breed}</p>
                     <div className={styles.badges}>
-                      <StitchBadge tone={resident.status === "available" ? "denim" : "brick"}>
+                      <AdminBadge tone={resident.status === "available" ? "denim" : "brick"}>
                         {resident.status}
-                      </StitchBadge>
-                      <StitchBadge tone={hasActiveSponsor ? "moss" : "brick"}>
+                      </AdminBadge>
+                      <AdminBadge tone={hasActiveSponsor ? "moss" : "brick"}>
                         {resident.sponsorships.length}{" "}
                         {resident.sponsorships.length === 1 ? "sponsor" : "sponsors"}
-                      </StitchBadge>
+                      </AdminBadge>
                     </div>
                   </div>
-                  <Link
-                    className={`felt-button felt-mustard ${styles.detailLink}`}
+                  <AdminLink
+                    className={styles.detailLink}
                     href={`/${orgSlug}/dogs/${resident.id}`}
+                    tone="mustard"
                   >
                     View dog page
-                  </Link>
+                  </AdminLink>
                 </div>
 
                 <div className={styles.tableWrap}>
@@ -148,7 +149,7 @@ export default async function DogsCoveredPage({ params }: DogsCoveredPageProps) 
                     </tbody>
                   </table>
                 </div>
-              </FeltPanel>
+              </AdminSurface>
             );
           })}
         </section>
