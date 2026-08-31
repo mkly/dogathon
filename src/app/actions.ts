@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 
-import { createStripeCheckout } from "@/lib/stripe-billing";
+import { createStripeCheckout, ResidentUnavailableError } from "@/lib/stripe-billing";
 
 function text(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
@@ -39,6 +39,9 @@ export async function createSponsorship(formData: FormData) {
     });
     checkoutUrl = session.url;
   } catch (error) {
+    if (error instanceof ResidentUnavailableError) {
+      redirect(`${dogPath}?error=unavailable`);
+    }
     console.error("Unable to create Stripe Checkout session", error);
     redirect(`${dogPath}?error=billing`);
   }

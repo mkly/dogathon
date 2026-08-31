@@ -4,6 +4,14 @@ import { prisma } from "@/lib/prisma";
 
 export const SPONSORSHIP_MONTHLY_USD = 25;
 
+/** The resident cannot be sponsored right now, as opposed to billing being unconfigured. */
+export class ResidentUnavailableError extends Error {
+  constructor() {
+    super("Resident is unavailable");
+    this.name = "ResidentUnavailableError";
+  }
+}
+
 type ConnectedOrganization = {
   id: string;
   name: string;
@@ -35,6 +43,8 @@ export interface BillingStore {
     status: { detailsSubmitted: boolean; chargesEnabled: boolean },
   ): Promise<void>;
   getAvailableResident(orgId: string, residentId: string): Promise<AvailableResident | null>;
+  /** Org-scoped lookup that ignores status, so a resident adopted mid-checkout still records. */
+  getResident(orgId: string, residentId: string): Promise<AvailableResident | null>;
   activateSponsorship(input: {
     orgId: string;
     residentId: string;
@@ -173,6 +183,13 @@ const prismaBillingStore: BillingStore = {
     });
   },
 
+  async getResident(orgId, residentId) {
+    return prisma.resident.findFirst({
+      where: { id: residentId, orgId },
+      select: { id: true, name: true, orgId: true },
+    });
+  },
+
   async activateSponsorship(input) {
     await prisma.sponsorship.upsert({
       where: { stripeCheckoutSessionId: input.stripeCheckoutSessionId },
@@ -204,6 +221,7 @@ const prismaBillingStore: BillingStore = {
       where: {
         orgId: input.orgId,
         stripeSubscriptionId: input.stripeSubscriptionId,
+        status: "active",
         organization: { stripeAccountId: input.stripeAccountId },
       },
       data: { status: "ended", endedAt: new Date(), endedReason: "stripe_subscription_canceled" },
@@ -276,7 +294,7 @@ export async function createStripeCheckout(
   if (!organization?.stripeAccountId || !organization.stripeChargesEnabled) {
     throw new Error("This organization is not ready to accept sponsorship payments");
   }
-  if (!resident) throw new Error("Resident is unavailable");
+  if (!resident) throw new ResidentUnavailableError();
 
   const session = await gateway.createSubscriptionCheckout({
     ...input,
@@ -317,7 +335,7 @@ export async function processStripeEvent(
     }
     const [organization, resident] = await Promise.all([
       store.getOrganization(orgId),
-      store.getAvailableResident(orgId, residentId),
+      store.getResident(orgId, residentId),
     ]);
     if (organization?.stripeAccountId !== event.account || !resident) return;
     await store.activateSponsorship({

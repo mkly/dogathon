@@ -5,6 +5,7 @@ import Stripe from "stripe";
 
 import {
   type BillingStore,
+  ResidentUnavailableError,
   constructStripeEvent,
   createConnectOnboardingLink,
   createStripeCheckout,
@@ -49,7 +50,13 @@ class MemoryBillingStore implements BillingStore {
     this.organization.stripeChargesEnabled = status.chargesEnabled;
   }
 
+  residentAvailable = true;
+
   async getAvailableResident(orgId: string, residentId: string) {
+    return this.residentAvailable ? this.getResident(orgId, residentId) : null;
+  }
+
+  async getResident(orgId: string, residentId: string) {
     return orgId === this.resident.orgId && residentId === this.resident.id
       ? { ...this.resident }
       : null;
@@ -234,4 +241,50 @@ test("webhooks ignore a connected account that does not belong to the organizati
   }, "checkout.session.completed"), store);
 
   assert.equal(store.sponsorships.size, 0);
+});
+
+test("checkout refuses an unavailable resident with a distinguishable error", async () => {
+  const store = new MemoryBillingStore();
+  store.organization.stripeAccountId = "acct_fixture_rescue";
+  store.organization.stripeChargesEnabled = true;
+  store.residentAvailable = false;
+
+  await assert.rejects(
+    createStripeCheckout(
+      {
+        orgId: "org_rescue",
+        residentId: "dog_mabel",
+        sponsorName: "Avery Sponsor",
+        sponsorEmail: "avery@example.com",
+        successUrl: "https://app.test/success",
+        cancelUrl: "https://app.test/cancel",
+      },
+      new FixtureStripeGateway(),
+      store,
+    ),
+    ResidentUnavailableError,
+  );
+});
+
+test("a resident adopted mid-checkout still records the paid sponsorship", async () => {
+  const store = new MemoryBillingStore();
+  store.organization.stripeAccountId = "acct_fixture_rescue";
+  store.organization.stripeChargesEnabled = true;
+  store.residentAvailable = false;
+
+  await processStripeEvent(signedEvent({
+    id: "cs_adopted",
+    object: "checkout.session",
+    customer: "cus_fixture",
+    metadata: {
+      orgId: "org_rescue",
+      residentId: "dog_mabel",
+      sponsorName: "Avery Sponsor",
+      sponsorEmail: "avery@example.com",
+    },
+    mode: "subscription",
+    subscription: "sub_adopted",
+  }, "checkout.session.completed"), store);
+
+  assert.equal(store.sponsorships.get("cs_adopted")?.status, "active");
 });
