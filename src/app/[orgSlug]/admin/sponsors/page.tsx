@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 
-import { FeltPanel, StitchBadge } from "@/components/felt";
+import { AdminBadge, AdminLink, AdminSurface } from "@/components/admin-ui";
 import { getOrganizationAccessBySlug } from "@/lib/organization-access";
 import { prisma } from "@/lib/prisma";
 
@@ -62,39 +61,39 @@ export default async function SponsorsPage({ params }: SponsorsPageProps) {
   });
 
   return (
-    <main className={styles.page}>
+    <main className={`admin-shell ${styles.page}`}>
       <header className={styles.header}>
         <div>
           <p className={styles.eyebrow}>Private staff directory</p>
           <h1>Sponsors</h1>
           <p>Contact preferences and every dog supported, grouped by sponsor email.</p>
         </div>
-        <Link className={`felt-button felt-denim ${styles.backLink}`} href={`/${orgSlug}/admin`}>
+        <AdminLink className={styles.backLink} href={`/${orgSlug}/admin`}>
           Back to staff room
-        </Link>
+        </AdminLink>
       </header>
 
       <div className={styles.summary}>
         <p>{sponsors.length} {sponsors.length === 1 ? "person" : "people"} · {sponsorships.length} {sponsorships.length === 1 ? "sponsorship" : "sponsorships"}</p>
-        <StitchBadge tone="moss">staff only</StitchBadge>
+        <AdminBadge tone="moss">staff only</AdminBadge>
       </div>
 
       {sponsors.length === 0 ? (
-        <FeltPanel className={styles.empty} tone="oatmeal">
+        <AdminSurface className={styles.empty} tone="oatmeal">
           <span aria-hidden="true">🧵</span>
           <h2>No sponsors yet</h2>
           <p>New sponsorships will be tucked into this directory.</p>
-        </FeltPanel>
+        </AdminSurface>
       ) : (
         <section aria-label="Sponsor directory" className={styles.sponsorList}>
           {sponsors.map(({ email, latest, records }) => (
-            <FeltPanel className={styles.sponsorCard} key={email} tone="oatmeal">
+            <AdminSurface className={styles.sponsorCard} key={email} tone="oatmeal">
               <div className={styles.sponsorHeading}>
                 <div>
                   <h2>{latest.sponsorName}</h2>
-                  <StitchBadge tone={records.some(({ status }) => status === "active") ? "moss" : "brick"}>
+                  <AdminBadge tone={records.some(({ status }) => status === "active") ? "moss" : "brick"}>
                     {records.length} {records.length === 1 ? "dog" : "dogs"}
-                  </StitchBadge>
+                  </AdminBadge>
                 </div>
                 <div className={styles.contact}>
                   <p><a href={`mailto:${email}`}>{email}</a></p>
@@ -123,7 +122,7 @@ export default async function SponsorsPage({ params }: SponsorsPageProps) {
                   </tbody>
                 </table>
               </div>
-            </FeltPanel>
+            </AdminSurface>
           ))}
         </section>
       )}

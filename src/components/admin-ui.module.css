@@ -1,0 +1,117 @@
+.surface {
+  --admin-accent: var(--felt-denim);
+  border: 1px solid rgb(61 51 43 / 20%);
+  border-top: 3px solid var(--admin-accent);
+  border-radius: 8px;
+  background: rgb(248 242 231 / 94%);
+  color: var(--felt-ink);
+}
+
+.button {
+  --admin-accent: var(--felt-denim);
+  display: inline-flex;
+  min-height: 2.5rem;
+  align-items: center;
+  justify-content: center;
+  padding: 0.55rem 0.9rem;
+  border: 1px solid color-mix(in srgb, var(--admin-accent), var(--felt-ink) 22%);
+  border-radius: 6px;
+  background: var(--admin-accent);
+  color: var(--admin-contrast, var(--felt-cream));
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 800;
+  line-height: 1.2;
+  text-decoration: none;
+}
+
+.button:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--admin-accent), white 10%);
+}
+
+.button:active:not(:disabled) {
+  background: color-mix(in srgb, var(--admin-accent), black 8%);
+}
+
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.field {
+  border: 1px solid rgb(61 51 43 / 34%);
+  border-radius: 6px;
+  background: white;
+}
+
+.field:focus-within {
+  border-color: var(--felt-denim);
+  box-shadow: 0 0 0 1px var(--felt-denim);
+}
+
+.field > input,
+.field > select,
+.field > textarea {
+  width: 100%;
+  min-height: 2.5rem;
+  padding: 0.6rem 0.7rem;
+  border: 0;
+  border-radius: inherit;
+  outline: 0;
+  background: transparent;
+  color: var(--felt-ink);
+  font: inherit;
+  font-size: 0.88rem;
+}
+
+.field > textarea {
+  min-height: 5.5rem;
+}
+
+.badge {
+  --admin-accent: var(--felt-denim);
+  --admin-contrast: var(--felt-cream);
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 0.25rem 0.5rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--admin-accent), white 78%);
+  color: color-mix(in srgb, var(--admin-accent), var(--felt-ink) 30%);
+  font-size: 0.67rem;
+  font-weight: 850;
+  letter-spacing: 0.04em;
+  line-height: 1.25;
+  text-transform: uppercase;
+}
+
+.oatmeal {
+  --admin-accent: var(--felt-oatmeal);
+  --admin-contrast: var(--felt-ink);
+}
+
+.mustard {
+  --admin-accent: var(--felt-mustard);
+  --admin-contrast: var(--felt-ink);
+}
+
+.brick {
+  --admin-accent: var(--felt-brick);
+  --admin-contrast: var(--felt-cream);
+}
+
+.moss {
+  --admin-accent: var(--felt-moss);
+  --admin-contrast: var(--felt-cream);
+}
+
+.denim {
+  --admin-accent: var(--felt-denim);
+  --admin-contrast: var(--felt-cream);
+}
+
+.cream {
+  --admin-accent: var(--felt-cream);
+  --admin-contrast: var(--felt-ink);
+}

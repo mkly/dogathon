@@ -3,7 +3,7 @@
 import { useActionState, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { FeltButton, FeltField, FeltPanel, StitchBadge } from "@/components/felt";
+import { AdminBadge, AdminButton, AdminField, AdminLink, AdminSurface } from "@/components/admin-ui";
 import { pushToast } from "@/components/toast";
 import { MAX_SMS_LENGTH } from "@/lib/pupdate-sms";
 
@@ -173,10 +173,10 @@ export function DraftEditor({
         <small>SMS: {savedDraft.smsText}</small>
       </div>
       <div className={styles.draftActions}>
-        <FeltButton disabled={pending !== null} onClick={openEditor} tone="mustard">
+        <AdminButton disabled={pending !== null} onClick={openEditor} tone="mustard">
           Edit
-        </FeltButton>
-        <FeltButton
+        </AdminButton>
+        <AdminButton
           aria-describedby={emailConnected ? undefined : EMAIL_CONNECTOR_NOTICE_ID}
           disabled={pending !== null || !emailConnected}
           onClick={approve}
@@ -184,19 +184,19 @@ export function DraftEditor({
           tone="moss"
         >
           {pending === "approve" ? "Saving & sending…" : "Approve & send"}
-        </FeltButton>
-        <FeltButton disabled={pending !== null} onClick={deny} tone="brick">
+        </AdminButton>
+        <AdminButton disabled={pending !== null} onClick={deny} tone="brick">
           {pending === "deny" ? "Discarding…" : "Deny & discard"}
-        </FeltButton>
+        </AdminButton>
         {/* the themed email as the sponsor will see it, not the plain draft text */}
-        <a
-          className={`felt-button felt-denim ${styles.previewLink}`}
+        <AdminLink
+          className={styles.previewLink}
           href={`/api/pupdates/${id}/preview?org=${encodeURIComponent(orgSlug)}`}
           rel="noreferrer"
           target="_blank"
         >
           Preview email
-        </a>
+        </AdminLink>
       </div>
 
       <dialog
@@ -209,19 +209,19 @@ export function DraftEditor({
         onClose={() => setEditorOpen(false)}
         ref={dialogRef}
       >
-        <FeltPanel className={styles.dialogPanel} tone="oatmeal">
+        <AdminSurface className={styles.dialogPanel} tone="oatmeal">
           <div className={styles.dialogHeader}>
             <div>
               <p className={styles.eyebrow}>Draft pupdate</p>
               <h2 id={`edit-draft-title-${id}`}>Edit message</h2>
             </div>
-            <FeltButton aria-label="Close editor" onClick={closeEditor} tone="oatmeal">
+            <AdminButton aria-label="Close editor" onClick={closeEditor} tone="oatmeal">
               ✕
-            </FeltButton>
+            </AdminButton>
           </div>
           <div className={styles.draftEditor}>
             <label htmlFor={`subject-${id}`}>Subject</label>
-            <FeltField>
+            <AdminField>
               <input
                 autoFocus
                 id={`subject-${id}`}
@@ -229,9 +229,9 @@ export function DraftEditor({
                 required
                 value={subject}
               />
-            </FeltField>
+            </AdminField>
             <label htmlFor={`email-${id}`}>Email body</label>
-            <FeltField>
+            <AdminField>
               <textarea
                 id={`email-${id}`}
                 onChange={(event) => setBodyText(event.target.value)}
@@ -239,14 +239,14 @@ export function DraftEditor({
                 rows={7}
                 value={bodyText}
               />
-            </FeltField>
+            </AdminField>
             <div className={styles.smsLabelRow}>
               <label htmlFor={`sms-${id}`}>SMS text</label>
               <span className={smsTooLong ? styles.smsError : undefined}>
                 {smsText.length}/{MAX_SMS_LENGTH}
               </span>
             </div>
-            <FeltField>
+            <AdminField>
               <textarea
                 aria-describedby={smsTooLong ? `sms-error-${id}` : undefined}
                 aria-invalid={smsTooLong}
@@ -256,22 +256,22 @@ export function DraftEditor({
                 rows={4}
                 value={smsText}
               />
-            </FeltField>
+            </AdminField>
             {smsTooLong && (
               <p className={styles.smsError} id={`sms-error-${id}`} role="alert">
                 Shorten the SMS by {smsText.length - MAX_SMS_LENGTH} characters before saving.
               </p>
             )}
             <div className={styles.modalActions}>
-              <FeltButton disabled={pending === "save"} onClick={closeEditor} tone="oatmeal">
+              <AdminButton disabled={pending === "save"} onClick={closeEditor} tone="oatmeal">
                 Cancel
-              </FeltButton>
-              <FeltButton disabled={pending !== null || smsTooLong} onClick={save} tone="mustard">
+              </AdminButton>
+              <AdminButton disabled={pending !== null || smsTooLong} onClick={save} tone="mustard">
                 {pending === "save" ? "Saving…" : "Save changes"}
-              </FeltButton>
+              </AdminButton>
             </div>
           </div>
-        </FeltPanel>
+        </AdminSurface>
       </dialog>
     </div>
   );
@@ -312,9 +312,9 @@ export function ComposeButton({
 
   return (
     <div className={styles.actionStack}>
-      <FeltButton disabled={pending} onClick={compose} tone="denim">
+      <AdminButton disabled={pending} onClick={compose} tone="denim">
         {pending ? "Composing…" : "Compose pupdate"}
-      </FeltButton>
+      </AdminButton>
     </div>
   );
 }
@@ -357,9 +357,9 @@ export function StaffTools({ orgSlug }: { orgSlug: string }) {
 
   return (
     <div className={styles.staffTools}>
-      <FeltButton disabled={pending} onClick={syncNow} tone="mustard">
+      <AdminButton disabled={pending} onClick={syncNow} tone="mustard">
         {pending ? "Syncing…" : "Sync now"}
-      </FeltButton>
+      </AdminButton>
     </div>
   );
 }
@@ -464,7 +464,7 @@ export function EmailConnectorSettings({
       : "SMTP";
 
   return (
-    <FeltPanel className={styles.connectorSettings} tone="oatmeal">
+    <AdminSurface className={styles.connectorSettings} tone="oatmeal">
       <div className={styles.connectorHeader}>
         <div>
           <p className={styles.eyebrow}>Organization email</p>
@@ -472,48 +472,48 @@ export function EmailConnectorSettings({
           <p>Connecting a provider replaces this organization&apos;s previous email connection.</p>
         </div>
         <div className={styles.connectorStatus}>
-          <StitchBadge tone={connector.connected ? "moss" : "brick"}>
+          <AdminBadge tone={connector.connected ? "moss" : "brick"}>
             {connector.connected
               ? `${providerLabel}: ${connector.fromEmail}`
               : "No verified connector"}
-          </StitchBadge>
+          </AdminBadge>
           {connector.connected && (
-            <FeltButton disabled={pending !== null} onClick={disconnect} tone="brick">
+            <AdminButton disabled={pending !== null} onClick={disconnect} tone="brick">
               {pending === "disconnect" ? "Disconnecting…" : "Disconnect"}
-            </FeltButton>
+            </AdminButton>
           )}
         </div>
       </div>
       <div className={styles.oauthChoices}>
-        <FeltButton disabled={pending !== null} onClick={() => connectOAuth("gmail")} tone="denim">
+        <AdminButton disabled={pending !== null} onClick={() => connectOAuth("gmail")} tone="denim">
           {pending === "gmail" ? "Opening Gmail…" : "Connect Gmail"}
-        </FeltButton>
-        <FeltButton disabled={pending !== null} onClick={() => connectOAuth("microsoft")} tone="denim">
+        </AdminButton>
+        <AdminButton disabled={pending !== null} onClick={() => connectOAuth("microsoft")} tone="denim">
           {pending === "microsoft" ? "Opening Microsoft…" : "Connect Microsoft 365"}
-        </FeltButton>
+        </AdminButton>
       </div>
       <form className={styles.smtpForm} onSubmit={saveSmtp}>
         <h3>Plain SMTP with password authentication</h3>
         <label htmlFor="smtpHost">Host</label>
-        <FeltField><input id="smtpHost" name="smtpHost" required /></FeltField>
+        <AdminField><input id="smtpHost" name="smtpHost" required /></AdminField>
         <label htmlFor="smtpPort">Port</label>
-        <FeltField><input defaultValue="587" id="smtpPort" max="65535" min="1" name="smtpPort" required type="number" /></FeltField>
+        <AdminField><input defaultValue="587" id="smtpPort" max="65535" min="1" name="smtpPort" required type="number" /></AdminField>
         <label htmlFor="smtpUser">Username</label>
-        <FeltField><input autoComplete="username" id="smtpUser" name="smtpUser" required /></FeltField>
+        <AdminField><input autoComplete="username" id="smtpUser" name="smtpUser" required /></AdminField>
         <label htmlFor="smtpPassword">Password</label>
-        <FeltField><input autoComplete="new-password" id="smtpPassword" name="smtpPassword" required type="password" /></FeltField>
+        <AdminField><input autoComplete="new-password" id="smtpPassword" name="smtpPassword" required type="password" /></AdminField>
         <label htmlFor="smtpFromEmail">From email</label>
-        <FeltField><input id="smtpFromEmail" name="smtpFromEmail" required type="email" /></FeltField>
+        <AdminField><input id="smtpFromEmail" name="smtpFromEmail" required type="email" /></AdminField>
         <label className={styles.smtpSecure} htmlFor="smtpSecure">
           <input id="smtpSecure" name="smtpSecure" type="checkbox" /> TLS from connection start (usually port 465)
         </label>
         <div className={styles.saveRow}>
-          <FeltButton disabled={pending !== null} tone="mustard" type="submit">
+          <AdminButton disabled={pending !== null} tone="mustard" type="submit">
             {pending === "smtp" ? "Verifying…" : "Verify & use SMTP"}
-          </FeltButton>
+          </AdminButton>
         </div>
       </form>
-    </FeltPanel>
+    </AdminSurface>
   );
 }
 
@@ -540,7 +540,7 @@ export function SettingsForm({
     <form action={formAction} className={styles.settingsForm}>
       <input name="orgSlug" type="hidden" value={orgSlug} />
       <label htmlFor="pinnedPostscript">This month&apos;s postscript</label>
-      <FeltField>
+      <AdminField>
         <textarea
           defaultValue={pinnedPostscript}
           id="pinnedPostscript"
@@ -548,9 +548,9 @@ export function SettingsForm({
           name="pinnedPostscript"
           placeholder="A note that rides along with every pupdate…"
         />
-      </FeltField>
+      </AdminField>
       <label htmlFor="sourceUrl">Adoption-page source URL</label>
-      <FeltField>
+      <AdminField>
         <input
           defaultValue={sourceUrl}
           id="sourceUrl"
@@ -559,11 +559,11 @@ export function SettingsForm({
           required
           type="text"
         />
-      </FeltField>
+      </AdminField>
       <div className={styles.saveRow}>
-        <FeltButton disabled={pending} tone="mustard" type="submit">
+        <AdminButton disabled={pending} tone="mustard" type="submit">
           {pending ? "Pinning…" : "Save & pin 📌"}
-        </FeltButton>
+        </AdminButton>
       </div>
     </form>
   );

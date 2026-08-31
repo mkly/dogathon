@@ -28,6 +28,13 @@
   outline: none;
 }
 
+/* Admin working surfaces deliberately restore conventional keyboard focus.
+   Public felt pages retain the chrome-free treatment above. */
+.admin-shell :focus-visible {
+  outline: 3px solid var(--felt-mustard);
+  outline-offset: 3px;
+}
+
 /* raised patch: felt tint blended over the fabric grain on a pseudo, so the
    drop-shadow can follow the silhouette; bevel gradients hug the edges */
 .felt-panel,
