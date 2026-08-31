@@ -13,14 +13,20 @@ export type SettingsState = {
   status: "idle" | "error" | "success";
 };
 
-export async function beginStripeOnboarding() {
-  const context = await getOrganizationContext(await headers(), ["owner"]);
-  if (!context) redirect("/organizations");
+export async function beginStripeOnboarding(formData: FormData) {
+  const orgSlug = String(formData.get("orgSlug") ?? "").trim();
+  const access = await getOrganizationAccessBySlug(await headers(), orgSlug, ["owner"]);
+
+  if (!access) notFound();
+  if (!access.context) redirect("/organizations");
 
   const appUrl = process.env.BETTER_AUTH_URL?.replace(/\/$/, "") ?? "http://localhost:3000";
-  const link = await createConnectOnboardingLink(context.orgId, {
-    refreshUrl: `${appUrl}/api/stripe/connect/refresh`,
-    returnUrl: `${appUrl}/api/stripe/connect/return`,
+  // Stripe sends the owner back to a bare API route, so the org has to ride along
+  // in the URL for the callback to know which admin room to return them to.
+  const org = `?org=${encodeURIComponent(orgSlug)}`;
+  const link = await createConnectOnboardingLink(access.context.orgId, {
+    refreshUrl: `${appUrl}/api/stripe/connect/refresh${org}`,
+    returnUrl: `${appUrl}/api/stripe/connect/return${org}`,
   });
   redirect(link.url);
 }

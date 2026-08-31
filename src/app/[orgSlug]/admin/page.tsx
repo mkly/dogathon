@@ -178,6 +178,7 @@ export default async function AdminPage({ params }: AdminPageProps) {
         </div>
         {!organization?.stripeChargesEnabled && context.role === "owner" && (
           <form action={beginStripeOnboarding}>
+            <input name="orgSlug" type="hidden" value={orgSlug} />
             <button className="felt-button felt-brick" type="submit">
               {organization?.stripeAccountId ? "Continue Stripe onboarding" : "Connect Stripe"}
             </button>
