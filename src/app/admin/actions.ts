@@ -6,11 +6,24 @@ import { redirect } from "next/navigation";
 
 import { getOrganizationContext } from "@/lib/organization-access";
 import { prisma } from "@/lib/prisma";
+import { createConnectOnboardingLink } from "@/lib/stripe-billing";
 
 export type SettingsState = {
   message: string;
   status: "idle" | "error" | "success";
 };
+
+export async function beginStripeOnboarding() {
+  const context = await getOrganizationContext(await headers(), ["owner"]);
+  if (!context) redirect("/organizations");
+
+  const appUrl = process.env.BETTER_AUTH_URL?.replace(/\/$/, "") ?? "http://localhost:3000";
+  const link = await createConnectOnboardingLink(context.orgId, {
+    refreshUrl: `${appUrl}/api/stripe/connect/refresh`,
+    returnUrl: `${appUrl}/api/stripe/connect/return`,
+  });
+  redirect(link.url);
+}
 
 // The sync pipeline accepts either a live adoption page or a checked-in capture
 // like seed/dogs-page-A.html, so the staff room has to let both through.

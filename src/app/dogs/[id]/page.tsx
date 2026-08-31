@@ -85,7 +85,9 @@ export default async function DogPage({ params, searchParams }: DogPageProps) {
             <p className={styles.formError} role="alert">
               {query.error === "unavailable"
                 ? `${resident.name} is no longer available to sponsor.`
-                : "Please complete the required fields."}
+                : query.error === "billing"
+                  ? "Online sponsorship is not ready for this rescue yet. Please try again later."
+                  : "Please complete the required fields."}
             </p>
           )}
 

@@ -45,19 +45,22 @@ model Session {
 }
 
 model Organization {
-  id             String          @id
-  name           String
-  slug           String
-  logo           String?
-  metadata       String?
-  createdAt      DateTime
-  members        Member[]
-  invitations    Invitation[]
-  residents      Resident[]
-  sponsorships   Sponsorship[]
-  volunteerNotes VolunteerNote[]
-  pupdates       Pupdate[]
-  settings       RescueSettings?
+  id                     String          @id
+  name                   String
+  slug                   String
+  logo                   String?
+  metadata               String?
+  createdAt              DateTime
+  members                Member[]
+  invitations            Invitation[]
+  residents              Resident[]
+  sponsorships           Sponsorship[]
+  volunteerNotes         VolunteerNote[]
+  pupdates               Pupdate[]
+  settings               RescueSettings?
+  stripeAccountId        String?         @unique
+  stripeDetailsSubmitted Boolean         @default(false)
+  stripeChargesEnabled   Boolean         @default(false)
 
   @@unique([slug])
   @@map("organization")
@@ -182,20 +185,24 @@ model Resident {
 }
 
 model Sponsorship {
-  id           String             @id @default(cuid())
-  orgId        String
-  residentId   String
-  sponsorName  String
-  sponsorEmail String
-  sponsorPhone String?
-  channel      SponsorshipChannel
-  monthlyUsd   Int                @default(25)
-  status       SponsorshipStatus  @default(active)
-  endedReason  String?
-  createdAt    DateTime           @default(now())
-  updatedAt    DateTime           @updatedAt
-  organization Organization       @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  resident     Resident           @relation(fields: [residentId, orgId], references: [id, orgId], onDelete: Cascade)
+  id                      String             @id @default(cuid())
+  orgId                   String
+  residentId              String
+  sponsorName             String
+  sponsorEmail            String
+  sponsorPhone            String?
+  channel                 SponsorshipChannel
+  monthlyUsd              Int                @default(25)
+  status                  SponsorshipStatus  @default(active)
+  endedReason             String?
+  endedAt                 DateTime?
+  stripeCheckoutSessionId String?            @unique
+  stripeSubscriptionId    String?            @unique
+  stripeCustomerId        String?
+  createdAt               DateTime           @default(now())
+  updatedAt               DateTime           @updatedAt
+  organization            Organization       @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  resident                Resident           @relation(fields: [residentId, orgId], references: [id, orgId], onDelete: Cascade)
 
   @@unique([id, orgId])
   @@index([orgId, status])
