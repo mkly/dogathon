@@ -19,6 +19,12 @@ export type MemberView = {
   userId: string;
 };
 
+function formatJoinedDate(joinedAt: string) {
+  return new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeZone: "UTC" }).format(
+    new Date(joinedAt),
+  );
+}
+
 const ROLE_TONES = {
   owner: "mustard",
   admin: "brick",
@@ -95,9 +101,7 @@ export function MemberList({
             <div className={styles.memberMeta}>
               <AdminBadge tone={ROLE_TONES[member.role]}>{member.role}</AdminBadge>
               <span>
-                Joined {new Intl.DateTimeFormat("en-US", { dateStyle: "medium" }).format(
-                  new Date(member.joinedAt),
-                )}
+                Joined {formatJoinedDate(member.joinedAt)}
               </span>
             </div>
             <div className={styles.controls}>
