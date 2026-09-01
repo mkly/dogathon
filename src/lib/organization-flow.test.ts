@@ -4,6 +4,13 @@ import test from "node:test";
 import { memoryAdapter } from "@better-auth/memory-adapter";
 import { betterAuth } from "better-auth/minimal";
 import { organization } from "better-auth/plugins";
+import { createAccessControl } from "better-auth/plugins/access";
+import {
+  adminAc,
+  defaultStatements,
+  memberAc,
+  ownerAc,
+} from "better-auth/plugins/organization/access";
 
 const origin = "http://localhost:3000";
 
@@ -13,6 +20,7 @@ function cookie(response: Response) {
 
 test("owner creates an organization and an invitee accepts the volunteer role", async () => {
   const invitationEmails: Array<{ email: string; id: string; role: string }> = [];
+  const accessControl = createAccessControl(defaultStatements);
   const auth = betterAuth({
     baseURL: origin,
     secret: "organization-flow-test-secret-at-least-32-characters",
@@ -28,6 +36,13 @@ test("owner creates an organization and an invitee accepts the volunteer role", 
     emailAndPassword: { enabled: true },
     plugins: [
       organization({
+        ac: accessControl,
+        roles: {
+          owner: ownerAc,
+          admin: adminAc,
+          member: memberAc,
+          volunteer: accessControl.newRole({}),
+        },
         sendInvitationEmail: async ({ email, id, role }) => {
           invitationEmails.push({ email, id, role });
         },
@@ -86,14 +101,14 @@ test("owner creates an organization and an invitee accepts the volunteer role", 
 
   const invitationResponse = await call(
     "/organization/invite-member",
-    { email: "volunteer@example.com", role: "member", organizationId: created.id },
+    { email: "volunteer@example.com", role: "volunteer", organizationId: created.id },
     ownerCookie,
   );
   assert.equal(invitationResponse.status, 200);
   const invitation = await invitationResponse.json() as { id: string; role: string };
-  assert.equal(invitation.role, "member");
+  assert.equal(invitation.role, "volunteer");
   assert.deepEqual(invitationEmails, [
-    { email: "volunteer@example.com", id: invitation.id, role: "member" },
+    { email: "volunteer@example.com", id: invitation.id, role: "volunteer" },
   ]);
 
   const volunteerSignUp = await call("/sign-up/email", {
@@ -115,5 +130,5 @@ test("owner creates an organization and an invitee accepts the volunteer role", 
   };
   assert.equal(accepted.invitation.status, "accepted");
   assert.equal(accepted.member.organizationId, created.id);
-  assert.equal(accepted.member.role, "member");
+  assert.equal(accepted.member.role, "volunteer");
 });

@@ -64,7 +64,9 @@ export async function inviteOrganizationMember(formData: FormData) {
 
   const email = value(formData, "email").toLowerCase();
   const requestedRole = value(formData, "role");
-  const role = requestedRole === "admin" ? "admin" : "member";
+  const role = requestedRole === "admin" || requestedRole === "volunteer"
+    ? requestedRole
+    : "member";
   if (!email.includes("@")) redirect("/organizations?error=invalid-email");
 
   await auth.api.createInvitation({

@@ -12,8 +12,8 @@ const session = {
   user: { id: "user-a" },
 };
 
-test("authorizes owner, admin, and volunteer membership in the active organization", () => {
-  for (const role of ["owner", "admin", "member"] as const) {
+test("authorizes every recognized membership in the active organization by default", () => {
+  for (const role of ["owner", "admin", "member", "volunteer"] as const) {
     assert.deepEqual(
       authorizeOrganization(session, { organizationId: "org-a", userId: "user-a", role }),
       { orgId: "org-a", userId: "user-a", role },
@@ -26,14 +26,16 @@ test("rejects cross-organization membership and disallowed roles", () => {
     authorizeOrganization(session, { organizationId: "org-b", userId: "user-a", role: "owner" }),
     null,
   );
-  assert.equal(
-    authorizeOrganization(
-      session,
-      { organizationId: "org-a", userId: "user-a", role: "member" },
-      ["owner", "admin"],
-    ),
-    null,
-  );
+  for (const role of ["member", "volunteer"] as const) {
+    assert.equal(
+      authorizeOrganization(
+        session,
+        { organizationId: "org-a", userId: "user-a", role },
+        ["owner", "admin"],
+      ),
+      null,
+    );
+  }
 });
 
 test("authorizes the organization named by a route independently of the active organization", () => {

@@ -1,7 +1,7 @@
 import { getSession } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
 
-export const ORGANIZATION_ROLES = ["owner", "admin", "member"] as const;
+export const ORGANIZATION_ROLES = ["owner", "admin", "member", "volunteer"] as const;
 export type OrganizationRole = (typeof ORGANIZATION_ROLES)[number];
 
 export type OrganizationContext = {
