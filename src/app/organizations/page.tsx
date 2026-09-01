@@ -67,8 +67,9 @@ export default async function OrganizationsPage({ searchParams }: OrganizationsP
             <FeltField><input name="email" placeholder="person@example.com" required type="email" /></FeltField>
             <FeltField>
               <select defaultValue="member" name="role">
-                <option value="member">Volunteer</option>
+                <option value="member">Member</option>
                 <option value="admin">Admin</option>
+                <option value="volunteer">Volunteer</option>
               </select>
             </FeltField>
             <FeltButton tone="moss" type="submit">Send invitation</FeltButton>

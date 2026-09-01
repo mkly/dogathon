@@ -1,10 +1,20 @@
 import { betterAuth } from "better-auth/minimal";
 import { prismaAdapter } from "better-auth/adapters/prisma";
+import { createAccessControl } from "better-auth/plugins/access";
 import { username } from "better-auth/plugins";
 import { organization } from "better-auth/plugins";
+import {
+  adminAc,
+  defaultStatements,
+  memberAc,
+  ownerAc,
+} from "better-auth/plugins/organization/access";
 
 import { sendAppEmail } from "@/lib/app-mailer";
 import { prisma } from "@/lib/prisma";
+
+const organizationAccessControl = createAccessControl(defaultStatements);
+const volunteerAc = organizationAccessControl.newRole({});
 
 export const auth = betterAuth({
   database: prismaAdapter(prisma, {
@@ -20,7 +30,14 @@ export const auth = betterAuth({
       immutableUsername: true,
     }),
     organization({
+      ac: organizationAccessControl,
       creatorRole: "owner",
+      roles: {
+        owner: ownerAc,
+        admin: adminAc,
+        member: memberAc,
+        volunteer: volunteerAc,
+      },
       sendInvitationEmail: async ({ email, id, organization: invitedOrganization, role }) => {
         const baseUrl = process.env.BETTER_AUTH_URL ?? "http://localhost:3000";
         const invitationUrl = new URL("/organizations", baseUrl);
