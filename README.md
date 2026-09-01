@@ -27,16 +27,6 @@ A multitenant Next.js app using PostgreSQL, Prisma, and Better Auth organization
 
 Open [http://localhost:3000](http://localhost:3000).
 
-## Stripe Connect billing
-
-Set `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` to test-mode values. In the
-Stripe Dashboard, create a Connect webhook endpoint at `/api/stripe/webhook`
-for `account.updated`, `checkout.session.completed`, and
-`customer.subscription.deleted` events on connected accounts. An organization
-owner can then open the staff room and use **Connect Stripe** to onboard an
-Express account. Sponsorship Checkout sessions and subscriptions are created
-on that organization's connected account.
-
 ## Deploy to Vercel
 
 Configure the variables from `.env.example` as Vercel project environment
@@ -81,53 +71,6 @@ Then authenticate the Vercel CLI with `npx vercel login`, or provide a
 
 The script can be invoked from any directory and always deploys this repository
 to production. Additional Vercel CLI options may be passed as arguments.
-
-## Demo
-
-The whole demo runs offline: with no delivery credentials, sends are described
-rather than transmitted, and without both `FIRECRAWL_API_KEY` and the configured
-OpenAI-compatible model credentials, the roster syncs from the checked-in
-captures in `seed/`.
-
-Live pupdate delivery requires the active organization to configure exactly one
-verified Gmail, Microsoft 365, or password-authenticated SMTP connector in the
-staff room. Connector access tokens, refresh tokens, and SMTP passwords are
-encrypted before they are stored.
-
-### Setup
-
-```bash
-docker compose up -d          # PostgreSQL 17 on localhost:5432
-npm install
-npm run db:migrate -- --name init
-npm run seed                  # Biscuit, his sponsors, care notes, settings
-npm run dev
-```
-
-### The 90-second script
-
-1. **Meet Biscuit** — open [http://localhost:3000](http://localhost:3000); the
-   seeded resident Biscuit is on the public grid.
-2. **Sponsor a dog** — open Biscuit's page and sponsor him for $25/month until
-   adopted, choosing email, text, or both.
-3. **Volunteer check-in** — from a phone (or
-   [/volunteer](http://localhost:3000/volunteer)), pick a dog, add a photo and a
-   one-liner, and send the pup-date.
-4. **Staff room** — the staff room is behind sign-in: create a staff account
-   once at [/sign-in](http://localhost:3000/sign-in) (Sign up, email +
-   password), then create or accept an organization at `/organizations`. Compose
-   a draft from the fresh notes — the staff API needs your session cookie, so
-   run it from the browser console on /admin:
-   `await fetch('/api/pupdates/compose', {method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({residentId:'demo-resident-biscuit'})})`
-   — then configure an organization email connector and approve it in /admin.
-   The send fans out one email per sponsor with the pinned postscript stitched
-   on.
-5. **Adoption day** — in the staff-room settings, set the source URL to
-   `seed/dogs-page-A.html` and press **Sync now**: the roster of ~33 dogs
-   syncs in and the available ones fill the public grid. Sponsor Hattie, flip the source to `seed/dogs-page-B.html`
-   (where she is marked adopted), and sync again: her sponsorship closes and a
-   graduation pupdate is queued as a draft for approval.
-6. **The point** — staff writing time today: zero.
 
 ### Automated smoke test
 
