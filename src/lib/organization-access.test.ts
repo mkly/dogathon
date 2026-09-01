@@ -26,14 +26,16 @@ test("rejects cross-organization membership and disallowed roles", () => {
     authorizeOrganization(session, { organizationId: "org-b", userId: "user-a", role: "owner" }),
     null,
   );
-  assert.equal(
-    authorizeOrganization(
-      session,
-      { organizationId: "org-a", userId: "user-a", role: "volunteer" },
-      ["owner", "admin"],
-    ),
-    null,
-  );
+  for (const role of ["member", "volunteer"] as const) {
+    assert.equal(
+      authorizeOrganization(
+        session,
+        { organizationId: "org-a", userId: "user-a", role },
+        ["owner", "admin"],
+      ),
+      null,
+    );
+  }
 });
 
 test("authorizes the organization named by a route independently of the active organization", () => {
