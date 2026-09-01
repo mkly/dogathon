@@ -2,22 +2,42 @@
 
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { APIError } from "better-auth";
 
 import { auth } from "@/lib/auth";
 import { getOrganizationContext } from "@/lib/organization-access";
+import { organizationSlug } from "@/lib/organization-slug";
 import { prisma } from "@/lib/prisma";
 
 function value(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
 }
 
-export async function createOrganization(formData: FormData) {
+export type CreateOrganizationState = { error: string };
+
+function isSlugCollision(error: unknown) {
+  if (!(error instanceof APIError)) return false;
+  const code = error.body?.code;
+  return code === "ORGANIZATION_ALREADY_EXISTS" || code === "ORGANIZATION_SLUG_ALREADY_TAKEN";
+}
+
+export async function createOrganization(
+  _previousState: CreateOrganizationState,
+  formData: FormData,
+): Promise<CreateOrganizationState> {
   const requestHeaders = await headers();
   const name = value(formData, "name");
-  const slug = value(formData, "slug").toLowerCase().replace(/[^a-z0-9-]+/g, "-");
-  if (!name || !slug) redirect("/organizations?error=invalid-organization");
+  const slug = organizationSlug(value(formData, "slug"));
+  if (!name || !slug) return { error: "Enter a rescue name and a valid organization slug." };
 
-  await auth.api.createOrganization({ body: { name, slug }, headers: requestHeaders });
+  try {
+    await auth.api.createOrganization({ body: { name, slug }, headers: requestHeaders });
+  } catch (error) {
+    if (isSlugCollision(error)) {
+      return { error: "That organization slug is already taken. Choose another slug." };
+    }
+    throw error;
+  }
   redirect("/organizations?created=1");
 }
 
