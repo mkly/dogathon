@@ -52,7 +52,7 @@ export type SmtpConfiguration = {
 };
 
 type Fetcher = typeof fetch;
-type MailTransport = {
+export type MailTransport = {
   verify(): Promise<unknown>;
   sendMail(input: {
     from: string;
@@ -62,7 +62,7 @@ type MailTransport = {
     html?: string;
   }): Promise<unknown>;
 };
-type TransportFactory = (options: {
+export type TransportFactory = (options: {
   host: string;
   port: number;
   secure: boolean;
@@ -373,6 +373,28 @@ function smtpTransport(config: SmtpConfiguration, factory: TransportFactory): Ma
   });
 }
 
+export function validateEmailHeaders(input: EmailInput, from: string): void {
+  if (!input.to.includes("@") || /[\r\n]/u.test(input.to) || /[\r\n]/u.test(from)) {
+    throw new Error("Email connector received an invalid email address");
+  }
+  if (/[\r\n]/u.test(input.subject)) {
+    throw new Error("Email subject must be a single line");
+  }
+}
+
+export async function sendSmtpEmail(
+  config: SmtpConfiguration,
+  input: EmailInput,
+  factory: TransportFactory = defaultTransportFactory,
+): Promise<void> {
+  await smtpTransport(config, factory).sendMail({
+    from: config.fromEmail,
+    to: input.to,
+    subject: input.subject,
+    ...(input.contentType === "html" ? { html: input.body } : { text: input.body }),
+  });
+}
+
 export async function verifySmtpConfiguration(
   config: SmtpConfiguration,
   factory: TransportFactory = defaultTransportFactory,
@@ -400,12 +422,7 @@ export async function sendEmailWithConnector(
   input: EmailInput,
   dependencies: { fetch?: Fetcher; transportFactory?: TransportFactory } = {},
 ): Promise<DescribedSend | null> {
-  if (!input.to.includes("@") || /[\r\n]/u.test(input.to) || /[\r\n]/u.test(connector.fromEmail)) {
-    throw new Error("Email connector received an invalid email address");
-  }
-  if (/[\r\n]/u.test(input.subject)) {
-    throw new Error("Email subject must be a single line");
-  }
+  validateEmailHeaders(input, connector.fromEmail);
 
   const fetcher = dependencies.fetch ?? fetch;
   if (!hasEncryptionKey()) return describeSend(connector, input);
@@ -413,12 +430,7 @@ export async function sendEmailWithConnector(
   if (connector.type === "smtp") {
     if (!smtpCredentialsPresent(connector)) return describeSend(connector, input);
     const config = smtpConfiguration(connector);
-    await smtpTransport(config, dependencies.transportFactory ?? defaultTransportFactory).sendMail({
-      from: config.fromEmail,
-      to: input.to,
-      subject: input.subject,
-      ...(input.contentType === "html" ? { html: input.body } : { text: input.body }),
-    });
+    await sendSmtpEmail(config, input, dependencies.transportFactory);
     return null;
   }
 
