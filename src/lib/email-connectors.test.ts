@@ -73,9 +73,11 @@ test("encrypts connector credentials with authenticated encryption", () => {
   // that character only carries partial bits, so swapping it can decode to the
   // same bytes and leave the assertion flaky.
   const [iv, tag, ciphertext] = encrypted.split(".");
-  const tampered = Buffer.from(ciphertext, "base64url");
-  tampered[0] ^= 0xff;
-  assert.throws(() => decryptEmailSecret([iv, tag, tampered.toString("base64url")].join(".")));
+  const tamperedCiphertext = Buffer.from(ciphertext, "base64url");
+  tamperedCiphertext[0] ^= 0x01;
+  assert.throws(() =>
+    decryptEmailSecret([iv, tag, tamperedCiphertext.toString("base64url")].join(".")),
+  );
 });
 
 test("builds provider authorization URLs with offline access and state", () => {
