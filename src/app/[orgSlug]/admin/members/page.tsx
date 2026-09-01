@@ -75,7 +75,7 @@ export default async function MembersPage({ params }: MembersPageProps) {
       email: invitation.email,
       expiresAt: invitation.expiresAt.toISOString(),
       id: invitation.id,
-      inviter: inviter?.user.name || inviter?.user.email || `member ${invitation.inviterId}`,
+      inviter: inviter?.user.name || inviter?.user.email || "a former member",
       role: invitation.role,
     }];
   });
