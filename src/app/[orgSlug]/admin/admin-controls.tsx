@@ -7,7 +7,7 @@ import { AdminBadge, AdminButton, AdminField, AdminLink, AdminSurface } from "@/
 import { pushToast } from "@/components/toast";
 import { MAX_SMS_LENGTH } from "@/lib/pupdate-sms";
 import {
-  isTerminalRosterSyncStatus,
+  pollRosterSyncJobUntilTerminal,
   rosterSyncResultToast,
   rosterSyncStatusLabel,
   type RosterSyncJobView,
@@ -323,19 +323,18 @@ export function ComposeButton({
 export function StaffTools({ orgSlug }: { orgSlug: string }) {
   const [pending, setPending] = useState(false);
   const [job, setJob] = useState<RosterSyncJobView | null>(null);
+  const goneRef = useRef(false);
 
-  async function pollUntilTerminal(initialJob: RosterSyncJobView) {
-    let current = initialJob;
-    while (!isTerminalRosterSyncStatus(current.status)) {
-      await new Promise((resolve) => setTimeout(resolve, 1_000));
-      const response = await fetch(`/api/sync/${encodeURIComponent(current.id)}`, {
-        headers: { "X-Organization-Slug": orgSlug },
-      });
-      if (!response.ok) throw new Error(await responseError(response, "Roster sync status"));
-      current = (await response.json()) as RosterSyncJobView;
-      setJob(current);
-    }
-    return current;
+  useEffect(() => () => {
+    goneRef.current = true;
+  }, []);
+
+  async function fetchJob(jobId: string) {
+    const response = await fetch(`/api/sync/${encodeURIComponent(jobId)}`, {
+      headers: { "X-Organization-Slug": orgSlug },
+    });
+    if (!response.ok) throw new Error(await responseError(response, "Roster sync status"));
+    return (await response.json()) as RosterSyncJobView;
   }
 
   async function syncNow() {
@@ -351,8 +350,21 @@ export function StaffTools({ orgSlug }: { orgSlug: string }) {
       }
       const enqueued = (await response.json()) as RosterSyncJobView;
       setJob(enqueued);
-      const finished = await pollUntilTerminal(enqueued);
-      const toast = rosterSyncResultToast(finished);
+      const outcome = await pollRosterSyncJobUntilTerminal(enqueued, {
+        fetchJob,
+        onUpdate: setJob,
+        cancelled: () => goneRef.current,
+      });
+      if (!outcome.done) {
+        if (outcome.reason === "timeout") {
+          pushToast(
+            "warning",
+            "Roster sync is still working in the background. Reload to see the result.",
+          );
+        }
+        return;
+      }
+      const toast = rosterSyncResultToast(outcome.job);
       if (toast) pushToast(toast.tone, toast.text);
       else pushToast("error", "Roster sync completed without a usable result.");
     } catch (error) {

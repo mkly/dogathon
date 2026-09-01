@@ -48,3 +48,52 @@ export function rosterSyncResultToast(job: RosterSyncJobView): Toast | null {
   }
   return null;
 }
+
+export const ROSTER_SYNC_POLL_INTERVAL_MS = 1_000;
+export const ROSTER_SYNC_POLL_TIMEOUT_MS = 15 * 60 * 1_000;
+
+export type RosterSyncPollOutcome =
+  | { done: true; job: RosterSyncJobView }
+  | { done: false; reason: "cancelled" | "timeout"; job: RosterSyncJobView };
+
+type RosterSyncPollOptions = {
+  fetchJob: (jobId: string) => Promise<RosterSyncJobView>;
+  onUpdate?: (job: RosterSyncJobView) => void;
+  wait?: (milliseconds: number) => Promise<void>;
+  now?: () => number;
+  intervalMs?: number;
+  timeoutMs?: number;
+  cancelled?: () => boolean;
+};
+
+/**
+ * Follow a job to a terminal state. A drain runner may be minutes away — or, if
+ * no scheduler is running, may never arrive — so polling stops at a deadline and
+ * whenever the caller says it has gone away, rather than looping forever.
+ */
+export async function pollRosterSyncJobUntilTerminal(
+  initial: RosterSyncJobView,
+  options: RosterSyncPollOptions,
+): Promise<RosterSyncPollOutcome> {
+  const {
+    fetchJob,
+    onUpdate,
+    wait = (milliseconds) => new Promise<void>((resolve) => setTimeout(resolve, milliseconds)),
+    now = () => Date.now(),
+    intervalMs = ROSTER_SYNC_POLL_INTERVAL_MS,
+    timeoutMs = ROSTER_SYNC_POLL_TIMEOUT_MS,
+    cancelled = () => false,
+  } = options;
+
+  const deadline = now() + timeoutMs;
+  let current = initial;
+  while (!isTerminalRosterSyncStatus(current.status)) {
+    if (cancelled()) return { done: false, reason: "cancelled", job: current };
+    if (now() >= deadline) return { done: false, reason: "timeout", job: current };
+    await wait(intervalMs);
+    if (cancelled()) return { done: false, reason: "cancelled", job: current };
+    current = await fetchJob(current.id);
+    onUpdate?.(current);
+  }
+  return { done: true, job: current };
+}
