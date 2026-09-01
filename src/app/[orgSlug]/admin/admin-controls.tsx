@@ -395,8 +395,18 @@ export function EmailConnectorSettings({
   initialConnector: ConnectorStatus;
   orgSlug: string;
 }) {
+  const smtpDialogRef = useRef<HTMLDialogElement>(null);
   const [connector, setConnector] = useState(initialConnector);
   const [pending, setPending] = useState<"gmail" | "microsoft" | "smtp" | "disconnect" | null>(null);
+  const [smtpOpen, setSmtpOpen] = useState(false);
+
+  useEffect(() => {
+    const dialog = smtpDialogRef.current;
+    if (!dialog) return;
+
+    if (smtpOpen && !dialog.open) dialog.showModal();
+    if (!smtpOpen && dialog.open) dialog.close();
+  }, [smtpOpen]);
 
   async function connectOAuth(provider: "gmail" | "microsoft") {
     setPending(provider);
@@ -447,6 +457,7 @@ export function EmailConnectorSettings({
       const status = (await response.json()) as ConnectorStatus;
       setConnector(status);
       formElement.reset();
+      setSmtpOpen(false);
       pushToast("success", "SMTP verified and saved for this organization.");
     } catch {
       pushToast("error", "SMTP verification could not reach the server.");
@@ -509,28 +520,55 @@ export function EmailConnectorSettings({
         <AdminButton disabled={pending !== null} onClick={() => connectOAuth("microsoft")} tone="denim">
           {pending === "microsoft" ? "Opening Microsoft…" : "Connect Microsoft 365"}
         </AdminButton>
+        <AdminButton disabled={pending !== null} onClick={() => setSmtpOpen(true)} tone="denim">
+          Connect SMTP with password
+        </AdminButton>
       </div>
-      <form className={styles.smtpForm} onSubmit={saveSmtp}>
-        <h3>Plain SMTP with password authentication</h3>
-        <label htmlFor="smtpHost">Host</label>
-        <AdminField><input id="smtpHost" name="smtpHost" required /></AdminField>
-        <label htmlFor="smtpPort">Port</label>
-        <AdminField><input defaultValue="587" id="smtpPort" max="65535" min="1" name="smtpPort" required type="number" /></AdminField>
-        <label htmlFor="smtpUser">Username</label>
-        <AdminField><input autoComplete="username" id="smtpUser" name="smtpUser" required /></AdminField>
-        <label htmlFor="smtpPassword">Password</label>
-        <AdminField><input autoComplete="new-password" id="smtpPassword" name="smtpPassword" required type="password" /></AdminField>
-        <label htmlFor="smtpFromEmail">From email</label>
-        <AdminField><input id="smtpFromEmail" name="smtpFromEmail" required type="email" /></AdminField>
-        <label className={styles.smtpSecure} htmlFor="smtpSecure">
-          <input id="smtpSecure" name="smtpSecure" type="checkbox" /> TLS from connection start (usually port 465)
-        </label>
-        <div className={styles.saveRow}>
-          <AdminButton disabled={pending !== null} tone="mustard" type="submit">
-            {pending === "smtp" ? "Verifying…" : "Verify & use SMTP"}
-          </AdminButton>
-        </div>
-      </form>
+      <dialog
+        aria-labelledby="smtp-dialog-title"
+        className={styles.connectorDialog}
+        onCancel={(event) => {
+          event.preventDefault();
+          setSmtpOpen(false);
+        }}
+        onClose={() => setSmtpOpen(false)}
+        ref={smtpDialogRef}
+      >
+        <AdminSurface className={styles.dialogPanel} tone="oatmeal">
+          <div className={styles.dialogHeader}>
+            <div>
+              <p className={styles.eyebrow}>Organization email</p>
+              <h2 id="smtp-dialog-title">Connect SMTP with password</h2>
+            </div>
+            <AdminButton aria-label="Close SMTP connection form" onClick={() => setSmtpOpen(false)} tone="oatmeal">
+              ✕
+            </AdminButton>
+          </div>
+          <form className={styles.smtpForm} onSubmit={saveSmtp}>
+            <label htmlFor="smtpHost">Host</label>
+            <AdminField><input autoFocus id="smtpHost" name="smtpHost" required /></AdminField>
+            <label htmlFor="smtpPort">Port</label>
+            <AdminField><input defaultValue="587" id="smtpPort" max="65535" min="1" name="smtpPort" required type="number" /></AdminField>
+            <label htmlFor="smtpUser">Username</label>
+            <AdminField><input autoComplete="username" id="smtpUser" name="smtpUser" required /></AdminField>
+            <label htmlFor="smtpPassword">Password</label>
+            <AdminField><input autoComplete="new-password" id="smtpPassword" name="smtpPassword" required type="password" /></AdminField>
+            <label htmlFor="smtpFromEmail">From email</label>
+            <AdminField><input id="smtpFromEmail" name="smtpFromEmail" required type="email" /></AdminField>
+            <label className={styles.smtpSecure} htmlFor="smtpSecure">
+              <input id="smtpSecure" name="smtpSecure" type="checkbox" /> TLS from connection start (usually port 465)
+            </label>
+            <div className={styles.modalActions}>
+              <AdminButton disabled={pending === "smtp"} onClick={() => setSmtpOpen(false)} tone="oatmeal" type="button">
+                Cancel
+              </AdminButton>
+              <AdminButton disabled={pending !== null} tone="mustard" type="submit">
+                {pending === "smtp" ? "Verifying…" : "Verify & use SMTP"}
+              </AdminButton>
+            </div>
+          </form>
+        </AdminSurface>
+      </dialog>
     </AdminSurface>
   );
 }
