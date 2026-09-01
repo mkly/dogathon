@@ -38,6 +38,13 @@ export class RosterSyncLeaseLostError extends Error {
   }
 }
 
+export class RosterSyncJobNotFoundError extends Error {
+  constructor(jobId: string) {
+    super(`Roster sync job ${jobId} was not found`);
+    this.name = "RosterSyncJobNotFoundError";
+  }
+}
+
 export function createRosterSyncJobQueue(db: RosterSyncJobDb) {
   async function enqueue(input: EnqueueRosterSyncJobInput): Promise<RosterSyncJob> {
     const maxAttempts = input.maxAttempts ?? DEFAULT_ROSTER_SYNC_MAX_ATTEMPTS;
@@ -226,7 +233,7 @@ export function createRosterSyncJobQueue(db: RosterSyncJobDb) {
 
   async function requireJob(orgId: string, jobId: string): Promise<RosterSyncJob> {
     const job = await db.rosterSyncJob.findFirst({ where: { id: jobId, orgId } });
-    if (!job) throw new Error(`Roster sync job ${jobId} was not found for organization ${orgId}`);
+    if (!job) throw new RosterSyncJobNotFoundError(jobId);
     return job;
   }
 
