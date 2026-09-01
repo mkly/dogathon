@@ -97,6 +97,9 @@ export default async function AdminPage({ params }: AdminPageProps) {
           <h1>Staff room</h1>
         </div>
         <div className={styles.headerActions}>
+          <AdminLink href={`/${orgSlug}/admin/members`} tone="oatmeal">
+            Members
+          </AdminLink>
           <AdminLink href={`/${orgSlug}/admin/settings`} tone="oatmeal">
             Settings
           </AdminLink>
