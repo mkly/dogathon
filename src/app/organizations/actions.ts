@@ -5,7 +5,6 @@ import { redirect } from "next/navigation";
 import { APIError } from "better-auth";
 
 import { auth } from "@/lib/auth";
-import { getOrganizationContext } from "@/lib/organization-access";
 import { organizationSlug } from "@/lib/organization-slug";
 import { prisma } from "@/lib/prisma";
 
@@ -55,25 +54,6 @@ export async function setActiveOrganization(formData: FormData) {
   });
   if (!organization) redirect("/organizations?error=invalid-organization");
   redirect(`/${organization.slug}/admin`);
-}
-
-export async function inviteOrganizationMember(formData: FormData) {
-  const requestHeaders = await headers();
-  const context = await getOrganizationContext(requestHeaders, ["owner", "admin"]);
-  if (!context) redirect("/organizations?error=forbidden");
-
-  const email = value(formData, "email").toLowerCase();
-  const requestedRole = value(formData, "role");
-  const role = requestedRole === "admin" || requestedRole === "volunteer"
-    ? requestedRole
-    : "member";
-  if (!email.includes("@")) redirect("/organizations?error=invalid-email");
-
-  await auth.api.createInvitation({
-    body: { email, role, organizationId: context.orgId },
-    headers: requestHeaders,
-  });
-  redirect("/organizations?invited=1");
 }
 
 export async function acceptOrganizationInvitation(formData: FormData) {

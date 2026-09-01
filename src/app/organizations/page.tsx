@@ -1,14 +1,12 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
-import { FeltButton, FeltField, FeltPanel } from "@/components/felt";
+import { FeltButton, FeltPanel } from "@/components/felt";
 import { auth } from "@/lib/auth";
 import { getSession } from "@/lib/auth-session";
-import { getOrganizationContext } from "@/lib/organization-access";
 
 import {
   acceptOrganizationInvitation,
-  inviteOrganizationMember,
   setActiveOrganization,
 } from "./actions";
 import { CreateOrganizationForm } from "./create-organization-form";
@@ -25,10 +23,7 @@ export default async function OrganizationsPage({ searchParams }: OrganizationsP
   if (!session) redirect("/sign-in?next=/organizations");
 
   const query = await searchParams;
-  const [organizations, context] = await Promise.all([
-    auth.api.listOrganizations({ headers: requestHeaders }),
-    getOrganizationContext(requestHeaders, ["owner", "admin"]),
-  ]);
+  const organizations = await auth.api.listOrganizations({ headers: requestHeaders });
   const invitation = query.invitation
     ? await auth.api.getInvitation({ query: { id: query.invitation }, headers: requestHeaders })
         .catch(() => null)
@@ -52,23 +47,6 @@ export default async function OrganizationsPage({ searchParams }: OrganizationsP
         <h2>Create an organization</h2>
         <CreateOrganizationForm />
       </FeltPanel>
-
-      {context && (
-        <FeltPanel tone="oatmeal">
-          <h2>Invite staff or a volunteer</h2>
-          <form action={inviteOrganizationMember}>
-            <FeltField><input name="email" placeholder="person@example.com" required type="email" /></FeltField>
-            <FeltField>
-              <select defaultValue="member" name="role">
-                <option value="member">Member</option>
-                <option value="admin">Admin</option>
-                <option value="volunteer">Volunteer</option>
-              </select>
-            </FeltField>
-            <FeltButton tone="moss" type="submit">Send invitation</FeltButton>
-          </form>
-        </FeltPanel>
-      )}
 
       {invitation?.status === "pending" && (
         <FeltPanel tone="mustard">

@@ -49,13 +49,23 @@
 .identity { min-width: 0; }
 .nameLine { display: flex; align-items: center; gap: 8px; }
 .identity h2 { margin: 0; overflow-wrap: anywhere; font-size: 1.05rem; font-weight: 900; }
+.identity h3 { margin: 0; overflow-wrap: anywhere; font-size: 1rem; font-weight: 900; }
 .identity a { display: block; margin-top: 4px; overflow-wrap: anywhere; color: inherit; font-size: 0.78rem; font-weight: 700; opacity: 0.72; }
+.identity p { margin: 4px 0 0; overflow-wrap: anywhere; font-size: 0.75rem; font-weight: 700; opacity: 0.68; }
 .you { padding: 2px 6px; border-radius: 999px; background: var(--felt-mustard); font-size: 0.62rem; font-weight: 900; text-transform: uppercase; }
 .memberMeta { display: grid; justify-items: start; gap: 7px; }
 .memberMeta > span:last-child { font-size: 0.72rem; font-weight: 750; opacity: 0.66; }
 .controls { display: grid; grid-template-columns: minmax(150px, 1fr) minmax(88px, auto); align-items: center; gap: 9px; }
 .roleField { min-width: 0; }
 .protectedNote { margin: 0; font-size: 0.7rem; font-weight: 800; line-height: 1.35; opacity: 0.66; }
+.invitationsSection { margin-top: 46px; }
+.invitationManager { display: grid; gap: 16px; }
+.invitationFormSurface { padding: 16px; }
+.invitationForm { display: grid; grid-template-columns: minmax(220px, 1fr) minmax(150px, 0.4fr) auto; gap: 10px; }
+.invitationMessage { min-height: 1.2em; margin: 8px 2px 0; font-size: 0.74rem; font-weight: 750; }
+.invitationList { display: grid; gap: 10px; }
+.invitationRow { display: grid; grid-template-columns: minmax(210px, 1.2fr) minmax(190px, 0.8fr) auto; align-items: center; gap: 18px; padding: 16px 20px; }
+.emptyInvitations { margin: 0; padding: 18px 20px; border: 1px dashed rgb(61 51 43 / 35%); border-radius: 8px; text-align: center; font-size: 0.82rem; font-weight: 750; opacity: 0.68; }
 .footer { margin-top: 42px; text-align: center; font-size: 13px; font-weight: 700; opacity: 0.6; }
 
 @media (max-width: 900px) {
@@ -63,6 +73,10 @@
   .headerActions { grid-column: 1 / -1; flex-wrap: wrap; }
   .memberRow { grid-template-columns: minmax(180px, 1fr) minmax(150px, 0.75fr); }
   .controls { grid-column: 1 / -1; }
+  .invitationForm { grid-template-columns: minmax(220px, 1fr) minmax(150px, 0.5fr); }
+  .invitationForm > :last-child { grid-column: 1 / -1; }
+  .invitationRow { grid-template-columns: minmax(180px, 1fr) minmax(160px, 0.75fr); }
+  .invitationRow > :last-child { grid-column: 1 / -1; }
 }
 
 @media (max-width: 620px) {
@@ -72,4 +86,6 @@
   .headerActions { align-items: stretch; flex-direction: column; }
   .memberRow { grid-template-columns: 1fr; padding: 18px; }
   .controls { grid-column: auto; grid-template-columns: 1fr; }
+  .invitationForm, .invitationRow { grid-template-columns: 1fr; }
+  .invitationForm > :last-child, .invitationRow > :last-child { grid-column: auto; }
 }

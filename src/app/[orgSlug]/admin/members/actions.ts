@@ -16,6 +16,7 @@ const ASSIGNABLE_ROLES = ["admin", "member", "volunteer"] as const;
 type AssignableRole = (typeof ASSIGNABLE_ROLES)[number];
 
 export type MemberActionResult = { ok: boolean; message: string };
+export type InvitationActionResult = { ok: boolean; message: string };
 
 function apiErrorMessage(error: unknown, fallback: string) {
   if (!(error instanceof APIError)) return fallback;
@@ -33,6 +34,108 @@ function apiErrorMessage(error: unknown, fallback: string) {
     default:
       return fallback;
   }
+}
+
+function invitationApiErrorMessage(error: unknown, fallback: string) {
+  if (!(error instanceof APIError)) return fallback;
+
+  switch (error.body?.code) {
+    case "USER_IS_ALREADY_A_MEMBER_OF_THIS_ORGANIZATION":
+      return "That email already belongs to a member of this organization.";
+    case "USER_IS_ALREADY_INVITED_TO_THIS_ORGANIZATION":
+      return "That email already has a pending invitation.";
+    case "YOU_ARE_NOT_ALLOWED_TO_INVITE_USERS_TO_THIS_ORGANIZATION":
+      return "You are not allowed to invite people to this organization.";
+    case "YOU_ARE_NOT_ALLOWED_TO_CANCEL_THIS_INVITATION":
+      return "You are not allowed to cancel this invitation.";
+    case "INVITATION_LIMIT_REACHED":
+      return "This organization has reached its pending invitation limit.";
+    case "INVITATION_NOT_FOUND":
+      return "That invitation is no longer available.";
+    default:
+      return fallback;
+  }
+}
+
+async function invitationContext(orgSlug: string) {
+  const requestHeaders = await headers();
+  const access = await getOrganizationAccessBySlug(requestHeaders, orgSlug, ["owner", "admin"]);
+  if (!access?.context) return null;
+
+  return {
+    headers: requestHeaders,
+    organizationId: access.context.orgId,
+  };
+}
+
+export async function inviteOrganizationMember(input: {
+  email: string;
+  orgSlug: string;
+  role: AssignableRole;
+}): Promise<InvitationActionResult> {
+  const email = input.email.trim().toLowerCase();
+  if (!email.includes("@")) {
+    return { ok: false, message: "Enter a valid email address." };
+  }
+  if (!ASSIGNABLE_ROLES.includes(input.role)) {
+    return { ok: false, message: "Choose admin, member, or volunteer as the role." };
+  }
+
+  const context = await invitationContext(input.orgSlug);
+  if (!context) {
+    return { ok: false, message: "You no longer have permission to invite people here." };
+  }
+
+  try {
+    await auth.api.createInvitation({
+      body: { email, role: input.role, organizationId: context.organizationId },
+      headers: context.headers,
+    });
+  } catch (error) {
+    return {
+      ok: false,
+      message: invitationApiErrorMessage(error, "The invitation could not be sent. Try again."),
+    };
+  }
+
+  revalidatePath(`/${input.orgSlug}/admin/members`);
+  return { ok: true, message: `Invitation sent to ${email}.` };
+}
+
+export async function cancelOrganizationInvitation(input: {
+  invitationId: string;
+  orgSlug: string;
+}): Promise<InvitationActionResult> {
+  const context = await invitationContext(input.orgSlug);
+  if (!context) {
+    return { ok: false, message: "You no longer have permission to manage invitations here." };
+  }
+
+  try {
+    const invitations = await auth.api.listInvitations({
+      headers: context.headers,
+      query: { organizationId: context.organizationId },
+    });
+    const invitation = invitations.find((item) => (
+      item.id === input.invitationId && item.status === "pending"
+    ));
+    if (!invitation) {
+      return { ok: false, message: "That invitation is no longer pending." };
+    }
+
+    await auth.api.cancelInvitation({
+      body: { invitationId: invitation.id },
+      headers: context.headers,
+    });
+  } catch (error) {
+    return {
+      ok: false,
+      message: invitationApiErrorMessage(error, "The invitation could not be cancelled. Try again."),
+    };
+  }
+
+  revalidatePath(`/${input.orgSlug}/admin/members`);
+  return { ok: true, message: "Invitation cancelled." };
 }
 
 async function mutationContext(orgSlug: string, memberId: string) {

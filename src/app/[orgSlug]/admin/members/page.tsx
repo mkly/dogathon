@@ -14,6 +14,7 @@ import {
 
 import pawcastWordmark from "../../../../../public/brand/pawcast-wordmark.png";
 
+import { InvitationManager, type InvitationView } from "./invitation-controls";
 import { MemberList, type MemberView } from "./member-controls";
 import styles from "./members.module.css";
 
@@ -32,10 +33,16 @@ export default async function MembersPage({ params }: MembersPageProps) {
     redirect(access.authenticated ? "/organizations" : `/sign-in?next=${next}`);
   }
 
-  const firstPage = await auth.api.listMembers({
-    headers: requestHeaders,
-    query: { limit: 100, organizationId: access.context.orgId, sortBy: "createdAt", sortDirection: "asc" },
-  });
+  const [firstPage, invitationResult] = await Promise.all([
+    auth.api.listMembers({
+      headers: requestHeaders,
+      query: { limit: 100, organizationId: access.context.orgId, sortBy: "createdAt", sortDirection: "asc" },
+    }),
+    auth.api.listInvitations({
+      headers: requestHeaders,
+      query: { organizationId: access.context.orgId },
+    }),
+  ]);
   const result = firstPage.members.length < firstPage.total
     ? await auth.api.listMembers({
         headers: requestHeaders,
@@ -56,6 +63,20 @@ export default async function MembersPage({ params }: MembersPageProps) {
       name: member.user.name,
       role: member.role as OrganizationRole,
       userId: member.userId,
+    }];
+  });
+  const invitations = invitationResult.flatMap<InvitationView>((invitation) => {
+    if (invitation.status !== "pending") return [];
+    if (invitation.role !== "admin" && invitation.role !== "member" && invitation.role !== "volunteer") {
+      return [];
+    }
+    const inviter = result.members.find((member) => member.userId === invitation.inviterId);
+    return [{
+      email: invitation.email,
+      expiresAt: invitation.expiresAt.toISOString(),
+      id: invitation.id,
+      inviter: inviter?.user.name || inviter?.user.email || `member ${invitation.inviterId}`,
+      role: invitation.role,
     }];
   });
 
@@ -90,6 +111,19 @@ export default async function MembersPage({ params }: MembersPageProps) {
           members={members}
           orgSlug={orgSlug}
         />
+      </section>
+
+      <section aria-labelledby="invitation-list-title" className={styles.invitationsSection}>
+        <div className={styles.sectionTitle}>
+          <div>
+            <p className={styles.eyebrow}>Bring someone into the room</p>
+            <h2 id="invitation-list-title">Invitations</h2>
+          </div>
+          <AdminBadge tone="mustard">
+            {invitations.length} pending
+          </AdminBadge>
+        </div>
+        <InvitationManager invitations={invitations} orgSlug={orgSlug} />
       </section>
 
       <footer className={styles.footer}>organization members · keep the right people in the room</footer>
