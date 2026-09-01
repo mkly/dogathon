@@ -6,12 +6,14 @@ import {
   assertPlausibleAdoptionCount,
   discoverRoster,
   extractScrapedText,
+  extractScrapedTexts,
   graduationDraft,
   loadRoster,
   loadRosterSource,
   requestFirecrawl,
   RosterSyncRefusal,
 } from "./roster-sync.ts";
+import { parseDogRoster } from "./parser.ts";
 
 test("loads a checked-in roster path without requiring the network", async () => {
   const expected = await readFile(new URL("../../seed/dogs-page-A.html", import.meta.url), "utf8");
@@ -29,6 +31,16 @@ test("extracts nested scrape content but rejects dry-run calls", () => {
   assert.equal(extractScrapedText({ dryRun: true, input: { url: "https://example.test" } }), null);
 });
 
+test("extracts every document from a multi-document crawl result", () => {
+  assert.deepEqual(extractScrapedTexts({
+    data: [
+      { markdown: "# Hattie" },
+      { content: "# Walnut" },
+      { output: { html: "<h3>June</h3>" } },
+    ],
+  }), ["# Hattie", "# Walnut", "<h3>June</h3>"]);
+});
+
 test("a bounded model loop maps the rescue site and scrapes the selected roster", async () => {
   const modelSteps: string[][] = [];
   const firecrawlCalls: Array<{ name: string; input: Record<string, unknown> }> = [];
@@ -39,6 +51,7 @@ test("a bounded model loop maps the rescue site and scrapes the selected roster"
       assert.deepEqual(tools.map((tool) => tool.function.name), [
         "firecrawl_map",
         "firecrawl_scrape",
+        "firecrawl_crawl",
       ]);
       step += 1;
       if (step === 1) {
@@ -85,6 +98,92 @@ test("a bounded model loop maps the rescue site and scrapes the selected roster"
     "firecrawl_scrape",
   ]);
   assert.deepEqual(modelSteps.map((messages) => messages.at(-1)), ["user", "tool", "tool"]);
+});
+
+test("a crawl contributes every document to roster parsing while returning a bounded summary", async () => {
+  const toolReplies: string[] = [];
+  let step = 0;
+  const documents = [
+    "# Hattie\nBreed: Mixed\n![Hattie](https://rescue.example/hattie.jpg)",
+    "# Walnut\nAge: 4 years\n![Walnut](https://rescue.example/walnut.jpg)",
+    `# June\nPersonality: Sweet\n![June](https://rescue.example/june.jpg)\n${"details ".repeat(8_000)}`,
+  ];
+
+  const text = await discoverRoster("https://rescue.example/adopt/dogs", {
+    model: async (messages, tools) => {
+      const systemPrompt = messages.find((message) => message.role === "system")?.content ?? "";
+      assert.match(systemPrompt, /every pagination page/);
+      assert.match(systemPrompt, /every dog-detail page/);
+      assert.match(systemPrompt, /rather than exploring the rest of the site/);
+      assert.deepEqual(tools.map((tool) => tool.function.name), [
+        "firecrawl_map",
+        "firecrawl_scrape",
+        "firecrawl_crawl",
+      ]);
+      const last = messages.at(-1);
+      if (last?.role === "tool") toolReplies.push(last.content);
+      step += 1;
+      if (step > 1) return { role: "assistant", content: "Done." };
+      return {
+        role: "assistant",
+        content: null,
+        tool_calls: [{
+          id: "crawl-1",
+          type: "function",
+          function: {
+            name: "firecrawl_crawl",
+            arguments: JSON.stringify({ url: "https://rescue.example/adopt/dogs" }),
+          },
+        }],
+      };
+    },
+    firecrawl: async () => ({
+      success: true,
+      status: "completed",
+      completeness: { complete: true },
+      data: documents.map((markdown) => ({ markdown })),
+    }),
+  });
+
+  const dogs = await parseDogRoster(text, { deterministic: true });
+  assert.deepEqual(dogs.map((dog) => dog.name), ["Hattie", "Walnut", "June"]);
+  assert.equal(toolReplies.length, 1);
+  assert.ok((toolReplies[0]?.length ?? Infinity) <= 4_100);
+  assert.match(toolReplies[0] ?? "", /"documents":3/);
+  assert.doesNotMatch(toolReplies[0] ?? "", /details details/);
+});
+
+test("bounds total Firecrawl calls even when the model requests a large batch", async () => {
+  let firecrawlCalls = 0;
+  let modelCalls = 0;
+
+  await assert.rejects(
+    discoverRoster("https://rescue.example/adopt/dogs", {
+      model: async () => {
+        modelCalls += 1;
+        if (modelCalls > 1) return { role: "assistant", content: "Done." };
+        return {
+          role: "assistant",
+          content: null,
+          tool_calls: Array.from({ length: 20 }, (_, index) => ({
+            id: `map-${index}`,
+            type: "function" as const,
+            function: {
+              name: "firecrawl_map",
+              arguments: JSON.stringify({ url: "https://rescue.example/adopt/dogs" }),
+            },
+          })),
+        };
+      },
+      firecrawl: async () => {
+        firecrawlCalls += 1;
+        return { success: true, links: [] };
+      },
+    }),
+    /without scraping roster content/,
+  );
+
+  assert.equal(firecrawlCalls, 12);
 });
 
 test("calls the direct Firecrawl v2 endpoints with bearer authentication", async () => {
@@ -365,7 +464,7 @@ test("scrapes subdomains of the configured source but refuses other protocols", 
   assert.match(toolReplies[0] ?? "", /unsupported protocol: file:/);
 });
 
-test("stops roster discovery after four model steps", async () => {
+test("stops roster discovery after eight model steps", async () => {
   let modelCalls = 0;
 
   await assert.rejects(
@@ -390,7 +489,7 @@ test("stops roster discovery after four model steps", async () => {
     /without scraping roster content/,
   );
 
-  assert.equal(modelCalls, 4);
+  assert.equal(modelCalls, 8);
 });
 
 test("graduation drafts are queued and sponsor-specific", () => {
