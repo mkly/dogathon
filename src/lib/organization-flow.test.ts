@@ -64,6 +64,26 @@ test("owner creates an organization and an invitee accepts the volunteer role", 
   const created = await createdResponse.json() as { id: string; members: Array<{ role: string }> };
   assert.equal(created.members[0]?.role, "owner");
 
+  async function activeOrganizationId() {
+    const response = await auth.handler(new Request(`${origin}/api/auth/get-session`, {
+      headers: { cookie: ownerCookie },
+    }));
+    assert.equal(response.status, 200);
+    const session = await response.json() as { session: { activeOrganizationId: string | null } };
+    return session.session.activeOrganizationId;
+  }
+
+  assert.equal(await activeOrganizationId(), created.id);
+
+  const secondCreatedResponse = await call(
+    "/organization/create",
+    { name: "Second Rescue", slug: "second-rescue" },
+    ownerCookie,
+  );
+  assert.equal(secondCreatedResponse.status, 200);
+  const secondCreated = await secondCreatedResponse.json() as { id: string };
+  assert.equal(await activeOrganizationId(), secondCreated.id);
+
   const invitationResponse = await call(
     "/organization/invite-member",
     { email: "volunteer@example.com", role: "member", organizationId: created.id },
