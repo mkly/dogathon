@@ -88,6 +88,23 @@ test("enqueue reports whether it created or reused the single active job", async
   assert.equal(second.job.id, first.job.id);
 });
 
+test("an admin sync pulls a staggered scheduled job forward instead of waiting", async () => {
+  const orgId = await createOrganization();
+  const queue = createRosterSyncJobQueue(db);
+  const scheduled = await queue.enqueue({
+    orgId,
+    trigger: "scheduled",
+    availableAt: new Date(Date.now() + 30 * 60 * 1000),
+  });
+
+  const reused = await queue.enqueueWithResult({ orgId });
+
+  assert.equal(reused.enqueued, false);
+  assert.equal(reused.job.id, scheduled.id);
+  assert.ok(reused.job.availableAt <= new Date());
+  assert.ok(await queue.claim({ orgId }));
+});
+
 test("a scheduled job cannot be claimed before its staggered availability", async () => {
   const orgId = await createOrganization();
   const queue = createRosterSyncJobQueue(db);

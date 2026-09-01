@@ -69,7 +69,19 @@ export function createRosterSyncJobQueue(db: RosterSyncJobDb) {
         where: { orgId: input.orgId, status: { in: ["queued", "running"] } },
         orderBy: { requestedAt: "asc" },
       });
-      if (existing) return { job: existing, enqueued: false };
+      if (existing) {
+        // An admin who clicks sync must not inherit a nightly job's stagger
+        // delay: pull the shared job forward so the next drain can run it.
+        const requestedAvailability = input.availableAt ?? new Date();
+        if (input.trigger !== "scheduled" && existing.availableAt > requestedAvailability) {
+          const expedited = await tx.rosterSyncJob.update({
+            where: { id: existing.id },
+            data: { availableAt: requestedAvailability },
+          });
+          return { job: expedited, enqueued: false };
+        }
+        return { job: existing, enqueued: false };
+      }
 
       const job = await tx.rosterSyncJob.create({
         data: {
