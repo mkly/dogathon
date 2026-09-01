@@ -8,17 +8,18 @@ datasource db {
 }
 
 model User {
-  id            String       @id
-  name          String
-  email         String
-  emailVerified Boolean      @default(false)
-  image         String?
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
-  sessions      Session[]
-  accounts      Account[]
-  members       Member[]
-  invitations   Invitation[]
+  id             String          @id
+  name           String
+  email          String
+  emailVerified  Boolean         @default(false)
+  image          String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  sessions       Session[]
+  accounts       Account[]
+  members        Member[]
+  invitations    Invitation[]
+  rosterSyncJobs RosterSyncJob[]
 
   username String?
 
@@ -59,6 +60,7 @@ model Organization {
   pupdates               Pupdate[]
   settings               RescueSettings?
   emailConnector         EmailConnector?
+  rosterSyncJobs         RosterSyncJob[]
   stripeAccountId        String?         @unique
   stripeDetailsSubmitted Boolean         @default(false)
   stripeChargesEnabled   Boolean         @default(false)
@@ -184,6 +186,39 @@ enum PupdateStatus {
   draft
   approved
   sent
+}
+
+enum RosterSyncJobStatus {
+  queued
+  running
+  succeeded
+  failed
+  refused
+}
+
+model RosterSyncJob {
+  id                String              @id @default(cuid())
+  orgId             String
+  status            RosterSyncJobStatus @default(queued)
+  attempts          Int                 @default(0)
+  maxAttempts       Int                 @default(3)
+  requestedAt       DateTime            @default(now())
+  requestedByUserId String?
+  startedAt         DateTime?
+  finishedAt        DateTime?
+  heartbeatAt       DateTime?
+  leaseExpiresAt    DateTime?
+  claimToken        String?
+  summary           Json?
+  refusalReason     String?
+  errorMessage      String?
+  organization      Organization        @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  requestedBy       User?               @relation(fields: [requestedByUserId], references: [id], onDelete: SetNull)
+
+  @@unique([id, orgId])
+  @@index([orgId, status, requestedAt])
+  @@index([orgId, status, leaseExpiresAt])
+  @@index([requestedByUserId])
 }
 
 model Resident {
