@@ -29,6 +29,7 @@ export type ChatCompletionOptions = {
   baseUrl?: string;
   model?: string;
   fetch?: typeof fetch;
+  signal?: AbortSignal;
 };
 
 type ChatCompletionResponse = {
@@ -71,6 +72,7 @@ async function requestChatCompletion(
       messages: options.messages,
       ...(options.tools ? { tools: options.tools, tool_choice: "auto" } : {}),
     }),
+    signal: options.signal,
   });
 
   const payload = (await response.json()) as ChatCompletionResponse;

@@ -26,7 +26,7 @@ type LeaseInput = {
 };
 
 type ClaimRosterSyncJobInput = {
-  orgId: string;
+  orgId?: string;
   leaseMs?: number;
   now?: Date;
 };
@@ -69,6 +69,9 @@ export function createRosterSyncJobQueue(db: RosterSyncJobDb) {
     const now = input.now ?? new Date();
     const leaseExpiresAt = leaseEnd(now, input.leaseMs);
     const claimToken = randomUUID();
+    const organizationFilter = input.orgId
+      ? Prisma.sql`AND "orgId" = ${input.orgId}`
+      : Prisma.empty;
 
     await db.$executeRaw`
       UPDATE "RosterSyncJob"
@@ -78,8 +81,8 @@ export function createRosterSyncJobQueue(db: RosterSyncJobDb) {
           "leaseExpiresAt" = NULL,
           "claimToken" = NULL,
           "errorMessage" = COALESCE("errorMessage", 'Roster sync lease expired after the maximum number of attempts')
-      WHERE "orgId" = ${input.orgId}
-        AND "status" = 'running'
+      WHERE "status" = 'running'
+        ${organizationFilter}
         AND "leaseExpiresAt" <= ${now}
         AND "attempts" >= "maxAttempts"
     `;
@@ -88,8 +91,8 @@ export function createRosterSyncJobQueue(db: RosterSyncJobDb) {
       WITH candidate AS (
         SELECT "id"
         FROM "RosterSyncJob"
-        WHERE "orgId" = ${input.orgId}
-          AND "attempts" < "maxAttempts"
+        WHERE "attempts" < "maxAttempts"
+          ${organizationFilter}
           AND (
             "status" = 'queued'
             OR ("status" = 'running' AND "leaseExpiresAt" <= ${now})
@@ -109,7 +112,6 @@ export function createRosterSyncJobQueue(db: RosterSyncJobDb) {
           "refusalReason" = NULL
       FROM candidate
       WHERE job."id" = candidate."id"
-        AND job."orgId" = ${input.orgId}
       RETURNING job.*
     `;
     return jobs[0] ?? null;

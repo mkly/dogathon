@@ -44,20 +44,35 @@ export class RosterSyncRefusal extends Error {
   }
 }
 
-export async function syncRoster(orgId: string): Promise<SyncSummary> {
+type SyncRosterOptions = {
+  signal?: AbortSignal;
+};
+
+export async function syncRoster(
+  orgId: string,
+  options: SyncRosterOptions = {},
+): Promise<SyncSummary> {
+  options.signal?.throwIfAborted();
   const settings = await prisma.rescueSettings.upsert({
     where: { orgId },
     update: {},
     create: { orgId },
   });
-  const { text, usedFallbackCapture, source } = await loadRoster(settings.sourceUrl);
+  options.signal?.throwIfAborted();
+  const { text, usedFallbackCapture, source } = await loadRoster(
+    settings.sourceUrl,
+    options,
+  );
+  options.signal?.throwIfAborted();
   const dogs = await parseDogRoster(text);
+  options.signal?.throwIfAborted();
 
   if (dogs.length === 0) {
     throw new Error("Roster sync refused to adopt every resident after parsing an empty roster");
   }
 
   return prisma.$transaction(async (tx) => {
+    options.signal?.throwIfAborted();
     const before = await tx.resident.findMany({
       where: { orgId },
       select: { id: true, name: true, status: true },
@@ -95,12 +110,14 @@ export async function syncRoster(orgId: string): Promise<SyncSummary> {
     );
 
     for (const dog of dogs) {
+      options.signal?.throwIfAborted();
       await upsertDog(tx, orgId, dog, !usedFallbackCapture);
     }
 
     let sponsorshipsClosed = 0;
 
     for (const resident of adoptionCandidates) {
+      options.signal?.throwIfAborted();
       await tx.resident.update({
         where: { id_orgId: { id: resident.id, orgId } },
         data: { status: "adopted", adoptedAt: new Date() },
@@ -112,6 +129,7 @@ export async function syncRoster(orgId: string): Promise<SyncSummary> {
       });
 
       for (const sponsorship of sponsorships) {
+        options.signal?.throwIfAborted();
         await tx.sponsorship.update({
           where: { id_orgId: { id: sponsorship.id, orgId } },
           data: { status: "ended", endedReason: "adopted" },
@@ -200,26 +218,31 @@ export type RosterSource = {
   source: string;
 };
 
-export async function loadRoster(sourceUrl: string): Promise<RosterSource> {
+export async function loadRoster(
+  sourceUrl: string,
+  options: { signal?: AbortSignal } = {},
+): Promise<RosterSource> {
+  options.signal?.throwIfAborted();
   const localPath = resolveLocalSource(sourceUrl);
   if (localPath) {
     return {
-      text: await readFile(localPath, "utf8"),
+      text: await readFile(localPath, { encoding: "utf8", signal: options.signal }),
       usedFallbackCapture: false,
       source: sourceUrl,
     };
   }
 
   try {
-    const text = await discoverRoster(sourceUrl);
+    const text = await discoverRoster(sourceUrl, options);
     return { text, usedFallbackCapture: false, source: sourceUrl };
   } catch (error) {
+    options.signal?.throwIfAborted();
     console.warn("Roster scrape failed; using the checked-in capture.", error);
   }
 
   const capture = fallbackCapture(sourceUrl);
   return {
-    text: await readFile(seedCapturePath(capture), "utf8"),
+    text: await readFile(seedCapturePath(capture), { encoding: "utf8", signal: options.signal }),
     usedFallbackCapture: true,
     source: `seed/${capture}`,
   };
@@ -233,12 +256,14 @@ type RosterToolName = "firecrawl_map" | "firecrawl_scrape" | "firecrawl_crawl";
 type RosterModel = (
   messages: ChatCompletionMessage[],
   tools: ChatCompletionTool[],
+  signal?: AbortSignal,
 ) => Promise<ChatCompletionAssistantMessage>;
 type FirecrawlCaller = (name: RosterToolName, input: Record<string, unknown>) => Promise<unknown>;
 
 export type RosterDiscoveryOptions = {
   model?: RosterModel;
   firecrawl?: FirecrawlCaller;
+  signal?: AbortSignal;
 };
 
 export type FirecrawlCrawlResult = {
@@ -263,6 +288,7 @@ type FirecrawlRequestOptions = {
   sourceUrl?: string;
   crawlTimeoutMs?: number;
   pollIntervalMs?: number;
+  signal?: AbortSignal;
 };
 
 const ROSTER_TOOLS: ChatCompletionTool[] = [
@@ -325,7 +351,7 @@ export async function discoverRoster(
 ): Promise<string> {
   const model = options.model ?? defaultRosterModel;
   const firecrawl = options.firecrawl
-    ?? ((name, input) => requestFirecrawl(name, input, { sourceUrl }));
+    ?? ((name, input) => requestFirecrawl(name, input, { sourceUrl, signal: options.signal }));
   const messages: ChatCompletionMessage[] = [
     {
       role: "system",
@@ -340,12 +366,15 @@ export async function discoverRoster(
   let toolCalls = 0;
 
   for (let step = 0; step < MAX_ROSTER_AGENT_STEPS; step += 1) {
-    const response = await model(messages, ROSTER_TOOLS);
+    options.signal?.throwIfAborted();
+    const response = await model(messages, ROSTER_TOOLS, options.signal);
+    options.signal?.throwIfAborted();
     messages.push(response);
     const calls = response.tool_calls ?? [];
     if (calls.length === 0) break;
 
     for (const call of calls) {
+      options.signal?.throwIfAborted();
       let content: string;
       try {
         if (toolCalls >= MAX_ROSTER_TOOL_CALLS) {
@@ -356,6 +385,7 @@ export async function discoverRoster(
         const input = parseToolInput(call.function.arguments);
         assertRelatedUrl(sourceUrl, input.url);
         const result = await firecrawl(name, input);
+        options.signal?.throwIfAborted();
         if (name === "firecrawl_scrape" || name === "firecrawl_crawl") {
           documents.push(...extractScrapedTexts(result));
         }
@@ -380,8 +410,9 @@ export async function discoverRoster(
 async function defaultRosterModel(
   messages: ChatCompletionMessage[],
   tools: ChatCompletionTool[],
+  signal?: AbortSignal,
 ): Promise<ChatCompletionAssistantMessage> {
-  return createToolCallingChatCompletion({ messages, tools, maxTokens: 1_000 });
+  return createToolCallingChatCompletion({ messages, tools, maxTokens: 1_000, signal });
 }
 
 export function requestFirecrawl(
@@ -427,6 +458,7 @@ export async function requestFirecrawl(
     method: "POST",
     headers: { authorization: `Bearer ${apiKey}`, "content-type": "application/json" },
     body: JSON.stringify(body),
+    signal: options.signal,
   });
   const payload = (await response.json()) as { success?: boolean; error?: string };
   if (!response.ok || payload.success === false) {
@@ -472,6 +504,7 @@ async function requestFirecrawlCrawl(
       "content-type": "application/json",
     },
     body: JSON.stringify(body),
+    signal: options.signal,
   });
   const submit = (await submitResponse.json()) as {
     success?: boolean;
@@ -506,6 +539,7 @@ async function requestFirecrawlCrawl(
           headers: { authorization: `Bearer ${options.apiKey}` },
         },
         deadline,
+        options.signal,
       );
     } catch (error) {
       if (error instanceof FirecrawlPollTimeout) return crawlResult(latest, true);
@@ -522,7 +556,7 @@ async function requestFirecrawlCrawl(
 
     const remainingMs = deadline - Date.now();
     if (remainingMs <= 0) break;
-    await new Promise((resolve) => setTimeout(resolve, Math.min(pollIntervalMs, remainingMs)));
+    await delayWithSignal(Math.min(pollIntervalMs, remainingMs), options.signal);
   }
 
   return crawlResult(latest, true);
@@ -585,19 +619,39 @@ async function fetchBeforeDeadline(
   url: string,
   init: RequestInit,
   deadline: number,
+  signal?: AbortSignal,
 ): Promise<Response> {
   const remainingMs = deadline - Date.now();
   if (remainingMs <= 0) throw new FirecrawlPollTimeout();
   const controller = new AbortController();
+  const abortFromParent = () => controller.abort(signal?.reason);
+  signal?.addEventListener("abort", abortFromParent, { once: true });
   const timer = setTimeout(() => controller.abort(), remainingMs);
   try {
     return await fetcher(url, { ...init, signal: controller.signal });
   } catch (error) {
+    signal?.throwIfAborted();
     if (controller.signal.aborted) throw new FirecrawlPollTimeout();
     throw error;
   } finally {
     clearTimeout(timer);
+    signal?.removeEventListener("abort", abortFromParent);
   }
+}
+
+function delayWithSignal(milliseconds: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    signal?.throwIfAborted();
+    const onAbort = () => {
+      clearTimeout(timer);
+      reject(signal?.reason);
+    };
+    const timer = setTimeout(() => {
+      signal?.removeEventListener("abort", onAbort);
+      resolve();
+    }, milliseconds);
+    signal?.addEventListener("abort", onAbort, { once: true });
+  });
 }
 
 function requiredHttpUrl(value: unknown, label: string): URL {
