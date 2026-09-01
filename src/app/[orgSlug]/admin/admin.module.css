@@ -55,6 +55,7 @@
   justify-content: flex-end;
   gap: 12px;
 }
+.syncStatus { font-size: 0.78rem; font-weight: 850; }
 
 .headerActions {
   display: flex;

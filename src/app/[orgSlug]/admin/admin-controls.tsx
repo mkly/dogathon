@@ -6,22 +6,16 @@ import { useRouter } from "next/navigation";
 import { AdminBadge, AdminButton, AdminField, AdminLink, AdminSurface } from "@/components/admin-ui";
 import { pushToast } from "@/components/toast";
 import { MAX_SMS_LENGTH } from "@/lib/pupdate-sms";
+import {
+  pollRosterSyncJobUntilTerminal,
+  rosterSyncResultToast,
+  rosterSyncStatusLabel,
+  type RosterSyncJobView,
+} from "@/lib/roster-sync-client";
 
 import { saveSettings, type SettingsState } from "./actions";
 import { EMAIL_CONNECTOR_NOTICE_ID, emailConnectorBlockedReason } from "./gmail-notice";
 import styles from "./admin.module.css";
-
-type SyncResult = {
-  usedFallbackCapture: boolean;
-  rosterComplete: boolean;
-  rosterCompleteness: {
-    timedOut: boolean;
-    status: string;
-    completed: number;
-    total: number;
-  };
-  source: string;
-};
 
 function routeError(action: string, status: number) {
   if (status === 404) {
@@ -328,6 +322,20 @@ export function ComposeButton({
 
 export function StaffTools({ orgSlug }: { orgSlug: string }) {
   const [pending, setPending] = useState(false);
+  const [job, setJob] = useState<RosterSyncJobView | null>(null);
+  const goneRef = useRef(false);
+
+  useEffect(() => () => {
+    goneRef.current = true;
+  }, []);
+
+  async function fetchJob(jobId: string) {
+    const response = await fetch(`/api/sync/${encodeURIComponent(jobId)}`, {
+      headers: { "X-Organization-Slug": orgSlug },
+    });
+    if (!response.ok) throw new Error(await responseError(response, "Roster sync status"));
+    return (await response.json()) as RosterSyncJobView;
+  }
 
   async function syncNow() {
     setPending(true);
@@ -337,46 +345,52 @@ export function StaffTools({ orgSlug }: { orgSlug: string }) {
         headers: { "X-Organization-Slug": orgSlug },
       });
       if (!response.ok) {
-        const failure = await response.json().catch(() => null) as {
-          refused?: boolean;
-          reason?: unknown;
-        } | null;
-        if (failure?.refused) {
-          const detail = typeof failure.reason === "string" ? ` ${failure.reason}` : "";
-          pushToast("error", `Unable to sync at this time.${detail}`);
-        } else {
-          pushToast("error", routeError("Roster sync", response.status));
+        pushToast("error", await responseError(response, "Roster sync"));
+        return;
+      }
+      const enqueued = (await response.json()) as RosterSyncJobView;
+      setJob(enqueued);
+      const outcome = await pollRosterSyncJobUntilTerminal(enqueued, {
+        fetchJob,
+        onUpdate: setJob,
+        cancelled: () => goneRef.current,
+      });
+      if (!outcome.done) {
+        if (outcome.reason === "timeout") {
+          pushToast(
+            "warning",
+            "Roster sync is still working in the background. Reload to see the result.",
+          );
         }
         return;
       }
-      const result = (await response.json()) as SyncResult;
-      if (result.usedFallbackCapture) {
-        pushToast("warning", `Roster synced from bundled capture (${result.source}).`);
-      } else if (!result.rosterComplete) {
-        const missing = Math.max(0, result.rosterCompleteness.total - result.rosterCompleteness.completed);
-        const detail = missing > 0
-          ? ` About ${missing} of ${result.rosterCompleteness.total} expected pages were not fetched.`
-          : result.rosterCompleteness.timedOut
-            ? " The crawl timed out before confirming every page was fetched."
-            : ` The crawl ended with status ${result.rosterCompleteness.status}.`;
-        pushToast(
-          "warning",
-          `Partial roster synced from ${result.source}.${detail} Missing residents were left unchanged.`,
-        );
-      } else {
-        pushToast("success", `Roster synced from live source (${result.source}).`);
-      }
-    } catch {
-      pushToast("error", "Roster sync could not reach the server.");
+      const toast = rosterSyncResultToast(outcome.job);
+      if (toast) pushToast(toast.tone, toast.text);
+      else pushToast("error", "Roster sync completed without a usable result.");
+    } catch (error) {
+      pushToast(
+        "error",
+        error instanceof Error && error.message
+          ? error.message
+          : "Roster sync could not reach the server.",
+      );
     } finally {
       setPending(false);
     }
   }
 
+  const label = job ? rosterSyncStatusLabel(job.status) : null;
+  const buttonLabel = job?.status === "queued"
+    ? "Queued…"
+    : job?.status === "running"
+      ? "Syncing…"
+      : "Sync now";
+
   return (
     <div className={styles.staffTools}>
+      {label ? <span className={styles.syncStatus} role="status">{label}</span> : null}
       <AdminButton disabled={pending} onClick={syncNow} tone="mustard">
-        {pending ? "Syncing…" : "Sync now"}
+        {buttonLabel}
       </AdminButton>
     </div>
   );
