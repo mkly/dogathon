@@ -3,7 +3,7 @@
 import { useActionState, useState } from "react";
 
 import { FeltButton, FeltField } from "@/components/felt";
-import { organizationSlug } from "@/lib/organization-slug";
+import { organizationSlug, organizationSlugWhileTyping } from "@/lib/organization-slug";
 
 import { createOrganization } from "./actions";
 
@@ -29,8 +29,9 @@ export function CreateOrganizationForm() {
       <FeltField>
         <input
           name="slug"
+          onBlur={() => setSlug(organizationSlug(slug))}
           onChange={(event) => {
-            const nextSlug = organizationSlug(event.currentTarget.value);
+            const nextSlug = organizationSlugWhileTyping(event.currentTarget.value);
             setSlug(nextSlug);
             setSlugEdited(nextSlug.length > 0);
           }}

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { organizationSlug } from "./organization-slug";
+import { organizationSlug, organizationSlugWhileTyping } from "./organization-slug";
 
 test("organizationSlug normalizes punctuation and casing", () => {
   assert.equal(organizationSlug("Coppers Dream Rescue!"), "coppers-dream-rescue");
@@ -17,4 +17,14 @@ test("organizationSlug trims leading and trailing dashes", () => {
 
 test("organizationSlug returns an empty slug when no supported characters remain", () => {
   assert.equal(organizationSlug("!!! 🐕 犬"), "");
+});
+
+test("organizationSlugWhileTyping keeps a dash the user just typed", () => {
+  assert.equal(organizationSlugWhileTyping("Happy-"), "happy-");
+  assert.equal(organizationSlugWhileTyping("happy-tails"), "happy-tails");
+});
+
+test("organizationSlugWhileTyping still collapses and trims leading noise", () => {
+  assert.equal(organizationSlugWhileTyping("---Happy___"), "happy-");
+  assert.equal(organizationSlugWhileTyping("!!!"), "");
 });
