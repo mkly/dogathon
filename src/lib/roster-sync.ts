@@ -27,7 +27,9 @@ const MAX_FIRECRAWL_CRAWL_PAGES = 100;
 const MAX_FIRECRAWL_DISCOVERY_DEPTH = 3;
 const FIRECRAWL_CRAWL_TIMEOUT_MS = 30_000;
 const FIRECRAWL_POLL_INTERVAL_MS = 1_000;
-const MAX_ROSTER_AGENT_STEPS = 4;
+const MAX_ROSTER_AGENT_STEPS = 8;
+const MAX_ROSTER_TOOL_CALLS = 12;
+const MAX_CRAWL_SUMMARY_CHARS = 4_000;
 // A live scrape should never make most of the current roster disappear at once.
 // Require a human to investigate instead of treating that disappearance as adoption.
 const MAX_LIVE_ADOPTION_FRACTION = 0.5;
@@ -294,6 +296,27 @@ const ROSTER_TOOLS: ChatCompletionTool[] = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "firecrawl_crawl",
+      description: "Crawl the complete adoption listing, following pagination and dog-detail links within the configured listing path.",
+      parameters: {
+        type: "object",
+        properties: {
+          url: { type: "string", description: "The adoption-listing URL to crawl." },
+          limit: { type: "integer", minimum: 1, maximum: MAX_FIRECRAWL_CRAWL_PAGES },
+          maxDiscoveryDepth: {
+            type: "integer",
+            minimum: 0,
+            maximum: MAX_FIRECRAWL_DISCOVERY_DEPTH,
+          },
+        },
+        required: ["url"],
+        additionalProperties: false,
+      },
+    },
+  },
 ];
 
 export async function discoverRoster(
@@ -306,7 +329,7 @@ export async function discoverRoster(
   const messages: ChatCompletionMessage[] = [
     {
       role: "system",
-      content: "Find the rescue's current adoptable-dog roster. Use map when the supplied page may not be the roster, then scrape the most relevant page or pages. When the scraped content is sufficient, reply with a short completion message. Do not invent roster content.",
+      content: "Find the rescue's complete current adoptable-dog roster. Use map when the supplied page may not be the adoption listing. Crawl the listing so you cover every pagination page and every dog-detail page linked from it; use scrape only for a specific page that the crawl did not capture. Stay within the adoption listing and its linked dog details rather than exploring the rest of the site. When the gathered content is complete, reply with a short completion message. Do not invent roster content.",
     },
     {
       role: "user",
@@ -314,6 +337,7 @@ export async function discoverRoster(
     },
   ];
   const documents: string[] = [];
+  let toolCalls = 0;
 
   for (let step = 0; step < MAX_ROSTER_AGENT_STEPS; step += 1) {
     const response = await model(messages, ROSTER_TOOLS);
@@ -324,15 +348,20 @@ export async function discoverRoster(
     for (const call of calls) {
       let content: string;
       try {
+        if (toolCalls >= MAX_ROSTER_TOOL_CALLS) {
+          throw new Error(`Roster discovery is limited to ${MAX_ROSTER_TOOL_CALLS} Firecrawl calls`);
+        }
+        toolCalls += 1;
         const name = rosterToolName(call.function.name);
         const input = parseToolInput(call.function.arguments);
         assertRelatedUrl(sourceUrl, input.url);
         const result = await firecrawl(name, input);
-        if (name === "firecrawl_scrape") {
-          const text = extractScrapedText(result);
-          if (text) documents.push(text);
+        if (name === "firecrawl_scrape" || name === "firecrawl_crawl") {
+          documents.push(...extractScrapedTexts(result));
         }
-        content = truncateToolResult(result);
+        content = name === "firecrawl_crawl"
+          ? summarizeCrawlToolResult(result)
+          : truncateToolResult(result);
       } catch (error) {
         // Report a refused or failed call back to the model so the remaining
         // steps can pick another page instead of discarding what was scraped.
@@ -641,23 +670,41 @@ function isRelatedHost(sourceHost: string, requestedHost: string): boolean {
   return requested === base || requested.endsWith(`.${base}`);
 }
 
-function truncateToolResult(value: unknown): string {
+function truncateToolResult(value: unknown, maxChars = 30_000): string {
   const serialized = JSON.stringify(value);
-  return serialized.length <= 30_000 ? serialized : `${serialized.slice(0, 30_000)}\n[truncated]`;
+  return serialized.length <= maxChars ? serialized : `${serialized.slice(0, maxChars)}\n[truncated]`;
+}
+
+function summarizeCrawlToolResult(value: unknown): string {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return truncateToolResult(value, MAX_CRAWL_SUMMARY_CHARS);
+  }
+
+  const { data, ...summary } = value as Record<string, unknown>;
+  return truncateToolResult({
+    ...summary,
+    documents: Array.isArray(data) ? data.length : 0,
+    documentContent: "retained for roster parsing",
+  }, MAX_CRAWL_SUMMARY_CHARS);
 }
 
 export function extractScrapedText(value: unknown): string | null {
-  if (!value || typeof value !== "object") return typeof value === "string" ? value : null;
-  if ("dryRun" in value && value.dryRun === true) return null;
+  return extractScrapedTexts(value)[0] ?? null;
+}
+
+export function extractScrapedTexts(value: unknown): string[] {
+  if (typeof value === "string") return value.trim() ? [value] : [];
+  if (!value || typeof value !== "object") return [];
+  if (Array.isArray(value)) return value.flatMap(extractScrapedTexts);
+  if ("dryRun" in value && value.dryRun === true) return [];
 
   const record = value as Record<string, unknown>;
   for (const key of ["html", "rawHtml", "markdown", "content", "text", "value", "output", "data"]) {
     const candidate = record[key];
-    if (typeof candidate === "string" && candidate.trim()) return candidate;
-    const nested = extractScrapedText(candidate);
-    if (nested) return nested;
+    const nested = extractScrapedTexts(candidate);
+    if (nested.length > 0) return nested;
   }
-  return null;
+  return [];
 }
 
 function resolveLocalSource(sourceUrl: string): string | null {
