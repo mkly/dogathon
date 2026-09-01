@@ -174,7 +174,7 @@ export default async function AdminPage({ params }: AdminPageProps) {
           </p>
         </div>
         {!organization?.stripeChargesEnabled && context.role === "owner" && (
-          <form action={beginStripeOnboarding}>
+          <form action={beginStripeOnboarding} className={styles.stripeConnectForm}>
             <input name="orgSlug" type="hidden" value={orgSlug} />
             <AdminButton tone="brick" type="submit">
               {organization?.stripeAccountId ? "Continue Stripe onboarding" : "Connect Stripe"}
