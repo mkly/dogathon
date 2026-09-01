@@ -3,7 +3,7 @@ import Link from "next/link";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 
-import { AdminBadge, AdminButton, AdminSurface } from "@/components/admin-ui";
+import { AdminBadge, AdminLink, AdminSurface } from "@/components/admin-ui";
 import { PhotoPatch } from "@/components/felt";
 import { SignOutButton } from "@/components/sign-out-button";
 import { getEmailConnectorStatus } from "@/lib/email-connectors";
@@ -12,12 +12,9 @@ import { prisma } from "@/lib/prisma";
 
 import pawcastWordmark from "../../../../public/brand/pawcast-wordmark.png";
 
-import { beginStripeOnboarding } from "./actions";
 import {
   ComposeButton,
   DraftEditor,
-  EmailConnectorSettings,
-  SettingsForm,
   StaffTools,
 } from "./admin-controls";
 import { EMAIL_CONNECTOR_NOTICE_ID, emailConnectorBlockedReason } from "./gmail-notice";
@@ -41,11 +38,9 @@ export default async function AdminPage({ params }: AdminPageProps) {
   const [
     drafts,
     noteResidents,
-    storedSettings,
     activeSponsorCount,
     sponsoredDogCount,
     emailConnector,
-    organization,
   ] =
     await Promise.all([
       prisma.pupdate.findMany({
@@ -84,7 +79,6 @@ export default async function AdminPage({ params }: AdminPageProps) {
           _count: { select: { volunteerNotes: true } },
         },
       }),
-      prisma.rescueSettings.findUnique({ where: { orgId: context.orgId } }),
       prisma.sponsorship.count({ where: { orgId: context.orgId, status: "active" } }),
       prisma.resident.count({
         where: {
@@ -93,20 +87,8 @@ export default async function AdminPage({ params }: AdminPageProps) {
         },
       }),
       getEmailConnectorStatus(context.orgId),
-      prisma.organization.findUnique({
-        where: { id: context.orgId },
-        select: {
-          stripeAccountId: true,
-          stripeDetailsSubmitted: true,
-          stripeChargesEnabled: true,
-        },
-      }),
     ]);
 
-  const settings = storedSettings ?? {
-    pinnedPostscript: "",
-    sourceUrl: "https://www.coppersdream.org/dogs-and-more-back-up",
-  };
   const monthlyRecurring = activeSponsorCount * 25;
 
   return (
@@ -120,6 +102,9 @@ export default async function AdminPage({ params }: AdminPageProps) {
         </div>
         <div className={styles.headerActions}>
           <StaffTools orgSlug={orgSlug} />
+          <AdminLink href={`/${orgSlug}/admin/settings`} tone="oatmeal">
+            Settings
+          </AdminLink>
           <SignOutButton />
         </div>
       </header>
@@ -158,30 +143,6 @@ export default async function AdminPage({ params }: AdminPageProps) {
           <small>people love dog email</small>
         </AdminSurface>
       </section>
-
-      <AdminSurface className={styles.settings} tone="mustard">
-        <div className={styles.settingsIntro}>
-          <p className={styles.eyebrow}>Stripe Connect</p>
-          <h2>Monthly sponsorship payments</h2>
-          <p>
-            {organization?.stripeChargesEnabled
-              ? "Connected and ready to accept $25 monthly sponsorships."
-              : organization?.stripeDetailsSubmitted
-                ? "Stripe has your details and is still enabling payments."
-                : organization?.stripeAccountId
-                  ? "Finish the Stripe onboarding form to accept sponsorships."
-                  : "Connect this rescue to Stripe before sponsors can check out."}
-          </p>
-        </div>
-        {!organization?.stripeChargesEnabled && context.role === "owner" && (
-          <form action={beginStripeOnboarding} className={styles.stripeConnectForm}>
-            <input name="orgSlug" type="hidden" value={orgSlug} />
-            <AdminButton tone="brick" type="submit">
-              {organization?.stripeAccountId ? "Continue Stripe onboarding" : "Connect Stripe"}
-            </AdminButton>
-          </form>
-        )}
-      </AdminSurface>
 
       <section className={styles.composeSection}>
         <div className={styles.sectionTitle}>
@@ -247,7 +208,12 @@ export default async function AdminPage({ params }: AdminPageProps) {
         {!emailConnector.connected && drafts.length > 0 && (
           <p className={styles.queueNotice} id={EMAIL_CONNECTOR_NOTICE_ID}>
             <span aria-hidden="true">✉️</span>
-            {emailConnectorBlockedReason()} Approving is on hold until then.
+            <span>
+              {emailConnectorBlockedReason()} Approving is on hold until then.{" "}
+              <Link href={`/${orgSlug}/admin/settings#${EMAIL_CONNECTOR_NOTICE_ID}`}>
+                Open email settings.
+              </Link>
+            </span>
           </p>
         )}
 
@@ -287,20 +253,6 @@ export default async function AdminPage({ params }: AdminPageProps) {
           )}
         </div>
       </section>
-
-      <EmailConnectorSettings initialConnector={emailConnector} orgSlug={orgSlug} />
-
-      <AdminSurface className={styles.settings} tone="denim">
-        <div className={styles.settingsIntro}>
-          <p className={styles.eyebrowLight}>Staff settings</p>
-          <h2>Pinned to every email this month</h2>
-          <p>
-            The postscript rides at the bottom of each pupdate. The source URL tells Sync now where
-            to look for the current adoption roster.
-          </p>
-        </div>
-        <SettingsForm orgSlug={orgSlug} pinnedPostscript={settings.pinnedPostscript} sourceUrl={settings.sourceUrl} />
-      </AdminSurface>
 
       <footer className={styles.footer}>the staff room · nobody wrote a single email today</footer>
     </main>

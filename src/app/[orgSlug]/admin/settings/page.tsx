@@ -1,0 +1,117 @@
+import Image from "next/image";
+import Link from "next/link";
+import { headers } from "next/headers";
+import { notFound, redirect } from "next/navigation";
+
+import { AdminButton, AdminLink, AdminSurface } from "@/components/admin-ui";
+import { SignOutButton } from "@/components/sign-out-button";
+import { getEmailConnectorStatus } from "@/lib/email-connectors";
+import { getOrganizationAccessBySlug } from "@/lib/organization-access";
+import { prisma } from "@/lib/prisma";
+
+import pawcastWordmark from "../../../../../public/brand/pawcast-wordmark.png";
+
+import { beginStripeOnboarding } from "../actions";
+import { EmailConnectorSettings, SettingsForm } from "../admin-controls";
+import { EMAIL_CONNECTOR_NOTICE_ID } from "../gmail-notice";
+import styles from "../admin.module.css";
+
+export const dynamic = "force-dynamic";
+
+type AdminSettingsPageProps = { params: Promise<{ orgSlug: string }> };
+
+export default async function AdminSettingsPage({ params }: AdminSettingsPageProps) {
+  const { orgSlug } = await params;
+  const access = await getOrganizationAccessBySlug(await headers(), orgSlug, ["owner", "admin"]);
+
+  if (!access) notFound();
+  if (!access.context) {
+    const next = encodeURIComponent(`/${orgSlug}/admin/settings`);
+    redirect(access.authenticated ? "/organizations" : `/sign-in?next=${next}`);
+  }
+  const { context } = access;
+
+  const [storedSettings, emailConnector, organization] = await Promise.all([
+    prisma.rescueSettings.findUnique({ where: { orgId: context.orgId } }),
+    getEmailConnectorStatus(context.orgId),
+    prisma.organization.findUnique({
+      where: { id: context.orgId },
+      select: {
+        stripeAccountId: true,
+        stripeDetailsSubmitted: true,
+        stripeChargesEnabled: true,
+      },
+    }),
+  ]);
+  const settings = storedSettings ?? {
+    pinnedPostscript: "",
+    sourceUrl: "https://www.coppersdream.org/dogs-and-more-back-up",
+  };
+
+  return (
+    <main className={`admin-shell ${styles.page}`}>
+      <header className={styles.header}>
+        <Link className={styles.logo} href={`/${orgSlug}`}>
+          <Image alt="Pawcast" priority src={pawcastWordmark} />
+        </Link>
+        <div>
+          <h1>Staff settings</h1>
+        </div>
+        <div className={styles.headerActions}>
+          <AdminLink href={`/${orgSlug}/admin`} tone="oatmeal">
+            Back to staff room
+          </AdminLink>
+          <SignOutButton />
+        </div>
+      </header>
+
+      <div className={styles.settingsStack}>
+        <AdminSurface className={styles.settings} tone="mustard">
+          <div className={styles.settingsIntro}>
+            <p className={styles.eyebrow}>Stripe Connect</p>
+            <h2>Monthly sponsorship payments</h2>
+            <p>
+              {organization?.stripeChargesEnabled
+                ? "Connected and ready to accept $25 monthly sponsorships."
+                : organization?.stripeDetailsSubmitted
+                  ? "Stripe has your details and is still enabling payments."
+                  : organization?.stripeAccountId
+                    ? "Finish the Stripe onboarding form to accept sponsorships."
+                    : "Connect this rescue to Stripe before sponsors can check out."}
+            </p>
+          </div>
+          {!organization?.stripeChargesEnabled && context.role === "owner" && (
+            <form action={beginStripeOnboarding} className={styles.stripeConnectForm}>
+              <input name="orgSlug" type="hidden" value={orgSlug} />
+              <AdminButton tone="brick" type="submit">
+                {organization?.stripeAccountId ? "Continue Stripe onboarding" : "Connect Stripe"}
+              </AdminButton>
+            </form>
+          )}
+        </AdminSurface>
+
+        <section id={EMAIL_CONNECTOR_NOTICE_ID}>
+          <EmailConnectorSettings initialConnector={emailConnector} orgSlug={orgSlug} />
+        </section>
+
+        <AdminSurface className={styles.settings} tone="denim">
+          <div className={styles.settingsIntro}>
+            <p className={styles.eyebrowLight}>Staff settings</p>
+            <h2>Pinned to every email this month</h2>
+            <p>
+              The postscript rides at the bottom of each pupdate. The source URL tells Sync now where
+              to look for the current adoption roster.
+            </p>
+          </div>
+          <SettingsForm
+            orgSlug={orgSlug}
+            pinnedPostscript={settings.pinnedPostscript}
+            sourceUrl={settings.sourceUrl}
+          />
+        </AdminSurface>
+      </div>
+
+      <footer className={styles.footer}>staff settings · everything in its place</footer>
+    </main>
+  );
+}
