@@ -5,15 +5,32 @@ import test from "node:test";
 import {
   assertPlausibleAdoptionCount,
   discoverRoster,
+  discoverRosterWithCompleteness,
   extractScrapedText,
   extractScrapedTexts,
   graduationDraft,
   loadRoster,
   loadRosterSource,
+  planRosterStatusChanges,
   requestFirecrawl,
   RosterSyncRefusal,
 } from "./roster-sync.ts";
 import { parseDogRoster } from "./parser.ts";
+
+function rosterDog(name: string, adopted: boolean) {
+  return {
+    name,
+    breed: "",
+    dobText: "",
+    ageText: "",
+    sex: "",
+    weightText: "",
+    personality: "",
+    careNotes: [],
+    photoUrls: [],
+    adopted,
+  };
+}
 
 test("loads a checked-in roster path without requiring the network", async () => {
   const expected = await readFile(new URL("../../seed/dogs-page-A.html", import.meta.url), "utf8");
@@ -100,6 +117,32 @@ test("a bounded model loop maps the rescue site and scrapes the selected roster"
   assert.deepEqual(modelSteps.map((messages) => messages.at(-1)), ["user", "tool", "tool"]);
 });
 
+test("a scrape without a completed crawl is not treated as a complete roster", async () => {
+  let step = 0;
+  const discovery = await discoverRosterWithCompleteness("https://rescue.example/dogs", {
+    model: async () => {
+      step += 1;
+      if (step > 1) return { role: "assistant", content: "Done." };
+      return {
+        role: "assistant",
+        content: null,
+        tool_calls: [{
+          id: "scrape-1",
+          type: "function",
+          function: {
+            name: "firecrawl_scrape",
+            arguments: JSON.stringify({ url: "https://rescue.example/dogs" }),
+          },
+        }],
+      };
+    },
+    firecrawl: async () => ({ success: true, data: { markdown: "# Hattie" } }),
+  });
+
+  assert.equal(discovery.rosterCompleteness.complete, false);
+  assert.equal(discovery.rosterCompleteness.status, "crawl-not-run");
+});
+
 test("a crawl contributes every document to roster parsing while returning a bounded summary", async () => {
   const toolReplies: string[] = [];
   let step = 0;
@@ -151,6 +194,54 @@ test("a crawl contributes every document to roster parsing while returning a bou
   assert.ok((toolReplies[0]?.length ?? Infinity) <= 4_100);
   assert.match(toolReplies[0] ?? "", /"documents":3/);
   assert.doesNotMatch(toolReplies[0] ?? "", /details details/);
+});
+
+test("roster discovery retains an incomplete crawl's progress", async () => {
+  let step = 0;
+  const discovery = await discoverRosterWithCompleteness(
+    "https://rescue.example/adopt/dogs",
+    {
+      model: async () => {
+        step += 1;
+        if (step > 1) return { role: "assistant", content: "Done." };
+        return {
+          role: "assistant",
+          content: null,
+          tool_calls: [{
+            id: "partial-crawl",
+            type: "function",
+            function: {
+              name: "firecrawl_crawl",
+              arguments: JSON.stringify({ url: "https://rescue.example/adopt/dogs" }),
+            },
+          }],
+        };
+      },
+      firecrawl: async () => ({
+        success: true,
+        status: "scraping",
+        completed: 2,
+        total: 5,
+        completeness: {
+          complete: false,
+          timedOut: true,
+          status: "scraping",
+          completed: 2,
+          total: 5,
+        },
+        data: [{ markdown: "# Hattie" }, { markdown: "# Walnut" }],
+      }),
+    },
+  );
+
+  assert.match(discovery.text, /Hattie/);
+  assert.deepEqual(discovery.rosterCompleteness, {
+    complete: false,
+    timedOut: true,
+    status: "scraping",
+    completed: 2,
+    total: 5,
+  });
 });
 
 test("bounds total Firecrawl calls even when the model requests a large batch", async () => {
@@ -517,10 +608,53 @@ test("preserves explicit adoption handling for fallback captures", () => {
   assert.doesNotThrow(() => assertPlausibleAdoptionCount(10, 10, true));
 });
 
+test("an incomplete crawl does not adopt a resident missing from the partial roster", () => {
+  const changes = planRosterStatusChanges(
+    [{ id: "resident-1", name: "Hattie", status: "available" }],
+    [rosterDog("Walnut", false)],
+    { usedFallbackCapture: false, rosterComplete: false },
+  );
+
+  assert.deepEqual(changes.adoptionCandidates, []);
+});
+
+test("an incomplete crawl still adopts a resident with an explicit Adopted marker", () => {
+  const resident = { id: "resident-1", name: "Hattie", status: "available" };
+  const changes = planRosterStatusChanges(
+    [resident],
+    [rosterDog("Hattie", true)],
+    { usedFallbackCapture: false, rosterComplete: false },
+  );
+
+  assert.deepEqual(changes.adoptionCandidates, [resident]);
+});
+
+test("a complete crawl still adopts an available resident missing from the roster", () => {
+  const resident = { id: "resident-1", name: "Hattie", status: "available" };
+  const changes = planRosterStatusChanges(
+    [resident],
+    [rosterDog("Walnut", false)],
+    { usedFallbackCapture: false, rosterComplete: true },
+  );
+
+  assert.deepEqual(changes.adoptionCandidates, [resident]);
+});
+
+test("an incomplete crawl does not restore an adopted resident", () => {
+  const changes = planRosterStatusChanges(
+    [{ id: "resident-1", name: "Hattie", status: "adopted" }],
+    [rosterDog("Hattie", false)],
+    { usedFallbackCapture: false, rosterComplete: false },
+  );
+
+  assert.deepEqual(changes.restoreCandidates, []);
+});
+
 test("a configured local capture is the real source, not a scrape fallback", async () => {
   const roster = await loadRoster("seed/dogs-page-A.html");
 
   assert.equal(roster.usedFallbackCapture, false);
+  assert.equal(roster.rosterComplete, true);
   assert.equal(roster.source, "seed/dogs-page-A.html");
   assert.match(roster.text, /Hattie/);
 });
@@ -529,6 +663,7 @@ test("an unreachable remote source is flagged as a fallback capture", async () =
   const roster = await loadRoster("https://example.test/dogs-and-more");
 
   assert.equal(roster.usedFallbackCapture, true);
+  assert.equal(roster.rosterComplete, false);
   assert.equal(roster.source, "seed/dogs-page-A.html");
   assert.match(roster.text, /Walnut/);
 });

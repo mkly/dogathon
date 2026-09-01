@@ -15,6 +15,14 @@ const summary: SyncSummary = {
   restored: 0,
   sponsorshipsClosed: 0,
   usedFallbackCapture: false,
+  rosterComplete: true,
+  rosterCompleteness: {
+    complete: true,
+    timedOut: false,
+    status: "completed",
+    completed: 1,
+    total: 1,
+  },
   source: "https://rescue.example/dogs",
 };
 

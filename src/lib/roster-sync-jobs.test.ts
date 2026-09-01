@@ -146,6 +146,14 @@ test("terminal transitions record a summary or refusal reason", async () => {
     restored: 0,
     sponsorshipsClosed: 1,
     usedFallbackCapture: false,
+    rosterComplete: true,
+    rosterCompleteness: {
+      complete: true,
+      timedOut: false,
+      status: "completed",
+      completed: 3,
+      total: 3,
+    },
     source: "https://rescue.example/dogs",
   };
 
