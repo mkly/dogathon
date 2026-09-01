@@ -6,10 +6,12 @@ import { notFound, redirect } from "next/navigation";
 
 import { getOrganizationAccessBySlug } from "@/lib/organization-access";
 import { prisma } from "@/lib/prisma";
+import { parseSettingsForm } from "@/lib/rescue-settings";
 import { createConnectOnboardingLink } from "@/lib/stripe-billing";
 
 export type SettingsState = {
   message: string;
+  savedSourceInput?: string;
   status: "idle" | "error" | "success";
 };
 
@@ -31,30 +33,8 @@ export async function beginStripeOnboarding(formData: FormData) {
   redirect(link.url);
 }
 
-// The sync pipeline accepts either a live adoption page or a checked-in capture
-// like seed/dogs-page-A.html, so the staff room has to let both through.
-function normalizeSourceUrl(raw: string): string | null {
-  if (!raw) return null;
-
-  if (/^[a-z][a-z0-9+.-]*:/i.test(raw)) {
-    let parsed: URL;
-    try {
-      parsed = new URL(raw);
-    } catch {
-      return null;
-    }
-    if (!["http:", "https:"].includes(parsed.protocol)) return null;
-    return parsed.toString();
-  }
-
-  // A local capture path: relative, no traversal, and an HTML file.
-  if (raw.startsWith("/") || raw.includes("..")) return null;
-  if (!/\.html?$/i.test(raw)) return null;
-  return raw;
-}
-
 export async function saveSettings(
-  _previousState: SettingsState,
+  previousState: SettingsState,
   formData: FormData,
 ): Promise<SettingsState> {
   const orgSlug = String(formData.get("orgSlug") ?? "").trim();
@@ -64,22 +44,27 @@ export async function saveSettings(
   if (!access.context) redirect("/organizations");
   const { context } = access;
 
-  const pinnedPostscript = String(formData.get("pinnedPostscript") ?? "").trim();
-  const sourceUrl = normalizeSourceUrl(String(formData.get("sourceUrl") ?? "").trim());
-
-  if (!sourceUrl) {
+  const parsed = parseSettingsForm(formData);
+  if (!parsed.ok) {
     return {
       status: "error",
-      message: "Enter an http(s) adoption-page URL or a local capture path like seed/dogs-page-A.html.",
+      message: parsed.message,
+      ...(previousState.savedSourceInput
+        ? { savedSourceInput: previousState.savedSourceInput }
+        : {}),
     };
   }
 
   await prisma.rescueSettings.upsert({
     where: { orgId: context.orgId },
-    update: { pinnedPostscript, sourceUrl },
-    create: { orgId: context.orgId, pinnedPostscript, sourceUrl },
+    update: parsed.settings,
+    create: { orgId: context.orgId, ...parsed.settings },
   });
 
   revalidatePath(`/${orgSlug}/admin/settings`);
-  return { status: "success", message: "Staff settings saved." };
+  return {
+    status: "success",
+    message: parsed.message,
+    ...(parsed.savedSourceInput ? { savedSourceInput: parsed.savedSourceInput } : {}),
+  };
 }

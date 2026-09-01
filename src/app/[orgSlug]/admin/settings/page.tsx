@@ -12,7 +12,11 @@ import { prisma } from "@/lib/prisma";
 import pawcastWordmark from "../../../../../public/brand/pawcast-wordmark.png";
 
 import { beginStripeOnboarding } from "../actions";
-import { EmailConnectorSettings, SettingsForm } from "../admin-controls";
+import {
+  EmailConnectorSettings,
+  PostscriptSettingsForm,
+  RosterSyncSettings,
+} from "../admin-controls";
 import { EMAIL_CONNECTOR_NOTICE_ID } from "../gmail-notice";
 import styles from "../admin.module.css";
 
@@ -98,16 +102,20 @@ export default async function AdminSettingsPage({ params }: AdminSettingsPagePro
           <div className={styles.settingsIntro}>
             <p className={styles.eyebrowLight}>Staff settings</p>
             <h2>Pinned to every email this month</h2>
+            <p>The postscript rides at the bottom of each pupdate.</p>
+          </div>
+          <PostscriptSettingsForm orgSlug={orgSlug} pinnedPostscript={settings.pinnedPostscript} />
+        </AdminSurface>
+
+        <AdminSurface className={styles.settings} tone="moss">
+          <div className={styles.settingsIntro}>
+            <p className={styles.eyebrow}>Roster sync</p>
+            <h2>Keep the adoption roster current</h2>
             <p>
-              The postscript rides at the bottom of each pupdate. The source URL tells Sync now where
-              to look for the current adoption roster.
+              Save the adoption-page source, then sync its current dogs into the staff roster.
             </p>
           </div>
-          <SettingsForm
-            orgSlug={orgSlug}
-            pinnedPostscript={settings.pinnedPostscript}
-            sourceUrl={settings.sourceUrl}
-          />
+          <RosterSyncSettings initialSourceUrl={settings.sourceUrl} orgSlug={orgSlug} />
         </AdminSurface>
       </div>
 

@@ -12,11 +12,7 @@ import { prisma } from "@/lib/prisma";
 
 import pawcastWordmark from "../../../../public/brand/pawcast-wordmark.png";
 
-import {
-  ComposeButton,
-  DraftEditor,
-  StaffTools,
-} from "./admin-controls";
+import { ComposeButton, DraftEditor } from "./admin-controls";
 import { EMAIL_CONNECTOR_NOTICE_ID, emailConnectorBlockedReason } from "./gmail-notice";
 import styles from "./admin.module.css";
 
@@ -101,7 +97,6 @@ export default async function AdminPage({ params }: AdminPageProps) {
           <h1>Staff room</h1>
         </div>
         <div className={styles.headerActions}>
-          <StaffTools orgSlug={orgSlug} />
           <AdminLink href={`/${orgSlug}/admin/settings`} tone="oatmeal">
             Settings
           </AdminLink>

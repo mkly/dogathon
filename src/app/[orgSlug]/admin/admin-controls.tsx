@@ -320,14 +320,29 @@ export function ComposeButton({
   );
 }
 
-export function StaffTools({ orgSlug }: { orgSlug: string }) {
-  const [pending, setPending] = useState(false);
+export function RosterSyncSettings({
+  initialSourceUrl,
+  orgSlug,
+}: {
+  initialSourceUrl: string;
+  orgSlug: string;
+}) {
+  const [state, formAction, saving] = useActionState(saveSettings, initialSettingsState);
+  const [sourceUrl, setSourceUrl] = useState(initialSourceUrl);
+  const [syncPending, setSyncPending] = useState(false);
   const [job, setJob] = useState<RosterSyncJobView | null>(null);
   const goneRef = useRef(false);
+  const savedSourceInput = state.savedSourceInput ?? initialSourceUrl;
+  const sourceDirty = sourceUrl !== savedSourceInput;
 
   useEffect(() => () => {
     goneRef.current = true;
   }, []);
+
+  useEffect(() => {
+    if (state.status === "idle") return;
+    pushToast(state.status, state.message);
+  }, [state]);
 
   async function fetchJob(jobId: string) {
     const response = await fetch(`/api/sync/${encodeURIComponent(jobId)}`, {
@@ -338,7 +353,7 @@ export function StaffTools({ orgSlug }: { orgSlug: string }) {
   }
 
   async function syncNow() {
-    setPending(true);
+    setSyncPending(true);
     try {
       const response = await fetch("/api/sync", {
         method: "POST",
@@ -375,7 +390,7 @@ export function StaffTools({ orgSlug }: { orgSlug: string }) {
           : "Roster sync could not reach the server.",
       );
     } finally {
-      setPending(false);
+      setSyncPending(false);
     }
   }
 
@@ -387,12 +402,41 @@ export function StaffTools({ orgSlug }: { orgSlug: string }) {
       : "Sync now";
 
   return (
-    <div className={styles.staffTools}>
-      {label ? <span className={styles.syncStatus} role="status">{label}</span> : null}
-      <AdminButton disabled={pending} onClick={syncNow} tone="mustard">
-        {buttonLabel}
-      </AdminButton>
-    </div>
+    <form action={formAction} className={styles.settingsForm}>
+      <input name="orgSlug" type="hidden" value={orgSlug} />
+      <label htmlFor="sourceUrl">Adoption-page source URL</label>
+      <AdminField>
+        <input
+          disabled={saving}
+          id="sourceUrl"
+          name="sourceUrl"
+          onChange={(event) => setSourceUrl(event.target.value)}
+          placeholder="https://… or seed/dogs-page-A.html"
+          required
+          type="text"
+          value={sourceUrl}
+        />
+      </AdminField>
+      <div className={styles.rosterActions}>
+        <AdminButton disabled={saving || syncPending} tone="denim" type="submit">
+          {saving ? "Saving…" : "Save source"}
+        </AdminButton>
+        <AdminButton
+          disabled={saving || syncPending || sourceDirty}
+          onClick={syncNow}
+          title={sourceDirty ? "Save the source URL before syncing." : undefined}
+          tone="mustard"
+        >
+          {buttonLabel}
+        </AdminButton>
+        {label ? <span className={styles.syncStatus} role="status">{label}</span> : null}
+      </div>
+      {sourceDirty ? (
+        <p className={styles.unsavedSource} role="status">
+          Save the source URL before syncing so the roster uses this address.
+        </p>
+      ) : null}
+    </form>
   );
 }
 
@@ -589,14 +633,12 @@ export function EmailConnectorSettings({
 
 const initialSettingsState: SettingsState = { status: "idle", message: "" };
 
-export function SettingsForm({
+export function PostscriptSettingsForm({
   orgSlug,
   pinnedPostscript,
-  sourceUrl,
 }: {
   orgSlug: string;
   pinnedPostscript: string;
-  sourceUrl: string;
 }) {
   const [state, formAction, pending] = useActionState(saveSettings, initialSettingsState);
 
@@ -617,17 +659,6 @@ export function SettingsForm({
           maxLength={2000}
           name="pinnedPostscript"
           placeholder="A note that rides along with every pupdate…"
-        />
-      </AdminField>
-      <label htmlFor="sourceUrl">Adoption-page source URL</label>
-      <AdminField>
-        <input
-          defaultValue={sourceUrl}
-          id="sourceUrl"
-          name="sourceUrl"
-          placeholder="https://… or seed/dogs-page-A.html"
-          required
-          type="text"
         />
       </AdminField>
       <div className={styles.saveRow}>

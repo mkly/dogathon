@@ -49,12 +49,6 @@
 
 .eyebrowLight { color: var(--felt-denim); }
 
-.staffTools {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 12px;
-}
 .syncStatus { font-size: 0.78rem; font-weight: 850; }
 
 .headerActions {
@@ -279,6 +273,9 @@
 .settingsForm { display: grid; gap: 14px; }
 .settingsForm label { margin: 6px 0 0; font-size: 0.7rem; font-weight: 900; letter-spacing: 0.08em; text-transform: uppercase; }
 
+.rosterActions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.unsavedSource { margin: 0; font-size: 0.78rem; font-weight: 800; line-height: 1.4; }
+
 .saveRow { display: flex; align-items: center; justify-content: flex-end; gap: 14px; margin-top: 8px; }
 
 .footer { margin-top: 42px; text-align: center; font-size: 13px; font-weight: 700; opacity: 0.6; }
@@ -286,7 +283,6 @@
 @media (max-width: 900px) {
   .header { grid-template-columns: auto 1fr; }
   .headerActions { grid-column: 1 / -1; justify-content: space-between; }
-  .staffTools { justify-content: space-between; }
   .stats { grid-template-columns: repeat(2, 1fr); }
   .composeGrid { grid-template-columns: 1fr; }
   .queueItem { grid-template-columns: 104px 1fr; }
@@ -299,7 +295,7 @@
   .page { padding: 20px 14px 36px; }
   .header { gap: 14px; }
   .logo { width: 132px; }
-  .headerActions, .staffTools { align-items: stretch; flex-direction: column; }
+  .headerActions { align-items: stretch; flex-direction: column; }
   .stats { grid-template-columns: 1fr 1fr; gap: 12px; }
   .stat { min-height: 112px; padding: 17px; }
   .composeItem { grid-template-columns: 72px minmax(0, 1fr); }
