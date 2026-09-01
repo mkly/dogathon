@@ -3,6 +3,7 @@ import { prismaAdapter } from "better-auth/adapters/prisma";
 import { username } from "better-auth/plugins";
 import { organization } from "better-auth/plugins";
 
+import { sendAppEmail } from "@/lib/app-mailer";
 import { prisma } from "@/lib/prisma";
 
 export const auth = betterAuth({
@@ -25,23 +26,19 @@ export const auth = betterAuth({
         const invitationUrl = new URL("/organizations", baseUrl);
         invitationUrl.searchParams.set("invitation", id);
 
-        const webhook = process.env.INVITATION_EMAIL_WEBHOOK_URL;
-        if (webhook) {
-          const response = await fetch(webhook, {
-            method: "POST",
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify({
-              to: email,
-              subject: `Join ${invitedOrganization.name} on Dogathon`,
-              invitationUrl: invitationUrl.toString(),
-              role,
-            }),
-          });
-          if (!response.ok) throw new Error(`Invitation email webhook failed (${response.status})`);
-          return;
-        }
+        const describedSend = await sendAppEmail({
+          to: email,
+          subject: `Join ${invitedOrganization.name} on Dogathon`,
+          body: [
+            `You've been invited to join ${invitedOrganization.name} on Dogathon as ${role}.`,
+            "",
+            `Accept the invitation: ${invitationUrl.toString()}`,
+          ].join("\n"),
+        });
 
-        console.info(`Dogathon invitation for ${email}: ${invitationUrl.toString()}`);
+        if (describedSend) {
+          console.info(`Dogathon invitation for ${email}: ${invitationUrl.toString()}`);
+        }
       },
     }),
   ],

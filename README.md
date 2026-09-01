@@ -4,7 +4,7 @@ A multitenant Next.js app using PostgreSQL, Prisma, and Better Auth organization
 
 ## Run locally
 
-1. Copy `.env.example` to `.env` and replace `BETTER_AUTH_SECRET` with a random value of at least 32 characters. Set `INVITATION_EMAIL_WEBHOOK_URL` to an endpoint that accepts the invitation JSON payload when you want real email delivery; local development logs invitation links when it is unset.
+1. Copy `.env.example` to `.env` and replace `BETTER_AUTH_SECRET` with a random value of at least 32 characters. Configure the `APP_SMTP_*` and `APP_EMAIL_FROM` variables when you want real email delivery; local development logs invitation links when the platform SMTP credentials are unset.
 2. Start PostgreSQL:
 
    ```bash
