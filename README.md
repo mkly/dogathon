@@ -71,27 +71,3 @@ Then authenticate the Vercel CLI with `npx vercel login`, or provide a
 
 The script can be invoked from any directory and always deploys this repository
 to production. Additional Vercel CLI options may be passed as arguments.
-
-### Automated smoke test
-
-With the app running against a migrated, seeded database:
-
-```bash
-npx tsx scripts/demo-smoke.ts
-```
-
-It walks every beat above end to end — the public sponsor form, the volunteer
-note, compose, approve with the per-channel fan-out, and both roster syncs —
-and fails loudly on the first broken step. Point it at another origin with
-`DEMO_BASE_URL`. Because the staff routes require a session, it signs in before
-the staff beats and creates that account on its first run; override it with
-`DEMO_STAFF_EMAIL` / `DEMO_STAFF_PASSWORD`.
-
-## Accounts
-
-Users sign in with email and password at `/sign-in` (Better Auth, email
-verification disabled). Organization owners can invite admins or volunteers;
-the Better Auth `member` role is the volunteer role. Admin pages, actions, and
-staff APIs require an owner/admin membership in the session's active
-organization. `/volunteer` and its submit action require any active membership.
-Every domain read and write is scoped to that organization.
