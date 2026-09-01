@@ -16,7 +16,7 @@ import {
 export const dynamic = "force-dynamic";
 
 type OrganizationsPageProps = {
-  searchParams: Promise<{ invitation?: string }>;
+  searchParams: Promise<{ error?: string; invitation?: string }>;
 };
 
 export default async function OrganizationsPage({ searchParams }: OrganizationsPageProps) {
@@ -50,6 +50,9 @@ export default async function OrganizationsPage({ searchParams }: OrganizationsP
 
       <FeltPanel tone="oatmeal">
         <h2>Create an organization</h2>
+        {query.error === "create-failed" ? (
+          <p role="alert">We could not create that organization. Check the details and try again.</p>
+        ) : null}
         <form action={createOrganization}>
           <FeltField><input name="name" placeholder="Rescue name" required /></FeltField>
           <FeltField><input name="slug" pattern="[a-z0-9-]+" placeholder="rescue-slug" required /></FeltField>

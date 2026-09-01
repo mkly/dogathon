@@ -17,8 +17,12 @@ export async function createOrganization(formData: FormData) {
   const slug = value(formData, "slug").toLowerCase().replace(/[^a-z0-9-]+/g, "-");
   if (!name || !slug) redirect("/organizations?error=invalid-organization");
 
-  await auth.api.createOrganization({ body: { name, slug }, headers: requestHeaders });
-  redirect("/organizations?created=1");
+  const organization = await auth.api
+    .createOrganization({ body: { name, slug }, headers: requestHeaders })
+    .catch(() => null);
+  if (!organization) redirect("/organizations?error=create-failed");
+
+  redirect(`/${organization.slug}/admin`);
 }
 
 export async function setActiveOrganization(formData: FormData) {
