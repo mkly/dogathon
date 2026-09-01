@@ -10,5 +10,5 @@ export async function GET(request: Request) {
   if (!access?.context) redirect("/organizations");
 
   await refreshConnectStatus(access.context.orgId);
-  redirect(`/${encodeURIComponent(access.organization.slug)}/admin`);
+  redirect(`/${encodeURIComponent(access.organization.slug)}/admin/settings`);
 }

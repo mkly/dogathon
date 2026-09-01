@@ -80,6 +80,6 @@ export async function saveSettings(
     create: { orgId: context.orgId, pinnedPostscript, sourceUrl },
   });
 
-  revalidatePath(`/${orgSlug}/admin`);
-  return { status: "success", message: "Staff-room settings saved." };
+  revalidatePath(`/${orgSlug}/admin/settings`);
+  return { status: "success", message: "Staff settings saved." };
 }
