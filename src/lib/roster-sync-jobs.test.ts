@@ -93,6 +93,24 @@ test("two concurrent claimers cannot claim the same job", async () => {
   assert.equal(claimed[0]?.heartbeatAt?.toISOString(), now.toISOString());
 });
 
+test("an unscoped claim takes the oldest queued job across organizations", async () => {
+  await db.rosterSyncJob.deleteMany();
+  const firstOrgId = await createOrganization();
+  const secondOrgId = await createOrganization();
+  const queue = createRosterSyncJobQueue(db);
+  const first = await queue.enqueue({ orgId: firstOrgId });
+  await queue.enqueue({ orgId: secondOrgId });
+  await db.rosterSyncJob.update({
+    where: { id: first.id },
+    data: { requestedAt: new Date("2026-01-01T00:00:00.000Z") },
+  });
+
+  const claimed = await queue.claim({});
+
+  assert.equal(claimed?.id, first.id);
+  assert.equal(claimed?.orgId, firstOrgId);
+});
+
 test("an expired lease is reclaimed and increments the attempt count", async () => {
   const orgId = await createOrganization();
   const queue = createRosterSyncJobQueue(db);
