@@ -8,10 +8,10 @@ import { getOrganizationContext } from "@/lib/organization-access";
 
 import {
   acceptOrganizationInvitation,
-  createOrganization,
   inviteOrganizationMember,
   setActiveOrganization,
 } from "./actions";
+import { CreateOrganizationForm } from "./create-organization-form";
 
 export const dynamic = "force-dynamic";
 
@@ -50,14 +50,7 @@ export default async function OrganizationsPage({ searchParams }: OrganizationsP
 
       <FeltPanel tone="oatmeal">
         <h2>Create an organization</h2>
-        {query.error === "create-failed" ? (
-          <p role="alert">We could not create that organization. Check the details and try again.</p>
-        ) : null}
-        <form action={createOrganization}>
-          <FeltField><input name="name" placeholder="Rescue name" required /></FeltField>
-          <FeltField><input name="slug" pattern="[a-z0-9-]+" placeholder="rescue-slug" required /></FeltField>
-          <FeltButton tone="moss" type="submit">Create organization</FeltButton>
-        </form>
+        <CreateOrganizationForm />
       </FeltPanel>
 
       {context && (
