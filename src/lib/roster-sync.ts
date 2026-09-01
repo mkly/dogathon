@@ -23,6 +23,10 @@ export type SyncSummary = {
 
 const DEFAULT_CAPTURE = "dogs-page-A.html";
 const DEFAULT_FIRECRAWL_BASE_URL = "https://api.firecrawl.dev/v2";
+const MAX_FIRECRAWL_CRAWL_PAGES = 100;
+const MAX_FIRECRAWL_DISCOVERY_DEPTH = 3;
+const FIRECRAWL_CRAWL_TIMEOUT_MS = 30_000;
+const FIRECRAWL_POLL_INTERVAL_MS = 1_000;
 const MAX_ROSTER_AGENT_STEPS = 4;
 // A live scrape should never make most of the current roster disappear at once.
 // Require a human to investigate instead of treating that disappearance as adoption.
@@ -223,7 +227,7 @@ export async function loadRosterSource(sourceUrl: string): Promise<string> {
   return (await loadRoster(sourceUrl)).text;
 }
 
-type RosterToolName = "firecrawl_map" | "firecrawl_scrape";
+type RosterToolName = "firecrawl_map" | "firecrawl_scrape" | "firecrawl_crawl";
 type RosterModel = (
   messages: ChatCompletionMessage[],
   tools: ChatCompletionTool[],
@@ -233,6 +237,30 @@ type FirecrawlCaller = (name: RosterToolName, input: Record<string, unknown>) =>
 export type RosterDiscoveryOptions = {
   model?: RosterModel;
   firecrawl?: FirecrawlCaller;
+};
+
+export type FirecrawlCrawlResult = {
+  success: boolean;
+  status: string;
+  total: number;
+  completed: number;
+  data: unknown[];
+  completeness: {
+    complete: boolean;
+    timedOut: boolean;
+    status: string;
+    total: number;
+    completed: number;
+  };
+};
+
+type FirecrawlRequestOptions = {
+  apiKey?: string;
+  baseUrl?: string;
+  fetch?: typeof fetch;
+  sourceUrl?: string;
+  crawlTimeoutMs?: number;
+  pollIntervalMs?: number;
 };
 
 const ROSTER_TOOLS: ChatCompletionTool[] = [
@@ -273,7 +301,8 @@ export async function discoverRoster(
   options: RosterDiscoveryOptions = {},
 ): Promise<string> {
   const model = options.model ?? defaultRosterModel;
-  const firecrawl = options.firecrawl ?? requestFirecrawl;
+  const firecrawl = options.firecrawl
+    ?? ((name, input) => requestFirecrawl(name, input, { sourceUrl }));
   const messages: ChatCompletionMessage[] = [
     {
       role: "system",
@@ -326,20 +355,46 @@ async function defaultRosterModel(
   return createToolCallingChatCompletion({ messages, tools, maxTokens: 1_000 });
 }
 
+export function requestFirecrawl(
+  name: "firecrawl_crawl",
+  input: Record<string, unknown>,
+  options: FirecrawlRequestOptions & { sourceUrl: string },
+): Promise<FirecrawlCrawlResult>;
+export function requestFirecrawl(
+  name: "firecrawl_map" | "firecrawl_scrape",
+  input: Record<string, unknown>,
+  options?: FirecrawlRequestOptions,
+): Promise<unknown>;
+export function requestFirecrawl(
+  name: RosterToolName,
+  input: Record<string, unknown>,
+  options?: FirecrawlRequestOptions,
+): Promise<unknown>;
 export async function requestFirecrawl(
   name: RosterToolName,
   input: Record<string, unknown>,
-  options: { apiKey?: string; baseUrl?: string; fetch?: typeof fetch } = {},
+  options: FirecrawlRequestOptions = {},
 ): Promise<unknown> {
   const apiKey = (options.apiKey ?? process.env.FIRECRAWL_API_KEY)?.trim();
   if (!apiKey) throw new Error("FIRECRAWL_API_KEY is required to fetch a live roster");
   const baseUrl = (options.baseUrl ?? process.env.FIRECRAWL_BASE_URL ?? DEFAULT_FIRECRAWL_BASE_URL)
     .replace(/\/+$/u, "");
+  const fetcher = options.fetch ?? fetch;
+
+  if (name === "firecrawl_crawl") {
+    return requestFirecrawlCrawl(input, {
+      ...options,
+      apiKey,
+      baseUrl,
+      fetch: fetcher,
+    });
+  }
+
   const endpoint = name === "firecrawl_map" ? "map" : "scrape";
   const body = name === "firecrawl_map"
     ? { ...input, limit: input.limit ?? 25 }
     : { ...input, formats: ["markdown"], onlyMainContent: true };
-  const response = await (options.fetch ?? fetch)(`${baseUrl}/${endpoint}`, {
+  const response = await fetcher(`${baseUrl}/${endpoint}`, {
     method: "POST",
     headers: { authorization: `Bearer ${apiKey}`, "content-type": "application/json" },
     body: JSON.stringify(body),
@@ -351,8 +406,210 @@ export async function requestFirecrawl(
   return payload;
 }
 
+async function requestFirecrawlCrawl(
+  input: Record<string, unknown>,
+  options: Required<Pick<FirecrawlRequestOptions, "apiKey" | "baseUrl" | "fetch">>
+    & FirecrawlRequestOptions,
+): Promise<FirecrawlCrawlResult> {
+  const sourceUrl = options.sourceUrl;
+  if (!sourceUrl) throw new Error("A source URL is required to scope a Firecrawl crawl");
+
+  const requestedUrl = requiredHttpUrl(input.url, "Roster crawl URL");
+  assertRelatedUrl(sourceUrl, requestedUrl.toString());
+  const source = requiredHttpUrl(sourceUrl, "Roster source URL");
+  const includePath = pathScopePattern(source.pathname);
+  const requestedStartsInScope = pathMatchesScope(requestedUrl.pathname, source.pathname);
+  const body = {
+    ...input,
+    url: requestedStartsInScope ? requestedUrl.toString() : source.toString(),
+    includePaths: [includePath],
+    regexOnFullURL: false,
+    limit: clampedInteger(input.limit, 1, MAX_FIRECRAWL_CRAWL_PAGES),
+    maxDiscoveryDepth: clampedInteger(
+      input.maxDiscoveryDepth,
+      0,
+      MAX_FIRECRAWL_DISCOVERY_DEPTH,
+    ),
+    sitemap: "skip",
+    crawlEntireDomain: false,
+    allowExternalLinks: false,
+    allowSubdomains: false,
+  };
+
+  const submitResponse = await options.fetch(`${options.baseUrl}/crawl`, {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${options.apiKey}`,
+      "content-type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+  const submit = (await submitResponse.json()) as {
+    success?: boolean;
+    id?: string;
+    error?: string;
+  };
+  if (!submitResponse.ok || submit.success === false || !submit.id) {
+    throw new Error(
+      submit.error ?? `Firecrawl crawl submission failed (${submitResponse.status})`,
+    );
+  }
+
+  const timeoutMs = Math.max(0, options.crawlTimeoutMs ?? FIRECRAWL_CRAWL_TIMEOUT_MS);
+  const pollIntervalMs = Math.max(0, options.pollIntervalMs ?? FIRECRAWL_POLL_INTERVAL_MS);
+  const deadline = Date.now() + timeoutMs;
+  let latest: FirecrawlCrawlStatus = {
+    success: true,
+    status: "scraping",
+    total: 0,
+    completed: 0,
+    data: [],
+  };
+
+  while (Date.now() < deadline) {
+    let response: Response;
+    try {
+      response = await fetchBeforeDeadline(
+        options.fetch,
+        `${options.baseUrl}/crawl/${encodeURIComponent(submit.id)}`,
+        {
+          method: "GET",
+          headers: { authorization: `Bearer ${options.apiKey}` },
+        },
+        deadline,
+      );
+    } catch (error) {
+      if (error instanceof FirecrawlPollTimeout) return crawlResult(latest, true);
+      throw error;
+    }
+    const payload = (await response.json()) as FirecrawlCrawlStatus;
+    if (!response.ok || payload.success === false) {
+      throw new Error(payload.error ?? `Firecrawl crawl status failed (${response.status})`);
+    }
+    latest = normalizeCrawlStatus(payload);
+    if (latest.status === "completed" || latest.status === "failed") {
+      return crawlResult(latest, false);
+    }
+
+    const remainingMs = deadline - Date.now();
+    if (remainingMs <= 0) break;
+    await new Promise((resolve) => setTimeout(resolve, Math.min(pollIntervalMs, remainingMs)));
+  }
+
+  return crawlResult(latest, true);
+}
+
+type FirecrawlCrawlStatus = {
+  success?: boolean;
+  status?: string;
+  total?: number;
+  completed?: number;
+  data?: unknown[];
+  error?: string;
+};
+
+class FirecrawlPollTimeout extends Error {}
+
+function normalizeCrawlStatus(payload: FirecrawlCrawlStatus): FirecrawlCrawlStatus & {
+  success: boolean;
+  status: string;
+  total: number;
+  completed: number;
+  data: unknown[];
+} {
+  const data = Array.isArray(payload.data) ? payload.data : [];
+  const completed = finiteNonNegativeInteger(payload.completed, data.length);
+  const total = finiteNonNegativeInteger(payload.total, completed);
+  return {
+    ...payload,
+    success: payload.success !== false,
+    status: typeof payload.status === "string" ? payload.status : "scraping",
+    total,
+    completed,
+    data,
+  };
+}
+
+function crawlResult(payload: FirecrawlCrawlStatus, timedOut: boolean): FirecrawlCrawlResult {
+  const normalized = normalizeCrawlStatus(payload);
+  const complete = !timedOut
+    && normalized.status === "completed"
+    && normalized.completed >= normalized.total;
+  return {
+    success: normalized.success,
+    status: normalized.status,
+    total: normalized.total,
+    completed: normalized.completed,
+    data: normalized.data,
+    completeness: {
+      complete,
+      timedOut,
+      status: normalized.status,
+      total: normalized.total,
+      completed: normalized.completed,
+    },
+  };
+}
+
+async function fetchBeforeDeadline(
+  fetcher: typeof fetch,
+  url: string,
+  init: RequestInit,
+  deadline: number,
+): Promise<Response> {
+  const remainingMs = deadline - Date.now();
+  if (remainingMs <= 0) throw new FirecrawlPollTimeout();
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), remainingMs);
+  try {
+    return await fetcher(url, { ...init, signal: controller.signal });
+  } catch (error) {
+    if (controller.signal.aborted) throw new FirecrawlPollTimeout();
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function requiredHttpUrl(value: unknown, label: string): URL {
+  if (typeof value !== "string") throw new Error(`${label} must be a string`);
+  const url = new URL(value);
+  if (url.protocol !== "http:" && url.protocol !== "https:") {
+    throw new Error(`${label} refused unsupported protocol: ${url.protocol}`);
+  }
+  return url;
+}
+
+function pathScopePattern(pathname: string): string {
+  const normalized = pathname.replace(/^\/+|\/+$/gu, "");
+  if (!normalized) return ".*";
+  return `${normalized.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&")}(?:/.*)?`;
+}
+
+function pathMatchesScope(candidatePath: string, sourcePath: string): boolean {
+  const normalized = sourcePath === "/" ? "/" : sourcePath.replace(/\/+$/u, "");
+  return normalized === "/"
+    || candidatePath === normalized
+    || candidatePath.startsWith(`${normalized}/`);
+}
+
+function clampedInteger(value: unknown, minimum: number, maximum: number): number {
+  if (typeof value !== "number" || !Number.isFinite(value)) return maximum;
+  return Math.min(maximum, Math.max(minimum, Math.floor(value)));
+}
+
+function finiteNonNegativeInteger(value: unknown, fallback: number): number {
+  return typeof value === "number" && Number.isFinite(value)
+    ? Math.max(0, Math.floor(value))
+    : fallback;
+}
+
 function rosterToolName(value: string): RosterToolName {
-  if (value === "firecrawl_map" || value === "firecrawl_scrape") return value;
+  if (
+    value === "firecrawl_map"
+    || value === "firecrawl_scrape"
+    || value === "firecrawl_crawl"
+  ) return value;
   throw new Error(`Unsupported roster tool: ${value}`);
 }
 

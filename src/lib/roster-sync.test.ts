@@ -112,6 +112,194 @@ test("calls the direct Firecrawl v2 endpoints with bearer authentication", async
   });
 });
 
+test("submits a Firecrawl v2 crawl job and polls it to completion", async () => {
+  const requests: Array<{ url: string; init?: RequestInit }> = [];
+  const responses = [
+    { success: true, id: "crawl-job-1", url: "https://api.example/crawl/crawl-job-1" },
+    { status: "scraping", total: 3, completed: 1, data: [{ markdown: "# Hattie" }] },
+    {
+      status: "completed",
+      total: 3,
+      completed: 3,
+      data: [
+        { markdown: "# Hattie" },
+        { markdown: "# Walnut" },
+        { markdown: "# June" },
+      ],
+    },
+  ];
+  const fetcher: typeof fetch = async (input, init) => {
+    requests.push({ url: String(input), init });
+    return new Response(JSON.stringify(responses.shift()), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
+  };
+
+  const result = await requestFirecrawl(
+    "firecrawl_crawl",
+    { url: "https://rescue.example/adopt/dogs" },
+    {
+      apiKey: "fc-test",
+      baseUrl: "https://firecrawl.example/v2",
+      sourceUrl: "https://rescue.example/adopt/dogs",
+      fetch: fetcher,
+      pollIntervalMs: 0,
+    },
+  );
+
+  assert.deepEqual(requests.map((request) => [request.init?.method, request.url]), [
+    ["POST", "https://firecrawl.example/v2/crawl"],
+    ["GET", "https://firecrawl.example/v2/crawl/crawl-job-1"],
+    ["GET", "https://firecrawl.example/v2/crawl/crawl-job-1"],
+  ]);
+  assert.equal(result.data.length, 3);
+  assert.deepEqual(result.completeness, {
+    complete: true,
+    timedOut: false,
+    status: "completed",
+    total: 3,
+    completed: 3,
+  });
+});
+
+test("narrows a broad crawl request to the configured listing path", async () => {
+  let submittedBody: Record<string, unknown> | undefined;
+  const fetcher: typeof fetch = async (_input, init) => {
+    if (init?.method === "POST") {
+      submittedBody = JSON.parse(String(init.body)) as Record<string, unknown>;
+      return Response.json({ success: true, id: "crawl-job-2" });
+    }
+    return Response.json({ status: "completed", total: 1, completed: 1, data: [{}] });
+  };
+
+  await requestFirecrawl(
+    "firecrawl_crawl",
+    {
+      url: "https://rescue.example/",
+      includePaths: [".*"],
+      crawlEntireDomain: true,
+      allowExternalLinks: true,
+      sitemap: "include",
+    },
+    {
+      apiKey: "fc-test",
+      sourceUrl: "https://rescue.example/adopt/dogs/",
+      fetch: fetcher,
+      pollIntervalMs: 0,
+    },
+  );
+
+  assert.equal(submittedBody?.url, "https://rescue.example/adopt/dogs/");
+  assert.deepEqual(submittedBody?.includePaths, ["adopt/dogs(?:/.*)?"]);
+  assert.equal(submittedBody?.regexOnFullURL, false);
+  assert.equal(submittedBody?.crawlEntireDomain, false);
+  assert.equal(submittedBody?.allowExternalLinks, false);
+  assert.equal(submittedBody?.allowSubdomains, false);
+  assert.equal(submittedBody?.sitemap, "skip");
+});
+
+test("refuses a crawl request for an unrelated host before fetching", async () => {
+  let fetchCalls = 0;
+  const fetcher: typeof fetch = async () => {
+    fetchCalls += 1;
+    return Response.json({ success: true, id: "should-not-run" });
+  };
+
+  await assert.rejects(
+    requestFirecrawl(
+      "firecrawl_crawl",
+      { url: "https://elsewhere.test/dogs" },
+      {
+        apiKey: "fc-test",
+        sourceUrl: "https://rescue.example/adopt/dogs",
+        fetch: fetcher,
+      },
+    ),
+    /refused unrelated host: elsewhere\.test/,
+  );
+  assert.equal(fetchCalls, 0);
+});
+
+test("clamps Firecrawl crawl page and discovery limits", async () => {
+  let submittedBody: Record<string, unknown> | undefined;
+  const fetcher: typeof fetch = async (_input, init) => {
+    if (init?.method === "POST") {
+      submittedBody = JSON.parse(String(init.body)) as Record<string, unknown>;
+      return Response.json({ success: true, id: "crawl-job-3" });
+    }
+    return Response.json({ status: "completed", total: 0, completed: 0, data: [] });
+  };
+
+  await requestFirecrawl(
+    "firecrawl_crawl",
+    {
+      url: "https://rescue.example/adopt/dogs",
+      limit: 100_000,
+      maxDiscoveryDepth: 99,
+    },
+    {
+      apiKey: "fc-test",
+      sourceUrl: "https://rescue.example/adopt/dogs",
+      fetch: fetcher,
+      pollIntervalMs: 0,
+    },
+  );
+
+  assert.equal(submittedBody?.limit, 100);
+  assert.equal(submittedBody?.maxDiscoveryDepth, 3);
+});
+
+test("reports a Firecrawl crawl polling timeout as incomplete", async () => {
+  let fetchCalls = 0;
+  const fetcher: typeof fetch = async () => {
+    fetchCalls += 1;
+    return Response.json({ success: true, id: "crawl-job-4" });
+  };
+
+  const result = await requestFirecrawl(
+    "firecrawl_crawl",
+    { url: "https://rescue.example/adopt/dogs" },
+    {
+      apiKey: "fc-test",
+      sourceUrl: "https://rescue.example/adopt/dogs",
+      fetch: fetcher,
+      crawlTimeoutMs: 0,
+    },
+  );
+
+  assert.equal(fetchCalls, 1);
+  assert.deepEqual(result.completeness, {
+    complete: false,
+    timedOut: true,
+    status: "scraping",
+    total: 0,
+    completed: 0,
+  });
+});
+
+test("a crawl without Firecrawl credentials never contacts the network", async () => {
+  let fetchCalls = 0;
+  const fetcher: typeof fetch = async () => {
+    fetchCalls += 1;
+    return Response.json({ success: true, id: "should-not-run" });
+  };
+
+  await assert.rejects(
+    requestFirecrawl(
+      "firecrawl_crawl",
+      { url: "https://rescue.example/adopt/dogs" },
+      {
+        apiKey: "",
+        sourceUrl: "https://rescue.example/adopt/dogs",
+        fetch: fetcher,
+      },
+    ),
+    /FIRECRAWL_API_KEY is required/,
+  );
+  assert.equal(fetchCalls, 0);
+});
+
 test("reports a refused tool call back to the model and keeps scraped content", async () => {
   const toolReplies: string[] = [];
   let step = 0;
