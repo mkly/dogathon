@@ -13,6 +13,13 @@ import styles from "./admin.module.css";
 
 type SyncResult = {
   usedFallbackCapture: boolean;
+  rosterComplete: boolean;
+  rosterCompleteness: {
+    timedOut: boolean;
+    status: string;
+    completed: number;
+    total: number;
+  };
   source: string;
 };
 
@@ -345,6 +352,17 @@ export function StaffTools({ orgSlug }: { orgSlug: string }) {
       const result = (await response.json()) as SyncResult;
       if (result.usedFallbackCapture) {
         pushToast("warning", `Roster synced from bundled capture (${result.source}).`);
+      } else if (!result.rosterComplete) {
+        const missing = Math.max(0, result.rosterCompleteness.total - result.rosterCompleteness.completed);
+        const detail = missing > 0
+          ? ` About ${missing} of ${result.rosterCompleteness.total} expected pages were not fetched.`
+          : result.rosterCompleteness.timedOut
+            ? " The crawl timed out before confirming every page was fetched."
+            : ` The crawl ended with status ${result.rosterCompleteness.status}.`;
+        pushToast(
+          "warning",
+          `Partial roster synced from ${result.source}.${detail} Missing residents were left unchanged.`,
+        );
       } else {
         pushToast("success", `Roster synced from live source (${result.source}).`);
       }

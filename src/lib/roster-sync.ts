@@ -18,7 +18,17 @@ export type SyncSummary = {
   restored: number;
   sponsorshipsClosed: number;
   usedFallbackCapture: boolean;
+  rosterComplete: boolean;
+  rosterCompleteness: RosterCompleteness;
   source: string;
+};
+
+export type RosterCompleteness = {
+  complete: boolean;
+  timedOut: boolean;
+  status: string;
+  completed: number;
+  total: number;
 };
 
 const DEFAULT_CAPTURE = "dogs-page-A.html";
@@ -50,7 +60,13 @@ export async function syncRoster(orgId: string): Promise<SyncSummary> {
     update: {},
     create: { orgId },
   });
-  const { text, usedFallbackCapture, source } = await loadRoster(settings.sourceUrl);
+  const {
+    text,
+    usedFallbackCapture,
+    rosterComplete,
+    rosterCompleteness,
+    source,
+  } = await loadRoster(settings.sourceUrl);
   const dogs = await parseDogRoster(text);
 
   if (dogs.length === 0) {
@@ -63,39 +79,20 @@ export async function syncRoster(orgId: string): Promise<SyncSummary> {
       select: { id: true, name: true, status: true },
     });
     const existingNames = new Set(before.map((resident) => resident.name));
-    const rosterNames = new Set(dogs.map((dog) => dog.name));
-    const explicitlyAdopted = new Set(
-      dogs.filter((dog) => dog.adopted).map((dog) => dog.name),
-    );
-
-    // A dog vanishing from the roster only means "adopted" when we actually
-    // read the configured source. After a scrape failure we are looking at a
-    // checked-in capture that knows nothing about the live roster, so absence
-    // proves nothing there and only explicit *Adopted markers count.
-    const adoptionCandidates = before.filter(
-      (resident) => resident.status === "available"
-        && (explicitlyAdopted.has(resident.name)
-          || (!usedFallbackCapture && !rosterNames.has(resident.name))),
+    const { adoptionCandidates, restoreCandidates } = planRosterStatusChanges(
+      before,
+      dogs,
+      { usedFallbackCapture, rosterComplete },
     );
 
     assertPlausibleAdoptionCount(
       before.filter((resident) => resident.status === "available").length,
       adoptionCandidates.length,
-      usedFallbackCapture,
-    );
-
-    // The mirror image of the adoption rule, with the same evidence standard:
-    // a dog we read on the live configured source without an Adopted marker is
-    // demonstrably not adopted, so a wrongly-adopted resident heals on the
-    // next good sync. A fallback capture proves nothing and never restores.
-    const restoreCandidates = usedFallbackCapture ? [] : before.filter(
-      (resident) => resident.status === "adopted"
-        && rosterNames.has(resident.name)
-        && !explicitlyAdopted.has(resident.name),
+      usedFallbackCapture || !rosterComplete,
     );
 
     for (const dog of dogs) {
-      await upsertDog(tx, orgId, dog, !usedFallbackCapture);
+      await upsertDog(tx, orgId, dog, !usedFallbackCapture && rosterComplete);
     }
 
     let sponsorshipsClosed = 0;
@@ -131,9 +128,48 @@ export async function syncRoster(orgId: string): Promise<SyncSummary> {
       restored: restoreCandidates.length,
       sponsorshipsClosed,
       usedFallbackCapture,
+      rosterComplete,
+      rosterCompleteness,
       source,
     };
   }, { maxWait: 10_000, timeout: 60_000 });
+}
+
+type ResidentStatusSnapshot = {
+  id: string;
+  name: string;
+  status: string;
+};
+
+export function planRosterStatusChanges<T extends ResidentStatusSnapshot>(
+  before: T[],
+  dogs: DogRecord[],
+  source: Pick<RosterSource, "usedFallbackCapture" | "rosterComplete">,
+) {
+  const rosterNames = new Set(dogs.map((dog) => dog.name));
+  const explicitlyAdopted = new Set(
+    dogs.filter((dog) => dog.adopted).map((dog) => dog.name),
+  );
+  const absenceIsReliable = !source.usedFallbackCapture && source.rosterComplete;
+
+  // Absence only proves adoption after a complete read of the configured
+  // source. Partial crawls and checked-in fallback captures still honor an
+  // explicit Adopted marker, but never infer a status from a missing dog.
+  const adoptionCandidates = before.filter(
+    (resident) => resident.status === "available"
+      && (explicitlyAdopted.has(resident.name)
+        || (absenceIsReliable && !rosterNames.has(resident.name))),
+  );
+
+  // Restoration uses the same evidence standard: only a complete live roster
+  // proves that an unmarked resident should be available again.
+  const restoreCandidates = absenceIsReliable ? before.filter(
+    (resident) => resident.status === "adopted"
+      && rosterNames.has(resident.name)
+      && !explicitlyAdopted.has(resident.name),
+  ) : [];
+
+  return { adoptionCandidates, restoreCandidates };
 }
 
 export function assertPlausibleAdoptionCount(
@@ -196,6 +232,10 @@ export type RosterSource = {
   text: string;
   /** True when a scrape failure forced the checked-in demo capture. */
   usedFallbackCapture: boolean;
+  /** Whether every page expected by roster discovery was gathered. */
+  rosterComplete: boolean;
+  /** Crawl progress retained so administrators can identify a partial sync. */
+  rosterCompleteness: RosterCompleteness;
   /** The configured source or bundled capture that supplied the roster. */
   source: string;
 };
@@ -206,13 +246,20 @@ export async function loadRoster(sourceUrl: string): Promise<RosterSource> {
     return {
       text: await readFile(localPath, "utf8"),
       usedFallbackCapture: false,
+      rosterComplete: true,
+      rosterCompleteness: completeRoster("local"),
       source: sourceUrl,
     };
   }
 
   try {
-    const text = await discoverRoster(sourceUrl);
-    return { text, usedFallbackCapture: false, source: sourceUrl };
+    const discovery = await discoverRosterWithCompleteness(sourceUrl);
+    return {
+      ...discovery,
+      usedFallbackCapture: false,
+      rosterComplete: discovery.rosterCompleteness.complete,
+      source: sourceUrl,
+    };
   } catch (error) {
     console.warn("Roster scrape failed; using the checked-in capture.", error);
   }
@@ -221,6 +268,14 @@ export async function loadRoster(sourceUrl: string): Promise<RosterSource> {
   return {
     text: await readFile(seedCapturePath(capture), "utf8"),
     usedFallbackCapture: true,
+    rosterComplete: false,
+    rosterCompleteness: {
+      complete: false,
+      timedOut: false,
+      status: "fallback-capture",
+      completed: 0,
+      total: 0,
+    },
     source: `seed/${capture}`,
   };
 }
@@ -323,6 +378,13 @@ export async function discoverRoster(
   sourceUrl: string,
   options: RosterDiscoveryOptions = {},
 ): Promise<string> {
+  return (await discoverRosterWithCompleteness(sourceUrl, options)).text;
+}
+
+export async function discoverRosterWithCompleteness(
+  sourceUrl: string,
+  options: RosterDiscoveryOptions = {},
+): Promise<{ text: string; rosterCompleteness: RosterCompleteness }> {
   const model = options.model ?? defaultRosterModel;
   const firecrawl = options.firecrawl
     ?? ((name, input) => requestFirecrawl(name, input, { sourceUrl }));
@@ -337,6 +399,7 @@ export async function discoverRoster(
     },
   ];
   const documents: string[] = [];
+  const crawlCompleteness: RosterCompleteness[] = [];
   let toolCalls = 0;
 
   for (let step = 0; step < MAX_ROSTER_AGENT_STEPS; step += 1) {
@@ -347,22 +410,36 @@ export async function discoverRoster(
 
     for (const call of calls) {
       let content: string;
+      let attemptedName: RosterToolName | undefined;
       try {
         if (toolCalls >= MAX_ROSTER_TOOL_CALLS) {
           throw new Error(`Roster discovery is limited to ${MAX_ROSTER_TOOL_CALLS} Firecrawl calls`);
         }
         toolCalls += 1;
         const name = rosterToolName(call.function.name);
+        attemptedName = name;
         const input = parseToolInput(call.function.arguments);
         assertRelatedUrl(sourceUrl, input.url);
         const result = await firecrawl(name, input);
         if (name === "firecrawl_scrape" || name === "firecrawl_crawl") {
           documents.push(...extractScrapedTexts(result));
         }
+        if (name === "firecrawl_crawl") {
+          crawlCompleteness.push(readCrawlCompleteness(result));
+        }
         content = name === "firecrawl_crawl"
           ? summarizeCrawlToolResult(result)
           : truncateToolResult(result);
       } catch (error) {
+        if (attemptedName === "firecrawl_crawl") {
+          crawlCompleteness.push({
+            complete: false,
+            timedOut: false,
+            status: "failed",
+            completed: 0,
+            total: 0,
+          });
+        }
         // Report a refused or failed call back to the model so the remaining
         // steps can pick another page instead of discarding what was scraped.
         content = `Tool call failed: ${error instanceof Error ? error.message : String(error)}`;
@@ -374,7 +451,56 @@ export async function discoverRoster(
   if (documents.length === 0) {
     throw new Error("Roster discovery completed without scraping roster content");
   }
-  return documents.join("\n\n");
+  return {
+    text: documents.join("\n\n"),
+    rosterCompleteness: combineCrawlCompleteness(crawlCompleteness),
+  };
+}
+
+function completeRoster(status: string): RosterCompleteness {
+  return { complete: true, timedOut: false, status, completed: 0, total: 0 };
+}
+
+function readCrawlCompleteness(value: unknown): RosterCompleteness {
+  const record = value && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {};
+  const detail = record.completeness && typeof record.completeness === "object"
+    && !Array.isArray(record.completeness)
+    ? record.completeness as Record<string, unknown>
+    : {};
+  const completed = finiteNonNegativeInteger(detail.completed ?? record.completed, 0);
+  const total = finiteNonNegativeInteger(detail.total ?? record.total, completed);
+  return {
+    complete: detail.complete === true,
+    timedOut: detail.timedOut === true,
+    status: typeof detail.status === "string"
+      ? detail.status
+      : typeof record.status === "string" ? record.status : "unknown",
+    completed,
+    total,
+  };
+}
+
+function combineCrawlCompleteness(crawls: RosterCompleteness[]): RosterCompleteness {
+  if (crawls.length === 0) {
+    return {
+      complete: false,
+      timedOut: false,
+      status: "crawl-not-run",
+      completed: 0,
+      total: 0,
+    };
+  }
+  return {
+    complete: crawls.every((crawl) => crawl.complete),
+    timedOut: crawls.some((crawl) => crawl.timedOut),
+    status: crawls.every((crawl) => crawl.complete)
+      ? "completed"
+      : crawls.find((crawl) => !crawl.complete)?.status ?? "incomplete",
+    completed: crawls.reduce((sum, crawl) => sum + crawl.completed, 0),
+    total: crawls.reduce((sum, crawl) => sum + crawl.total, 0),
+  };
 }
 
 async function defaultRosterModel(
