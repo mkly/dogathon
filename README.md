@@ -51,11 +51,20 @@ OpenAI-compatible model variables when those integrations are enabled. Vercel's
 install step runs the existing `postinstall` script, which generates the Prisma
 client.
 
-Configure a scheduler to `POST /api/jobs/drain` with
-`Authorization: Bearer <ROSTER_SYNC_DRAIN_SECRET>`. The route refuses all calls
-while that secret is unset. Each call drains at most one queued roster job,
-heartbeats its lease while it runs, and uses `ROSTER_SYNC_DRAIN_BUDGET_MS`
-(240 seconds by default) within the route's 300-second maximum duration.
+The checked-in `vercel.json` invokes `GET /api/jobs/drain` every five minutes
+and `GET /api/jobs/schedule-roster-sync` daily at 08:00 UTC. Set `CRON_SECRET`
+in the Vercel project; Vercel sends it to both routes as an Authorization Bearer
+token, and both refuse calls when neither it nor the legacy
+`ROSTER_SYNC_DRAIN_SECRET` is configured. `POST /api/jobs/drain` remains
+available for manual schedulers using the same authentication.
+
+The nightly route enqueues every organization with a saved adoption-page source
+URL. Jobs become eligible one at a time, spaced by
+`ROSTER_SYNC_SCHEDULE_STAGGER_MS` (five minutes by default), and an organization
+with a queued or running job is skipped. Each drain invocation runs at most one
+eligible job, heartbeats its lease while it works, and uses
+`ROSTER_SYNC_DRAIN_BUDGET_MS` (240 seconds by default) within the route's
+300-second maximum duration.
 
 Register these exact OAuth redirect URLs with the enabled providers, replacing
 the origin with the deployed app URL:

@@ -75,11 +75,37 @@ test("concurrent enqueues return one active job per organization", async () => {
   assert.equal(await db.rosterSyncJob.count({ where: { orgId } }), 1);
 });
 
+test("enqueue reports whether it created or reused the single active job", async () => {
+  const orgId = await createOrganization();
+  const queue = createRosterSyncJobQueue(db);
+
+  const first = await queue.enqueueWithResult({ orgId, trigger: "scheduled" });
+  const second = await queue.enqueueWithResult({ orgId, trigger: "scheduled" });
+
+  assert.equal(first.enqueued, true);
+  assert.equal(first.job.trigger, "scheduled");
+  assert.equal(second.enqueued, false);
+  assert.equal(second.job.id, first.job.id);
+});
+
+test("a scheduled job cannot be claimed before its staggered availability", async () => {
+  const orgId = await createOrganization();
+  const queue = createRosterSyncJobQueue(db);
+  const availableAt = new Date("2026-09-01T12:05:00.000Z");
+  const job = await queue.enqueue({ orgId, trigger: "scheduled", availableAt });
+
+  assert.equal(await queue.claim({ orgId, now: new Date("2026-09-01T12:04:59.999Z") }), null);
+  assert.equal(
+    (await queue.claim({ orgId, now: availableAt }))?.id,
+    job.id,
+  );
+});
+
 test("two concurrent claimers cannot claim the same job", async () => {
   const orgId = await createOrganization();
   const queue = createRosterSyncJobQueue(db);
-  await queue.enqueue({ orgId });
   const now = new Date("2026-09-01T12:00:00.000Z");
+  await queue.enqueue({ orgId, availableAt: now });
 
   const claims = await Promise.all([
     queue.claim({ orgId, now }),
@@ -114,10 +140,11 @@ test("an unscoped claim takes the oldest queued job across organizations", async
 test("an expired lease is reclaimed and increments the attempt count", async () => {
   const orgId = await createOrganization();
   const queue = createRosterSyncJobQueue(db);
-  const job = await queue.enqueue({ orgId });
+  const availableAt = new Date("2026-09-01T12:00:00.000Z");
+  const job = await queue.enqueue({ orgId, availableAt });
   const first = await queue.claim({
     orgId,
-    now: new Date("2026-09-01T12:00:00.000Z"),
+    now: availableAt,
     leaseMs: 1_000,
   });
   assert.ok(first);

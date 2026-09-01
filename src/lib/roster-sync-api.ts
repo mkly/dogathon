@@ -9,7 +9,7 @@ import {
 
 export type RosterSyncJobResponse = Pick<
   RosterSyncJob,
-  "id" | "status" | "attempts" | "summary" | "refusalReason" | "errorMessage"
+  "id" | "status" | "trigger" | "attempts" | "summary" | "refusalReason" | "errorMessage"
 >;
 
 type OrganizationAccess = Awaited<ReturnType<typeof requireApiOrganization>>;
@@ -68,6 +68,7 @@ function publicJob(job: RosterSyncJob): RosterSyncJobResponse {
   return {
     id: job.id,
     status: job.status,
+    trigger: job.trigger,
     attempts: job.attempts,
     summary: job.summary,
     refusalReason: job.refusalReason,

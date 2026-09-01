@@ -1,4 +1,7 @@
 import { createRosterSyncDrainHandler } from "@/lib/roster-sync-drain";
 
 export const maxDuration = 300;
-export const POST = createRosterSyncDrainHandler();
+const drainRosterSyncJob = createRosterSyncDrainHandler();
+
+export const GET = drainRosterSyncJob;
+export const POST = drainRosterSyncJob;

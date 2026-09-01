@@ -379,7 +379,7 @@ export function StaffTools({ orgSlug }: { orgSlug: string }) {
     }
   }
 
-  const label = job ? rosterSyncStatusLabel(job.status) : null;
+  const label = job ? rosterSyncStatusLabel(job) : null;
   const buttonLabel = job?.status === "queued"
     ? "Queued…"
     : job?.status === "running"
