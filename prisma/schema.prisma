@@ -196,13 +196,20 @@ enum RosterSyncJobStatus {
   refused
 }
 
+enum RosterSyncJobTrigger {
+  admin
+  scheduled
+}
+
 model RosterSyncJob {
-  id                String              @id @default(cuid())
+  id                String               @id @default(cuid())
   orgId             String
-  status            RosterSyncJobStatus @default(queued)
-  attempts          Int                 @default(0)
-  maxAttempts       Int                 @default(3)
-  requestedAt       DateTime            @default(now())
+  status            RosterSyncJobStatus  @default(queued)
+  trigger           RosterSyncJobTrigger @default(admin)
+  attempts          Int                  @default(0)
+  maxAttempts       Int                  @default(3)
+  requestedAt       DateTime             @default(now())
+  availableAt       DateTime             @default(now())
   requestedByUserId String?
   startedAt         DateTime?
   finishedAt        DateTime?
@@ -212,11 +219,11 @@ model RosterSyncJob {
   summary           Json?
   refusalReason     String?
   errorMessage      String?
-  organization      Organization        @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  requestedBy       User?               @relation(fields: [requestedByUserId], references: [id], onDelete: SetNull)
+  organization      Organization         @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  requestedBy       User?                @relation(fields: [requestedByUserId], references: [id], onDelete: SetNull)
 
   @@unique([id, orgId])
-  @@index([orgId, status, requestedAt])
+  @@index([orgId, status, availableAt, requestedAt])
   @@index([orgId, status, leaseExpiresAt])
   @@index([requestedByUserId])
 }

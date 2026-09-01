@@ -1,5 +1,3 @@
-import { createHash } from "node:crypto";
-
 import type { RosterSyncJob } from "@/generated/prisma/client";
 
 import {
@@ -10,6 +8,7 @@ import {
   succeedRosterSyncJob,
 } from "./roster-sync-jobs.ts";
 import { RosterSyncRefusal, syncRoster, type SyncSummary } from "./roster-sync.ts";
+import { isAuthorizedSchedulerRequest } from "./scheduler-auth.ts";
 
 export const DEFAULT_ROSTER_SYNC_DRAIN_BUDGET_MS = 4 * 60 * 1000;
 export const DEFAULT_ROSTER_SYNC_HEARTBEAT_MS = 30 * 1000;
@@ -129,9 +128,7 @@ export function createRosterSyncDrainHandler(dependencies: DrainRouteDependencie
   const env = dependencies.env ?? process.env;
 
   return async function POST(request: Request): Promise<Response> {
-    const secret = env.ROSTER_SYNC_DRAIN_SECRET?.trim();
-    const authorization = request.headers.get("authorization");
-    if (!secret || !matchesBearerSecret(authorization, secret)) {
+    if (!isAuthorizedSchedulerRequest(request, env)) {
       return Response.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -143,14 +140,6 @@ export function createRosterSyncDrainHandler(dependencies: DrainRouteDependencie
       return Response.json({ error: "Roster sync drain failed" }, { status: 500 });
     }
   };
-}
-
-function matchesBearerSecret(authorization: string | null, secret: string): boolean {
-  if (!authorization?.startsWith("Bearer ")) return false;
-  const supplied = authorization.slice("Bearer ".length);
-  return createHash("sha256").update(supplied).digest().equals(
-    createHash("sha256").update(secret).digest(),
-  );
 }
 
 function configuredBudget(value: string | undefined): number {

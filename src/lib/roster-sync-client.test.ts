@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   pollRosterSyncJobUntilTerminal,
+  rosterSyncStatusLabel,
   rosterSyncResultToast,
   type RosterSyncJobView,
 } from "./roster-sync-client.ts";
@@ -29,12 +30,21 @@ function job(overrides: Partial<RosterSyncJobView>): RosterSyncJobView {
   return {
     id: "job-1",
     status: "queued",
+    trigger: "admin",
     summary: null,
     refusalReason: null,
     errorMessage: null,
     ...overrides,
   };
 }
+
+test("scheduled jobs are identified as automatic in the staff room", () => {
+  assert.equal(
+    rosterSyncStatusLabel(job({ status: "running", trigger: "scheduled" })),
+    "Automatic roster sync running",
+  );
+  assert.equal(rosterSyncStatusLabel(job({ status: "queued" })), "Roster sync queued");
+});
 
 test("a successful job preserves the existing live and fallback result meanings", () => {
   assert.deepEqual(

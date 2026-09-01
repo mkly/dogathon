@@ -1,10 +1,11 @@
-import type { RosterSyncJobStatus } from "@/generated/prisma/enums";
+import type { RosterSyncJobStatus, RosterSyncJobTrigger } from "@/generated/prisma/enums";
 
 import type { SyncSummary } from "./roster-sync.ts";
 
 export type RosterSyncJobView = {
   id: string;
   status: RosterSyncJobStatus;
+  trigger: RosterSyncJobTrigger;
   summary: SyncSummary | null;
   refusalReason: string | null;
   errorMessage: string | null;
@@ -12,13 +13,14 @@ export type RosterSyncJobView = {
 
 type Toast = { tone: "error" | "success" | "warning"; text: string };
 
-export function rosterSyncStatusLabel(status: RosterSyncJobStatus) {
-  switch (status) {
-    case "queued": return "Roster sync queued";
-    case "running": return "Roster sync running";
-    case "succeeded": return "Roster sync completed";
-    case "refused": return "Roster sync refused";
-    case "failed": return "Roster sync failed";
+export function rosterSyncStatusLabel(job: Pick<RosterSyncJobView, "status" | "trigger">) {
+  const prefix = job.trigger === "scheduled" ? "Automatic roster sync" : "Roster sync";
+  switch (job.status) {
+    case "queued": return `${prefix} queued`;
+    case "running": return `${prefix} running`;
+    case "succeeded": return `${prefix} completed`;
+    case "refused": return `${prefix} refused`;
+    case "failed": return `${prefix} failed`;
   }
 }
 

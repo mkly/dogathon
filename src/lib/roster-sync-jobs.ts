@@ -15,7 +15,14 @@ type RosterSyncJobDb = Pick<PrismaClient, "$executeRaw" | "$queryRaw" | "$transa
 type EnqueueRosterSyncJobInput = {
   orgId: string;
   requestedByUserId?: string;
+  trigger?: "admin" | "scheduled";
+  availableAt?: Date;
   maxAttempts?: number;
+};
+
+export type EnqueueRosterSyncJobResult = {
+  job: RosterSyncJob;
+  enqueued: boolean;
 };
 
 type LeaseInput = {
@@ -46,7 +53,9 @@ export class RosterSyncJobNotFoundError extends Error {
 }
 
 export function createRosterSyncJobQueue(db: RosterSyncJobDb) {
-  async function enqueue(input: EnqueueRosterSyncJobInput): Promise<RosterSyncJob> {
+  async function enqueueWithResult(
+    input: EnqueueRosterSyncJobInput,
+  ): Promise<EnqueueRosterSyncJobResult> {
     const maxAttempts = input.maxAttempts ?? DEFAULT_ROSTER_SYNC_MAX_ATTEMPTS;
     if (!Number.isInteger(maxAttempts) || maxAttempts < 1) {
       throw new RangeError("maxAttempts must be a positive integer");
@@ -60,16 +69,35 @@ export function createRosterSyncJobQueue(db: RosterSyncJobDb) {
         where: { orgId: input.orgId, status: { in: ["queued", "running"] } },
         orderBy: { requestedAt: "asc" },
       });
-      if (existing) return existing;
+      if (existing) {
+        // An admin who clicks sync must not inherit a nightly job's stagger
+        // delay: pull the shared job forward so the next drain can run it.
+        const requestedAvailability = input.availableAt ?? new Date();
+        if (input.trigger !== "scheduled" && existing.availableAt > requestedAvailability) {
+          const expedited = await tx.rosterSyncJob.update({
+            where: { id: existing.id },
+            data: { availableAt: requestedAvailability },
+          });
+          return { job: expedited, enqueued: false };
+        }
+        return { job: existing, enqueued: false };
+      }
 
-      return tx.rosterSyncJob.create({
+      const job = await tx.rosterSyncJob.create({
         data: {
           orgId: input.orgId,
           requestedByUserId: input.requestedByUserId,
+          trigger: input.trigger ?? "admin",
+          availableAt: input.availableAt,
           maxAttempts,
         },
       });
+      return { job, enqueued: true };
     });
+  }
+
+  async function enqueue(input: EnqueueRosterSyncJobInput): Promise<RosterSyncJob> {
+    return (await enqueueWithResult(input)).job;
   }
 
   async function claim(input: ClaimRosterSyncJobInput): Promise<RosterSyncJob | null> {
@@ -100,11 +128,12 @@ export function createRosterSyncJobQueue(db: RosterSyncJobDb) {
         FROM "RosterSyncJob"
         WHERE "attempts" < "maxAttempts"
           ${organizationFilter}
+          AND "availableAt" <= ${now}
           AND (
             "status" = 'queued'
             OR ("status" = 'running' AND "leaseExpiresAt" <= ${now})
           )
-        ORDER BY "requestedAt" ASC
+        ORDER BY "availableAt" ASC, "requestedAt" ASC
         FOR UPDATE SKIP LOCKED
         LIMIT 1
       )
@@ -237,7 +266,7 @@ export function createRosterSyncJobQueue(db: RosterSyncJobDb) {
     return job;
   }
 
-  return { enqueue, claim, heartbeat, succeed, refuse, fail, get: requireJob };
+  return { enqueue, enqueueWithResult, claim, heartbeat, succeed, refuse, fail, get: requireJob };
 }
 
 function leaseEnd(now: Date, leaseMs = DEFAULT_ROSTER_SYNC_LEASE_MS) {
@@ -250,6 +279,7 @@ function leaseEnd(now: Date, leaseMs = DEFAULT_ROSTER_SYNC_LEASE_MS) {
 const defaultQueue = createRosterSyncJobQueue(prisma);
 
 export const enqueueRosterSyncJob = defaultQueue.enqueue;
+export const enqueueRosterSyncJobWithResult = defaultQueue.enqueueWithResult;
 export const claimRosterSyncJob = defaultQueue.claim;
 export const heartbeatRosterSyncJob = defaultQueue.heartbeat;
 export const succeedRosterSyncJob = defaultQueue.succeed;

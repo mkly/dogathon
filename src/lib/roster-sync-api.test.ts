@@ -13,6 +13,7 @@ const queuedJob = {
   id: "job-1",
   orgId: "org-1",
   status: "queued",
+  trigger: "admin",
   attempts: 0,
   summary: null,
   refusalReason: null,
@@ -45,6 +46,7 @@ test("the sync endpoint enqueues for the caller and returns the job immediately"
   assert.deepEqual(await response.json(), {
     id: "job-1",
     status: "queued",
+    trigger: "admin",
     attempts: 0,
     summary: null,
     refusalReason: null,
