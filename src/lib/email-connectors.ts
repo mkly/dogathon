@@ -2,6 +2,7 @@ import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:
 
 import nodemailer from "nodemailer";
 
+import { sendAppEmail } from "./app-mailer.ts";
 import { prisma } from "./prisma.ts";
 
 export type EmailConnectorKind = "gmail" | "microsoft" | "smtp";
@@ -501,12 +502,24 @@ export async function sendEmailWithConnector(
 export async function sendOrganizationEmail(
   orgId: string,
   input: EmailInput,
+  dependencies: {
+    findConnector?: (orgId: string) => Promise<StoredEmailConnector | null>;
+    sendAppEmail?: (input: EmailInput) => Promise<DescribedSend | null>;
+    sendEmailWithConnector?: (
+      connector: StoredEmailConnector,
+      input: EmailInput,
+    ) => Promise<DescribedSend | null>;
+  } = {},
 ): Promise<DescribedSend | null> {
-  const connector = await prisma.emailConnector.findUnique({ where: { orgId } });
+  const findConnector = dependencies.findConnector
+    ?? ((organizationId: string) => prisma.emailConnector.findUnique({
+      where: { orgId: organizationId },
+    }));
+  const connector = await findConnector(orgId);
   if (!connector || !connector.verifiedAt) {
-    throw new Error("This organization has no verified email connector");
+    return (dependencies.sendAppEmail ?? sendAppEmail)(input);
   }
-  return sendEmailWithConnector(connector, input);
+  return (dependencies.sendEmailWithConnector ?? sendEmailWithConnector)(connector, input);
 }
 
 export async function getEmailConnectorStatus(orgId: string) {

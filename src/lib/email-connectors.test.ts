@@ -8,6 +8,7 @@ import {
   encryptEmailSecret,
   exchangeEmailConnectorCode,
   sendEmailWithConnector,
+  sendOrganizationEmail,
   verifySmtpConfiguration,
   type StoredEmailConnector,
 } from "./email-connectors.ts";
@@ -208,6 +209,86 @@ test("describes the send for every connector type when its credentials are unset
   } finally {
     process.env.EMAIL_CONNECTOR_ENCRYPTION_KEY = key;
   }
+});
+
+test("routes organization email through the platform sender when no connector exists", async () => {
+  const message = {
+    to: "sponsor@example.com",
+    subject: "Biscuit update",
+    body: "Hello",
+  };
+  const smtpEnvironment = Object.fromEntries(
+    ["APP_SMTP_HOST", "APP_SMTP_USER", "APP_SMTP_PASSWORD", "APP_EMAIL_FROM"]
+      .map((key) => [key, process.env[key]]),
+  );
+  for (const key of Object.keys(smtpEnvironment)) delete process.env[key];
+
+  let result;
+  try {
+    result = await sendOrganizationEmail("org-a", message, {
+      findConnector: async () => null,
+      sendEmailWithConnector: async () => {
+        throw new Error("an organization connector must not be used");
+      },
+    });
+  } finally {
+    for (const [key, value] of Object.entries(smtpEnvironment)) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  }
+
+  assert.deepEqual(result, {
+    dryRun: true,
+    connector: "smtp",
+    from: "",
+    ...message,
+    contentType: "plain",
+  });
+});
+
+test("routes organization email through the platform sender when its connector is unverified", async () => {
+  const unverified = connector("smtp", { verifiedAt: null });
+  let usedPlatformSender = false;
+
+  await sendOrganizationEmail(
+    "org-a",
+    { to: "sponsor@example.com", subject: "Biscuit update", body: "Hello" },
+    {
+      findConnector: async () => unverified,
+      sendAppEmail: async () => {
+        usedPlatformSender = true;
+        return null;
+      },
+      sendEmailWithConnector: async () => {
+        throw new Error("an unverified connector must not be used");
+      },
+    },
+  );
+
+  assert.equal(usedPlatformSender, true);
+});
+
+test("routes organization email through its verified connector", async () => {
+  const verified = connector("smtp");
+  let usedConnector: StoredEmailConnector | undefined;
+
+  await sendOrganizationEmail(
+    "org-a",
+    { to: "sponsor@example.com", subject: "Biscuit update", body: "Hello" },
+    {
+      findConnector: async () => verified,
+      sendAppEmail: async () => {
+        throw new Error("the platform sender must not be used");
+      },
+      sendEmailWithConnector: async (selected) => {
+        usedConnector = selected;
+        return null;
+      },
+    },
+  );
+
+  assert.equal(usedConnector, verified);
 });
 
 test("verifies and sends through a password-authenticated SMTP server", async () => {
