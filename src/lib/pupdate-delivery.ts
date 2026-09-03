@@ -1,3 +1,5 @@
+import pMap from "p-map";
+
 import {
   sendOrganizationEmail,
   type DescribedSend,
@@ -75,11 +77,10 @@ export async function deliverPupdate(
   sponsorships: DeliverySponsorship[],
   sendEmail: EmailSender = sendOrganizationEmail,
 ): Promise<Delivery[]> {
-  const deliveries: Delivery[] = [];
-
-  for (const sponsorship of sponsorships) {
-    deliveries.push(
-      await attempt(
+  return pMap(
+    sponsorships,
+    (sponsorship) =>
+      attempt(
         () =>
           sendEmail(orgId, {
             to: sponsorship.sponsor.email,
@@ -90,8 +91,6 @@ export async function deliverPupdate(
         sponsorship.id,
         "email",
       ),
-    );
-  }
-
-  return deliveries;
+    { concurrency: 4, stopOnError: false },
+  );
 }

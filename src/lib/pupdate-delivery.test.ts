@@ -67,6 +67,32 @@ test("records a failed email and continues with the remaining sponsors", async (
   ]);
 });
 
+test("fans out with bounded concurrency while preserving sponsorship order", async () => {
+  let active = 0;
+  let maxActive = 0;
+  const sponsorships = Array.from({ length: 8 }, (_, index) => ({
+    id: `sponsor-${index}`,
+    sponsor: {
+      email: `sponsor-${index}@example.com`,
+      phone: null,
+      channel: "email" as const,
+    },
+  }));
+
+  const deliveries = await deliverPupdate("org-a", pupdate, sponsorships, async () => {
+    active += 1;
+    maxActive = Math.max(maxActive, active);
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    active -= 1;
+  });
+
+  assert.equal(maxActive, 4);
+  assert.deepEqual(
+    deliveries.map(({ sponsorshipId }) => sponsorshipId),
+    sponsorships.map(({ id }) => id),
+  );
+});
+
 test("carries a described send through the delivery record", async () => {
   const described = {
     dryRun: true as const,
