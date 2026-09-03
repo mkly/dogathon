@@ -1,0 +1,56 @@
+/* Layout only: the patch itself (tint, fabric grain, bevel, drop shadow) comes
+   from the shared .felt-panel/.felt-<tone> classes the Toaster is given. */
+.toast {
+  display: flex;
+  width: min(24rem, calc(100vw - 36px));
+  align-items: flex-start;
+  gap: 10px;
+  padding: 14px 16px;
+}
+
+.icon {
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+
+.content {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.title {
+  font-size: 0.82rem;
+  font-weight: 800;
+  line-height: 1.4;
+}
+
+.closeButton {
+  display: grid;
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 18%);
+  color: inherit;
+  cursor: pointer;
+  place-items: center;
+}
+
+.closeButton:hover {
+  background: rgb(255 255 255 / 30%);
+}
+
+/* toasts live in the root layout, outside the .admin-shell focus scope, but
+   only admin flows raise them -- keep the ring reachable for the keyboard */
+.closeButton:focus-visible {
+  outline: 3px solid var(--felt-mustard);
+  outline-offset: 3px;
+}
+
+@media (max-width: 620px) {
+  .toast {
+    width: calc(100vw - 28px);
+  }
+}

@@ -11,7 +11,6 @@ import {
   AdminLink,
   AdminSurface,
 } from "@/components/admin-ui";
-import { pushToast } from "@/components/toast";
 import { MAX_SMS_LENGTH } from "@/lib/pupdate-sms";
 import {
   pollRosterSyncJobUntilTerminal,
@@ -19,6 +18,7 @@ import {
   rosterSyncStatusLabel,
   type RosterSyncJobView,
 } from "@/lib/roster-sync-client";
+import { pushToast } from "@/lib/toast";
 
 import { saveSettings, type SettingsState } from "./actions";
 import { EMAIL_CONNECTOR_NOTICE_ID, emailConnectorBlockedReason } from "./gmail-notice";

@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import { Nunito } from "next/font/google";
+import { Toaster } from "sonner";
 
 import { FeltFilters } from "@/components/felt";
-import { ToastViewport } from "@/components/toast";
 
 import "./felt.css";
 import "./globals.css";
+import toastStyles from "./toaster.module.css";
 
 // The sirius-proto mockups load Nunito wght 500–900 from Google Fonts.
 const nunito = Nunito({
@@ -30,7 +31,31 @@ export default function RootLayout({
       <body className={nunito.className}>
         <FeltFilters />
         {children}
-        <ToastViewport />
+        <Toaster
+          closeButton
+          // the hand-rolled viewport stacked every toast at once; `expand`
+          // keeps that (and is what makes `gap` apply)
+          expand
+          gap={12}
+          mobileOffset={14}
+          offset={18}
+          position="bottom-left"
+          toastOptions={{
+            unstyled: true,
+            classNames: {
+              // the felt patch itself stays the shared primitive; the module
+              // only adds toast layout on top of it
+              toast: `felt-panel ${toastStyles.toast}`,
+              title: toastStyles.title,
+              content: toastStyles.content,
+              closeButton: toastStyles.closeButton,
+              icon: toastStyles.icon,
+              success: "felt-moss",
+              warning: "felt-mustard",
+              error: "felt-brick",
+            },
+          }}
+        />
       </body>
     </html>
   );
