@@ -1,8 +1,10 @@
+import { PupdateEmail } from "@/emails/pupdate-email";
 import { requireApiOrganization } from "@/lib/organization-access";
 import { prisma } from "@/lib/prisma";
-import { renderPupdateEmail } from "@/lib/pupdate-email";
 import { companionPageUrl } from "@/lib/pupdate-delivery";
 import { isUuid } from "@/lib/uuid";
+import { render } from "@react-email/render";
+import { createElement } from "react";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -33,7 +35,7 @@ export async function GET(request: Request, { params }: RouteContext) {
   }
 
   const origin = new URL(request.url).origin;
-  const html = renderPupdateEmail({
+  const html = await render(createElement(PupdateEmail, {
     companionName: pupdate.resident.name,
     subject: pupdate.subject,
     bodyText: pupdate.bodyText,
@@ -41,7 +43,7 @@ export async function GET(request: Request, { params }: RouteContext) {
     origin,
     photoUrl: pupdate.photoUrl ?? pupdate.resident.photoUrls[0] ?? null,
     type: pupdate.type === "graduation" ? "graduation" : "regular",
-  });
+  }));
 
   return new Response(html, {
     headers: { "content-type": "text/html; charset=utf-8" },

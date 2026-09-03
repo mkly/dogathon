@@ -46,7 +46,7 @@ function deterministicCompose(input: ComposePupdateInput): ComposedPupdate {
     input.type === "graduation"
       ? `${name} was adopted today. You helped get ${name} there.`
       : `Here is the latest pupdate from ${name}.`;
-  const noteSection = notes.length > 0 ? `Recent notes:\n${notes.map((note) => `- ${note}`).join("\n")}` : "";
+  const noteSection = notes.length > 0 ? `## Recent notes\n\n${notes.map((note) => `- ${note}`).join("\n")}` : "";
   const bodyText = [intro, noteSection, input.pinnedPostscript.trim()].filter(Boolean).join("\n\n");
 
   return {
@@ -76,7 +76,7 @@ async function composeWithModel(input: ComposePupdateInput): Promise<ComposedPup
     maxOutputTokens: 900,
     output: Output.object({ schema: composedPupdateSchema }),
     instructions:
-      `You write warm, short email updates in an animal shelter's voice. Use only facts in the supplied JSON; never invent details.${regularUpdateGuidance}`,
+      `You write warm, short email updates in an animal shelter's voice. Use only facts in the supplied JSON; never invent details.${regularUpdateGuidance} Format the notes section with the literal Markdown heading "## Recent notes".`,
     prompt: JSON.stringify(input),
   });
 
