@@ -1,9 +1,11 @@
+import { PupdateEmail } from "@/emails/pupdate-email";
 import { getEmailConnectorStatus } from "@/lib/email-connectors";
 import { requireApiOrganization } from "@/lib/organization-access";
 import { deliverPupdate, companionPageUrl } from "@/lib/pupdate-delivery";
 import { prisma } from "@/lib/prisma";
-import { renderPupdateEmail } from "@/lib/pupdate-email";
 import { isUuid } from "@/lib/uuid";
+import { render } from "@react-email/render";
+import { createElement } from "react";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -58,19 +60,25 @@ export async function POST(request: Request, { params }: RouteContext) {
 
   const origin = new URL(request.url).origin;
   const companionUrl = companionPageUrl(origin, pupdate.organization.slug, pupdate.residentId);
+  const email = createElement(PupdateEmail, {
+    companionName: pupdate.resident.name,
+    subject: pupdate.subject,
+    bodyText: pupdate.bodyText,
+    companionUrl,
+    origin,
+    photoUrl: pupdate.photoUrl ?? pupdate.resident.photoUrls[0] ?? null,
+    type: pupdate.type === "graduation" ? "graduation" : "regular",
+  });
+  const [bodyHtml, bodyText] = await Promise.all([
+    render(email),
+    render(email, { plainText: true }),
+  ]);
   const deliveries = await deliverPupdate(
     orgId,
     {
       ...pupdate,
-      bodyHtml: renderPupdateEmail({
-        companionName: pupdate.resident.name,
-        subject: pupdate.subject,
-        bodyText: pupdate.bodyText,
-        companionUrl,
-        origin,
-        photoUrl: pupdate.photoUrl ?? pupdate.resident.photoUrls[0] ?? null,
-        type: pupdate.type === "graduation" ? "graduation" : "regular",
-      }),
+      bodyHtml,
+      bodyText,
     },
     pupdate.resident.sponsorships,
   );

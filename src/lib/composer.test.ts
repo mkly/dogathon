@@ -41,6 +41,7 @@ test("composes a grounded regular pupdate without credentials", async () => {
   assert.match(draft.subject, /Biscuit/u);
   assert.match(draft.bodyText, /vet visit went well/u);
   assert.match(draft.bodyText, /Teeth cleaned/u);
+  assert.match(draft.bodyText, /^## Recent notes$/mu);
   assert.ok(draft.bodyText.endsWith("Come meet us at Saturday's adoption fair."));
 });
 
