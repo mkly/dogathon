@@ -1,0 +1,277 @@
+/* Component-specific felt primitives. Tokens and composable tone utilities stay global. */
+
+/* raised patch: felt tint blended over the fabric grain on a pseudo, so the
+   drop-shadow can follow the silhouette; bevel gradients hug the edges */
+.felt-panel,
+.felt-button,
+.stitch-badge {
+  --pil: 1; /* pillow scale: bevel band widths grow with element size */
+  --drop: 1; /* drop-shadow scale: smaller for controls resting on felt */
+  position: relative;
+  border-radius: 22px;
+  background: none;
+  color: var(--felt-contrast, var(--felt-ink));
+  filter:
+    drop-shadow(0 calc(5px * var(--drop)) calc(4px * var(--drop)) rgb(0 0 0 / 28%))
+    drop-shadow(0 1px calc(1.5px * var(--drop)) rgb(0 0 0 / 18%));
+  isolation: isolate;
+}
+
+.felt-panel::before,
+.felt-button::before,
+.stitch-badge::before {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  border-radius: inherit;
+  background-color: var(--felt-color, var(--felt-cream));
+  background-image: url("/textures/Fabric034_1K-JPG_Color.jpg");
+  background-size: 200px;
+  background-blend-mode: soft-light;
+  content: "";
+}
+
+.felt-panel::after,
+.felt-button::after,
+.stitch-badge::after {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  overflow: hidden;
+  border-radius: inherit;
+  background:
+    radial-gradient(ellipse 90% 80% at 50% 40%, rgb(255 255 255 / 14%), rgb(255 255 255 / 0%) 62%, rgb(0 0 0 / 7%) 100%),
+    linear-gradient(
+      180deg,
+      rgb(255 255 255 / var(--bw, 0.5)),
+      rgb(255 255 255 / 0%) calc(2px * var(--pil)),
+      rgb(0 0 0 / 0%) calc(100% - 2.3px * var(--pil)),
+      rgb(0 0 0 / 24%)
+    ),
+    linear-gradient(
+      90deg,
+      rgb(0 0 0 / 11%),
+      rgb(0 0 0 / 0%) calc(2px * var(--pil)),
+      rgb(0 0 0 / 0%) calc(100% - 2px * var(--pil)),
+      rgb(0 0 0 / 11%)
+    );
+  content: "";
+  pointer-events: none;
+}
+
+.felt-panel {
+  --pil: 2.2;
+  --bw: 0.3;
+  padding: 2rem;
+}
+
+/* hand-stitch ring: dashed SVG rect just inside (or outside, for insets) the edge */
+svg.stitch {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+svg.stitch rect {
+  x: 8px;
+  y: 8px;
+  width: calc(100% - 16px);
+  height: calc(100% - 16px);
+  rx: 14px;
+  fill: none;
+  stroke-dasharray: 7 5.5;
+  stroke-linecap: round;
+}
+
+svg.stitch rect.shadow {
+  stroke: rgb(0 0 0 / 35%);
+  stroke-width: 2.6;
+  transform: translateY(1.4px);
+}
+
+svg.stitch rect.thread {
+  stroke: var(--felt-thread);
+  stroke-width: 2.1;
+}
+
+svg.stitch.fine rect {
+  x: 5px;
+  y: 5px;
+  width: calc(100% - 10px);
+  height: calc(100% - 10px);
+  rx: 10px;
+}
+
+svg.stitch.fine rect.shadow { stroke-width: 1.8; transform: translateY(1px); }
+svg.stitch.fine rect.thread { stroke-width: 1.4; }
+
+/* cut-out hole: flat felt, inner shadow hanging from the top edge, stitch ring outside */
+.felt-inset {
+  position: relative;
+  border-radius: 12px;
+  background-color: var(--felt-color, var(--felt-cream));
+  background-image: url("/textures/Fabric034_1K-JPG_Color.jpg");
+  background-size: 200px;
+  background-blend-mode: soft-light;
+  box-shadow:
+    inset 0 3px 7px rgb(0 0 0 / 42%),
+    inset 0 1px 2px rgb(0 0 0 / 30%);
+}
+
+.felt-inset > svg.stitch,
+.photo-patch > svg.stitch {
+  inset: -8px;
+  width: calc(100% + 16px);
+  height: calc(100% + 16px);
+}
+
+.felt-inset > svg.stitch rect,
+.photo-patch > svg.stitch rect {
+  x: 4px;
+  y: 4px;
+  width: calc(100% - 8px);
+  height: calc(100% - 8px);
+}
+
+.felt-inset > svg.stitch rect.shadow,
+.photo-patch > svg.stitch rect.shadow { stroke-width: 1.5; }
+
+.felt-inset > svg.stitch rect.thread,
+.photo-patch > svg.stitch rect.thread { stroke-width: 1.2; }
+
+.felt-button {
+  --pil: 1;
+  --drop: 0.45;
+  min-height: 2.75rem;
+  padding: 0.65rem 1.15rem;
+  border: 0;
+  border-radius: 14px;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 900;
+}
+
+.felt-button:hover:not(:disabled) {
+  filter:
+    drop-shadow(0 calc(5px * var(--drop)) calc(4px * var(--drop)) rgb(0 0 0 / 28%))
+    drop-shadow(0 1px calc(1.5px * var(--drop)) rgb(0 0 0 / 18%))
+    brightness(1.04);
+}
+
+.felt-button:active:not(:disabled) {
+  translate: 0 2px;
+  --drop: 0.2;
+}
+
+.felt-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.stitch-badge {
+  --pil: 1;
+  --drop: 0.45;
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 11px;
+  border: 0;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* photo hole: image cut into the felt with an inset shadow, fine stitch outside */
+.photo-patch {
+  position: relative;
+  display: block;
+  width: min(100%, 22rem);
+  margin: 0;
+  border-radius: 10px;
+}
+
+.photo-patch img,
+.photo-patch-placeholder {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border-radius: 10px;
+  object-fit: cover;
+}
+
+.photo-patch::after {
+  position: absolute;
+  inset: 0;
+  border-radius: 10px;
+  box-shadow:
+    inset 0 3px 7px rgb(0 0 0 / 42%),
+    inset 0 1px 2px rgb(0 0 0 / 30%);
+  content: "";
+  pointer-events: none;
+}
+
+.photo-patch-placeholder {
+  display: grid;
+  place-content: center;
+  gap: 0.4rem;
+  color: rgb(61 51 43 / 65%);
+  background: #cfc8ba;
+  text-align: center;
+}
+
+.photo-patch-placeholder span { font-size: 2.5rem; }
+.photo-patch-placeholder small { font-weight: 800; }
+
+/* the control sitting in the hole carries no chrome of its own */
+.felt-field > input,
+.felt-field > textarea,
+.felt-field > select {
+  display: block;
+  width: 100%;
+  padding: 14px 18px;
+  border: 0;
+  outline: none;
+  color: var(--felt-ink);
+  background: none;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.felt-field > textarea {
+  height: 110px;
+  resize: none;
+}
+
+/* the native chevron is browser chrome sitting in a felt hole: draw our own in
+   ink and reserve the room for it */
+.felt-field > select {
+  padding-right: 44px;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.6 6 6.4 11 1.6' fill='none' stroke='%233d332b' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 17px center;
+  background-size: 13px 9px;
+  cursor: pointer;
+}
+
+.felt-field > select option {
+  background: var(--felt-cream);
+  color: var(--felt-ink);
+}
+
+.felt-field ::placeholder {
+  color: rgb(61 51 43 / 45%);
+}
+
+.felt-filter-definitions {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}

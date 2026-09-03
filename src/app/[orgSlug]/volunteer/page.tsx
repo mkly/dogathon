@@ -1,10 +1,9 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 
 import { AdminEmptyState, AdminHeader, AdminPage } from "@/components/admin-ui";
-import { FeltButton, FeltField, FeltPanel, PhotoPatch, StitchBadge } from "@/components/felt";
+import { FeltButton, FeltField, FeltLink, FeltPanel, PhotoPatch, StitchBadge } from "@/components/felt";
 import { prisma } from "@/lib/prisma";
 import { getOrganizationAccessBySlug } from "@/lib/organization-access";
 
@@ -68,9 +67,9 @@ export default async function VolunteerPage({ params, searchParams }: VolunteerP
               ? `${submittedCompanion.name}’s care team can see your note now.`
               : "The care team can see your note now."}
           </p>
-          <Link className={`felt-button felt-mustard ${styles.againLink}`} href={`/${orgSlug}/volunteer`}>
+          <FeltLink className={styles.againLink} href={`/${orgSlug}/volunteer`}>
             Submit another
-          </Link>
+          </FeltLink>
         </FeltPanel>
       </AdminPage>
     );
@@ -128,7 +127,7 @@ export default async function VolunteerPage({ params, searchParams }: VolunteerP
             <label className={styles.inputLabel} htmlFor="note">
               2. Add one quick note
             </label>
-            <FeltField>
+            <FeltField className={styles.noteField}>
               <textarea
                 id="note"
                 maxLength={240}
@@ -142,7 +141,7 @@ export default async function VolunteerPage({ params, searchParams }: VolunteerP
             <label className={styles.inputLabel} htmlFor="photo">
               3. Add a photo <span>(optional)</span>
             </label>
-            <FeltField className={styles.photoField}>
+            <FeltField className={`${styles.noteField} ${styles.photoField}`}>
               <input
                 accept="image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif"
                 capture="environment"

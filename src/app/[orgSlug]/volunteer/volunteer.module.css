@@ -136,7 +136,7 @@
   font-weight: 700;
 }
 
-.notePanel :global(.felt-field) {
+.noteField {
   min-width: 0;
 }
 

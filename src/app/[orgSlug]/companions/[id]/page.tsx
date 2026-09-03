@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { createSponsorship } from "@/app/actions";
-import { FeltButton, FeltField, FeltPanel, PhotoPatch, StitchBadge } from "@/components/felt";
+import { FeltButton, FeltField, FeltLink, FeltPanel, PhotoPatch, StitchBadge } from "@/components/felt";
 import { prisma } from "@/lib/prisma";
 import { getPublicOrganization } from "@/lib/public-organization";
 import { isUuid } from "@/lib/uuid";
@@ -38,9 +38,9 @@ export default async function CompanionPage({ params, searchParams }: CompanionP
           <StitchBadge tone="cream">You&apos;re a hero!</StitchBadge>
           <h2>Thank you for sponsoring {resident.name}!</h2>
           <p>Your $25 monthly sponsorship is active until {resident.name} is adopted.</p>
-          <Link className={`felt-button felt-mustard ${styles.cardLink}`} href="/account/sign-in">
+          <FeltLink className={styles.cardLink} href="/account/sign-in">
             Create your sponsor account
-          </Link>
+          </FeltLink>
         </FeltPanel>
       )}
 
@@ -119,7 +119,9 @@ export default async function CompanionPage({ params, searchParams }: CompanionP
         <FeltPanel className={styles.confirmation} tone="brick">
           <h2>{resident.name} has been adopted!</h2>
           <p>Their sponsorship chapter is complete. Meet another resident who could use your help.</p>
-          <Link className={`felt-button felt-cream ${styles.cardLink}`} href={`/${orgSlug}`}>Meet the companions</Link>
+          <FeltLink className={styles.cardLink} href={`/${orgSlug}`} tone="cream">
+            Meet the companions
+          </FeltLink>
         </FeltPanel>
       ) : null}
     </main>
