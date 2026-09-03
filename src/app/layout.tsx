@@ -33,6 +33,9 @@ export default function RootLayout({
         {children}
         <Toaster
           closeButton
+          // the hand-rolled viewport stacked every toast at once; `expand`
+          // keeps that (and is what makes `gap` apply)
+          expand
           gap={12}
           mobileOffset={14}
           offset={18}
@@ -40,14 +43,16 @@ export default function RootLayout({
           toastOptions={{
             unstyled: true,
             classNames: {
-              toast: toastStyles.toast,
+              // the felt patch itself stays the shared primitive; the module
+              // only adds toast layout on top of it
+              toast: `felt-panel ${toastStyles.toast}`,
               title: toastStyles.title,
               content: toastStyles.content,
               closeButton: toastStyles.closeButton,
               icon: toastStyles.icon,
-              success: toastStyles.success,
-              warning: toastStyles.warning,
-              error: toastStyles.error,
+              success: "felt-moss",
+              warning: "felt-mustard",
+              error: "felt-brick",
             },
           }}
         />

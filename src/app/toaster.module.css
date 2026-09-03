@@ -1,40 +1,11 @@
+/* Layout only: the patch itself (tint, fabric grain, bevel, drop shadow) comes
+   from the shared .felt-panel/.felt-<tone> classes the Toaster is given. */
 .toast {
   display: flex;
   width: min(24rem, calc(100vw - 36px));
   align-items: flex-start;
   gap: 10px;
   padding: 14px 16px;
-  border-radius: 22px;
-  background-color: var(--toast-color);
-  background-image:
-    radial-gradient(
-      ellipse 90% 80% at 50% 40%,
-      rgb(255 255 255 / 14%),
-      rgb(255 255 255 / 0%) 62%,
-      rgb(0 0 0 / 7%) 100%
-    ),
-    url("/textures/Fabric034_1K-JPG_Color.jpg");
-  background-size: auto, 200px;
-  background-blend-mode: normal, soft-light;
-  color: var(--toast-contrast);
-  filter:
-    drop-shadow(0 5px 4px rgb(0 0 0 / 28%))
-    drop-shadow(0 1px 1.5px rgb(0 0 0 / 18%));
-}
-
-.success {
-  --toast-color: var(--felt-moss);
-  --toast-contrast: var(--felt-cream);
-}
-
-.warning {
-  --toast-color: var(--felt-mustard);
-  --toast-contrast: var(--felt-ink);
-}
-
-.error {
-  --toast-color: var(--felt-brick);
-  --toast-contrast: var(--felt-cream);
 }
 
 .icon {
@@ -71,6 +42,8 @@
   background: rgb(255 255 255 / 30%);
 }
 
+/* toasts live in the root layout, outside the .admin-shell focus scope, but
+   only admin flows raise them -- keep the ring reachable for the keyboard */
 .closeButton:focus-visible {
   outline: 3px solid var(--felt-mustard);
   outline-offset: 3px;
