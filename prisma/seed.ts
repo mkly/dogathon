@@ -28,7 +28,6 @@ async function main() {
     where: { slug: "coppers-dream" },
     update: { name: "Copper's Dream Rescue" },
     create: {
-      id: "demo-org-coppers-dream",
       name: "Copper's Dream Rescue",
       slug: "coppers-dream",
       createdAt: new Date(),
@@ -50,7 +49,6 @@ async function main() {
       adoptedAt: null,
     },
     create: {
-      id: "demo-resident-biscuit",
       orgId: organization.id,
       name: "Biscuit",
       breed: "Mixed breed",
@@ -66,9 +64,7 @@ async function main() {
 
   const sponsorships = [
     {
-      id: "demo-sponsorship-email",
       sponsor: {
-        id: "demo-sponsor-alex",
         name: "Alex Rivera",
         email: "alex@example.com",
         phone: null,
@@ -76,9 +72,7 @@ async function main() {
       },
     },
     {
-      id: "demo-sponsorship-both",
       sponsor: {
-        id: "demo-sponsor-jordan",
         name: "Jordan Lee",
         email: "jordan@example.com",
         phone: "+14155550123",
@@ -93,39 +87,56 @@ async function main() {
       update: sponsorship.sponsor,
       create: sponsorship.sponsor,
     });
-    await prisma.sponsorship.upsert({
+    const existingSponsorship = await prisma.sponsorship.findFirst({
       where: {
-        id_orgId: { id: sponsorship.id, orgId: organization.id },
-      },
-      update: {
-        orgId: organization.id,
-        residentId: biscuit.id,
-        sponsorId: sponsor.id,
-        monthlyUsd: 25,
-        status: "active",
-        endedReason: null,
-      },
-      create: {
-        id: sponsorship.id,
         orgId: organization.id,
         residentId: biscuit.id,
         sponsorId: sponsor.id,
       },
     });
+    const sponsorshipData = {
+      orgId: organization.id,
+      residentId: biscuit.id,
+      sponsorId: sponsor.id,
+      monthlyUsd: 25,
+      status: "active" as const,
+      endedReason: null,
+    };
+    if (existingSponsorship) {
+      await prisma.sponsorship.update({
+        where: { id: existingSponsorship.id },
+        data: sponsorshipData,
+      });
+    } else {
+      await prisma.sponsorship.create({
+        data: {
+          orgId: organization.id,
+          residentId: biscuit.id,
+          sponsorId: sponsor.id,
+        },
+      });
+    }
   }
 
   const notes = [
-    ["demo-note-vet", "Vet visit went well."],
-    ["demo-note-teeth", "Teeth cleaned."],
-    ["demo-note-sock", "Ate a sock."],
+    "Vet visit went well.",
+    "Teeth cleaned.",
+    "Ate a sock.",
   ] as const;
 
-  for (const [id, note] of notes) {
-    await prisma.volunteerNote.upsert({
-      where: { id_orgId: { id, orgId: organization.id } },
-      update: { orgId: organization.id, residentId: biscuit.id, note, photoUrl: null },
-      create: { id, orgId: organization.id, residentId: biscuit.id, note },
+  for (const note of notes) {
+    const existingNote = await prisma.volunteerNote.findFirst({
+      where: { orgId: organization.id, residentId: biscuit.id, note },
     });
+    const noteData = { orgId: organization.id, residentId: biscuit.id, note };
+    if (existingNote) {
+      await prisma.volunteerNote.update({
+        where: { id: existingNote.id },
+        data: { ...noteData, photoUrl: null },
+      });
+    } else {
+      await prisma.volunteerNote.create({ data: noteData });
+    }
   }
 
   await prisma.rescueSettings.upsert({
@@ -144,7 +155,6 @@ async function main() {
     where: { slug: "happy-tails" },
     update: { name: "Happy Tails Rescue" },
     create: {
-      id: "demo-org-happy-tails",
       name: "Happy Tails Rescue",
       slug: "happy-tails",
       createdAt: new Date(),
@@ -166,7 +176,6 @@ async function main() {
       adoptedAt: null,
     },
     create: {
-      id: "demo-resident-juniper",
       orgId: secondOrganization.id,
       name: "Juniper",
       breed: "Terrier mix",
@@ -188,7 +197,6 @@ async function main() {
       channel: "email",
     },
     create: {
-      id: "demo-sponsor-sam",
       name: "Sam Chen",
       email: "sam@example.com",
       phone: null,
@@ -196,43 +204,57 @@ async function main() {
     },
   });
 
-  await prisma.sponsorship.upsert({
+  const existingSecondSponsorship = await prisma.sponsorship.findFirst({
     where: {
-      id_orgId: { id: "demo-sponsorship-happy-tails", orgId: secondOrganization.id },
-    },
-    update: {
-      orgId: secondOrganization.id,
-      residentId: juniper.id,
-      sponsorId: sam.id,
-      monthlyUsd: 25,
-      status: "active",
-      endedReason: null,
-    },
-    create: {
-      id: "demo-sponsorship-happy-tails",
       orgId: secondOrganization.id,
       residentId: juniper.id,
       sponsorId: sam.id,
     },
   });
+  const secondSponsorshipData = {
+    orgId: secondOrganization.id,
+    residentId: juniper.id,
+    sponsorId: sam.id,
+    monthlyUsd: 25,
+    status: "active" as const,
+    endedReason: null,
+  };
+  if (existingSecondSponsorship) {
+    await prisma.sponsorship.update({
+      where: { id: existingSecondSponsorship.id },
+      data: secondSponsorshipData,
+    });
+  } else {
+    await prisma.sponsorship.create({
+      data: {
+        orgId: secondOrganization.id,
+        residentId: juniper.id,
+        sponsorId: sam.id,
+      },
+    });
+  }
 
-  await prisma.volunteerNote.upsert({
+  const secondNoteText = "Learned to bring the tennis ball back.";
+  const existingSecondNote = await prisma.volunteerNote.findFirst({
     where: {
-      id_orgId: { id: "demo-note-happy-tails", orgId: secondOrganization.id },
-    },
-    update: {
       orgId: secondOrganization.id,
       residentId: juniper.id,
-      note: "Learned to bring the tennis ball back.",
-      photoUrl: null,
-    },
-    create: {
-      id: "demo-note-happy-tails",
-      orgId: secondOrganization.id,
-      residentId: juniper.id,
-      note: "Learned to bring the tennis ball back.",
+      note: secondNoteText,
     },
   });
+  const secondNoteData = {
+    orgId: secondOrganization.id,
+    residentId: juniper.id,
+    note: secondNoteText,
+  };
+  if (existingSecondNote) {
+    await prisma.volunteerNote.update({
+      where: { id: existingSecondNote.id },
+      data: { ...secondNoteData, photoUrl: null },
+    });
+  } else {
+    await prisma.volunteerNote.create({ data: secondNoteData });
+  }
 
   await prisma.rescueSettings.upsert({
     where: { orgId: secondOrganization.id },
