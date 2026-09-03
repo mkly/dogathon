@@ -154,7 +154,8 @@ test("a crawl contributes every document to roster parsing while returning a bou
 
   const text = await discoverRoster("https://rescue.example/adopt/companions", {
     model: async (messages, tools) => {
-      const systemPrompt = messages.find((message) => message.role === "system")?.content ?? "";
+      const systemContent = messages.find((message) => message.role === "system")?.content;
+      const systemPrompt = typeof systemContent === "string" ? systemContent : "";
       assert.match(systemPrompt, /every pagination page/);
       assert.match(systemPrompt, /every companion detail page/);
       assert.match(systemPrompt, /rather than exploring the rest of the site/);
@@ -164,7 +165,7 @@ test("a crawl contributes every document to roster parsing while returning a bou
         "firecrawl_crawl",
       ]);
       const last = messages.at(-1);
-      if (last?.role === "tool") toolReplies.push(last.content);
+      if (last?.role === "tool" && typeof last.content === "string") toolReplies.push(last.content);
       step += 1;
       if (step > 1) return { role: "assistant", content: "Done." };
       return {
@@ -502,7 +503,7 @@ test("reports a refused tool call back to the model and keeps scraped content", 
   const text = await discoverRoster("https://rescue.example/companions", {
     model: async (messages) => {
       const last = messages.at(-1);
-      if (last?.role === "tool") toolReplies.push(last.content);
+      if (last?.role === "tool" && typeof last.content === "string") toolReplies.push(last.content);
       step += 1;
       if (step === 1) {
         return {
@@ -534,7 +535,7 @@ test("scrapes subdomains of the configured source but refuses other protocols", 
   const text = await discoverRoster("https://www.rescue.example/", {
     model: async (messages) => {
       const last = messages.at(-1);
-      if (last?.role === "tool") toolReplies.push(last.content);
+      if (last?.role === "tool" && typeof last.content === "string") toolReplies.push(last.content);
       step += 1;
       if (step > 2) return { role: "assistant", content: "Done." };
       const url = step === 1 ? "file:///etc/passwd" : "https://adopt.rescue.example/companions";

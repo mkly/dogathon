@@ -438,6 +438,9 @@ export async function discoverRosterWithCompleteness(
       let content: string;
       let attemptedName: RosterToolName | undefined;
       try {
+        if (call.type !== "function") {
+          throw new Error(`Unsupported roster tool call type: ${call.type}`);
+        }
         if (toolCalls >= MAX_ROSTER_TOOL_CALLS) {
           throw new Error(`Roster discovery is limited to ${MAX_ROSTER_TOOL_CALLS} Firecrawl calls`);
         }
