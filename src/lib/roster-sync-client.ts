@@ -1,6 +1,7 @@
-import type { RosterSyncJobStatus, RosterSyncJobTrigger } from "@/generated/prisma/enums";
-
 import type { SyncSummary } from "./roster-sync.ts";
+
+export type RosterSyncJobStatus = "queued" | "running" | "succeeded" | "failed" | "refused";
+export type RosterSyncJobTrigger = "admin" | "scheduled";
 
 export type RosterSyncJobView = {
   id: string;

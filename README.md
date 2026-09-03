@@ -18,6 +18,10 @@ A multitenant Next.js app using PostgreSQL, Prisma, and Better Auth organization
    npm run db:migrate -- --name init
    ```
 
+   Roster sync jobs are stored in pg-boss's `pgboss` schema. Prisma does not
+   manage that schema: the application creates and migrates it when the lazy
+   shared PgBoss instance first calls `boss.start()`.
+
 4. Seed the demo organization, then start the app:
 
    ```bash
@@ -94,9 +98,9 @@ and the server is not configured for UTC.
 
 The nightly route enqueues every organization with a saved adoption-page source
 URL. Jobs become eligible one at a time, spaced by
-`ROSTER_SYNC_SCHEDULE_STAGGER_MS` (five minutes by default), and an organization
-with a queued or running job is skipped. Each drain invocation runs at most one
-eligible job, heartbeats its lease while it works, and uses
+`ROSTER_SYNC_SCHEDULE_STAGGER_MS` (five minutes by default), and pg-boss's
+exclusive queue policy skips an organization with a queued or running job.
+Each drain invocation fetches and settles at most one eligible job and uses
 `ROSTER_SYNC_DRAIN_BUDGET_MS` (240 seconds by default) within the route's
 300-second maximum duration.
 

@@ -2,7 +2,7 @@ import { prisma } from "./prisma.ts";
 import {
   enqueueRosterSyncJobWithResult,
   type EnqueueRosterSyncJobResult,
-} from "./roster-sync-jobs.ts";
+} from "./roster-sync-queue.ts";
 import { isAuthorizedSchedulerRequest, type SchedulerEnvironment } from "./scheduler-auth.ts";
 
 export const DEFAULT_ROSTER_SYNC_STAGGER_MS = 5 * 60 * 1000;
@@ -11,7 +11,7 @@ type ScheduledOrganization = { orgId: string };
 type ScheduledEnqueue = (input: {
   orgId: string;
   trigger: "scheduled";
-  availableAt: Date;
+  startAfter: Date;
 }) => Promise<EnqueueRosterSyncJobResult>;
 
 type ScheduleDependencies = {
@@ -45,7 +45,7 @@ export function createRosterSyncScheduleHandler(dependencies: ScheduleDependenci
           const result = await enqueue({
             orgId: organization.orgId,
             trigger: "scheduled",
-            availableAt: new Date(startedAt.getTime() + index * staggerMs),
+            startAfter: new Date(startedAt.getTime() + index * staggerMs),
           });
           if (result.enqueued) enqueued += 1;
           else skipped += 1;

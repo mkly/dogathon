@@ -1,24 +1,21 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import type { RosterSyncJob } from "@/generated/prisma/client";
-
 import {
   createEnqueueRosterSyncHandler,
   createGetRosterSyncJobHandler,
 } from "./roster-sync-api.ts";
-import { RosterSyncJobNotFoundError } from "./roster-sync-jobs.ts";
+import { RosterSyncJobNotFoundError } from "./roster-sync-queue.ts";
+import type { RosterSyncJobView } from "./roster-sync-client.ts";
 
 const queuedJob = {
   id: "job-1",
-  orgId: "org-1",
   status: "queued",
   trigger: "admin",
-  attempts: 0,
   summary: null,
   refusalReason: null,
   errorMessage: null,
-} as RosterSyncJob;
+} satisfies RosterSyncJobView;
 
 function authorized(orgId: string) {
   return async () => ({
@@ -47,7 +44,6 @@ test("the sync endpoint enqueues for the caller and returns the job immediately"
     id: "job-1",
     status: "queued",
     trigger: "admin",
-    attempts: 0,
     summary: null,
     refusalReason: null,
     errorMessage: null,

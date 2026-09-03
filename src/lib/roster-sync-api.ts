@@ -1,17 +1,13 @@
-import type { RosterSyncJob } from "@/generated/prisma/client";
-
 import type { OrganizationPermission } from "./auth.ts";
 import { requireApiOrganization } from "./organization-access.ts";
 import {
   enqueueRosterSyncJob,
   getRosterSyncJob,
   RosterSyncJobNotFoundError,
-} from "./roster-sync-jobs.ts";
+} from "./roster-sync-queue.ts";
+import type { RosterSyncJobView } from "./roster-sync-client.ts";
 
-export type RosterSyncJobResponse = Pick<
-  RosterSyncJob,
-  "id" | "status" | "trigger" | "attempts" | "summary" | "refusalReason" | "errorMessage"
->;
+export type RosterSyncJobResponse = RosterSyncJobView;
 
 type OrganizationAccess = Awaited<ReturnType<typeof requireApiOrganization>>;
 type Authorize = (
@@ -65,14 +61,6 @@ export function createGetRosterSyncJobHandler(
   };
 }
 
-function publicJob(job: RosterSyncJob): RosterSyncJobResponse {
-  return {
-    id: job.id,
-    status: job.status,
-    trigger: job.trigger,
-    attempts: job.attempts,
-    summary: job.summary,
-    refusalReason: job.refusalReason,
-    errorMessage: job.errorMessage,
-  };
+function publicJob(job: RosterSyncJobView): RosterSyncJobResponse {
+  return job;
 }
