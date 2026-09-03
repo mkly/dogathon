@@ -1,8 +1,12 @@
+import Link from "next/link";
 import type {
   ButtonHTMLAttributes,
+  ComponentProps,
   HTMLAttributes,
   ImgHTMLAttributes,
 } from "react";
+
+import styles from "./felt.module.css";
 
 type FeltTone =
   | "oatmeal"
@@ -21,9 +25,12 @@ function classes(...values: Array<string | undefined>) {
 // (dark offset "shadow" under a thread-colored dash) sized entirely in CSS.
 function Stitch({ fine = false }: { fine?: boolean }) {
   return (
-    <svg aria-hidden="true" className={fine ? "stitch fine" : "stitch"}>
-      <rect className="shadow" />
-      <rect className="thread" />
+    <svg
+      aria-hidden="true"
+      className={classes(styles.stitch, fine ? styles.fine : undefined)}
+    >
+      <rect className={styles.shadow} />
+      <rect className={styles.thread} />
     </svg>
   );
 }
@@ -42,7 +49,7 @@ export function FeltPanel({
 }: FeltPanelProps) {
   return (
     <div
-      className={classes("felt-panel", `felt-${tone}`, className)}
+      className={classes(styles["felt-panel"], `felt-${tone}`, className)}
       {...props}
     >
       {stitched ? <Stitch /> : null}
@@ -66,13 +73,30 @@ export function FeltButton({
 }: FeltButtonProps) {
   return (
     <button
-      className={classes("felt-button", `felt-${tone}`, className)}
+      className={classes(styles["felt-button"], `felt-${tone}`, className)}
       type={type}
       {...props}
     >
       {stitched ? <Stitch fine /> : null}
       {children}
     </button>
+  );
+}
+
+export type FeltLinkProps = ComponentProps<typeof Link> & {
+  tone?: FeltTone;
+};
+
+export function FeltLink({
+  className,
+  tone = "mustard",
+  ...props
+}: FeltLinkProps) {
+  return (
+    <Link
+      className={classes(styles["felt-button"], `felt-${tone}`, className)}
+      {...props}
+    />
   );
 }
 
@@ -90,7 +114,12 @@ export function FeltField({
 }: FeltFieldProps) {
   return (
     <div
-      className={classes("felt-field", "felt-inset", `felt-${tone}`, className)}
+      className={classes(
+        styles["felt-field"],
+        styles["felt-inset"],
+        `felt-${tone}`,
+        className,
+      )}
       {...props}
     >
       <Stitch fine />
@@ -113,13 +142,17 @@ export function PhotoPatch({
   ...props
 }: PhotoPatchProps) {
   return (
-    <figure className={classes("photo-patch", className)} {...props}>
+    <figure className={classes(styles["photo-patch"], className)} {...props}>
       {src ? (
         // This primitive intentionally accepts local, uploaded, or remote rescue photos.
         // eslint-disable-next-line @next/next/no-img-element
         <img alt={alt} src={src} {...imageProps} />
       ) : (
-        <div aria-label={alt} className="photo-patch-placeholder" role="img">
+        <div
+          aria-label={alt}
+          className={styles["photo-patch-placeholder"]}
+          role="img"
+        >
           <span aria-hidden="true">🐾</span>
           <small>{alt}</small>
         </div>
@@ -140,7 +173,7 @@ export function StitchBadge({
 }: StitchBadgeProps) {
   return (
     <span
-      className={classes("stitch-badge", `felt-${tone}`, className)}
+      className={classes(styles["stitch-badge"], `felt-${tone}`, className)}
       {...props}
     />
   );
@@ -150,7 +183,7 @@ export function StitchBadge({
 // display headings, #ink-s (gentler displacement) for body copy.
 export function FeltFilters() {
   return (
-    <svg aria-hidden="true" className="felt-filter-definitions">
+    <svg aria-hidden="true" className={styles["felt-filter-definitions"]}>
       <filter id="ink">
         <feTurbulence
           baseFrequency="0.06"

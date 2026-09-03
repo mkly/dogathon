@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { FeltPanel, PhotoPatch } from "@/components/felt";
+import { FeltLink, FeltPanel, PhotoPatch } from "@/components/felt";
 import { prisma } from "@/lib/prisma";
 import { getPublicOrganization } from "@/lib/public-organization";
 
@@ -60,9 +60,13 @@ export default async function OrganizationHome({ params }: OrganizationHomeProps
                 <span className={styles.cardStatus}>Available</span>
                 <h2>{resident.name}</h2>
                 <p>{resident.breed} · {resident.ageText}</p>
-                <Link className={`felt-button felt-brick ${styles.cardLink}`} href={`/${orgSlug}/companions/${resident.id}`}>
+                <FeltLink
+                  className={styles.cardLink}
+                  href={`/${orgSlug}/companions/${resident.id}`}
+                  tone="brick"
+                >
                   Meet {resident.name}
-                </Link>
+                </FeltLink>
               </div>
             </FeltPanel>
           ))}
