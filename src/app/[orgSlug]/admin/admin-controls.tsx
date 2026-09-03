@@ -1,6 +1,8 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import * as AlertDialog from "@radix-ui/react-alert-dialog";
+import * as Dialog from "@radix-ui/react-dialog";
 import { useActionState, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -58,7 +60,6 @@ export function DraftEditor({
   subject: string;
 }) {
   const router = useRouter();
-  const dialogRef = useRef<HTMLDialogElement>(null);
   const [savedDraft, setSavedDraft] = useState({
     subject: initialSubject,
     bodyText: initialBodyText,
@@ -68,16 +69,9 @@ export function DraftEditor({
   const [bodyText, setBodyText] = useState(initialBodyText);
   const [smsText, setSmsText] = useState(initialSmsText);
   const [editorOpen, setEditorOpen] = useState(false);
+  const [denyConfirmOpen, setDenyConfirmOpen] = useState(false);
   const [pending, setPending] = useState<"save" | "approve" | "deny" | null>(null);
   const smsTooLong = smsText.length > MAX_SMS_LENGTH;
-
-  useEffect(() => {
-    const dialog = dialogRef.current;
-    if (!dialog) return;
-
-    if (editorOpen && !dialog.open) dialog.showModal();
-    if (!editorOpen && dialog.open) dialog.close();
-  }, [editorOpen]);
 
   function openEditor() {
     setSubject(savedDraft.subject);
@@ -148,8 +142,6 @@ export function DraftEditor({
   }
 
   async function deny() {
-    if (!window.confirm("Discard this draft? This cannot be undone.")) return;
-
     setPending("deny");
     try {
       await apiFetch(`/api/pupdates/${id}`, {
@@ -185,7 +177,7 @@ export function DraftEditor({
         >
           {pending === "approve" ? "Saving & sending…" : "Approve & send"}
         </AdminButton>
-        <AdminButton disabled={pending !== null} onClick={deny} tone="brick">
+        <AdminButton disabled={pending !== null} onClick={() => setDenyConfirmOpen(true)} tone="brick">
           {pending === "deny" ? "Discarding…" : "Deny & discard"}
         </AdminButton>
         {/* the themed email as the sponsor will see it, not the plain draft text */}
@@ -199,80 +191,110 @@ export function DraftEditor({
         </AdminLink>
       </div>
 
-      <dialog
-        aria-labelledby={`edit-draft-title-${id}`}
-        className={styles.draftDialog}
-        onCancel={(event) => {
-          event.preventDefault();
-          closeEditor();
+      <Dialog.Root
+        onOpenChange={(open) => {
+          if (!open) closeEditor();
         }}
-        onClose={() => setEditorOpen(false)}
-        ref={dialogRef}
+        open={editorOpen}
       >
-        <AdminSurface className={styles.dialogPanel} tone="oatmeal">
-          <div className={styles.dialogHeader}>
-            <div>
-              <AdminEyebrow>Draft pupdate</AdminEyebrow>
-              <h2 id={`edit-draft-title-${id}`}>Edit message</h2>
-            </div>
-            <AdminButton aria-label="Close editor" onClick={closeEditor} tone="oatmeal">
-              ✕
-            </AdminButton>
-          </div>
-          <div className={styles.draftEditor}>
-            <label htmlFor={`subject-${id}`}>Subject</label>
-            <AdminField>
-              <input
-                autoFocus
-                id={`subject-${id}`}
-                onChange={(event) => setSubject(event.target.value)}
-                required
-                value={subject}
-              />
-            </AdminField>
-            <label htmlFor={`email-${id}`}>Email body</label>
-            <AdminField>
-              <textarea
-                id={`email-${id}`}
-                onChange={(event) => setBodyText(event.target.value)}
-                required
-                rows={7}
-                value={bodyText}
-              />
-            </AdminField>
-            <div className={styles.smsLabelRow}>
-              <label htmlFor={`sms-${id}`}>SMS text</label>
-              <span className={smsTooLong ? styles.smsError : undefined}>
-                {smsText.length}/{MAX_SMS_LENGTH}
-              </span>
-            </div>
-            <AdminField>
-              <textarea
-                aria-describedby={smsTooLong ? `sms-error-${id}` : undefined}
-                aria-invalid={smsTooLong}
-                id={`sms-${id}`}
-                onChange={(event) => setSmsText(event.target.value)}
-                required
-                rows={4}
-                value={smsText}
-              />
-            </AdminField>
-            {smsTooLong && (
-              <p className={styles.smsError} id={`sms-error-${id}`} role="alert">
-                Shorten the SMS by {smsText.length - MAX_SMS_LENGTH} characters before saving.
-              </p>
-            )}
-            <div className={styles.modalActions}>
-              <AdminButton disabled={pending === "save"} onClick={closeEditor} tone="oatmeal">
-                Cancel
-              </AdminButton>
-              <AdminButton disabled={pending !== null || smsTooLong} onClick={save} tone="mustard">
-                {pending === "save" ? "Saving…" : "Save changes"}
-              </AdminButton>
-            </div>
-          </div>
-        </AdminSurface>
-      </dialog>
+        <Dialog.Portal>
+          <Dialog.Overlay className={styles.dialogOverlay} />
+          <Dialog.Content className={styles.draftDialog}>
+            <AdminSurface className={styles.dialogPanel} tone="oatmeal">
+              <div className={styles.dialogHeader}>
+                <div>
+                  <AdminEyebrow>Draft pupdate</AdminEyebrow>
+                  <Dialog.Title asChild>
+                    <h2>Edit message</h2>
+                  </Dialog.Title>
+                </div>
+                <AdminButton aria-label="Close editor" onClick={closeEditor} tone="oatmeal">
+                  ✕
+                </AdminButton>
+              </div>
+              <Dialog.Description className={styles.dialogDescription}>
+                Review the email and SMS copy before saving this draft.
+              </Dialog.Description>
+              <div className={styles.draftEditor}>
+                <label htmlFor={`subject-${id}`}>Subject</label>
+                <AdminField>
+                  <input
+                    autoFocus
+                    id={`subject-${id}`}
+                    onChange={(event) => setSubject(event.target.value)}
+                    required
+                    value={subject}
+                  />
+                </AdminField>
+                <label htmlFor={`email-${id}`}>Email body</label>
+                <AdminField>
+                  <textarea
+                    id={`email-${id}`}
+                    onChange={(event) => setBodyText(event.target.value)}
+                    required
+                    rows={7}
+                    value={bodyText}
+                  />
+                </AdminField>
+                <div className={styles.smsLabelRow}>
+                  <label htmlFor={`sms-${id}`}>SMS text</label>
+                  <span className={smsTooLong ? styles.smsError : undefined}>
+                    {smsText.length}/{MAX_SMS_LENGTH}
+                  </span>
+                </div>
+                <AdminField>
+                  <textarea
+                    aria-describedby={smsTooLong ? `sms-error-${id}` : undefined}
+                    aria-invalid={smsTooLong}
+                    id={`sms-${id}`}
+                    onChange={(event) => setSmsText(event.target.value)}
+                    required
+                    rows={4}
+                    value={smsText}
+                  />
+                </AdminField>
+                {smsTooLong && (
+                  <p className={styles.smsError} id={`sms-error-${id}`} role="alert">
+                    Shorten the SMS by {smsText.length - MAX_SMS_LENGTH} characters before saving.
+                  </p>
+                )}
+                <div className={styles.modalActions}>
+                  <AdminButton disabled={pending === "save"} onClick={closeEditor} tone="oatmeal">
+                    Cancel
+                  </AdminButton>
+                  <AdminButton disabled={pending !== null || smsTooLong} onClick={save} tone="mustard">
+                    {pending === "save" ? "Saving…" : "Save changes"}
+                  </AdminButton>
+                </div>
+              </div>
+            </AdminSurface>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
+
+      <AlertDialog.Root onOpenChange={setDenyConfirmOpen} open={denyConfirmOpen}>
+        <AlertDialog.Portal>
+          <AlertDialog.Overlay className={styles.dialogOverlay} />
+          <AlertDialog.Content className={styles.alertDialog}>
+            <AdminSurface className={styles.dialogPanel} tone="oatmeal">
+              <AlertDialog.Title asChild>
+                <h2>Discard this draft?</h2>
+              </AlertDialog.Title>
+              <AlertDialog.Description className={styles.dialogDescription}>
+                This cannot be undone.
+              </AlertDialog.Description>
+              <div className={styles.modalActions}>
+                <AlertDialog.Cancel asChild>
+                  <AdminButton tone="oatmeal">Cancel</AdminButton>
+                </AlertDialog.Cancel>
+                <AlertDialog.Action asChild>
+                  <AdminButton onClick={deny} tone="brick">Discard draft</AdminButton>
+                </AlertDialog.Action>
+              </div>
+            </AdminSurface>
+          </AlertDialog.Content>
+        </AlertDialog.Portal>
+      </AlertDialog.Root>
     </div>
   );
 }
@@ -471,18 +493,9 @@ export function EmailConnectorSettings({
   initialConnector: ConnectorStatus;
   orgSlug: string;
 }) {
-  const smtpDialogRef = useRef<HTMLDialogElement>(null);
   const [connector, setConnector] = useState(initialConnector);
   const [pending, setPending] = useState<"gmail" | "microsoft" | "smtp" | "disconnect" | null>(null);
   const [smtpOpen, setSmtpOpen] = useState(false);
-
-  useEffect(() => {
-    const dialog = smtpDialogRef.current;
-    if (!dialog) return;
-
-    if (smtpOpen && !dialog.open) dialog.showModal();
-    if (!smtpOpen && dialog.open) dialog.close();
-  }, [smtpOpen]);
 
   async function connectOAuth(provider: "gmail" | "microsoft") {
     setPending(provider);
@@ -588,51 +601,52 @@ export function EmailConnectorSettings({
           Connect SMTP with password
         </AdminButton>
       </div>
-      <dialog
-        aria-labelledby="smtp-dialog-title"
-        className={styles.connectorDialog}
-        onCancel={(event) => {
-          event.preventDefault();
-          setSmtpOpen(false);
-        }}
-        onClose={() => setSmtpOpen(false)}
-        ref={smtpDialogRef}
-      >
-        <AdminSurface className={styles.dialogPanel} tone="oatmeal">
-          <div className={styles.dialogHeader}>
-            <div>
-              <AdminEyebrow>Organization email</AdminEyebrow>
-              <h2 id="smtp-dialog-title">Connect SMTP with password</h2>
-            </div>
-            <AdminButton aria-label="Close SMTP connection form" onClick={() => setSmtpOpen(false)} tone="oatmeal">
-              ✕
-            </AdminButton>
-          </div>
-          <form className={styles.smtpForm} onSubmit={saveSmtp}>
-            <label htmlFor="smtpHost">Host</label>
-            <AdminField><input autoFocus id="smtpHost" name="smtpHost" required /></AdminField>
-            <label htmlFor="smtpPort">Port</label>
-            <AdminField><input defaultValue="587" id="smtpPort" max="65535" min="1" name="smtpPort" required type="number" /></AdminField>
-            <label htmlFor="smtpUser">Username</label>
-            <AdminField><input autoComplete="username" id="smtpUser" name="smtpUser" required /></AdminField>
-            <label htmlFor="smtpPassword">Password</label>
-            <AdminField><input autoComplete="new-password" id="smtpPassword" name="smtpPassword" required type="password" /></AdminField>
-            <label htmlFor="smtpFromEmail">From email</label>
-            <AdminField><input id="smtpFromEmail" name="smtpFromEmail" required type="email" /></AdminField>
-            <label className={styles.smtpSecure} htmlFor="smtpSecure">
-              <input id="smtpSecure" name="smtpSecure" type="checkbox" /> TLS from connection start (usually port 465)
-            </label>
-            <div className={styles.modalActions}>
-              <AdminButton disabled={pending === "smtp"} onClick={() => setSmtpOpen(false)} tone="oatmeal" type="button">
-                Cancel
-              </AdminButton>
-              <AdminButton disabled={pending !== null} tone="mustard" type="submit">
-                {pending === "smtp" ? "Verifying…" : "Verify & use SMTP"}
-              </AdminButton>
-            </div>
-          </form>
-        </AdminSurface>
-      </dialog>
+      <Dialog.Root onOpenChange={setSmtpOpen} open={smtpOpen}>
+        <Dialog.Portal>
+          <Dialog.Overlay className={styles.dialogOverlay} />
+          <Dialog.Content className={styles.connectorDialog}>
+            <AdminSurface className={styles.dialogPanel} tone="oatmeal">
+              <div className={styles.dialogHeader}>
+                <div>
+                  <AdminEyebrow>Organization email</AdminEyebrow>
+                  <Dialog.Title asChild>
+                    <h2>Connect SMTP with password</h2>
+                  </Dialog.Title>
+                </div>
+                <AdminButton aria-label="Close SMTP connection form" onClick={() => setSmtpOpen(false)} tone="oatmeal">
+                  ✕
+                </AdminButton>
+              </div>
+              <Dialog.Description className={styles.dialogDescription}>
+                Enter the credentials this organization will use to send email.
+              </Dialog.Description>
+              <form className={styles.smtpForm} onSubmit={saveSmtp}>
+                <label htmlFor="smtpHost">Host</label>
+                <AdminField><input autoFocus id="smtpHost" name="smtpHost" required /></AdminField>
+                <label htmlFor="smtpPort">Port</label>
+                <AdminField><input defaultValue="587" id="smtpPort" max="65535" min="1" name="smtpPort" required type="number" /></AdminField>
+                <label htmlFor="smtpUser">Username</label>
+                <AdminField><input autoComplete="username" id="smtpUser" name="smtpUser" required /></AdminField>
+                <label htmlFor="smtpPassword">Password</label>
+                <AdminField><input autoComplete="new-password" id="smtpPassword" name="smtpPassword" required type="password" /></AdminField>
+                <label htmlFor="smtpFromEmail">From email</label>
+                <AdminField><input id="smtpFromEmail" name="smtpFromEmail" required type="email" /></AdminField>
+                <label className={styles.smtpSecure} htmlFor="smtpSecure">
+                  <input id="smtpSecure" name="smtpSecure" type="checkbox" /> TLS from connection start (usually port 465)
+                </label>
+                <div className={styles.modalActions}>
+                  <AdminButton disabled={pending === "smtp"} onClick={() => setSmtpOpen(false)} tone="oatmeal" type="button">
+                    Cancel
+                  </AdminButton>
+                  <AdminButton disabled={pending !== null} tone="mustard" type="submit">
+                    {pending === "smtp" ? "Verifying…" : "Verify & use SMTP"}
+                  </AdminButton>
+                </div>
+              </form>
+            </AdminSurface>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
     </AdminSurface>
   );
 }
