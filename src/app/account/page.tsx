@@ -10,6 +10,7 @@ import {
 } from "@/components/admin-ui";
 import { SignOutButton } from "@/components/sign-out-button";
 import { getSession } from "@/lib/auth-session";
+import { formatDate } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 import { getSponsorContext } from "@/lib/sponsor-access";
 
@@ -22,13 +23,6 @@ export const metadata: Metadata = {
   title: "Sponsor account | Dogathon",
   description: "Manage your Dogathon sponsorships and contact preferences.",
 };
-
-function formatDate(date: Date) {
-  return new Intl.DateTimeFormat("en-US", {
-    dateStyle: "medium",
-    timeZone: "UTC",
-  }).format(date);
-}
 
 function formatMonthlyAmount(monthlyUsd: number) {
   return new Intl.NumberFormat("en-US", {

@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
 import { AdminBadge, AdminButton, AdminField, AdminSurface } from "@/components/admin-ui";
+import { formatDate } from "@/lib/format";
 import { pushToast } from "@/lib/toast";
 import type { OrganizationRole } from "@/lib/organization-access";
 
@@ -18,12 +19,6 @@ export type MemberView = {
   role: OrganizationRole;
   userId: string;
 };
-
-function formatJoinedDate(joinedAt: string) {
-  return new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeZone: "UTC" }).format(
-    new Date(joinedAt),
-  );
-}
 
 const ROLE_TONES = {
   owner: "mustard",
@@ -101,7 +96,7 @@ export function MemberList({
             <div className={styles.memberMeta}>
               <AdminBadge tone={ROLE_TONES[member.role]}>{member.role}</AdminBadge>
               <span>
-                Joined {formatJoinedDate(member.joinedAt)}
+                Joined {formatDate(member.joinedAt)}
               </span>
             </div>
             <div className={styles.controls}>

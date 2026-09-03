@@ -5,6 +5,7 @@ import type {
   HTMLAttributes,
   ImgHTMLAttributes,
 } from "react";
+import { clsx } from "clsx";
 
 import styles from "./felt.module.css";
 
@@ -17,17 +18,13 @@ type FeltTone =
   | "denim-lt"
   | "cream";
 
-function classes(...values: Array<string | undefined>) {
-  return values.filter(Boolean).join(" ");
-}
-
 // Dashed hand-stitch ring from the sirius-proto mockups: an SVG rect pair
 // (dark offset "shadow" under a thread-colored dash) sized entirely in CSS.
 function Stitch({ fine = false }: { fine?: boolean }) {
   return (
     <svg
       aria-hidden="true"
-      className={classes(styles.stitch, fine ? styles.fine : undefined)}
+      className={clsx(styles.stitch, fine ? styles.fine : undefined)}
     >
       <rect className={styles.shadow} />
       <rect className={styles.thread} />
@@ -49,7 +46,7 @@ export function FeltPanel({
 }: FeltPanelProps) {
   return (
     <div
-      className={classes(styles["felt-panel"], `felt-${tone}`, className)}
+      className={clsx(styles["felt-panel"], `felt-${tone}`, className)}
       {...props}
     >
       {stitched ? <Stitch /> : null}
@@ -73,7 +70,7 @@ export function FeltButton({
 }: FeltButtonProps) {
   return (
     <button
-      className={classes(styles["felt-button"], `felt-${tone}`, className)}
+      className={clsx(styles["felt-button"], `felt-${tone}`, className)}
       type={type}
       {...props}
     >
@@ -94,7 +91,7 @@ export function FeltLink({
 }: FeltLinkProps) {
   return (
     <Link
-      className={classes(styles["felt-button"], `felt-${tone}`, className)}
+      className={clsx(styles["felt-button"], `felt-${tone}`, className)}
       {...props}
     />
   );
@@ -114,7 +111,7 @@ export function FeltField({
 }: FeltFieldProps) {
   return (
     <div
-      className={classes(
+      className={clsx(
         styles["felt-field"],
         styles["felt-inset"],
         `felt-${tone}`,
@@ -142,7 +139,7 @@ export function PhotoPatch({
   ...props
 }: PhotoPatchProps) {
   return (
-    <figure className={classes(styles["photo-patch"], className)} {...props}>
+    <figure className={clsx(styles["photo-patch"], className)} {...props}>
       {src ? (
         // This primitive intentionally accepts local, uploaded, or remote rescue photos.
         // eslint-disable-next-line @next/next/no-img-element
@@ -173,7 +170,7 @@ export function StitchBadge({
 }: StitchBadgeProps) {
   return (
     <span
-      className={classes(styles["stitch-badge"], `felt-${tone}`, className)}
+      className={clsx(styles["stitch-badge"], `felt-${tone}`, className)}
       {...props}
     />
   );

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
+import pluralize from "pluralize";
 
 import {
   AdminBadge,
@@ -11,6 +12,7 @@ import {
   AdminSurface,
   AdminTable,
 } from "@/components/admin-ui";
+import { formatDate } from "@/lib/format";
 import { getOrganizationAccessBySlug } from "@/lib/organization-access";
 import { prisma } from "@/lib/prisma";
 import { isUuid } from "@/lib/uuid";
@@ -27,13 +29,6 @@ export const metadata: Metadata = {
 type SponsorDetailPageProps = {
   params: Promise<{ sponsorId: string; orgSlug: string }>;
 };
-
-function formatDate(date: Date) {
-  return new Intl.DateTimeFormat("en-US", {
-    dateStyle: "medium",
-    timeZone: "UTC",
-  }).format(date);
-}
 
 export default async function SponsorDetailPage({ params }: SponsorDetailPageProps) {
   const { sponsorId, orgSlug } = await params;
@@ -89,7 +84,7 @@ export default async function SponsorDetailPage({ params }: SponsorDetailPagePro
       <section aria-labelledby="history-heading">
         <div className={styles.historyTitle}>
           <h2 id="history-heading">Sponsorship history</h2>
-          <AdminBadge tone="mustard">{sponsor.sponsorships.length} {sponsor.sponsorships.length === 1 ? "companion" : "companions"}</AdminBadge>
+          <AdminBadge tone="mustard">{sponsor.sponsorships.length} {pluralize("companion", sponsor.sponsorships.length)}</AdminBadge>
         </div>
         <AdminSurface className={styles.historyPanel} tone="oatmeal">
           <AdminTable>
