@@ -123,7 +123,7 @@ test("completes Gmail and Microsoft OAuth flows against stubbed providers", asyn
   assert.equal(requests.length, 4);
 });
 
-test("sends through Gmail and Microsoft provider APIs", async () => {
+test("sends RFC-compliant MIME through Gmail and JSON through Microsoft", async () => {
   const calls: Array<{ url: string; init?: RequestInit }> = [];
   const providerFetch = async (input: string | URL | Request, init?: RequestInit) => {
     calls.push({ url: String(input), init });
@@ -133,7 +133,7 @@ test("sends through Gmail and Microsoft provider APIs", async () => {
   };
   const message = {
     to: "sponsor@example.com",
-    subject: "Biscuit update",
+    subject: `${"Biscuit's café fundraiser 🐾 ".repeat(8)}update`,
     body: "Hello",
     contentType: "plain" as const,
   };
@@ -145,6 +145,14 @@ test("sends through Gmail and Microsoft provider APIs", async () => {
   assert.equal(
     calls[0]!.init?.headers && (calls[0]!.init.headers as Record<string, string>).Authorization,
     "Bearer access-token",
+  );
+  const gmailRequest = JSON.parse(String(calls[0]!.init?.body)) as { raw: string };
+  const gmailMessage = Buffer.from(gmailRequest.raw, "base64url").toString("utf8");
+  assert.match(gmailMessage, /^Date: .+$/mu);
+  assert.match(gmailMessage, /^Message-ID: <.+>$/mu);
+  assert.match(
+    gmailMessage,
+    /^Subject: =\?UTF-8\?[BQ]\?.+\?=\r\n[ \t]+=\?UTF-8\?[BQ]\?.+\?=/mu,
   );
   assert.match(calls[1]!.url, /graph\.microsoft\.com\/v1\.0\/me\/sendMail/u);
   assert.match(String(calls[1]!.init?.body), /sponsor@example\.com/u);

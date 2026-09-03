@@ -1,6 +1,7 @@
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
 
 import nodemailer from "nodemailer";
+import MailComposer from "nodemailer/lib/mail-composer";
 
 import { sendAppEmail } from "./app-mailer.ts";
 import { prisma } from "./prisma.ts";
@@ -403,21 +404,6 @@ export async function verifySmtpConfiguration(
   await smtpTransport(config, factory).verify();
 }
 
-function mimeMessage(input: EmailInput, from: string): string {
-  const subject = Buffer.from(input.subject, "utf8").toString("base64");
-  const body = Buffer.from(input.body, "utf8").toString("base64").replace(/.{76}/gu, "$&\r\n");
-  return [
-    `From: ${from}`,
-    `To: ${input.to}`,
-    `Subject: =?UTF-8?B?${subject}?=`,
-    "MIME-Version: 1.0",
-    `Content-Type: ${input.contentType === "html" ? "text/html" : "text/plain"}; charset=UTF-8`,
-    "Content-Transfer-Encoding: base64",
-    "",
-    body,
-  ].join("\r\n");
-}
-
 export async function sendEmailWithConnector(
   connector: StoredEmailConnector,
   input: EmailInput,
@@ -460,7 +446,13 @@ export async function sendEmailWithConnector(
   }
 
   if (connector.type === "gmail") {
-    const raw = Buffer.from(mimeMessage(input, connector.fromEmail), "utf8").toString("base64url");
+    const message = await new MailComposer({
+      from: connector.fromEmail,
+      to: input.to,
+      subject: input.subject,
+      ...(input.contentType === "html" ? { html: input.body } : { text: input.body }),
+    }).compile().build();
+    const raw = message.toString("base64url");
     await jsonResponse(
       await fetcher("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", {
         method: "POST",
