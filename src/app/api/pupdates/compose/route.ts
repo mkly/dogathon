@@ -2,6 +2,7 @@ import { composePupdate } from "@/lib/composer";
 import { requireApiOrganization } from "@/lib/organization-access";
 import { companionPageUrl } from "@/lib/pupdate-delivery";
 import { prisma } from "@/lib/prisma";
+import { isUuid } from "@/lib/uuid";
 
 type ComposeRequest = {
   residentId?: unknown;
@@ -20,8 +21,8 @@ export async function POST(request: Request) {
     return Response.json({ error: "Request body must be valid JSON" }, { status: 400 });
   }
 
-  if (typeof input.residentId !== "string" || !input.residentId.trim()) {
-    return Response.json({ error: "residentId is required" }, { status: 400 });
+  if (!isUuid(input.residentId)) {
+    return Response.json({ error: "residentId must be a UUID" }, { status: 400 });
   }
   if (input.type !== undefined && input.type !== "regular" && input.type !== "graduation") {
     return Response.json({ error: "type must be regular or graduation" }, { status: 400 });

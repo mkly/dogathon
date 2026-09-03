@@ -7,6 +7,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSponsorContext } from "@/lib/sponsor-access";
 import { stripeGateway } from "@/lib/stripe-billing";
+import { isUuid } from "@/lib/uuid";
 
 const SPONSORSHIP_CHANNELS = ["email", "sms", "both"] as const;
 
@@ -38,6 +39,9 @@ export async function updateSponsorProfile(formData: FormData) {
 export async function openBillingPortal(sponsorshipId: string) {
   const sponsor = await getSponsorContext(await headers());
   if (!sponsor) redirect("/account/sign-in");
+  if (!isUuid(sponsorshipId)) {
+    throw new Error("Billing management is unavailable for this sponsorship");
+  }
 
   const sponsorship = await prisma.sponsorship.findFirst({
     where: {
