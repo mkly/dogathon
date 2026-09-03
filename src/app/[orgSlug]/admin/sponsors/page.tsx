@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
+import pluralize from "pluralize";
 
 import {
   AdminBadge,
@@ -12,6 +13,7 @@ import {
   AdminSurface,
   AdminTable,
 } from "@/components/admin-ui";
+import { formatDate } from "@/lib/format";
 import { getOrganizationAccessBySlug } from "@/lib/organization-access";
 import { prisma } from "@/lib/prisma";
 
@@ -23,13 +25,6 @@ export const metadata: Metadata = {
   title: "Sponsors | Dogathon staff",
   description: "Private sponsor directory for Dogathon staff.",
 };
-
-function formatDate(date: Date) {
-  return new Intl.DateTimeFormat("en-US", {
-    dateStyle: "medium",
-    timeZone: "UTC",
-  }).format(date);
-}
 
 type SponsorsPageProps = { params: Promise<{ orgSlug: string }> };
 
@@ -70,7 +65,7 @@ export default async function SponsorsPage({ params }: SponsorsPageProps) {
       />
 
       <div className={styles.summary}>
-        <p>{sponsors.length} {sponsors.length === 1 ? "person" : "people"} · {sponsorshipCount} {sponsorshipCount === 1 ? "sponsorship" : "sponsorships"}</p>
+        <p>{sponsors.length} {pluralize("person", sponsors.length)} · {sponsorshipCount} {pluralize("sponsorship", sponsorshipCount)}</p>
         <AdminBadge tone="moss">staff only</AdminBadge>
       </div>
 
@@ -90,7 +85,7 @@ export default async function SponsorsPage({ params }: SponsorsPageProps) {
                 <div>
                   <h2>{sponsor.name}</h2>
                   <AdminBadge tone={sponsor.sponsorships.some(({ status }) => status === "active") ? "moss" : "brick"}>
-                    {sponsor.sponsorships.length} {sponsor.sponsorships.length === 1 ? "companion" : "companions"}
+                    {sponsor.sponsorships.length} {pluralize("companion", sponsor.sponsorships.length)}
                   </AdminBadge>
                 </div>
                 <div className={styles.contact}>

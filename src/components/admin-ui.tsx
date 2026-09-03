@@ -7,14 +7,11 @@ import type {
   ReactNode,
   TableHTMLAttributes,
 } from "react";
+import { clsx } from "clsx";
 
 import styles from "./admin-ui.module.css";
 
 type AdminTone = "oatmeal" | "mustard" | "brick" | "moss" | "denim" | "cream";
-
-function classes(...values: Array<string | undefined>) {
-  return values.filter(Boolean).join(" ");
-}
 
 type ToneProps = { tone?: AdminTone };
 
@@ -31,7 +28,7 @@ export function AdminPage({
 }: AdminPageProps) {
   return (
     <main
-      className={classes(
+      className={clsx(
         variant === "volunteer" ? undefined : "admin-shell",
         styles.page,
         styles[`page-${variant}`],
@@ -69,7 +66,7 @@ export function AdminHeader({
 }: AdminHeaderProps) {
   return (
     <header
-      className={classes(styles.header, styles[`header-${variant}`], className)}
+      className={clsx(styles.header, styles[`header-${variant}`], className)}
       {...props}
     >
       {brand ? <div className={styles.brand}>{brand}</div> : null}
@@ -81,7 +78,7 @@ export function AdminHeader({
         {lede ? <p className={styles.lede}>{lede}</p> : null}
       </div>
       {actions ? (
-        <div className={classes(styles.headerActions, actionsClassName)}>{actions}</div>
+        <div className={clsx(styles.headerActions, actionsClassName)}>{actions}</div>
       ) : null}
     </header>
   );
@@ -98,7 +95,7 @@ export function AdminEyebrow({
 }: AdminEyebrowProps) {
   return (
     <p
-      className={classes(styles.eyebrow, tone === "denim" ? styles.eyebrowDenim : undefined, className)}
+      className={clsx(styles.eyebrow, tone === "denim" ? styles.eyebrowDenim : undefined, className)}
       {...props}
     />
   );
@@ -120,7 +117,7 @@ export function AdminSectionHeader({
   ...props
 }: AdminSectionHeaderProps) {
   return (
-    <div className={classes(styles.sectionHeader, className)} {...props}>
+    <div className={clsx(styles.sectionHeader, className)} {...props}>
       <div>
         {eyebrow ? <AdminEyebrow>{eyebrow}</AdminEyebrow> : null}
         <h2 id={titleId}>{title}</h2>
@@ -143,7 +140,7 @@ export function AdminEmptyState({
 }: AdminEmptyStateProps) {
   return (
     <div
-      className={classes(styles.empty, styles[`empty-${variant}`], className)}
+      className={clsx(styles.empty, styles[`empty-${variant}`], className)}
       {...props}
     />
   );
@@ -159,8 +156,8 @@ export function AdminTable({
   ...props
 }: AdminTableProps) {
   return (
-    <div className={classes(styles.tableWrap, wrapperClassName)}>
-      <table className={classes(styles.table, className)} {...props} />
+    <div className={clsx(styles.tableWrap, wrapperClassName)}>
+      <table className={clsx(styles.table, className)} {...props} />
     </div>
   );
 }
@@ -168,13 +165,13 @@ export function AdminTable({
 export type AdminStatusProps = HTMLAttributes<HTMLSpanElement>;
 
 export function AdminStatus({ className, ...props }: AdminStatusProps) {
-  return <span className={classes(styles.status, className)} {...props} />;
+  return <span className={clsx(styles.status, className)} {...props} />;
 }
 
 export type AdminFooterProps = HTMLAttributes<HTMLElement>;
 
 export function AdminFooter({ className, ...props }: AdminFooterProps) {
-  return <footer className={classes(styles.footer, className)} {...props} />;
+  return <footer className={clsx(styles.footer, className)} {...props} />;
 }
 
 export type AdminSurfaceProps = HTMLAttributes<HTMLDivElement> & ToneProps;
@@ -184,7 +181,7 @@ export function AdminSurface({
   tone = "oatmeal",
   ...props
 }: AdminSurfaceProps) {
-  return <div className={classes(styles.surface, styles[tone], className)} {...props} />;
+  return <div className={clsx(styles.surface, styles[tone], className)} {...props} />;
 }
 
 export type AdminButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & ToneProps;
@@ -197,7 +194,7 @@ export function AdminButton({
 }: AdminButtonProps) {
   return (
     <button
-      className={classes(styles.button, styles[tone], className)}
+      className={clsx(styles.button, styles[tone], className)}
       type={type}
       {...props}
     />
@@ -207,13 +204,13 @@ export function AdminButton({
 export type AdminLinkProps = ComponentProps<typeof Link> & ToneProps;
 
 export function AdminLink({ className, tone = "denim", ...props }: AdminLinkProps) {
-  return <Link className={classes(styles.button, styles[tone], className)} {...props} />;
+  return <Link className={clsx(styles.button, styles[tone], className)} {...props} />;
 }
 
 export type AdminFieldProps = HTMLAttributes<HTMLDivElement>;
 
 export function AdminField({ className, ...props }: AdminFieldProps) {
-  return <div className={classes(styles.field, className)} {...props} />;
+  return <div className={clsx(styles.field, className)} {...props} />;
 }
 
 export type AdminBadgeProps = HTMLAttributes<HTMLSpanElement> & ToneProps;
@@ -223,5 +220,5 @@ export function AdminBadge({
   tone = "denim",
   ...props
 }: AdminBadgeProps) {
-  return <span className={classes(styles.badge, styles[tone], className)} {...props} />;
+  return <span className={clsx(styles.badge, styles[tone], className)} {...props} />;
 }

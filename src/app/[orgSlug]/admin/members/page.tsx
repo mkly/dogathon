@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
+import pluralize from "pluralize";
 
 import {
   AdminBadge,
@@ -108,7 +109,7 @@ export default async function MembersPage({ params }: MembersPageProps) {
 
       <section aria-labelledby="member-list-title">
         <AdminSectionHeader
-          actions={<AdminBadge tone="denim">{members.length} {members.length === 1 ? "person" : "people"}</AdminBadge>}
+          actions={<AdminBadge tone="denim">{members.length} {pluralize("person", members.length)}</AdminBadge>}
           eyebrow="People with access"
           title="Members"
           titleId="member-list-title"

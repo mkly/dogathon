@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
+import pluralize from "pluralize";
 
 import {
   AdminBadge,
@@ -16,6 +17,7 @@ import {
 import { PhotoPatch } from "@/components/felt";
 import { SignOutButton } from "@/components/sign-out-button";
 import { getEmailConnectorStatus } from "@/lib/email-connectors";
+import { formatDateTime } from "@/lib/format";
 import { getOrganizationAccessBySlug } from "@/lib/organization-access";
 import { prisma } from "@/lib/prisma";
 
@@ -154,7 +156,7 @@ export default async function AdminPage({ params }: AdminPageProps) {
       <section className={styles.composeSection}>
         <AdminSectionHeader
           actions={<AdminBadge tone="mustard">
-            {noteResidents.length} {noteResidents.length === 1 ? "companion" : "companions"}
+            {noteResidents.length} {pluralize("companion", noteResidents.length)}
           </AdminBadge>}
           eyebrow="Volunteer notebook"
           title="Notes ready for a pupdate"
@@ -181,15 +183,11 @@ export default async function AdminPage({ params }: AdminPageProps) {
                     <p className={styles.composeBreed}>{resident.breed}</p>
                     <p>
                       {resident._count.volunteerNotes}{" "}
-                      {resident._count.volunteerNotes === 1 ? "volunteer note" : "volunteer notes"}
+                      {pluralize("volunteer note", resident._count.volunteerNotes)}
                     </p>
                     {latestNote && (
                       <small>
-                        Latest {latestNote.toLocaleString("en-US", {
-                          dateStyle: "medium",
-                          timeStyle: "short",
-                          timeZone: "America/Los_Angeles",
-                        })} PT
+                        Latest {formatDateTime(latestNote)} UTC
                       </small>
                     )}
                   </div>
@@ -203,7 +201,7 @@ export default async function AdminPage({ params }: AdminPageProps) {
 
       <section className={styles.queueSection}>
         <AdminSectionHeader
-          actions={<AdminBadge tone="brick">{drafts.length} {drafts.length === 1 ? "draft" : "drafts"}</AdminBadge>}
+          actions={<AdminBadge tone="brick">{drafts.length} {pluralize("draft", drafts.length)}</AdminBadge>}
           eyebrow="Approval queue"
           title="Waiting for your OK"
         />

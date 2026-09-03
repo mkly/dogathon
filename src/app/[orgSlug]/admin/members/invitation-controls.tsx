@@ -4,6 +4,7 @@ import { FormEvent, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
 import { AdminBadge, AdminButton, AdminField, AdminSurface } from "@/components/admin-ui";
+import { formatDateTime } from "@/lib/format";
 import { pushToast } from "@/lib/toast";
 
 import { cancelOrganizationInvitation, inviteOrganizationMember } from "./actions";
@@ -22,14 +23,6 @@ const ROLE_TONES = {
   member: "denim",
   volunteer: "moss",
 } as const;
-
-function formatExpiry(expiresAt: string) {
-  return new Intl.DateTimeFormat("en-US", {
-    dateStyle: "medium",
-    timeStyle: "short",
-    timeZone: "UTC",
-  }).format(new Date(expiresAt));
-}
 
 export function InvitationManager({
   invitations,
@@ -130,7 +123,7 @@ export function InvitationManager({
             </div>
             <div className={styles.memberMeta}>
               <AdminBadge tone={ROLE_TONES[invitation.role]}>{invitation.role}</AdminBadge>
-              <span>Expires {formatExpiry(invitation.expiresAt)} UTC</span>
+              <span>Expires {formatDateTime(invitation.expiresAt)} UTC</span>
             </div>
             <AdminButton
               disabled={isPending}

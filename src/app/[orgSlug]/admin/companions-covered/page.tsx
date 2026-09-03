@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
+import pluralize from "pluralize";
 
 import {
   AdminBadge,
@@ -12,6 +13,7 @@ import {
   AdminTable,
 } from "@/components/admin-ui";
 import { PhotoPatch } from "@/components/felt";
+import { formatDate } from "@/lib/format";
 import { getOrganizationAccessBySlug } from "@/lib/organization-access";
 import { prisma } from "@/lib/prisma";
 
@@ -23,13 +25,6 @@ export const metadata: Metadata = {
   title: "Companions covered | Dogathon staff",
   description: "Private sponsorship directory grouped by companion for Dogathon staff.",
 };
-
-function formatDate(date: Date) {
-  return new Intl.DateTimeFormat("en-US", {
-    dateStyle: "medium",
-    timeZone: "UTC",
-  }).format(date);
-}
 
 type CompanionsCoveredPageProps = { params: Promise<{ orgSlug: string }> };
 
@@ -77,8 +72,8 @@ export default async function CompanionsCoveredPage({ params }: CompanionsCovere
 
       <div className={styles.summary}>
         <p>
-          {residents.length} {residents.length === 1 ? "companion" : "companions"} · {sponsorshipCount}{" "}
-          {sponsorshipCount === 1 ? "sponsorship" : "sponsorships"} · {activelyCoveredCount}{" "}
+          {residents.length} {pluralize("companion", residents.length)} · {sponsorshipCount}{" "}
+          {pluralize("sponsorship", sponsorshipCount)} · {activelyCoveredCount}{" "}
           actively covered
         </p>
         <AdminBadge tone="moss">staff only</AdminBadge>
@@ -116,7 +111,7 @@ export default async function CompanionsCoveredPage({ params }: CompanionsCovere
                       </AdminBadge>
                       <AdminBadge tone={hasActiveSponsor ? "moss" : "brick"}>
                         {resident.sponsorships.length}{" "}
-                        {resident.sponsorships.length === 1 ? "sponsor" : "sponsors"}
+                        {pluralize("sponsor", resident.sponsorships.length)}
                       </AdminBadge>
                     </div>
                   </div>
