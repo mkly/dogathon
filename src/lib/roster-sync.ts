@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { setTimeout } from "node:timers/promises";
 
 import {
   createToolCallingChatCompletion,
@@ -652,20 +653,25 @@ async function requestFirecrawlCrawl(
   };
 
   while (Date.now() < deadline) {
+    const remainingMs = deadline - Date.now();
+    if (remainingMs <= 0) break;
+    const timeoutSignal = AbortSignal.timeout(remainingMs);
+    const signal = options.signal
+      ? AbortSignal.any([options.signal, timeoutSignal])
+      : timeoutSignal;
     let response: Response;
     try {
-      response = await fetchBeforeDeadline(
-        options.fetch,
+      response = await options.fetch(
         `${options.baseUrl}/crawl/${encodeURIComponent(submit.id)}`,
         {
           method: "GET",
           headers: { authorization: `Bearer ${options.apiKey}` },
+          signal,
         },
-        deadline,
-        options.signal,
       );
     } catch (error) {
-      if (error instanceof FirecrawlPollTimeout) return crawlResult(latest, true);
+      options.signal?.throwIfAborted();
+      if (timeoutSignal.aborted) return crawlResult(latest, true);
       throw error;
     }
     const payload = (await response.json()) as FirecrawlCrawlStatus;
@@ -677,9 +683,11 @@ async function requestFirecrawlCrawl(
       return crawlResult(latest, false);
     }
 
-    const remainingMs = deadline - Date.now();
-    if (remainingMs <= 0) break;
-    await delayWithSignal(Math.min(pollIntervalMs, remainingMs), options.signal);
+    const delayMs = deadline - Date.now();
+    if (delayMs <= 0) break;
+    await setTimeout(Math.min(pollIntervalMs, delayMs), undefined, {
+      signal: options.signal,
+    });
   }
 
   return crawlResult(latest, true);
@@ -693,8 +701,6 @@ type FirecrawlCrawlStatus = {
   data?: unknown[];
   error?: string;
 };
-
-class FirecrawlPollTimeout extends Error {}
 
 function normalizeCrawlStatus(payload: FirecrawlCrawlStatus): FirecrawlCrawlStatus & {
   success: boolean;
@@ -735,46 +741,6 @@ function crawlResult(payload: FirecrawlCrawlStatus, timedOut: boolean): Firecraw
       completed: normalized.completed,
     },
   };
-}
-
-async function fetchBeforeDeadline(
-  fetcher: typeof fetch,
-  url: string,
-  init: RequestInit,
-  deadline: number,
-  signal?: AbortSignal,
-): Promise<Response> {
-  const remainingMs = deadline - Date.now();
-  if (remainingMs <= 0) throw new FirecrawlPollTimeout();
-  const controller = new AbortController();
-  const abortFromParent = () => controller.abort(signal?.reason);
-  signal?.addEventListener("abort", abortFromParent, { once: true });
-  const timer = setTimeout(() => controller.abort(), remainingMs);
-  try {
-    return await fetcher(url, { ...init, signal: controller.signal });
-  } catch (error) {
-    signal?.throwIfAborted();
-    if (controller.signal.aborted) throw new FirecrawlPollTimeout();
-    throw error;
-  } finally {
-    clearTimeout(timer);
-    signal?.removeEventListener("abort", abortFromParent);
-  }
-}
-
-function delayWithSignal(milliseconds: number, signal?: AbortSignal): Promise<void> {
-  return new Promise((resolve, reject) => {
-    signal?.throwIfAborted();
-    const onAbort = () => {
-      clearTimeout(timer);
-      reject(signal?.reason);
-    };
-    const timer = setTimeout(() => {
-      signal?.removeEventListener("abort", onAbort);
-      resolve();
-    }, milliseconds);
-    signal?.addEventListener("abort", onAbort, { once: true });
-  });
 }
 
 function requiredHttpUrl(value: unknown, label: string): URL {
