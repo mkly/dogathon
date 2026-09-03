@@ -15,7 +15,9 @@ type ParsedSettingsForm =
     };
 
 const httpSourceSchema = z.url({ protocol: /^https?$/ }).transform((value) => new URL(value).toString());
+// A local capture path: no scheme, relative, no traversal, and an HTML file.
 const localSourceSchema = z.string()
+  .refine((value) => !/^[a-z][a-z0-9+.-]*:/i.test(value))
   .refine((value) => !value.startsWith("/") && !value.includes("..") && /\.html?$/i.test(value));
 const sourceSchema = z.union([httpSourceSchema, localSourceSchema]);
 const settingsFormSchema = z.object({

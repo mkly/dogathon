@@ -35,3 +35,15 @@ test("an invalid roster source is rejected without an update", () => {
     message: "Enter an http(s) adoption-page URL or a local capture path like seed/dogs-page-A.html.",
   });
 });
+
+test("a non-http scheme is rejected rather than read as a local capture path", () => {
+  for (const value of ["file:///etc/passwd.html", "javascript:alert(1).html", "ftp://example.com/dogs.html"]) {
+    const formData = new FormData();
+    formData.set("sourceUrl", value);
+
+    assert.deepEqual(parseSettingsForm(formData), {
+      ok: false,
+      message: "Enter an http(s) adoption-page URL or a local capture path like seed/dogs-page-A.html.",
+    }, `expected ${value} to be rejected`);
+  }
+});
