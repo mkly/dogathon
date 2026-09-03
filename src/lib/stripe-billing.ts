@@ -191,28 +191,36 @@ const prismaBillingStore: BillingStore = {
   },
 
   async activateSponsorship(input) {
-    await prisma.sponsorship.upsert({
-      where: { stripeCheckoutSessionId: input.stripeCheckoutSessionId },
-      update: {
-        status: "active",
-        endedAt: null,
-        endedReason: null,
-        stripeSubscriptionId: input.stripeSubscriptionId,
-        stripeCustomerId: input.stripeCustomerId,
-      },
-      create: {
-        orgId: input.orgId,
-        residentId: input.residentId,
-        sponsorName: input.sponsorName,
-        sponsorEmail: input.sponsorEmail,
-        sponsorPhone: null,
-        channel: "email",
-        monthlyUsd: SPONSORSHIP_MONTHLY_USD,
-        status: "active",
-        stripeCheckoutSessionId: input.stripeCheckoutSessionId,
-        stripeSubscriptionId: input.stripeSubscriptionId,
-        stripeCustomerId: input.stripeCustomerId,
-      },
+    const email = input.sponsorEmail.trim().toLowerCase();
+
+    await prisma.$transaction(async (tx) => {
+      const sponsor = await tx.sponsor.upsert({
+        where: { email },
+        update: { name: input.sponsorName },
+        create: { email, name: input.sponsorName },
+      });
+
+      await tx.sponsorship.upsert({
+        where: { stripeCheckoutSessionId: input.stripeCheckoutSessionId },
+        update: {
+          sponsorId: sponsor.id,
+          status: "active",
+          endedAt: null,
+          endedReason: null,
+          stripeSubscriptionId: input.stripeSubscriptionId,
+          stripeCustomerId: input.stripeCustomerId,
+        },
+        create: {
+          orgId: input.orgId,
+          residentId: input.residentId,
+          sponsorId: sponsor.id,
+          monthlyUsd: SPONSORSHIP_MONTHLY_USD,
+          status: "active",
+          stripeCheckoutSessionId: input.stripeCheckoutSessionId,
+          stripeSubscriptionId: input.stripeSubscriptionId,
+          stripeCustomerId: input.stripeCustomerId,
+        },
+      });
     });
   },
 

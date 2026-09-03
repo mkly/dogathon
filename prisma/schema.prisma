@@ -20,6 +20,7 @@ model User {
   members        Member[]
   invitations    Invitation[]
   rosterSyncJobs RosterSyncJob[]
+  sponsor        Sponsor?
 
   username String?
 
@@ -177,6 +178,19 @@ enum SponsorshipStatus {
   ended
 }
 
+model Sponsor {
+  id           String             @id @default(cuid())
+  email        String             @unique
+  name         String
+  phone        String?
+  channel      SponsorshipChannel @default(email)
+  userId       String?            @unique
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  user         User?              @relation(fields: [userId], references: [id], onDelete: SetNull)
+  sponsorships Sponsorship[]
+}
+
 enum PupdateType {
   regular
   graduation
@@ -255,28 +269,27 @@ model Resident {
 }
 
 model Sponsorship {
-  id                      String             @id @default(cuid())
+  id                      String            @id @default(cuid())
   orgId                   String
   residentId              String
-  sponsorName             String
-  sponsorEmail            String
-  sponsorPhone            String?
-  channel                 SponsorshipChannel
-  monthlyUsd              Int                @default(25)
-  status                  SponsorshipStatus  @default(active)
+  sponsorId               String
+  monthlyUsd              Int               @default(25)
+  status                  SponsorshipStatus @default(active)
   endedReason             String?
   endedAt                 DateTime?
-  stripeCheckoutSessionId String?            @unique
-  stripeSubscriptionId    String?            @unique
+  stripeCheckoutSessionId String?           @unique
+  stripeSubscriptionId    String?           @unique
   stripeCustomerId        String?
-  createdAt               DateTime           @default(now())
-  updatedAt               DateTime           @updatedAt
-  organization            Organization       @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  resident                Resident           @relation(fields: [residentId, orgId], references: [id, orgId], onDelete: Cascade)
+  createdAt               DateTime          @default(now())
+  updatedAt               DateTime          @updatedAt
+  organization            Organization      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  resident                Resident          @relation(fields: [residentId, orgId], references: [id, orgId], onDelete: Cascade)
+  sponsor                 Sponsor           @relation(fields: [sponsorId], references: [id], onDelete: Restrict)
 
   @@unique([id, orgId])
   @@index([orgId, status])
   @@index([residentId, orgId, status])
+  @@index([sponsorId])
 }
 
 model VolunteerNote {

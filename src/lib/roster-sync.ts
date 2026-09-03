@@ -119,7 +119,7 @@ export async function syncRoster(
 
       const sponsorships = await tx.sponsorship.findMany({
         where: { residentId: resident.id, orgId, status: "active" },
-        select: { id: true, sponsorName: true },
+        select: { id: true, sponsor: { select: { name: true } } },
       });
 
       for (const sponsorship of sponsorships) {
@@ -129,7 +129,7 @@ export async function syncRoster(
           data: { status: "ended", endedReason: "adopted" },
         });
         await tx.pupdate.create({
-          data: { ...graduationDraft(resident.id, resident.name, sponsorship.sponsorName), orgId },
+          data: { ...graduationDraft(resident.id, resident.name, sponsorship.sponsor.name), orgId },
         });
       }
 

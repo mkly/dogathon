@@ -161,9 +161,17 @@ async function sponsorCompanion(
     fail(`Sponsorship form did not confirm; redirected to ${location}`);
   }
   const record = await prisma.sponsorship.findFirst({
-    where: { orgId: DEMO_ORG_ID, residentId, sponsorEmail: sponsor.email, status: "active" },
+    where: {
+      orgId: DEMO_ORG_ID,
+      residentId,
+      sponsor: { email: sponsor.email.toLowerCase() },
+      status: "active",
+    },
+    include: { sponsor: true },
   });
-  if (!record) fail(`No active sponsorship row for ${sponsor.email}`);
+  if (!record || record.sponsor.email !== sponsor.email.toLowerCase()) {
+    fail(`No active sponsorship row for ${sponsor.email}`);
+  }
   return record;
 }
 

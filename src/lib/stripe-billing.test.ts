@@ -17,7 +17,17 @@ import {
 } from "./stripe-billing";
 
 type SponsorshipRecord = Parameters<BillingStore["activateSponsorship"]>[0] & {
+  sponsorId: string;
   status: "active" | "ended";
+};
+
+type SponsorRecord = {
+  id: string;
+  email: string;
+  name: string;
+  phone: string | null;
+  channel: "email" | "sms" | "both";
+  userId: string | null;
 };
 
 class MemoryBillingStore implements BillingStore {
@@ -30,6 +40,7 @@ class MemoryBillingStore implements BillingStore {
   };
 
   resident = { id: "companion_mabel", name: "Mabel", orgId: "org_rescue" };
+  sponsors = new Map<string, SponsorRecord>();
   sponsorships = new Map<string, SponsorshipRecord>();
 
   async getOrganization(orgId: string) {
@@ -63,7 +74,24 @@ class MemoryBillingStore implements BillingStore {
   }
 
   async activateSponsorship(input: Parameters<BillingStore["activateSponsorship"]>[0]) {
-    this.sponsorships.set(input.stripeCheckoutSessionId, { ...input, status: "active" });
+    const email = input.sponsorEmail.trim().toLowerCase();
+    const existing = this.sponsors.get(email);
+    const sponsor = existing
+      ? { ...existing, name: input.sponsorName }
+      : {
+          id: `sponsor_${this.sponsors.size + 1}`,
+          email,
+          name: input.sponsorName,
+          phone: null,
+          channel: "email" as const,
+          userId: null,
+        };
+    this.sponsors.set(email, sponsor);
+    this.sponsorships.set(input.stripeCheckoutSessionId, {
+      ...input,
+      sponsorId: sponsor.id,
+      status: "active",
+    });
   }
 
   async endSponsorship(input: Parameters<BillingStore["endSponsorship"]>[0]) {
@@ -210,7 +238,16 @@ test("Stripe Connect onboarding, checkout, and signed webhooks maintain sponsors
     stripeCheckoutSessionId: "cs_fixture",
     stripeSubscriptionId: "sub_fixture",
     stripeCustomerId: "cus_fixture",
+    sponsorId: "sponsor_1",
     status: "active",
+  });
+  assert.deepEqual(store.sponsors.get("avery@example.com"), {
+    id: "sponsor_1",
+    email: "avery@example.com",
+    name: "Avery Sponsor",
+    phone: null,
+    channel: "email",
+    userId: null,
   });
 
   await processStripeEvent(signedEvent({
@@ -287,4 +324,30 @@ test("a resident adopted mid-checkout still records the paid sponsorship", async
   }, "checkout.session.completed"), store);
 
   assert.equal(store.sponsorships.get("cs_adopted")?.status, "active");
+});
+
+test("checkout completion reuses a sponsor by normalized email without linking a user", async () => {
+  const store = new MemoryBillingStore();
+  store.organization.stripeAccountId = "acct_fixture_rescue";
+
+  for (const [sessionId, email] of [["cs_first", "Sponsor@Example.com"], ["cs_second", "sponsor@example.com"]]) {
+    await processStripeEvent(signedEvent({
+      id: sessionId,
+      object: "checkout.session",
+      customer: `cus_${sessionId}`,
+      metadata: {
+        orgId: "org_rescue",
+        residentId: "companion_mabel",
+        sponsorName: "Avery Sponsor",
+        sponsorEmail: email,
+      },
+      mode: "subscription",
+      subscription: `sub_${sessionId}`,
+    }, "checkout.session.completed"), store);
+  }
+
+  assert.equal(store.sponsors.size, 1);
+  assert.equal(store.sponsors.get("sponsor@example.com")?.userId, null);
+  assert.equal(store.sponsorships.get("cs_first")?.sponsorId, "sponsor_1");
+  assert.equal(store.sponsorships.get("cs_second")?.sponsorId, "sponsor_1");
 });
