@@ -81,6 +81,7 @@ export type TransportFactory = (options: {
 const GMAIL_SCOPE = "openid email https://www.googleapis.com/auth/gmail.send";
 const MICROSOFT_SCOPE = "openid email profile offline_access User.Read Mail.Send";
 export const EMAIL_CONNECTOR_OAUTH_COOKIE = "dogathon-email-connector-oauth";
+export const EMAIL_CONNECTOR_OAUTH_COOKIE_PATH = "/api/email-connectors/";
 const OAUTH_COOKIE_LIFETIME_SECONDS = 10 * 60;
 const textEncoder = new TextEncoder();
 const textDecoder = new TextDecoder();
@@ -108,8 +109,12 @@ export async function encryptEmailSecret(value: string): Promise<string> {
 }
 
 export async function decryptEmailSecret(value: string): Promise<string> {
+  // Resolve the key outside the catch so a misconfigured
+  // EMAIL_CONNECTOR_ENCRYPTION_KEY still reports itself instead of being
+  // reported as an unreadable stored credential.
+  const key = encryptionKey();
   try {
-    const { plaintext, protectedHeader } = await compactDecrypt(value, encryptionKey());
+    const { plaintext, protectedHeader } = await compactDecrypt(value, key);
     if (protectedHeader.alg !== "dir" || protectedHeader.enc !== "A256GCM") {
       throw new Error("Unexpected JWE algorithms");
     }
@@ -171,6 +176,24 @@ function hasOAuthCredentials(provider: Exclude<EmailConnectorKind, "smtp">): boo
   return provider === "gmail"
     ? Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET)
     : Boolean(process.env.MICROSOFT_CLIENT_ID && process.env.MICROSOFT_CLIENT_SECRET);
+}
+
+/**
+ * Multi-tenant Microsoft ("common" / "organizations") signs ID tokens with the
+ * resolved tenant's issuer, which can never equal the literal tenant segment in
+ * the hand-built authorization server metadata, so oauth4webapi rejects every
+ * token response that carries one. Nothing here reads OIDC claims — the sender
+ * address comes from Graph — so drop the ID token before it is validated.
+ */
+function withoutIdToken(fetcher: Fetcher): Fetcher {
+  return async (input, init) => {
+    const response = await fetcher(input, init);
+    if (!response.ok) return response;
+    const body = await response.clone().json().catch(() => null) as Record<string, unknown> | null;
+    if (!body || typeof body !== "object" || body.id_token === undefined) return response;
+    delete body.id_token;
+    return Response.json(body, { status: response.status });
+  };
 }
 
 function oauthConfiguration(provider: Exclude<EmailConnectorKind, "smtp">) {
@@ -296,7 +319,7 @@ export async function exchangeEmailConnectorCode(
     callbackParameters,
     redirectUri,
     session.codeVerifier,
-    { [oauth.customFetch]: fetcher },
+    { [oauth.customFetch]: provider === "microsoft" ? withoutIdToken(fetcher) : fetcher },
   );
   const tokens = await oauth.processAuthorizationCodeResponse(
     authorizationServer,
@@ -364,7 +387,7 @@ async function refreshAccessToken(
     currentRefreshToken,
     {
       ...(connector.type === "microsoft" ? { additionalParameters: { scope } } : {}),
-      [oauth.customFetch]: fetcher,
+      [oauth.customFetch]: connector.type === "microsoft" ? withoutIdToken(fetcher) : fetcher,
     },
   );
   const response = await oauth.processRefreshTokenResponse(

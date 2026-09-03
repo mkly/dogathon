@@ -1,6 +1,7 @@
 import {
   decryptEmailConnectorOAuthSession,
   EMAIL_CONNECTOR_OAUTH_COOKIE,
+  EMAIL_CONNECTOR_OAUTH_COOKIE_PATH,
   encryptEmailSecret,
   exchangeEmailConnectorCode,
   type EmailConnectorKind,
@@ -20,7 +21,12 @@ function adminRedirect(request: NextRequest, orgSlug: string | null, result: "co
     ? `/${orgSlug}/admin/settings?emailConnector=${result}`
     : `/staff/organizations?emailConnector=${result}`;
   const response = NextResponse.redirect(new URL(path, request.url), 303);
-  response.cookies.delete(EMAIL_CONNECTOR_OAUTH_COOKIE);
+  // The authorize route scopes the cookie to the connector API path, so the
+  // expiry has to name that same path or the browser keeps the original.
+  response.cookies.delete({
+    name: EMAIL_CONNECTOR_OAUTH_COOKIE,
+    path: EMAIL_CONNECTOR_OAUTH_COOKIE_PATH,
+  });
   return response;
 }
 

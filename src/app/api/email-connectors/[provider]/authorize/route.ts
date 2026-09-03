@@ -1,6 +1,7 @@
 import {
   createEmailConnectorAuthorization,
   EMAIL_CONNECTOR_OAUTH_COOKIE,
+  EMAIL_CONNECTOR_OAUTH_COOKIE_PATH,
   type EmailConnectorKind,
 } from "@/lib/email-connectors";
 import { requireApiOrganization } from "@/lib/organization-access";
@@ -33,7 +34,7 @@ export async function POST(
       httpOnly: true,
       sameSite: "lax",
       secure: process.env.NODE_ENV === "production",
-      path: "/api/email-connectors/",
+      path: EMAIL_CONNECTOR_OAUTH_COOKIE_PATH,
       maxAge: 10 * 60,
     });
     return response;

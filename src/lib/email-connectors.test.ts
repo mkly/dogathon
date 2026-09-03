@@ -153,6 +153,43 @@ test("completes Gmail and Microsoft OAuth flows against stubbed providers", asyn
   assert.equal(requests.length, 4);
 });
 
+test("completes the Microsoft flow when the tenant returns a foreign-issuer ID token", async () => {
+  // The organizations/common tenants sign ID tokens with the resolved tenant's
+  // issuer, which never matches the literal tenant in our provider metadata.
+  const segment = (value: object) => Buffer.from(JSON.stringify(value)).toString("base64url");
+  const issuedAt = Math.floor(Date.now() / 1000);
+  const idToken = [
+    segment({ alg: "RS256" }),
+    segment({
+      iss: "https://login.microsoftonline.com/9188040d-6c67-4c5b-b112-36a304b66dad/v2.0",
+      aud: "microsoft-client",
+      sub: "user-a",
+      iat: issuedAt,
+      exp: issuedAt + 3600,
+    }),
+    "signature",
+  ].join(".");
+  const providerFetch = async (input: string | URL | Request) => {
+    const url = input instanceof Request ? input.url : String(input);
+    if (url.includes("login.microsoftonline.com")) {
+      return Response.json({ access_token: "ms-access", refresh_token: "ms-refresh", expires_in: 1200, token_type: "Bearer", id_token: idToken });
+    }
+    if (url.includes("graph.microsoft.com/v1.0/me")) {
+      return Response.json({ mail: "microsoft@example.com" });
+    }
+    return new Response("unexpected request", { status: 500 });
+  };
+
+  const authorization = await createEmailConnectorAuthorization("microsoft", "https://dogathon.test", "org-b");
+  const session = await decryptEmailConnectorOAuthSession(authorization.cookie);
+  const callback = new URL("https://dogathon.test/api/email-connectors/microsoft/callback");
+  callback.search = new URLSearchParams({ code: "code-b", state: session.state }).toString();
+
+  const tokens = await exchangeEmailConnectorCode("microsoft", callback, "https://dogathon.test", session, providerFetch as typeof fetch);
+  assert.equal(tokens.fromEmail, "microsoft@example.com");
+  assert.equal(tokens.refreshToken, "ms-refresh");
+});
+
 test("sends RFC-compliant MIME through Gmail and JSON through Microsoft", async () => {
   const calls: Request[] = [];
   const providerFetch = async (input: string | URL | Request, init?: RequestInit) => {
