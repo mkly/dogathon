@@ -27,6 +27,14 @@ A multitenant Next.js app using PostgreSQL, Prisma, and Better Auth organization
 
 Open [http://localhost:3000](http://localhost:3000).
 
+## Styling
+
+- Use CSS Modules only; do not use Tailwind or runtime CSS-in-JS.
+- Each primitive in `src/components` owns exactly one CSS Module.
+- Route pages compose primitives and keep a module only for page-specific layout.
+- Keep tokens, resets, tone utilities, and focus rules only in `src/app/globals.css` and `src/app/felt.css`.
+- Never restyle a primitive with a descendant selector from another module; pass `className` or a prop instead.
+
 ## Deploy to Vercel
 
 Configure the variables from `.env.example` as Vercel project environment
