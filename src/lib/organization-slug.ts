@@ -1,8 +1,35 @@
+export const RESERVED_ORGANIZATION_SLUG_ERROR = "ORGANIZATION_SLUG_RESERVED";
+export const RESERVED_ORGANIZATION_SLUG_MESSAGE = "That slug is reserved. Choose another slug.";
+
+const RESERVED_ORGANIZATION_SLUGS = new Set([
+  "_next",
+  "account",
+  "admin",
+  "api",
+  "brand",
+  "felt",
+  "mascot",
+  "next",
+  "organizations",
+  "sign-in",
+  "staff",
+  "textures",
+  "uploads",
+]);
+
 export function organizationSlug(name: string) {
   return name
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
+}
+
+export function isReservedOrganizationSlug(slug: string) {
+  const normalized = organizationSlug(slug);
+  return (
+    RESERVED_ORGANIZATION_SLUGS.has(slug.trim().toLowerCase()) ||
+    RESERVED_ORGANIZATION_SLUGS.has(normalized)
+  );
 }
 
 // While a slug is being typed by hand, the separator the last keystroke
