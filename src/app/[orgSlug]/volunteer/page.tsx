@@ -146,7 +146,7 @@ export default async function VolunteerPage({ params, searchParams }: VolunteerP
             </label>
             <FeltField className={`${styles.noteField} ${styles.photoField}`}>
               <input
-                accept="image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif"
+                accept="image/jpeg,image/png,image/webp,image/gif"
                 capture="environment"
                 id="photo"
                 name="photo"
