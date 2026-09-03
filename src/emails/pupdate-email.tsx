@@ -53,6 +53,20 @@ function escapeHtmlInMarkdown(value: string): string {
   return value.replace(/&/gu, "&amp;").replace(/</gu, "&lt;").replace(/>/gu, "&gt;");
 }
 
+const SAFE_DESTINATION = /^(?:https?:|mailto:|[/#])/iu;
+
+/**
+ * Markdown link and image destinations are author-supplied and reach a preview
+ * page served from our own origin, so only web schemes are allowed through.
+ */
+function neutralizeUnsafeDestinations(value: string): string {
+  return value.replace(
+    /(\]\(\s*)([^)\s]*)/gu,
+    (match, open: string, destination: string) =>
+      destination === "" || SAFE_DESTINATION.test(destination) ? match : `${open}#`,
+  );
+}
+
 function feltBackground(tone: string, tile: string): CSSProperties {
   return {
     backgroundColor: tone,
@@ -227,7 +241,7 @@ export function PupdateEmail(input: PupdateEmailProps) {
               ) : null}
 
               <Markdown markdownCustomStyles={markdownStyles}>
-                {escapeHtmlInMarkdown(input.bodyText.trim())}
+                {neutralizeUnsafeDestinations(escapeHtmlInMarkdown(input.bodyText.trim()))}
               </Markdown>
 
               <Section style={{ textAlign: "center" }}>

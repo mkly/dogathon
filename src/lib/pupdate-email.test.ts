@@ -68,3 +68,13 @@ test("switches the hero to the mustard adoption-day treatment", async () => {
   assert.match(graduation, /Adoption day/u);
   assert.match(graduation, /felt-mustard\.jpg/u);
 });
+
+test("neutralizes unsafe markdown link destinations", async () => {
+  const html = await render(createElement(PupdateEmail, {
+    ...base,
+    bodyText: "[click](javascript:alert(1)) and [safe](https://pawcast.test/x)",
+  }));
+
+  assert.ok(!html.includes("javascript:"));
+  assert.match(html, /href="https:\/\/pawcast\.test\/x"/u);
+});
