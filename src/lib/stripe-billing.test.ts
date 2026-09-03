@@ -128,6 +128,10 @@ class FixtureStripeGateway implements StripeBillingGateway {
     this.checkoutInput = input;
     return { id: "cs_fixture", url: "https://checkout.stripe.test/cs_fixture" };
   }
+
+  async createBillingPortalSession() {
+    return { url: "https://billing.stripe.test/session_fixture" };
+  }
 }
 
 function signedEvent(object: Record<string, unknown>, type: string) {
@@ -179,6 +183,37 @@ test("Stripe SDK checkout request is a $25 direct subscription on the connected 
   assert.equal(checkoutParams?.line_items?.[0]?.price_data?.unit_amount, 2_500);
   assert.equal(checkoutParams?.line_items?.[0]?.price_data?.recurring?.interval, "month");
   assert.equal(checkoutParams?.subscription_data?.metadata?.orgId, "org_rescue");
+  assert.equal(requestOptions?.stripeAccount, "acct_fixture_rescue");
+});
+
+test("Stripe SDK billing portal uses the sponsorship customer on the connected account", async () => {
+  let portalParams: Stripe.BillingPortal.SessionCreateParams | undefined;
+  let requestOptions: Stripe.RequestOptions | undefined;
+  const stripeFixture = {
+    billingPortal: {
+      sessions: {
+        create: async (
+          params: Stripe.BillingPortal.SessionCreateParams,
+          options: Stripe.RequestOptions,
+        ) => {
+          portalParams = params;
+          requestOptions = options;
+          return { url: "https://billing.stripe.test/session_fixture" };
+        },
+      },
+    },
+  } as unknown as Stripe;
+
+  const gateway = new StripeSdkGateway(stripeFixture);
+  const portal = await gateway.createBillingPortalSession({
+    accountId: "acct_fixture_rescue",
+    customerId: "cus_fixture_sponsor",
+    returnUrl: "https://app.test/account",
+  });
+
+  assert.equal(portal.url, "https://billing.stripe.test/session_fixture");
+  assert.equal(portalParams?.customer, "cus_fixture_sponsor");
+  assert.equal(portalParams?.return_url, "https://app.test/account");
   assert.equal(requestOptions?.stripeAccount, "acct_fixture_rescue");
 });
 

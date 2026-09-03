@@ -1,27 +1,166 @@
+import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
-import { FeltPanel } from "@/components/felt";
+import {
+  AdminBadge,
+  AdminButton,
+  AdminField,
+  AdminSurface,
+} from "@/components/admin-ui";
+import { SignOutButton } from "@/components/sign-out-button";
 import { getSession } from "@/lib/auth-session";
+import { prisma } from "@/lib/prisma";
+import { getSponsorContext } from "@/lib/sponsor-access";
 
-import styles from "../sign-in/sign-in.module.css";
+import { openBillingPortal, updateSponsorProfile } from "./actions";
+import styles from "./account.module.css";
 
 export const dynamic = "force-dynamic";
 
-export default async function SponsorAccountPage() {
-  const session = await getSession(await headers());
+export const metadata: Metadata = {
+  title: "Sponsor account | Dogathon",
+  description: "Manage your Dogathon sponsorships and contact preferences.",
+};
 
-  if (!session) {
-    redirect("/account/sign-in");
+function formatDate(date: Date) {
+  return new Intl.DateTimeFormat("en-US", {
+    dateStyle: "medium",
+    timeZone: "UTC",
+  }).format(date);
+}
+
+function formatMonthlyAmount(monthlyUsd: number) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(monthlyUsd);
+}
+
+export default async function SponsorAccountPage() {
+  const requestHeaders = await headers();
+  const session = await getSession(requestHeaders);
+
+  if (!session) redirect("/account/sign-in");
+
+  const sponsor = await getSponsorContext(requestHeaders);
+  if (!sponsor) {
+    return (
+      <main className={styles.page}>
+        <AdminSurface className={styles.empty} tone="oatmeal">
+          <p className={styles.eyebrow}>Sponsor account</p>
+          <h1>No sponsorship profile yet</h1>
+          <p>
+            We couldn&apos;t match {session.user.email} to a sponsorship. Sign in with
+            the email used at checkout, or contact the rescue for help.
+          </p>
+          <div className={styles.emptyActions}>
+            <SignOutButton redirectTo="/account/sign-in" />
+          </div>
+        </AdminSurface>
+      </main>
+    );
   }
+
+  const sponsorships = await prisma.sponsorship.findMany({
+    where: { sponsorId: sponsor.id },
+    select: {
+      id: true,
+      monthlyUsd: true,
+      status: true,
+      createdAt: true,
+      stripeCustomerId: true,
+      organization: { select: { name: true } },
+      resident: { select: { name: true } },
+    },
+    orderBy: { createdAt: "desc" },
+  });
 
   return (
     <main className={styles.page}>
-      <FeltPanel className={styles.card} tone="denim">
-        <p className={styles.eyebrow}>Sponsor account</p>
-        <h1>You&apos;re signed in</h1>
-        <p className={styles.lede}>{session.user.email}</p>
-      </FeltPanel>
+      <header className={styles.header}>
+        <div>
+          <p className={styles.eyebrow}>Sponsor account</p>
+          <h1>Welcome, {sponsor.name}</h1>
+          <p>Keep your details current and manage each rescue subscription.</p>
+        </div>
+        <SignOutButton redirectTo="/account/sign-in" />
+      </header>
+
+      <div className={styles.layout}>
+        <AdminSurface className={styles.profile} tone="mustard">
+          <h2>Your profile</h2>
+          <p className={styles.profileIntro}>These details are shared with your rescues.</p>
+          <form action={updateSponsorProfile} className={styles.form}>
+            <label>
+              Name
+              <AdminField>
+                <input defaultValue={sponsor.name} name="name" required />
+              </AdminField>
+            </label>
+            <label>
+              Phone
+              <AdminField>
+                <input
+                  defaultValue={sponsor.phone ?? ""}
+                  name="phone"
+                  placeholder="Optional"
+                  type="tel"
+                />
+              </AdminField>
+            </label>
+            <label>
+              Send updates by
+              <AdminField>
+                <select defaultValue={sponsor.channel} name="channel">
+                  <option value="email">Email</option>
+                  <option value="sms">SMS</option>
+                  <option value="both">Email and SMS</option>
+                </select>
+              </AdminField>
+            </label>
+            <p className={styles.email}>{sponsor.email}</p>
+            <div className={styles.profileActions}>
+              <AdminButton tone="denim" type="submit">Save profile</AdminButton>
+            </div>
+          </form>
+        </AdminSurface>
+
+        <AdminSurface className={styles.sponsorships} tone="denim">
+          <div className={styles.sectionHeading}>
+            <h2>Your sponsorships</h2>
+            <p>{sponsorships.length} total</p>
+          </div>
+
+          {sponsorships.length === 0 ? (
+            <p className={styles.profileIntro}>No sponsorships are linked yet.</p>
+          ) : (
+            <div className={styles.list}>
+              {sponsorships.map((record) => (
+                <article className={styles.sponsorshipCard} key={record.id}>
+                  <div>
+                    <h3>{record.resident.name}</h3>
+                    <p className={styles.rescue}>{record.organization.name}</p>
+                    <div className={styles.details}>
+                      <AdminBadge tone={record.status === "active" ? "moss" : "brick"}>
+                        <span className={styles.status}>{record.status}</span>
+                      </AdminBadge>
+                      <span>Started {formatDate(record.createdAt)}</span>
+                      <span>{formatMonthlyAmount(record.monthlyUsd)}/month</span>
+                    </div>
+                  </div>
+                  {record.status === "active" && record.stripeCustomerId ? (
+                    <form action={openBillingPortal.bind(null, record.id)}>
+                      <AdminButton tone="mustard" type="submit">Manage billing</AdminButton>
+                    </form>
+                  ) : null}
+                </article>
+              ))}
+            </div>
+          )}
+        </AdminSurface>
+      </div>
     </main>
   );
 }

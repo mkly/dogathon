@@ -1,0 +1,170 @@
+.page {
+  width: min(100%, 1040px);
+  min-height: 100svh;
+  margin: 0 auto;
+  padding: 32px 20px 56px;
+}
+
+.header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.eyebrow {
+  margin: 0 0 5px;
+  color: var(--felt-brick);
+  font-size: 0.7rem;
+  font-weight: 900;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.header h1 {
+  margin: 0;
+  font-size: clamp(2rem, 6vw, 3.25rem);
+  font-weight: 900;
+  letter-spacing: -0.045em;
+}
+
+.header p:last-child {
+  margin: 8px 0 0;
+  font-weight: 650;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(240px, 0.72fr) minmax(0, 1.4fr);
+  align-items: start;
+  gap: 20px;
+}
+
+.profile,
+.sponsorships,
+.empty {
+  padding: 20px;
+}
+
+.profile h2,
+.sponsorships h2,
+.empty h1 {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 900;
+}
+
+.profileIntro,
+.empty p {
+  margin: 6px 0 18px;
+  font-size: 0.86rem;
+  font-weight: 650;
+  line-height: 1.5;
+}
+
+.form {
+  display: grid;
+  gap: 12px;
+}
+
+.form label {
+  display: grid;
+  gap: 5px;
+  font-size: 0.72rem;
+  font-weight: 850;
+}
+
+.email {
+  margin: 2px 0 0;
+  overflow-wrap: anywhere;
+  font-size: 0.8rem;
+  font-weight: 750;
+}
+
+.profileActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin-top: 5px;
+}
+
+.sectionHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.sectionHeading p {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 750;
+}
+
+.list {
+  display: grid;
+  gap: 10px;
+}
+
+.sponsorshipCard {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 16px;
+  padding: 14px;
+  border: 1px solid rgb(61 51 43 / 17%);
+  border-radius: 7px;
+  background: white;
+}
+
+.sponsorshipCard h3 {
+  margin: 0 0 3px;
+  font-size: 1rem;
+  font-weight: 900;
+}
+
+.rescue {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 750;
+}
+
+.details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  margin: 10px 0 0;
+  color: rgb(61 51 43 / 76%);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.status {
+  text-transform: capitalize;
+}
+
+.empty {
+  text-align: center;
+}
+
+.emptyActions {
+  display: flex;
+  justify-content: center;
+}
+
+@media (max-width: 760px) {
+  .header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .layout {
+    grid-template-columns: 1fr;
+  }
+
+  .sponsorshipCard {
+    grid-template-columns: 1fr;
+  }
+}

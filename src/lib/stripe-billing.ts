@@ -78,6 +78,11 @@ export interface StripeBillingGateway {
     accountId: string;
     residentName: string;
   }): Promise<{ id: string; url: string | null }>;
+  createBillingPortalSession(input: {
+    accountId: string;
+    customerId: string;
+    returnUrl: string;
+  }): Promise<{ url: string }>;
 }
 
 export class StripeSdkGateway implements StripeBillingGateway {
@@ -142,6 +147,20 @@ export class StripeSdkGateway implements StripeBillingGateway {
         },
         success_url: input.successUrl,
         cancel_url: input.cancelUrl,
+      },
+      { stripeAccount: input.accountId },
+    );
+  }
+
+  async createBillingPortalSession(input: {
+    accountId: string;
+    customerId: string;
+    returnUrl: string;
+  }) {
+    return this.stripe.billingPortal.sessions.create(
+      {
+        customer: input.customerId,
+        return_url: input.returnUrl,
       },
       { stripeAccount: input.accountId },
     );
