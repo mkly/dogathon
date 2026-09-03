@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
+import { z } from "zod";
 
 import { AdminEmptyState, AdminHeader, AdminPage } from "@/components/admin-ui";
 import { FeltButton, FeltField, FeltLink, FeltPanel, PhotoPatch, StitchBadge } from "@/components/felt";
 import { prisma } from "@/lib/prisma";
 import { getOrganizationAccessBySlug } from "@/lib/organization-access";
+import { uuidSchema } from "@/lib/uuid";
 
 import { submitVolunteerNote } from "./actions";
 import { volunteerErrorMessage } from "./errors";
@@ -20,12 +22,13 @@ export const metadata: Metadata = {
 
 type VolunteerPageProps = {
   params: Promise<{ orgSlug: string }>;
-  searchParams: Promise<{
-    companion?: string;
-    error?: string;
-    submitted?: string;
-  }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
+const volunteerQuerySchema = z.object({
+  companion: uuidSchema.optional().catch(undefined),
+  error: z.string().optional().catch(undefined),
+  submitted: z.literal("1").optional().catch(undefined),
+});
 
 export default async function VolunteerPage({ params, searchParams }: VolunteerPageProps) {
   const { orgSlug } = await params;
@@ -40,7 +43,7 @@ export default async function VolunteerPage({ params, searchParams }: VolunteerP
   const { context } = access;
 
   const [{ companion, error, submitted }, residents] = await Promise.all([
-    searchParams,
+    searchParams.then((query) => volunteerQuerySchema.parse(query)),
     prisma.resident.findMany({
       where: {
         orgId: context.orgId,

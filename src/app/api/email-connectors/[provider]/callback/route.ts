@@ -9,12 +9,14 @@ import {
 import { requireApiOrganization } from "@/lib/organization-access";
 import { prisma } from "@/lib/prisma";
 import { NextResponse, type NextRequest } from "next/server";
+import { z } from "zod";
 
-type OAuthProvider = Exclude<EmailConnectorKind, "smtp">;
-
-function providerFrom(value: string): OAuthProvider | null {
-  return value === "gmail" || value === "microsoft" ? value : null;
-}
+const oauthProviderSchema = z.enum(["gmail", "microsoft"] satisfies Array<Exclude<EmailConnectorKind, "smtp">>);
+const oauthCallbackSchema = z.object({
+  code: z.string().min(1),
+  state: z.string().min(1),
+  error: z.string().optional(),
+});
 
 function adminRedirect(request: NextRequest, orgSlug: string | null, result: "connected" | "error") {
   const path = orgSlug
@@ -34,10 +36,11 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ provider: string }> },
 ) {
-  const provider = providerFrom((await params).provider);
+  const provider = oauthProviderSchema.safeParse((await params).provider);
   const url = new URL(request.url);
+  const query = oauthCallbackSchema.safeParse(Object.fromEntries(url.searchParams));
   const cookie = request.cookies.get(EMAIL_CONNECTOR_OAUTH_COOKIE)?.value;
-  if (!provider || !cookie || url.searchParams.has("error")) {
+  if (!provider.success || !cookie || !query.success || query.data.error !== undefined) {
     return adminRedirect(request, null, "error");
   }
 
@@ -47,7 +50,7 @@ export async function GET(
   } catch {
     return adminRedirect(request, null, "error");
   }
-  if (session.provider !== provider) return adminRedirect(request, null, "error");
+  if (session.provider !== provider.data) return adminRedirect(request, null, "error");
 
   const organization = await prisma.organization.findUnique({
     where: { id: session.orgId },
@@ -66,13 +69,13 @@ export async function GET(
   }
 
   try {
-    const tokens = await exchangeEmailConnectorCode(provider, url, url.origin, session);
+    const tokens = await exchangeEmailConnectorCode(provider.data, url, url.origin, session);
     const accessTokenEncrypted = await encryptEmailSecret(tokens.accessToken);
     const refreshTokenEncrypted = await encryptEmailSecret(tokens.refreshToken);
     await prisma.emailConnector.upsert({
       where: { orgId: session.orgId },
       update: {
-        type: provider,
+        type: provider.data,
         fromEmail: tokens.fromEmail,
         accessTokenEncrypted,
         refreshTokenEncrypted,
@@ -86,7 +89,7 @@ export async function GET(
       },
       create: {
         orgId: session.orgId,
-        type: provider,
+        type: provider.data,
         fromEmail: tokens.fromEmail,
         accessTokenEncrypted,
         refreshTokenEncrypted,
@@ -96,7 +99,7 @@ export async function GET(
     });
     return adminRedirect(request, organization.slug, "connected");
   } catch (error) {
-    console.error(`${provider} email connector callback failed`, error);
+    console.error(`${provider.data} email connector callback failed`, error);
     return adminRedirect(request, organization.slug, "error");
   }
 }

@@ -15,7 +15,7 @@ import {
 import { formatDate } from "@/lib/format";
 import { getOrganizationAccessBySlug } from "@/lib/organization-access";
 import { prisma } from "@/lib/prisma";
-import { isUuid } from "@/lib/uuid";
+import { uuidSchema } from "@/lib/uuid";
 
 import styles from "../sponsors.module.css";
 
@@ -32,7 +32,7 @@ type SponsorDetailPageProps = {
 
 export default async function SponsorDetailPage({ params }: SponsorDetailPageProps) {
   const { sponsorId, orgSlug } = await params;
-  if (!isUuid(sponsorId)) notFound();
+  if (!uuidSchema.safeParse(sponsorId).success) notFound();
   const access = await getOrganizationAccessBySlug(await headers(), orgSlug, {
     sponsors: ["read"],
   });

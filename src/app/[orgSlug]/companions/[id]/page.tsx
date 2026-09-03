@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { z } from "zod";
 
 import { createSponsorship } from "@/app/actions";
 import { FeltButton, FeltField, FeltLink, FeltPanel, PhotoPatch, StitchBadge } from "@/components/felt";
 import { prisma } from "@/lib/prisma";
 import { getPublicOrganization } from "@/lib/public-organization";
-import { isUuid } from "@/lib/uuid";
+import { uuidSchema } from "@/lib/uuid";
 
 import styles from "../../../public.module.css";
 
@@ -13,13 +14,17 @@ export const dynamic = "force-dynamic";
 
 type CompanionPageProps = {
   params: Promise<{ id: string; orgSlug: string }>;
-  searchParams: Promise<{ error?: string; sponsored?: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
+const companionQuerySchema = z.object({
+  error: z.string().optional().catch(undefined),
+  sponsored: z.literal("1").optional().catch(undefined),
+});
 
 export default async function CompanionPage({ params, searchParams }: CompanionPageProps) {
   const { id, orgSlug } = await params;
-  const query = await searchParams;
-  if (!isUuid(id)) notFound();
+  const query = companionQuerySchema.parse(await searchParams);
+  if (!uuidSchema.safeParse(id).success) notFound();
   const organization = await getPublicOrganization(orgSlug);
   if (!organization) notFound();
   const resident = await prisma.resident.findFirst({ where: { id, orgId: organization.id } });

@@ -1,9 +1,11 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { z } from "zod";
 
 import { FeltButton, FeltPanel } from "@/components/felt";
 import { auth } from "@/lib/auth";
 import { getSession } from "@/lib/auth-session";
+import { uuidSchema } from "@/lib/uuid";
 
 import {
   acceptOrganizationInvitation,
@@ -14,15 +16,19 @@ import { CreateOrganizationForm } from "./create-organization-form";
 export const dynamic = "force-dynamic";
 
 type OrganizationsPageProps = {
-  searchParams: Promise<{ error?: string; invitation?: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
+const organizationsQuerySchema = z.object({
+  error: z.string().optional().catch(undefined),
+  invitation: uuidSchema.optional().catch(undefined),
+});
 
 export default async function OrganizationsPage({ searchParams }: OrganizationsPageProps) {
   const requestHeaders = await headers();
   const session = await getSession(requestHeaders);
   if (!session) redirect("/staff/sign-in?next=/staff/organizations");
 
-  const query = await searchParams;
+  const query = organizationsQuerySchema.parse(await searchParams);
   const organizations = await auth.api.listOrganizations({ headers: requestHeaders });
   const invitation = query.invitation
     ? await auth.api.getInvitation({ query: { id: query.invitation }, headers: requestHeaders })

@@ -3,6 +3,7 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { APIError } from "better-auth";
+import { z } from "zod";
 
 import { auth } from "@/lib/auth";
 import {
@@ -11,10 +12,14 @@ import {
   RESERVED_ORGANIZATION_SLUG_MESSAGE,
 } from "@/lib/organization-slug";
 import { prisma } from "@/lib/prisma";
+import { uuidSchema } from "@/lib/uuid";
 
-function value(formData: FormData, key: string) {
-  return String(formData.get(key) ?? "").trim();
-}
+const createOrganizationSchema = z.object({
+  name: z.string().trim().min(1),
+  slug: z.string().trim().transform(organizationSlug).pipe(z.string().min(1)),
+});
+const organizationSelectionSchema = z.object({ organizationId: uuidSchema });
+const invitationSelectionSchema = z.object({ invitationId: uuidSchema });
 
 export type CreateOrganizationState = { error: string };
 
@@ -33,9 +38,9 @@ export async function createOrganization(
   formData: FormData,
 ): Promise<CreateOrganizationState> {
   const requestHeaders = await headers();
-  const name = value(formData, "name");
-  const slug = organizationSlug(value(formData, "slug"));
-  if (!name || !slug) return { error: "Enter a rescue name and a valid organization slug." };
+  const input = createOrganizationSchema.safeParse(Object.fromEntries(formData));
+  if (!input.success) return { error: "Enter a rescue name and a valid organization slug." };
+  const { name, slug } = input.data;
 
   let organization: Awaited<ReturnType<typeof auth.api.createOrganization>>;
   try {
@@ -53,8 +58,9 @@ export async function createOrganization(
 
 export async function setActiveOrganization(formData: FormData) {
   const requestHeaders = await headers();
-  const organizationId = value(formData, "organizationId");
-  if (!organizationId) redirect("/staff/organizations?error=invalid-organization");
+  const input = organizationSelectionSchema.safeParse(Object.fromEntries(formData));
+  if (!input.success) redirect("/staff/organizations?error=invalid-organization");
+  const { organizationId } = input.data;
 
   await auth.api.setActiveOrganization({ body: { organizationId }, headers: requestHeaders });
   const organization = await prisma.organization.findUnique({
@@ -67,8 +73,9 @@ export async function setActiveOrganization(formData: FormData) {
 
 export async function acceptOrganizationInvitation(formData: FormData) {
   const requestHeaders = await headers();
-  const invitationId = value(formData, "invitationId");
-  if (!invitationId) redirect("/staff/organizations?error=invalid-invitation");
+  const input = invitationSelectionSchema.safeParse(Object.fromEntries(formData));
+  if (!input.success) redirect("/staff/organizations?error=invalid-invitation");
+  const { invitationId } = input.data;
 
   const accepted = await auth.api.acceptInvitation({ body: { invitationId }, headers: requestHeaders });
   await auth.api.setActiveOrganization({

@@ -3,7 +3,7 @@ import { getEmailConnectorStatus } from "@/lib/email-connectors";
 import { requireApiOrganization } from "@/lib/organization-access";
 import { deliverPupdate, companionPageUrl } from "@/lib/pupdate-delivery";
 import { prisma } from "@/lib/prisma";
-import { isUuid } from "@/lib/uuid";
+import { uuidSchema } from "@/lib/uuid";
 import { render } from "@react-email/render";
 import { createElement } from "react";
 
@@ -11,7 +11,7 @@ type RouteContext = { params: Promise<{ id: string }> };
 
 export async function POST(request: Request, { params }: RouteContext) {
   const { id } = await params;
-  if (!isUuid(id)) {
+  if (!uuidSchema.safeParse(id).success) {
     return Response.json({ error: "Pupdate not found" }, { status: 404 });
   }
 

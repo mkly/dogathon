@@ -3,33 +3,39 @@
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { z } from "zod";
 
 import { prisma } from "@/lib/prisma";
 import { getSponsorContext } from "@/lib/sponsor-access";
 import { createBillingPortalSession } from "@/lib/stripe-billing";
-import { isUuid } from "@/lib/uuid";
+import { uuidSchema } from "@/lib/uuid";
 
 const SPONSORSHIP_CHANNELS = ["email", "sms", "both"] as const;
+const sponsorProfileSchema = z.object({
+  name: z.string().trim().min(1),
+  phone: z.string().trim(),
+  channel: z.enum(SPONSORSHIP_CHANNELS),
+});
 
 export async function updateSponsorProfile(formData: FormData) {
   const sponsor = await getSponsorContext(await headers());
   if (!sponsor) redirect("/account/sign-in");
 
-  const name = String(formData.get("name") ?? "").trim();
-  const phone = String(formData.get("phone") ?? "").trim();
-  const channel = String(formData.get("channel") ?? "");
-
-  if (!name) throw new Error("Name is required");
-  if (!SPONSORSHIP_CHANNELS.includes(channel as (typeof SPONSORSHIP_CHANNELS)[number])) {
+  const profile = sponsorProfileSchema.safeParse(Object.fromEntries(formData));
+  if (!profile.success && profile.error.issues.some((issue) => issue.path[0] === "name")) {
+    throw new Error("Name is required");
+  }
+  if (!profile.success) {
     throw new Error("Choose a valid update channel");
   }
+  const { name, phone, channel } = profile.data;
 
   await prisma.sponsor.update({
     where: { id: sponsor.id },
     data: {
       name,
       phone: phone || null,
-      channel: channel as (typeof SPONSORSHIP_CHANNELS)[number],
+      channel,
     },
   });
 
@@ -39,7 +45,7 @@ export async function updateSponsorProfile(formData: FormData) {
 export async function openBillingPortal(sponsorshipId: string) {
   const sponsor = await getSponsorContext(await headers());
   if (!sponsor) redirect("/account/sign-in");
-  if (!isUuid(sponsorshipId)) {
+  if (!uuidSchema.safeParse(sponsorshipId).success) {
     throw new Error("Billing management is unavailable for this sponsorship");
   }
 

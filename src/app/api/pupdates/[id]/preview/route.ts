@@ -1,22 +1,26 @@
+import { z } from "zod";
+
 import { PupdateEmail } from "@/emails/pupdate-email";
 import { requireApiOrganization } from "@/lib/organization-access";
 import { prisma } from "@/lib/prisma";
 import { companionPageUrl } from "@/lib/pupdate-delivery";
-import { isUuid } from "@/lib/uuid";
+import { uuidSchema } from "@/lib/uuid";
 import { render } from "@react-email/render";
 import { createElement } from "react";
 
 type RouteContext = { params: Promise<{ id: string }> };
+const previewQuerySchema = z.object({ org: z.string().trim().min(1).optional() });
 
 /** Renders the sponsor email exactly as it will be sent, for staff to eyeball. */
 export async function GET(request: Request, { params }: RouteContext) {
   const { id } = await params;
-  if (!isUuid(id)) {
+  if (!uuidSchema.safeParse(id).success) {
     return Response.json({ error: "Pupdate not found" }, { status: 404 });
   }
 
   const requestHeaders = new Headers(request.headers);
-  const orgSlug = new URL(request.url).searchParams.get("org");
+  const query = previewQuerySchema.safeParse(Object.fromEntries(new URL(request.url).searchParams));
+  const orgSlug = query.success ? query.data.org : undefined;
   if (orgSlug) requestHeaders.set("x-organization-slug", orgSlug);
   const access = await requireApiOrganization(requestHeaders, { pupdate: ["manage"] });
   if (!access.ok) return access.response;

@@ -1,44 +1,26 @@
+import { z } from "zod";
+
 import { requireApiOrganization } from "@/lib/organization-access";
 import { MAX_SMS_LENGTH } from "@/lib/pupdate-sms";
 import { prisma } from "@/lib/prisma";
-import { isUuid } from "@/lib/uuid";
+import { uuidSchema } from "@/lib/uuid";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-type DraftInput = {
-  subject?: unknown;
-  emailBody?: unknown;
-  smsBody?: unknown;
-};
-
-function validateDraft(input: DraftInput) {
-  if (
-    typeof input.subject !== "string" ||
-    typeof input.emailBody !== "string" ||
-    typeof input.smsBody !== "string"
-  ) {
-    return { error: "Subject, email body, and SMS text are required" };
-  }
-
-  const subject = input.subject.trim();
-  const bodyText = input.emailBody.trim();
-  const smsText = input.smsBody.trim();
-
-  // Composition no longer writes SMS text, so an empty legacy value is valid
-  // until the delivery task drops the column.
-  if (!subject || !bodyText) {
-    return { error: "Subject and email body cannot be empty" };
-  }
-  if (smsText.length > MAX_SMS_LENGTH) {
-    return { error: `SMS text must be ${MAX_SMS_LENGTH} characters or fewer` };
-  }
-
-  return { data: { subject, bodyText, smsText } };
-}
+const draftInputSchema = z.object({
+  subject: z.string(),
+  emailBody: z.string(),
+  smsBody: z.string(),
+});
+const trimmedDraftSchema = draftInputSchema.transform(({ subject, emailBody, smsBody }) => ({
+  subject: subject.trim(),
+  bodyText: emailBody.trim(),
+  smsText: smsBody.trim(),
+}));
 
 export async function PATCH(request: Request, { params }: RouteContext) {
   const { id } = await params;
-  if (!isUuid(id)) {
+  if (!uuidSchema.safeParse(id).success) {
     return Response.json({ error: "Pupdate not found" }, { status: 404 });
   }
 
@@ -46,16 +28,22 @@ export async function PATCH(request: Request, { params }: RouteContext) {
   if (!access.ok) return access.response;
   const { orgId } = access.context;
 
-  let input: DraftInput;
+  let body: unknown;
   try {
-    input = (await request.json()) as DraftInput;
+    body = await request.json();
   } catch {
     return Response.json({ error: "A JSON request body is required" }, { status: 400 });
   }
 
-  const validated = validateDraft(input);
-  if (!validated.data) {
-    return Response.json({ error: validated.error }, { status: 400 });
+  const validated = trimmedDraftSchema.safeParse(body);
+  if (!validated.success) {
+    return Response.json({ error: "Subject, email body, and SMS text are required" }, { status: 400 });
+  }
+  if (!validated.data.subject || !validated.data.bodyText) {
+    return Response.json({ error: "Subject and email body cannot be empty" }, { status: 400 });
+  }
+  if (validated.data.smsText.length > MAX_SMS_LENGTH) {
+    return Response.json({ error: `SMS text must be ${MAX_SMS_LENGTH} characters or fewer` }, { status: 400 });
   }
 
   const updated = await prisma.pupdate.updateMany({
@@ -77,7 +65,7 @@ export async function PATCH(request: Request, { params }: RouteContext) {
 
 export async function DELETE(request: Request, { params }: RouteContext) {
   const { id } = await params;
-  if (!isUuid(id)) {
+  if (!uuidSchema.safeParse(id).success) {
     return Response.json({ error: "Pupdate not found" }, { status: 404 });
   }
 

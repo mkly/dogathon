@@ -1,5 +1,6 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { z } from "zod";
 
 import { AuthForm } from "@/components/auth-form";
 import { FeltPanel } from "@/components/felt";
@@ -9,14 +10,15 @@ import styles from "./sign-in.module.css";
 
 export const dynamic = "force-dynamic";
 
-type SignInPageProps = { searchParams: Promise<{ next?: string }> };
-
-function safeNextPath(value: string | undefined) {
-  return value?.startsWith("/") && !value.startsWith("//") ? value : "/staff/organizations";
-}
+type SignInPageProps = { searchParams: Promise<Record<string, string | string[] | undefined>> };
+const safeNextPathSchema = z.string()
+  .startsWith("/")
+  .refine((value) => !value.startsWith("//"))
+  .catch("/staff/organizations");
+const signInQuerySchema = z.object({ next: safeNextPathSchema });
 
 export default async function SignInPage({ searchParams }: SignInPageProps) {
-  const redirectTo = safeNextPath((await searchParams).next);
+  const { next: redirectTo } = signInQuerySchema.parse(await searchParams);
   const session = await getSession(await headers());
 
   if (session) {

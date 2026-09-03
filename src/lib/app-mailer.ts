@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 import {
   sendSmtpEmail,
   validateEmailHeaders,
@@ -22,35 +24,36 @@ export type AppMailerDependencies = {
   transportFactory?: TransportFactory;
 };
 
-function smtpSecure(value: string | undefined): boolean {
-  const normalized = value?.trim().toLowerCase();
-  if (!normalized || ["false", "0", "no", "off"].includes(normalized)) return false;
-  if (["true", "1", "yes", "on"].includes(normalized)) return true;
-  throw new Error("APP_SMTP_SECURE must be a boolean");
-}
-
-function smtpPort(value: string | undefined, secure: boolean): number {
-  const normalized = value?.trim();
-  if (!normalized) return secure ? 465 : 587;
-
-  const port = Number(normalized);
-  if (!Number.isInteger(port) || port < 1 || port > 65_535) {
-    throw new Error("APP_SMTP_PORT must be an integer between 1 and 65535");
-  }
-  return port;
-}
+const smtpCredentialsSchema = z.object({
+  APP_SMTP_HOST: z.string().trim().min(1),
+  APP_SMTP_USER: z.string().trim().min(1),
+  APP_SMTP_PASSWORD: z.string().refine((value) => Boolean(value.trim())),
+  APP_EMAIL_FROM: z.string().trim().min(1),
+});
+const smtpSecureSchema = z.preprocess(
+  (value) => typeof value === "string" ? value.trim() || undefined : value,
+  z.stringbool().optional().default(false),
+);
+const smtpPortSchema = z.preprocess(
+  (value) => typeof value === "string" && !value.trim() ? undefined : value,
+  z.coerce.number().int().min(1).max(65_535).optional(),
+);
 
 function configuration(env: AppMailerEnvironment): SmtpConfiguration | null {
-  const host = env.APP_SMTP_HOST?.trim() ?? "";
-  const user = env.APP_SMTP_USER?.trim() ?? "";
-  const password = env.APP_SMTP_PASSWORD ?? "";
-  const fromEmail = env.APP_EMAIL_FROM?.trim() ?? "";
-  if (!host || !user || !password.trim() || !fromEmail) return null;
-
-  const secure = smtpSecure(env.APP_SMTP_SECURE);
+  const credentials = smtpCredentialsSchema.safeParse(env);
+  if (!credentials.success) return null;
+  const secureResult = smtpSecureSchema.safeParse(env.APP_SMTP_SECURE);
+  if (!secureResult.success) throw new Error("APP_SMTP_SECURE must be a boolean");
+  const portResult = smtpPortSchema.safeParse(env.APP_SMTP_PORT);
+  if (!portResult.success) {
+    throw new Error("APP_SMTP_PORT must be an integer between 1 and 65535");
+  }
+  const secure = secureResult.data;
+  const { APP_SMTP_HOST: host, APP_SMTP_USER: user, APP_SMTP_PASSWORD: password,
+    APP_EMAIL_FROM: fromEmail } = credentials.data;
   return {
     host,
-    port: smtpPort(env.APP_SMTP_PORT, secure),
+    port: portResult.data ?? (secure ? 465 : 587),
     secure,
     user,
     password,

@@ -78,6 +78,36 @@ test("sends platform mail through the shared SMTP transport path", async () => {
   });
 });
 
+test("coerces SMTP environment values and preserves validation messages", async () => {
+  let transportOptions: Parameters<TransportFactory>[0] | undefined;
+  const transportFactory: TransportFactory = (options) => {
+    transportOptions = options;
+    return { verify: async () => undefined, sendMail: async () => undefined };
+  };
+
+  await sendAppEmail(message, {
+    env: { ...configuredEnvironment, APP_SMTP_PORT: "", APP_SMTP_SECURE: " off " },
+    transportFactory,
+  });
+  assert.equal(transportOptions?.port, 587);
+  assert.equal(transportOptions?.secure, false);
+
+  await assert.rejects(
+    () => sendAppEmail(message, {
+      env: { ...configuredEnvironment, APP_SMTP_SECURE: "sometimes" },
+      transportFactory,
+    }),
+    /APP_SMTP_SECURE must be a boolean/u,
+  );
+  await assert.rejects(
+    () => sendAppEmail(message, {
+      env: { ...configuredEnvironment, APP_SMTP_PORT: "70000" },
+      transportFactory,
+    }),
+    /APP_SMTP_PORT must be an integer between 1 and 65535/u,
+  );
+});
+
 test("rejects header injection in recipients, From addresses, and subjects", async () => {
   await assert.rejects(() => sendAppEmail({ ...message, to: "valid@example.com\r\nBcc: bad@example.com" }, {
     env: configuredEnvironment,

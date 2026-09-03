@@ -1,35 +1,37 @@
+import { z } from "zod";
+
 import { composePupdate } from "@/lib/composer";
 import { requireApiOrganization } from "@/lib/organization-access";
 import { companionPageUrl } from "@/lib/pupdate-delivery";
 import { prisma } from "@/lib/prisma";
-import { isUuid } from "@/lib/uuid";
+import { uuidSchema } from "@/lib/uuid";
 
-type ComposeRequest = {
-  residentId?: unknown;
-  type?: unknown;
-};
+const composeRequestSchema = z.object({
+  residentId: uuidSchema,
+  type: z.enum(["regular", "graduation"]).optional(),
+});
 
 export async function POST(request: Request) {
   const access = await requireApiOrganization(request.headers, { pupdate: ["manage"] });
   if (!access.ok) return access.response;
   const { orgId } = access.context;
 
-  let input: ComposeRequest;
+  let body: unknown;
   try {
-    input = (await request.json()) as ComposeRequest;
+    body = await request.json();
   } catch {
     return Response.json({ error: "Request body must be valid JSON" }, { status: 400 });
   }
-
-  if (!isUuid(input.residentId)) {
+  const input = composeRequestSchema.safeParse(body);
+  if (!input.success && input.error.issues.some((issue) => issue.path[0] === "residentId")) {
     return Response.json({ error: "residentId must be a UUID" }, { status: 400 });
   }
-  if (input.type !== undefined && input.type !== "regular" && input.type !== "graduation") {
+  if (!input.success) {
     return Response.json({ error: "type must be regular or graduation" }, { status: 400 });
   }
 
   const resident = await prisma.resident.findFirst({
-    where: { id: input.residentId, orgId },
+    where: { id: input.data.residentId, orgId },
     include: {
       organization: { select: { slug: true } },
       volunteerNotes: {
@@ -45,7 +47,7 @@ export async function POST(request: Request) {
   }
 
   const settings = await prisma.rescueSettings.findUnique({ where: { orgId } });
-  const type = input.type ?? "regular";
+  const type = input.data.type ?? "regular";
   let composed;
   try {
     composed = await composePupdate({

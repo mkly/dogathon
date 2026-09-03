@@ -4,10 +4,11 @@ import { randomUUID } from "node:crypto";
 
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
+import { z } from "zod";
 
 import { getOrganizationAccessBySlug } from "@/lib/organization-access";
 import { prisma } from "@/lib/prisma";
-import { isUuid } from "@/lib/uuid";
+import { uuidSchema } from "@/lib/uuid";
 
 import type { VolunteerErrorCode } from "./errors";
 
@@ -20,6 +21,12 @@ const PHOTO_EXTENSIONS: Record<string, string> = {
   "image/png": ".png",
   "image/webp": ".webp",
 };
+const volunteerOrganizationSchema = z.object({ orgSlug: z.string().trim().min(1) });
+const volunteerNoteSchema = z.object({
+  residentId: z.string().trim(),
+  note: z.string().transform((value) => value.replace(/\s+/g, " ").trim()),
+  photo: z.file().optional().catch(undefined),
+});
 
 function volunteerUrl(orgSlug: string, params: Record<string, string>) {
   return `/${encodeURIComponent(orgSlug)}/volunteer?${new URLSearchParams(params).toString()}`;
@@ -30,7 +37,10 @@ function volunteerErrorUrl(orgSlug: string, error: VolunteerErrorCode) {
 }
 
 export async function submitVolunteerNote(formData: FormData) {
-  const orgSlug = String(formData.get("orgSlug") ?? "").trim();
+  const rawInput = Object.fromEntries(formData);
+  const organizationInput = volunteerOrganizationSchema.safeParse(rawInput);
+  if (!organizationInput.success) notFound();
+  const { orgSlug } = organizationInput.data;
   const access = await getOrganizationAccessBySlug(await headers(), orgSlug, {
     roster: ["contribute"],
   });
@@ -41,13 +51,11 @@ export async function submitVolunteerNote(formData: FormData) {
   }
   const { context } = access;
 
-  const residentId = String(formData.get("residentId") ?? "").trim();
-  const note = String(formData.get("note") ?? "")
-    .replace(/\s+/g, " ")
-    .trim();
-  const photo = formData.get("photo");
+  const parsed = volunteerNoteSchema.safeParse(rawInput);
+  if (!parsed.success) redirect(volunteerErrorUrl(orgSlug, "no-note"));
+  const { residentId, note, photo } = parsed.data;
 
-  if (!isUuid(residentId)) {
+  if (!uuidSchema.safeParse(residentId).success) {
     redirect(volunteerErrorUrl(orgSlug, "no-companion"));
   }
 
@@ -78,7 +86,7 @@ export async function submitVolunteerNote(formData: FormData) {
   let photoData: Uint8Array<ArrayBuffer> | undefined;
   let photoMime: string | undefined;
 
-  if (photo instanceof File && photo.size > 0) {
+  if (photo && photo.size > 0) {
     if (!PHOTO_EXTENSIONS[photo.type]) {
       redirect(volunteerErrorUrl(orgSlug, "photo-type"));
     }
