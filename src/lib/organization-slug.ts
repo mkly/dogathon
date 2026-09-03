@@ -1,3 +1,5 @@
+import slugify from "slugify";
+
 export const RESERVED_ORGANIZATION_SLUG_ERROR = "ORGANIZATION_SLUG_RESERVED";
 export const RESERVED_ORGANIZATION_SLUG_MESSAGE = "That slug is reserved. Choose another slug.";
 
@@ -18,10 +20,7 @@ const RESERVED_ORGANIZATION_SLUGS = new Set([
 ]);
 
 export function organizationSlug(name: string) {
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
+  return slugify(name, { lower: true, strict: true });
 }
 
 export function isReservedOrganizationSlug(slug: string) {

@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { setTimeout } from "node:timers/promises";
 import { generateText, isStepCount, tool, type LanguageModel } from "ai";
+import { getDomain } from "tldts";
 import { z } from "zod";
 
 import { createAiModel } from "./ai-model.ts";
@@ -735,9 +736,9 @@ function assertRelatedUrl(sourceUrl: string, candidate: unknown) {
 // Rescue sites routinely map to a `www.` or `adopt.` host of the configured
 // source, so keep those in scope while still refusing unrelated domains.
 function isRelatedHost(sourceHost: string, requestedHost: string): boolean {
-  const base = sourceHost.toLowerCase().replace(/^www\./u, "");
-  const requested = requestedHost.toLowerCase();
-  return requested === base || requested.endsWith(`.${base}`);
+  const sourceDomain = getDomain(sourceHost);
+  const requestedDomain = getDomain(requestedHost);
+  return sourceDomain !== null && sourceDomain === requestedDomain;
 }
 
 function truncateToolResult(value: unknown, maxChars = 30_000): string {

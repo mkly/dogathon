@@ -477,6 +477,28 @@ test("refuses a crawl request for an unrelated host before fetching", async () =
   assert.equal(fetchCalls, 0);
 });
 
+test("refuses a public suffix host without a registrable domain", async () => {
+  let fetchCalls = 0;
+  const fetcher: typeof fetch = async () => {
+    fetchCalls += 1;
+    return Response.json({ success: true, id: "should-not-run" });
+  };
+
+  await assert.rejects(
+    requestFirecrawl(
+      "firecrawl_crawl",
+      { url: "https://unrelated.co.uk/companions" },
+      {
+        apiKey: "fc-test",
+        sourceUrl: "https://www.co.uk/companions",
+        fetch: fetcher,
+      },
+    ),
+    /refused unrelated host: unrelated\.co\.uk/,
+  );
+  assert.equal(fetchCalls, 0);
+});
+
 test("clamps Firecrawl crawl page and discovery limits", async () => {
   let submittedBody: Record<string, unknown> | undefined;
   const fetcher: typeof fetch = async (_input, init) => {
