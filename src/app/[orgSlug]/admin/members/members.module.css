@@ -1,41 +1,11 @@
-.page {
-  width: min(100%, 1120px);
-  min-height: 100vh;
-  margin: 0 auto;
-  padding: 30px 0 40px;
-}
-
-.header {
-  display: grid;
-  grid-template-columns: auto minmax(180px, 1fr) auto;
-  align-items: center;
-  gap: 22px;
+.membersHeader {
   margin-bottom: 38px;
 }
 
-.logo {
-  display: block;
-  width: 170px;
-  filter: drop-shadow(0 4px 4px rgb(61 51 43 / 26%));
+.membersHeader > :last-child {
+  gap: 10px;
 }
 
-.logo img { width: 100%; height: auto; }
-.header h1, .sectionTitle h2 { margin: 0; font-weight: 900; letter-spacing: -0.035em; }
-.header h1 { font-size: clamp(1.8rem, 4vw, 2.5rem); }
-.header p { margin: 3px 0 0; font-size: 0.78rem; font-weight: 800; opacity: 0.68; }
-.headerActions { display: flex; align-items: center; gap: 10px; }
-.headerActions > :global(.primary) { margin-top: 0; white-space: nowrap; }
-
-.sectionTitle {
-  display: flex;
-  align-items: end;
-  justify-content: space-between;
-  gap: 20px;
-  margin-bottom: 20px;
-}
-
-.sectionTitle h2 { font-size: clamp(1.6rem, 4vw, 2.1rem); }
-.eyebrow { margin: 0 0 3px; color: var(--felt-brick); font-size: 0.7rem; font-weight: 900; letter-spacing: 0.12em; text-transform: uppercase; }
 .memberList { display: grid; gap: 12px; }
 
 .memberRow {
@@ -66,11 +36,7 @@
 .invitationList { display: grid; gap: 10px; }
 .invitationRow { display: grid; grid-template-columns: minmax(210px, 1.2fr) minmax(190px, 0.8fr) auto; align-items: center; gap: 18px; padding: 16px 20px; }
 .emptyInvitations { margin: 0; padding: 18px 20px; border: 1px dashed rgb(61 51 43 / 35%); border-radius: 8px; text-align: center; font-size: 0.82rem; font-weight: 750; opacity: 0.68; }
-.footer { margin-top: 42px; text-align: center; font-size: 13px; font-weight: 700; opacity: 0.6; }
-
 @media (max-width: 900px) {
-  .header { grid-template-columns: auto 1fr; }
-  .headerActions { grid-column: 1 / -1; flex-wrap: wrap; }
   .memberRow { grid-template-columns: minmax(180px, 1fr) minmax(150px, 0.75fr); }
   .controls { grid-column: 1 / -1; }
   .invitationForm { grid-template-columns: minmax(220px, 1fr) minmax(150px, 0.5fr); }
@@ -80,10 +46,6 @@
 }
 
 @media (max-width: 620px) {
-  .page { padding: 20px 14px 36px; }
-  .header { gap: 14px; }
-  .logo { width: 132px; }
-  .headerActions { align-items: stretch; flex-direction: column; }
   .memberRow { grid-template-columns: 1fr; padding: 18px; }
   .controls { grid-column: auto; grid-template-columns: 1fr; }
   .invitationForm, .invitationRow { grid-template-columns: 1fr; }

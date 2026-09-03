@@ -3,7 +3,16 @@ import Link from "next/link";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 
-import { AdminBadge, AdminLink, AdminSurface } from "@/components/admin-ui";
+import {
+  AdminBadge,
+  AdminEmptyState,
+  AdminFooter,
+  AdminHeader,
+  AdminLink,
+  AdminPage as AdminPageShell,
+  AdminSectionHeader,
+  AdminSurface,
+} from "@/components/admin-ui";
 import { PhotoPatch } from "@/components/felt";
 import { SignOutButton } from "@/components/sign-out-button";
 import { getEmailConnectorStatus } from "@/lib/email-connectors";
@@ -88,24 +97,24 @@ export default async function AdminPage({ params }: AdminPageProps) {
   const monthlyRecurring = activeSponsorCount * 25;
 
   return (
-    <main className={`admin-shell ${styles.page}`}>
-      <header className={styles.header}>
-        <Link className={styles.logo} href={`/${orgSlug}`}>
+    <AdminPageShell>
+      <AdminHeader
+        actions={
+          <>
+            <AdminLink href={`/${orgSlug}/admin/members`} tone="oatmeal">
+              Members
+            </AdminLink>
+            <AdminLink href={`/${orgSlug}/admin/settings`} tone="oatmeal">
+              Settings
+            </AdminLink>
+            <SignOutButton />
+          </>
+        }
+        brand={<Link href={`/${orgSlug}`}>
           <Image alt="Pawcast" priority src={pawcastWordmark} />
-        </Link>
-        <div>
-          <h1>Staff room</h1>
-        </div>
-        <div className={styles.headerActions}>
-          <AdminLink href={`/${orgSlug}/admin/members`} tone="oatmeal">
-            Members
-          </AdminLink>
-          <AdminLink href={`/${orgSlug}/admin/settings`} tone="oatmeal">
-            Settings
-          </AdminLink>
-          <SignOutButton />
-        </div>
-      </header>
+        </Link>}
+        title="Staff room"
+      />
 
       <section aria-label="Program statistics" className={styles.stats}>
         <AdminSurface className={styles.stat} tone="mustard">
@@ -143,15 +152,13 @@ export default async function AdminPage({ params }: AdminPageProps) {
       </section>
 
       <section className={styles.composeSection}>
-        <div className={styles.sectionTitle}>
-          <div>
-            <p className={styles.eyebrow}>Volunteer notebook</p>
-            <h2>Notes ready for a pupdate</h2>
-          </div>
-          <AdminBadge tone="mustard">
+        <AdminSectionHeader
+          actions={<AdminBadge tone="mustard">
             {noteResidents.length} {noteResidents.length === 1 ? "companion" : "companions"}
-          </AdminBadge>
-        </div>
+          </AdminBadge>}
+          eyebrow="Volunteer notebook"
+          title="Notes ready for a pupdate"
+        />
 
         {noteResidents.length === 0 ? (
           <AdminSurface className={styles.composeEmpty} tone="oatmeal">
@@ -195,13 +202,11 @@ export default async function AdminPage({ params }: AdminPageProps) {
       </section>
 
       <section className={styles.queueSection}>
-        <div className={styles.sectionTitle}>
-          <div>
-            <p className={styles.eyebrow}>Approval queue</p>
-            <h2>Waiting for your OK</h2>
-          </div>
-          <AdminBadge tone="brick">{drafts.length} {drafts.length === 1 ? "draft" : "drafts"}</AdminBadge>
-        </div>
+        <AdminSectionHeader
+          actions={<AdminBadge tone="brick">{drafts.length} {drafts.length === 1 ? "draft" : "drafts"}</AdminBadge>}
+          eyebrow="Approval queue"
+          title="Waiting for your OK"
+        />
 
         {!emailConnector.connected && drafts.length > 0 && (
           <p className={styles.queueNotice} id={EMAIL_CONNECTOR_NOTICE_ID}>
@@ -217,10 +222,12 @@ export default async function AdminPage({ params }: AdminPageProps) {
 
         <div className={styles.queue}>
           {drafts.length === 0 ? (
-            <AdminSurface className={styles.empty} tone="oatmeal">
-              <span aria-hidden="true">🐾</span>
-              <h3>The queue is clear</h3>
-              <p>Fresh volunteer notes will become drafts here.</p>
+            <AdminSurface tone="oatmeal">
+              <AdminEmptyState variant="dashboard">
+                <span aria-hidden="true">🐾</span>
+                <h3>The queue is clear</h3>
+                <p>Fresh volunteer notes will become drafts here.</p>
+              </AdminEmptyState>
             </AdminSurface>
           ) : (
             drafts.map((draft) => (
@@ -252,7 +259,7 @@ export default async function AdminPage({ params }: AdminPageProps) {
         </div>
       </section>
 
-      <footer className={styles.footer}>the staff room · nobody wrote a single email today</footer>
-    </main>
+      <AdminFooter>the staff room · nobody wrote a single email today</AdminFooter>
+    </AdminPageShell>
   );
 }

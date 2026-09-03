@@ -2,7 +2,15 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 
-import { AdminBadge, AdminLink, AdminSurface } from "@/components/admin-ui";
+import {
+  AdminBadge,
+  AdminHeader,
+  AdminLink,
+  AdminPage,
+  AdminStatus,
+  AdminSurface,
+  AdminTable,
+} from "@/components/admin-ui";
 import { getOrganizationAccessBySlug } from "@/lib/organization-access";
 import { prisma } from "@/lib/prisma";
 
@@ -48,17 +56,16 @@ export default async function SponsorDetailPage({ params }: SponsorDetailPagePro
   if (!sponsor) notFound();
 
   return (
-    <main className={`admin-shell ${styles.page}`}>
-      <header className={styles.header}>
-        <div>
-          <p className={styles.eyebrow}>Sponsor record</p>
-          <h1>{sponsor.name}</h1>
-          <p>Full contact details and sponsorship history.</p>
-        </div>
-        <AdminLink className={styles.backLink} href={`/${orgSlug}/admin/sponsors`}>
+    <AdminPage variant="directory">
+      <AdminHeader
+        actions={<AdminLink className={styles.backLink} href={`/${orgSlug}/admin/sponsors`}>
           Back to sponsors
-        </AdminLink>
-      </header>
+        </AdminLink>}
+        eyebrow="Sponsor record"
+        lede="Full contact details and sponsorship history."
+        title={sponsor.name}
+        variant="directory"
+      />
 
       <AdminSurface className={styles.profile} tone="denim">
         <div className={styles.profileItem}>
@@ -81,32 +88,30 @@ export default async function SponsorDetailPage({ params }: SponsorDetailPagePro
           <AdminBadge tone="mustard">{sponsor.sponsorships.length} {sponsor.sponsorships.length === 1 ? "companion" : "companions"}</AdminBadge>
         </div>
         <AdminSurface className={styles.historyPanel} tone="oatmeal">
-          <div className={styles.tableWrap}>
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th scope="col">Companion</th>
-                  <th scope="col">Status</th>
-                  <th scope="col">Started</th>
-                  <th scope="col">Ended</th>
-                  <th scope="col">Reason</th>
+          <AdminTable>
+            <thead>
+              <tr>
+                <th scope="col">Companion</th>
+                <th scope="col">Status</th>
+                <th scope="col">Started</th>
+                <th scope="col">Ended</th>
+                <th scope="col">Reason</th>
+              </tr>
+            </thead>
+            <tbody>
+              {sponsor.sponsorships.map((sponsorship) => (
+                <tr key={sponsorship.id}>
+                  <td>{sponsorship.resident.name}</td>
+                  <td><AdminStatus>{sponsorship.status}</AdminStatus></td>
+                  <td>{formatDate(sponsorship.createdAt)}</td>
+                  <td>{sponsorship.status === "ended" ? formatDate(sponsorship.updatedAt) : "Ongoing"}</td>
+                  <td className={styles.reason}>{sponsorship.endedReason ?? "—"}</td>
                 </tr>
-              </thead>
-              <tbody>
-                {sponsor.sponsorships.map((sponsorship) => (
-                  <tr key={sponsorship.id}>
-                    <td>{sponsorship.resident.name}</td>
-                    <td><span className={styles.status}>{sponsorship.status}</span></td>
-                    <td>{formatDate(sponsorship.createdAt)}</td>
-                    <td>{sponsorship.status === "ended" ? formatDate(sponsorship.updatedAt) : "Ongoing"}</td>
-                    <td className={styles.reason}>{sponsorship.endedReason ?? "—"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+              ))}
+            </tbody>
+          </AdminTable>
         </AdminSurface>
       </section>
-    </main>
+    </AdminPage>
   );
 }
