@@ -1,5 +1,6 @@
 "use client";
 
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useActionState, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -13,7 +14,9 @@ import {
 } from "@/components/admin-ui";
 import { MAX_SMS_LENGTH } from "@/lib/pupdate-sms";
 import {
-  pollRosterSyncJobUntilTerminal,
+  isTerminalRosterSyncStatus,
+  ROSTER_SYNC_POLL_INTERVAL_MS,
+  ROSTER_SYNC_POLL_TIMEOUT_MS,
   rosterSyncResultToast,
   rosterSyncStatusLabel,
   type RosterSyncJobView,
@@ -24,18 +27,19 @@ import { saveSettings, type SettingsState } from "./actions";
 import { EMAIL_CONNECTOR_NOTICE_ID, emailConnectorBlockedReason } from "./gmail-notice";
 import styles from "./admin.module.css";
 
-function routeError(action: string, status: number) {
-  if (status === 404) {
-    return `${action} is not wired up yet (404).`;
+async function apiFetch(input: RequestInfo | URL, init: RequestInit, action: string) {
+  let response: Response;
+  try {
+    response = await fetch(input, init);
+  } catch {
+    throw new Error(`${action} could not reach the server.`);
   }
-  return `${action} failed (${status}). Try again.`;
-}
+  if (response.ok) return response;
 
-async function responseError(response: Response, action: string) {
   const body = await response.json().catch(() => null) as { error?: unknown } | null;
-  return typeof body?.error === "string" && body.error
-    ? body.error
-    : routeError(action, response.status);
+  if (typeof body?.error === "string" && body.error) throw new Error(body.error);
+  if (response.status === 404) throw new Error(`${action} is not wired up yet (404).`);
+  throw new Error(`${action} failed (${response.status}). Try again.`);
 }
 
 export function DraftEditor({
@@ -95,7 +99,7 @@ export function DraftEditor({
       return false;
     }
 
-    const response = await fetch(`/api/pupdates/${id}`, {
+    await apiFetch(`/api/pupdates/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json", "X-Organization-Slug": orgSlug },
       body: JSON.stringify({
@@ -103,11 +107,7 @@ export function DraftEditor({
         emailBody: draft.bodyText,
         smsBody: draft.smsText,
       }),
-    });
-    if (!response.ok) {
-      pushToast("error", await responseError(response, "Save draft"));
-      return false;
-    }
+    }, "Save draft");
     return true;
   }
 
@@ -121,8 +121,8 @@ export function DraftEditor({
         pushToast("success", "Draft changes saved.");
         router.refresh();
       }
-    } catch {
-      pushToast("error", "Save draft could not reach the server.");
+    } catch (error) {
+      pushToast("error", error instanceof Error ? error.message : "Save draft could not reach the server.");
     } finally {
       setPending(null);
     }
@@ -134,18 +134,14 @@ export function DraftEditor({
     setPending("approve");
     try {
       if (!(await persistDraft(savedDraft))) return;
-      const response = await fetch(`/api/pupdates/${id}/approve`, {
+      await apiFetch(`/api/pupdates/${id}/approve`, {
         method: "POST",
         headers: { "X-Organization-Slug": orgSlug },
-      });
-      if (!response.ok) {
-        pushToast("error", await responseError(response, "Approve and send"));
-        return;
-      }
+      }, "Approve and send");
       pushToast("success", "Approved and sent.");
       router.refresh();
-    } catch {
-      pushToast("error", "Approve and send could not reach the server.");
+    } catch (error) {
+      pushToast("error", error instanceof Error ? error.message : "Approve and send could not reach the server.");
     } finally {
       setPending(null);
     }
@@ -156,18 +152,14 @@ export function DraftEditor({
 
     setPending("deny");
     try {
-      const response = await fetch(`/api/pupdates/${id}`, {
+      await apiFetch(`/api/pupdates/${id}`, {
         method: "DELETE",
         headers: { "X-Organization-Slug": orgSlug },
-      });
-      if (!response.ok) {
-        pushToast("error", await responseError(response, "Discard draft"));
-        return;
-      }
+      }, "Discard draft");
       pushToast("success", "Draft discarded.");
       router.refresh();
-    } catch {
-      pushToast("error", "Discard draft could not reach the server.");
+    } catch (error) {
+      pushToast("error", error instanceof Error ? error.message : "Discard draft could not reach the server.");
     } finally {
       setPending(null);
     }
@@ -300,19 +292,15 @@ export function ComposeButton({
   async function compose() {
     setPending(true);
     try {
-      const response = await fetch("/api/pupdates/compose", {
+      await apiFetch("/api/pupdates/compose", {
         method: "POST",
         headers: { "Content-Type": "application/json", "X-Organization-Slug": orgSlug },
         body: JSON.stringify({ residentId }),
-      });
-      if (!response.ok) {
-        pushToast("error", await responseError(response, "Compose pupdate"));
-        return;
-      }
+      }, "Compose pupdate");
       pushToast("success", `${residentName}'s draft is ready for review.`);
       router.refresh();
-    } catch {
-      pushToast("error", "Compose pupdate could not reach the server.");
+    } catch (error) {
+      pushToast("error", error instanceof Error ? error.message : "Compose pupdate could not reach the server.");
     } finally {
       setPending(false);
     }
@@ -334,77 +322,100 @@ export function RosterSyncSettings({
   initialSourceUrl: string;
   orgSlug: string;
 }) {
+  const queryClient = useQueryClient();
   const [state, formAction, saving] = useActionState(saveSettings, initialSettingsState);
   const [sourceUrl, setSourceUrl] = useState(initialSourceUrl);
-  const [syncPending, setSyncPending] = useState(false);
-  const [job, setJob] = useState<RosterSyncJobView | null>(null);
-  const goneRef = useRef(false);
+  const [jobId, setJobId] = useState<string | null>(null);
+  const [pollDeadline, setPollDeadline] = useState<number | null>(null);
+  const notifiedJobId = useRef<string | null>(null);
   const savedSourceInput = state.savedSourceInput ?? initialSourceUrl;
   const sourceDirty = sourceUrl !== savedSourceInput;
-
-  useEffect(() => () => {
-    goneRef.current = true;
-  }, []);
 
   useEffect(() => {
     if (state.status === "idle") return;
     pushToast(state.status, state.message);
   }, [state]);
 
-  async function fetchJob(jobId: string) {
-    const response = await fetch(`/api/sync/${encodeURIComponent(jobId)}`, {
-      headers: { "X-Organization-Slug": orgSlug },
-    });
-    if (!response.ok) throw new Error(await responseError(response, "Roster sync status"));
-    return (await response.json()) as RosterSyncJobView;
-  }
-
-  async function syncNow() {
-    setSyncPending(true);
-    try {
-      const response = await fetch("/api/sync", {
+  const syncMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiFetch("/api/sync", {
         method: "POST",
         headers: { "X-Organization-Slug": orgSlug },
-      });
-      if (!response.ok) {
-        pushToast("error", await responseError(response, "Roster sync"));
-        return;
-      }
-      const enqueued = (await response.json()) as RosterSyncJobView;
-      setJob(enqueued);
-      const outcome = await pollRosterSyncJobUntilTerminal(enqueued, {
-        fetchJob,
-        onUpdate: setJob,
-        cancelled: () => goneRef.current,
-      });
-      if (!outcome.done) {
-        if (outcome.reason === "timeout") {
-          pushToast(
-            "warning",
-            "Roster sync is still working in the background. Reload to see the result.",
-          );
-        }
-        return;
-      }
-      const toast = rosterSyncResultToast(outcome.job);
-      if (toast) pushToast(toast.tone, toast.text);
-      else pushToast("error", "Roster sync completed without a usable result.");
-    } catch (error) {
+      }, "Roster sync");
+      return (await response.json()) as RosterSyncJobView;
+    },
+    onError: (error) => {
       pushToast(
         "error",
-        error instanceof Error && error.message
-          ? error.message
-          : "Roster sync could not reach the server.",
+        error.message || "Roster sync could not reach the server.",
       );
-    } finally {
-      setSyncPending(false);
-    }
-  }
+    },
+    onSuccess: (enqueued) => {
+      notifiedJobId.current = null;
+      queryClient.setQueryData(["roster-sync", orgSlug, enqueued.id], enqueued);
+      setJobId(enqueued.id);
+      setPollDeadline(Date.now() + ROSTER_SYNC_POLL_TIMEOUT_MS);
+    },
+  });
+
+  const jobQuery = useQuery({
+    queryKey: ["roster-sync", orgSlug, jobId],
+    queryFn: async () => {
+      if (!jobId) throw new Error("Roster sync status is missing a job ID.");
+      const response = await apiFetch(`/api/sync/${encodeURIComponent(jobId)}`, {
+        headers: { "X-Organization-Slug": orgSlug },
+      }, "Roster sync status");
+      return (await response.json()) as RosterSyncJobView;
+    },
+    enabled: jobId !== null,
+    refetchInterval: (query) => {
+      if (query.state.status === "error") return false;
+      if (pollDeadline === null || Date.now() >= pollDeadline) return false;
+      const currentJob = query.state.data;
+      return currentJob && isTerminalRosterSyncStatus(currentJob.status)
+        ? false
+        : ROSTER_SYNC_POLL_INTERVAL_MS;
+    },
+  });
+
+  const job = jobQuery.data ?? syncMutation.data ?? null;
+  const jobInProgress = Boolean(job && !isTerminalRosterSyncStatus(job.status))
+    && !jobQuery.isError
+    && pollDeadline !== null;
+  const syncPending = syncMutation.isPending || jobInProgress;
+
+  useEffect(() => {
+    if (!jobQuery.error) return;
+    pushToast("error", jobQuery.error.message || "Roster sync could not reach the server.");
+  }, [jobQuery.error]);
+
+  useEffect(() => {
+    if (!job || !isTerminalRosterSyncStatus(job.status) || notifiedJobId.current === job.id) return;
+    notifiedJobId.current = job.id;
+    setPollDeadline(null);
+    const toast = rosterSyncResultToast(job);
+    if (toast) pushToast(toast.tone, toast.text);
+    else pushToast("error", "Roster sync completed without a usable result.");
+  }, [job]);
+
+  // Give up on a job that never drains, the way the hand-rolled poller did,
+  // instead of asking the status route for it once a second forever.
+  useEffect(() => {
+    if (pollDeadline === null) return;
+    const timer = setTimeout(() => {
+      setPollDeadline(null);
+      pushToast(
+        "warning",
+        "Roster sync is still working in the background. Reload to see the result.",
+      );
+    }, Math.max(0, pollDeadline - Date.now()));
+    return () => clearTimeout(timer);
+  }, [pollDeadline]);
 
   const label = job ? rosterSyncStatusLabel(job) : null;
-  const buttonLabel = job?.status === "queued"
+  const buttonLabel = jobInProgress && job?.status === "queued"
     ? "Queued…"
-    : job?.status === "running"
+    : jobInProgress && job?.status === "running"
       ? "Syncing…"
       : "Sync now";
 
@@ -430,7 +441,7 @@ export function RosterSyncSettings({
         </AdminButton>
         <AdminButton
           disabled={saving || syncPending || sourceDirty}
-          onClick={syncNow}
+          onClick={() => syncMutation.mutate()}
           title={sourceDirty ? "Save the source URL before syncing." : undefined}
           tone="mustard"
         >
@@ -476,22 +487,18 @@ export function EmailConnectorSettings({
   async function connectOAuth(provider: "gmail" | "microsoft") {
     setPending(provider);
     try {
-      const response = await fetch(`/api/email-connectors/${provider}/authorize`, {
+      const response = await apiFetch(`/api/email-connectors/${provider}/authorize`, {
         method: "POST",
         headers: { "X-Organization-Slug": orgSlug },
-      });
-      if (!response.ok) {
-        pushToast("error", await responseError(response, `Connect ${provider}`));
-        return;
-      }
+      }, `Connect ${provider}`);
       const body = (await response.json()) as { url?: string };
       if (!body.url) {
         pushToast("error", "The email provider returned no authorization URL.");
         return;
       }
       window.location.assign(body.url);
-    } catch {
-      pushToast("error", `Could not start the ${provider} connection.`);
+    } catch (error) {
+      pushToast("error", error instanceof Error ? error.message : `Could not start the ${provider} connection.`);
     } finally {
       setPending(null);
     }
@@ -503,7 +510,7 @@ export function EmailConnectorSettings({
     setPending("smtp");
     try {
       const form = new FormData(formElement);
-      const response = await fetch("/api/email-connectors/smtp", {
+      const response = await apiFetch("/api/email-connectors/smtp", {
         method: "POST",
         headers: { "Content-Type": "application/json", "X-Organization-Slug": orgSlug },
         body: JSON.stringify({
@@ -514,18 +521,14 @@ export function EmailConnectorSettings({
           password: form.get("smtpPassword"),
           fromEmail: form.get("smtpFromEmail"),
         }),
-      });
-      if (!response.ok) {
-        pushToast("error", await responseError(response, "Verify SMTP"));
-        return;
-      }
+      }, "Verify SMTP");
       const status = (await response.json()) as ConnectorStatus;
       setConnector(status);
       formElement.reset();
       setSmtpOpen(false);
       pushToast("success", "SMTP verified and saved for this organization.");
-    } catch {
-      pushToast("error", "SMTP verification could not reach the server.");
+    } catch (error) {
+      pushToast("error", error instanceof Error ? error.message : "SMTP verification could not reach the server.");
     } finally {
       setPending(null);
     }
@@ -534,18 +537,14 @@ export function EmailConnectorSettings({
   async function disconnect() {
     setPending("disconnect");
     try {
-      const response = await fetch("/api/email-connectors", {
+      await apiFetch("/api/email-connectors", {
         method: "DELETE",
         headers: { "X-Organization-Slug": orgSlug },
-      });
-      if (!response.ok) {
-        pushToast("error", await responseError(response, "Disconnect email"));
-        return;
-      }
+      }, "Disconnect email");
       setConnector({ connected: false, type: null, fromEmail: null });
       pushToast("success", "Organization email disconnected.");
-    } catch {
-      pushToast("error", "Email disconnect could not reach the server.");
+    } catch (error) {
+      pushToast("error", error instanceof Error ? error.message : "Email disconnect could not reach the server.");
     } finally {
       setPending(null);
     }

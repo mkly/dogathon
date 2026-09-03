@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
-  pollRosterSyncJobUntilTerminal,
   rosterSyncStatusLabel,
   rosterSyncResultToast,
   type RosterSyncJobView,
@@ -77,62 +76,6 @@ test("a refused job is presented as a refusal with its reason", () => {
       text: "Unable to sync at this time. The parsed roster would adopt most residents.",
     },
   );
-});
-
-test("polling follows a job to its terminal state and reports every update", async () => {
-  const states: RosterSyncJobView[] = [
-    job({ status: "running" }),
-    job({ status: "succeeded", summary }),
-  ];
-  const seen: string[] = [];
-
-  const outcome = await pollRosterSyncJobUntilTerminal(job({ status: "queued" }), {
-    fetchJob: async () => states.shift()!,
-    onUpdate: (next) => seen.push(next.status),
-    wait: async () => {},
-  });
-
-  assert.deepEqual(seen, ["running", "succeeded"]);
-  assert.equal(outcome.done, true);
-  assert.equal(outcome.job.status, "succeeded");
-});
-
-test("polling stops at its deadline instead of waiting on a drain that never runs", async () => {
-  let clock = 0;
-  let polls = 0;
-
-  const outcome = await pollRosterSyncJobUntilTerminal(job({ status: "queued" }), {
-    fetchJob: async () => {
-      polls += 1;
-      return job({ status: "queued" });
-    },
-    wait: async (milliseconds) => {
-      clock += milliseconds;
-    },
-    now: () => clock,
-    intervalMs: 1_000,
-    timeoutMs: 3_000,
-  });
-
-  assert.deepEqual(outcome, { done: false, reason: "timeout", job: job({ status: "queued" }) });
-  assert.equal(polls, 3);
-});
-
-test("polling stops as soon as the caller has gone away", async () => {
-  let polls = 0;
-
-  const outcome = await pollRosterSyncJobUntilTerminal(job({ status: "queued" }), {
-    fetchJob: async () => {
-      polls += 1;
-      return job({ status: "queued" });
-    },
-    wait: async () => {},
-    cancelled: () => polls >= 1,
-  });
-
-  assert.equal(outcome.done, false);
-  assert.equal(outcome.done === false ? outcome.reason : null, "cancelled");
-  assert.equal(polls, 1);
 });
 
 test("an incomplete crawl is presented as a partial sync that left residents alone", () => {
