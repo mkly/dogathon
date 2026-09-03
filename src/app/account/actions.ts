@@ -8,6 +8,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { getSponsorContext } from "@/lib/sponsor-access";
 import { createBillingPortalSession } from "@/lib/stripe-billing";
+import { env } from "@/lib/env";
 import { uuidSchema } from "@/lib/uuid";
 
 const SPONSORSHIP_CHANNELS = ["email", "sms", "both"] as const;
@@ -67,11 +68,10 @@ export async function openBillingPortal(sponsorshipId: string) {
     throw new Error("Billing management is unavailable for this sponsorship");
   }
 
-  const baseUrl = process.env.BETTER_AUTH_URL ?? "http://localhost:3000";
   const portal = await createBillingPortalSession({
     accountId,
     customerId,
-    returnUrl: new URL("/account", baseUrl).toString(),
+    returnUrl: new URL("/account", env.BETTER_AUTH_URL).toString(),
   });
 
   redirect(portal.url);

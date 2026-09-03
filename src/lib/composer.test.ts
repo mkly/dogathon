@@ -2,30 +2,30 @@ import assert from "node:assert/strict";
 import { after, afterEach, before, test } from "node:test";
 
 import { composePupdate } from "./composer.ts";
+import { env } from "./env.ts";
 
 const originalEnvironment = {
-  OPENAI_API_KEY: process.env.OPENAI_API_KEY,
-  OPENAI_BASE_URL: process.env.OPENAI_BASE_URL,
-  OPENAI_MODEL: process.env.OPENAI_MODEL,
+  OPENAI_API_KEY: env.OPENAI_API_KEY,
+  OPENAI_BASE_URL: env.OPENAI_BASE_URL,
+  OPENAI_MODEL: env.OPENAI_MODEL,
 };
 const originalFetch = globalThis.fetch;
 
 before(() => {
-  delete process.env.OPENAI_API_KEY;
+  env.OPENAI_API_KEY = undefined;
 });
 
 afterEach(() => {
-  delete process.env.OPENAI_API_KEY;
-  delete process.env.OPENAI_BASE_URL;
-  delete process.env.OPENAI_MODEL;
+  env.OPENAI_API_KEY = undefined;
+  env.OPENAI_BASE_URL = "https://api.openai.com/v1";
+  env.OPENAI_MODEL = "gpt-4o-mini";
   globalThis.fetch = originalFetch;
 });
 
 after(() => {
-  for (const [name, value] of Object.entries(originalEnvironment)) {
-    if (value === undefined) delete process.env[name];
-    else process.env[name] = value;
-  }
+  env.OPENAI_API_KEY = originalEnvironment.OPENAI_API_KEY;
+  env.OPENAI_BASE_URL = originalEnvironment.OPENAI_BASE_URL;
+  env.OPENAI_MODEL = originalEnvironment.OPENAI_MODEL;
   globalThis.fetch = originalFetch;
 });
 
@@ -46,9 +46,9 @@ test("composes a grounded regular pupdate without credentials", async () => {
 });
 
 test("uses the configured chat-completions endpoint and model", async () => {
-  process.env.OPENAI_API_KEY = "test-key";
-  process.env.OPENAI_BASE_URL = "https://model.example/v1/";
-  process.env.OPENAI_MODEL = "rescue-writer";
+  env.OPENAI_API_KEY = "test-key";
+  env.OPENAI_BASE_URL = "https://model.example/v1";
+  env.OPENAI_MODEL = "rescue-writer";
   let requestUrl = "";
   let requestHeaders: Headers | undefined;
   let requestBody: Record<string, unknown> | undefined;

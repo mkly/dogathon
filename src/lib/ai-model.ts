@@ -1,5 +1,7 @@
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 
+import { env } from "./env.ts";
+
 export type AiModelOptions = {
   apiKey?: string;
   baseUrl?: string;
@@ -14,16 +16,16 @@ function requiredSetting(value: string | undefined, name: string): string {
 }
 
 export function hasAiCredentials(apiKey?: string): boolean {
-  return Boolean((apiKey ?? process.env.OPENAI_API_KEY)?.trim());
+  return Boolean((apiKey ?? env.OPENAI_API_KEY)?.trim());
 }
 
 export function createAiModel(options: AiModelOptions = {}) {
-  const apiKey = requiredSetting(options.apiKey ?? process.env.OPENAI_API_KEY, "OPENAI_API_KEY");
+  const apiKey = requiredSetting(options.apiKey ?? env.OPENAI_API_KEY, "OPENAI_API_KEY");
   const baseURL = requiredSetting(
-    options.baseUrl ?? process.env.OPENAI_BASE_URL,
+    options.baseUrl ?? env.OPENAI_BASE_URL,
     "OPENAI_BASE_URL",
   ).replace(/\/+$/u, "");
-  const model = requiredSetting(options.model ?? process.env.OPENAI_MODEL, "OPENAI_MODEL");
+  const model = requiredSetting(options.model ?? env.OPENAI_MODEL, "OPENAI_MODEL");
 
   return createOpenAICompatible({
     name: "dogathon",

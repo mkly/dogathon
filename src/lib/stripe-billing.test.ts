@@ -15,8 +15,9 @@ import {
   processStripeEvent,
   refreshConnectStatus,
 } from "./stripe-billing";
+import { env } from "./env.ts";
 
-process.env.STRIPE_SECRET_KEY = "sk_test_fixture";
+env.STRIPE_SECRET_KEY = "sk_test_fixture";
 
 const stripeApi = "https://api.stripe.com";
 

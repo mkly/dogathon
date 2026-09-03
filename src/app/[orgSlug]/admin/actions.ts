@@ -6,6 +6,7 @@ import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
 
 import { getOrganizationAccessBySlug } from "@/lib/organization-access";
+import { env } from "@/lib/env";
 import { prisma } from "@/lib/prisma";
 import { parseSettingsForm } from "@/lib/rescue-settings";
 import { createConnectOnboardingLink } from "@/lib/stripe-billing";
@@ -28,13 +29,12 @@ export async function beginStripeOnboarding(formData: FormData) {
   if (!access) notFound();
   if (!access.context) redirect("/staff/organizations");
 
-  const appUrl = process.env.BETTER_AUTH_URL?.replace(/\/$/, "") ?? "http://localhost:3000";
   // Stripe sends the owner back to a bare API route, so the org has to ride along
   // in the URL for the callback to know which admin room to return them to.
   const org = `?org=${encodeURIComponent(orgSlug)}`;
   const link = await createConnectOnboardingLink(access.context.orgId, {
-    refreshUrl: `${appUrl}/api/stripe/connect/refresh${org}`,
-    returnUrl: `${appUrl}/api/stripe/connect/return${org}`,
+    refreshUrl: `${env.BETTER_AUTH_URL}/api/stripe/connect/refresh${org}`,
+    returnUrl: `${env.BETTER_AUTH_URL}/api/stripe/connect/return${org}`,
   });
   redirect(link.url);
 }

@@ -4,6 +4,7 @@ import { z } from "zod";
 
 import { getOrganizationAccessBySlug } from "@/lib/organization-access";
 import { createConnectOnboardingLink } from "@/lib/stripe-billing";
+import { env } from "@/lib/env";
 
 const connectQuerySchema = z.object({ org: z.string().trim().min(1) });
 
@@ -15,11 +16,10 @@ export async function GET(request: Request) {
   });
   if (!access?.context) redirect("/staff/organizations");
 
-  const appUrl = process.env.BETTER_AUTH_URL?.replace(/\/$/, "") ?? "http://localhost:3000";
   const org = `?org=${encodeURIComponent(access.organization.slug)}`;
   const link = await createConnectOnboardingLink(access.context.orgId, {
-    refreshUrl: `${appUrl}/api/stripe/connect/refresh${org}`,
-    returnUrl: `${appUrl}/api/stripe/connect/return${org}`,
+    refreshUrl: `${env.BETTER_AUTH_URL}/api/stripe/connect/refresh${org}`,
+    returnUrl: `${env.BETTER_AUTH_URL}/api/stripe/connect/return${org}`,
   });
   redirect(link.url);
 }

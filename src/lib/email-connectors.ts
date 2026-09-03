@@ -4,6 +4,7 @@ import MailComposer from "nodemailer/lib/mail-composer";
 import * as oauth from "oauth4webapi";
 
 import { sendAppEmail } from "./app-mailer.ts";
+import { env } from "./env.ts";
 import { prisma } from "./prisma.ts";
 
 export type EmailConnectorKind = "gmail" | "microsoft" | "smtp";
@@ -87,7 +88,7 @@ const textEncoder = new TextEncoder();
 const textDecoder = new TextDecoder();
 
 function encryptionKey(): Uint8Array {
-  const encoded = process.env.EMAIL_CONNECTOR_ENCRYPTION_KEY;
+  const encoded = env.EMAIL_CONNECTOR_ENCRYPTION_KEY;
   if (!encoded) throw new Error("EMAIL_CONNECTOR_ENCRYPTION_KEY is required");
 
   const key = Buffer.from(encoded, "base64");
@@ -98,7 +99,7 @@ function encryptionKey(): Uint8Array {
 }
 
 function hasEncryptionKey(): boolean {
-  const encoded = process.env.EMAIL_CONNECTOR_ENCRYPTION_KEY;
+  const encoded = env.EMAIL_CONNECTOR_ENCRYPTION_KEY;
   return Boolean(encoded) && Buffer.from(encoded!, "base64").length === 32;
 }
 
@@ -151,21 +152,21 @@ export async function decryptEmailConnectorOAuthSession(value: string): Promise<
 }
 
 function microsoftTenant(): string {
-  return process.env.MICROSOFT_TENANT_ID?.trim() || "common";
+  return env.MICROSOFT_TENANT_ID;
 }
 
 function oauthCredentials(provider: Exclude<EmailConnectorKind, "smtp">) {
   if (provider === "gmail") {
-    const clientId = process.env.GOOGLE_CLIENT_ID;
-    const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+    const clientId = env.GOOGLE_CLIENT_ID;
+    const clientSecret = env.GOOGLE_CLIENT_SECRET;
     if (!clientId || !clientSecret) {
       throw new Error("GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET are required");
     }
     return { clientId, clientSecret };
   }
 
-  const clientId = process.env.MICROSOFT_CLIENT_ID;
-  const clientSecret = process.env.MICROSOFT_CLIENT_SECRET;
+  const clientId = env.MICROSOFT_CLIENT_ID;
+  const clientSecret = env.MICROSOFT_CLIENT_SECRET;
   if (!clientId || !clientSecret) {
     throw new Error("MICROSOFT_CLIENT_ID and MICROSOFT_CLIENT_SECRET are required");
   }
@@ -174,8 +175,8 @@ function oauthCredentials(provider: Exclude<EmailConnectorKind, "smtp">) {
 
 function hasOAuthCredentials(provider: Exclude<EmailConnectorKind, "smtp">): boolean {
   return provider === "gmail"
-    ? Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET)
-    : Boolean(process.env.MICROSOFT_CLIENT_ID && process.env.MICROSOFT_CLIENT_SECRET);
+    ? Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET)
+    : Boolean(env.MICROSOFT_CLIENT_ID && env.MICROSOFT_CLIENT_SECRET);
 }
 
 /**

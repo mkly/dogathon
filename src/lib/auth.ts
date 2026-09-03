@@ -11,6 +11,7 @@ import {
 } from "better-auth/plugins/organization/access";
 
 import { sendAppEmail } from "@/lib/app-mailer";
+import { env } from "@/lib/env";
 import { sendMagicLinkEmail } from "@/lib/magic-link-email";
 import {
   isReservedOrganizationSlug,
@@ -90,6 +91,8 @@ function rejectReservedOrganizationSlug(slug: string | undefined) {
 }
 
 export const auth = betterAuth({
+  baseURL: env.BETTER_AUTH_URL,
+  ...(env.BETTER_AUTH_SECRET ? { secret: env.BETTER_AUTH_SECRET } : {}),
   database: prismaAdapter(prisma, {
     provider: "postgresql",
   }),
@@ -125,8 +128,7 @@ export const auth = betterAuth({
         ...organizationRoles,
       },
       sendInvitationEmail: async ({ email, id, organization: invitedOrganization, role }) => {
-        const baseUrl = process.env.BETTER_AUTH_URL ?? "http://localhost:3000";
-        const invitationUrl = new URL("/staff/organizations", baseUrl);
+        const invitationUrl = new URL("/staff/organizations", env.BETTER_AUTH_URL);
         invitationUrl.searchParams.set("invitation", id);
 
         const describedSend = await sendAppEmail({

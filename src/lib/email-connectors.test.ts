@@ -13,41 +13,38 @@ import {
   verifySmtpConfiguration,
   type StoredEmailConnector,
 } from "./email-connectors.ts";
+import { env } from "./env.ts";
 
 let encryptedAccessToken = "";
 let encryptedRefreshToken = "";
 
 const originalEnvironment = {
-  encryption: process.env.EMAIL_CONNECTOR_ENCRYPTION_KEY,
-  gmailId: process.env.GOOGLE_CLIENT_ID,
-  gmailSecret: process.env.GOOGLE_CLIENT_SECRET,
-  microsoftId: process.env.MICROSOFT_CLIENT_ID,
-  microsoftSecret: process.env.MICROSOFT_CLIENT_SECRET,
-  microsoftTenant: process.env.MICROSOFT_TENANT_ID,
+  encryption: env.EMAIL_CONNECTOR_ENCRYPTION_KEY,
+  gmailId: env.GOOGLE_CLIENT_ID,
+  gmailSecret: env.GOOGLE_CLIENT_SECRET,
+  microsoftId: env.MICROSOFT_CLIENT_ID,
+  microsoftSecret: env.MICROSOFT_CLIENT_SECRET,
+  microsoftTenant: env.MICROSOFT_TENANT_ID,
 };
 
 before(async () => {
-  process.env.EMAIL_CONNECTOR_ENCRYPTION_KEY = Buffer.alloc(32, 7).toString("base64");
-  process.env.GOOGLE_CLIENT_ID = "gmail-client";
-  process.env.GOOGLE_CLIENT_SECRET = "gmail-secret";
-  process.env.MICROSOFT_CLIENT_ID = "microsoft-client";
-  process.env.MICROSOFT_CLIENT_SECRET = "microsoft-secret";
-  process.env.MICROSOFT_TENANT_ID = "organizations";
+  env.EMAIL_CONNECTOR_ENCRYPTION_KEY = Buffer.alloc(32, 7).toString("base64");
+  env.GOOGLE_CLIENT_ID = "gmail-client";
+  env.GOOGLE_CLIENT_SECRET = "gmail-secret";
+  env.MICROSOFT_CLIENT_ID = "microsoft-client";
+  env.MICROSOFT_CLIENT_SECRET = "microsoft-secret";
+  env.MICROSOFT_TENANT_ID = "organizations";
   encryptedAccessToken = await encryptEmailSecret("access-token");
   encryptedRefreshToken = await encryptEmailSecret("refresh-token");
 });
 
 after(() => {
-  const restore = (key: string, value: string | undefined) => {
-    if (value === undefined) delete process.env[key];
-    else process.env[key] = value;
-  };
-  restore("EMAIL_CONNECTOR_ENCRYPTION_KEY", originalEnvironment.encryption);
-  restore("GOOGLE_CLIENT_ID", originalEnvironment.gmailId);
-  restore("GOOGLE_CLIENT_SECRET", originalEnvironment.gmailSecret);
-  restore("MICROSOFT_CLIENT_ID", originalEnvironment.microsoftId);
-  restore("MICROSOFT_CLIENT_SECRET", originalEnvironment.microsoftSecret);
-  restore("MICROSOFT_TENANT_ID", originalEnvironment.microsoftTenant);
+  env.EMAIL_CONNECTOR_ENCRYPTION_KEY = originalEnvironment.encryption;
+  env.GOOGLE_CLIENT_ID = originalEnvironment.gmailId;
+  env.GOOGLE_CLIENT_SECRET = originalEnvironment.gmailSecret;
+  env.MICROSOFT_CLIENT_ID = originalEnvironment.microsoftId;
+  env.MICROSOFT_CLIENT_SECRET = originalEnvironment.microsoftSecret;
+  env.MICROSOFT_TENANT_ID = originalEnvironment.microsoftTenant;
 });
 
 function connector(
@@ -237,10 +234,10 @@ test("describes the send for every connector type when its credentials are unset
     contentType: "html" as const,
   };
 
-  delete process.env.GOOGLE_CLIENT_ID;
-  delete process.env.GOOGLE_CLIENT_SECRET;
-  delete process.env.MICROSOFT_CLIENT_ID;
-  delete process.env.MICROSOFT_CLIENT_SECRET;
+  env.GOOGLE_CLIENT_ID = undefined;
+  env.GOOGLE_CLIENT_SECRET = undefined;
+  env.MICROSOFT_CLIENT_ID = undefined;
+  env.MICROSOFT_CLIENT_SECRET = undefined;
   try {
     for (const provider of ["gmail", "microsoft"] as const) {
       assert.deepEqual(
@@ -257,10 +254,10 @@ test("describes the send for every connector type when its credentials are unset
       );
     }
   } finally {
-    process.env.GOOGLE_CLIENT_ID = "gmail-client";
-    process.env.GOOGLE_CLIENT_SECRET = "gmail-secret";
-    process.env.MICROSOFT_CLIENT_ID = "microsoft-client";
-    process.env.MICROSOFT_CLIENT_SECRET = "microsoft-secret";
+    env.GOOGLE_CLIENT_ID = "gmail-client";
+    env.GOOGLE_CLIENT_SECRET = "gmail-secret";
+    env.MICROSOFT_CLIENT_ID = "microsoft-client";
+    env.MICROSOFT_CLIENT_SECRET = "microsoft-secret";
   }
 
   // SMTP carries no app-level env credentials, so an unconfigured org connector
@@ -280,15 +277,15 @@ test("describes the send for every connector type when its credentials are unset
   // A fully configured SMTP org still stays offline without the encryption key
   // that would let the stored password be read.
   const withoutKey = { ...connector("smtp"), smtpHost: "smtp.example.com", smtpPort: 587, smtpSecure: false, smtpUser: "u", smtpPasswordEncrypted: await encryptEmailSecret("p") };
-  const key = process.env.EMAIL_CONNECTOR_ENCRYPTION_KEY;
-  delete process.env.EMAIL_CONNECTOR_ENCRYPTION_KEY;
+  const key = env.EMAIL_CONNECTOR_ENCRYPTION_KEY;
+  env.EMAIL_CONNECTOR_ENCRYPTION_KEY = undefined;
   try {
     assert.equal(
       (await sendEmailWithConnector(withoutKey, message, { fetch: refuse, transportFactory: refuseTransport }))?.dryRun,
       true,
     );
   } finally {
-    process.env.EMAIL_CONNECTOR_ENCRYPTION_KEY = key;
+    env.EMAIL_CONNECTOR_ENCRYPTION_KEY = key;
   }
 });
 
@@ -298,11 +295,16 @@ test("routes organization email through the platform sender when no connector ex
     subject: "Biscuit update",
     body: "Hello",
   };
-  const smtpEnvironment = Object.fromEntries(
-    ["APP_SMTP_HOST", "APP_SMTP_USER", "APP_SMTP_PASSWORD", "APP_EMAIL_FROM"]
-      .map((key) => [key, process.env[key]]),
-  );
-  for (const key of Object.keys(smtpEnvironment)) delete process.env[key];
+  const smtpEnvironmentKeys = [
+    "APP_SMTP_HOST",
+    "APP_SMTP_USER",
+    "APP_SMTP_PASSWORD",
+    "APP_EMAIL_FROM",
+  ] as const;
+  const smtpEnvironment = smtpEnvironmentKeys.map((key) => [key, env[key]] as const);
+  for (const [key] of smtpEnvironment) {
+    env[key] = undefined;
+  }
 
   let result;
   try {
@@ -313,9 +315,8 @@ test("routes organization email through the platform sender when no connector ex
       },
     });
   } finally {
-    for (const [key, value] of Object.entries(smtpEnvironment)) {
-      if (value === undefined) delete process.env[key];
-      else process.env[key] = value;
+    for (const [key, value] of smtpEnvironment) {
+      env[key] = value;
     }
   }
 

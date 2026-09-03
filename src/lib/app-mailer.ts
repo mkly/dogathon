@@ -8,12 +8,13 @@ import {
   type SmtpConfiguration,
   type TransportFactory,
 } from "./email-connectors.ts";
+import { env as appEnv } from "./env.ts";
 
 export type AppMailerEnvironment = {
-  [key: string]: string | undefined;
+  [key: string]: string | number | boolean | undefined;
   APP_SMTP_HOST?: string;
-  APP_SMTP_PORT?: string;
-  APP_SMTP_SECURE?: string;
+  APP_SMTP_PORT?: string | number;
+  APP_SMTP_SECURE?: string | boolean;
   APP_SMTP_USER?: string;
   APP_SMTP_PASSWORD?: string;
   APP_EMAIL_FROM?: string;
@@ -30,9 +31,12 @@ const smtpCredentialsSchema = z.object({
   APP_SMTP_PASSWORD: z.string().refine((value) => Boolean(value.trim())),
   APP_EMAIL_FROM: z.string().trim().min(1),
 });
+// The typed env module hands these through already coerced, so both schemas
+// accept the parsed value as well as the raw string a caller-supplied
+// environment still carries.
 const smtpSecureSchema = z.preprocess(
   (value) => typeof value === "string" ? value.trim() || undefined : value,
-  z.stringbool().optional().default(false),
+  z.union([z.boolean(), z.stringbool()]).optional().default(false),
 );
 const smtpPortSchema = z.preprocess(
   (value) => typeof value === "string" && !value.trim() ? undefined : value,
@@ -66,11 +70,11 @@ export async function sendAppEmail(
   input: EmailInput,
   dependencies: AppMailerDependencies = {},
 ): Promise<DescribedSend | null> {
-  const env = dependencies.env ?? process.env;
-  const from = env.APP_EMAIL_FROM?.trim() ?? "";
+  const environment = dependencies.env ?? appEnv;
+  const from = environment.APP_EMAIL_FROM?.trim() ?? "";
   validateEmailHeaders(input, from);
 
-  const config = configuration(env);
+  const config = configuration(environment);
   if (!config) {
     return {
       dryRun: true,
