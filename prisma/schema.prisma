@@ -19,7 +19,6 @@ model User {
   accounts       Account[]
   members        Member[]
   invitations    Invitation[]
-  rosterSyncJobs RosterSyncJob[]
   sponsor        Sponsor?
 
   username String?
@@ -61,7 +60,6 @@ model Organization {
   pupdates               Pupdate[]
   settings               RescueSettings?
   emailConnector         EmailConnector?
-  rosterSyncJobs         RosterSyncJob[]
   stripeAccountId        String?         @unique
   stripeDetailsSubmitted Boolean         @default(false)
   stripeChargesEnabled   Boolean         @default(false)
@@ -200,46 +198,6 @@ enum PupdateStatus {
   draft
   approved
   sent
-}
-
-enum RosterSyncJobStatus {
-  queued
-  running
-  succeeded
-  failed
-  refused
-}
-
-enum RosterSyncJobTrigger {
-  admin
-  scheduled
-}
-
-model RosterSyncJob {
-  id                String               @id @default(uuid(4)) @db.Uuid
-  orgId             String               @db.Uuid
-  status            RosterSyncJobStatus  @default(queued)
-  trigger           RosterSyncJobTrigger @default(admin)
-  attempts          Int                  @default(0)
-  maxAttempts       Int                  @default(3)
-  requestedAt       DateTime             @default(now())
-  availableAt       DateTime             @default(now())
-  requestedByUserId String?              @db.Uuid
-  startedAt         DateTime?
-  finishedAt        DateTime?
-  heartbeatAt       DateTime?
-  leaseExpiresAt    DateTime?
-  claimToken        String?
-  summary           Json?
-  refusalReason     String?
-  errorMessage      String?
-  organization      Organization         @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  requestedBy       User?                @relation(fields: [requestedByUserId], references: [id], onDelete: SetNull)
-
-  @@unique([id, orgId])
-  @@index([orgId, status, availableAt, requestedAt])
-  @@index([orgId, status, leaseExpiresAt])
-  @@index([requestedByUserId])
 }
 
 model Resident {

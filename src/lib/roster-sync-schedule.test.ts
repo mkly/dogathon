@@ -1,16 +1,22 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import type { RosterSyncJob } from "@/generated/prisma/client";
-
 import { createRosterSyncScheduleHandler } from "./roster-sync-schedule.ts";
+import type { RosterSyncJobView } from "./roster-sync-client.ts";
 
 const request = new Request("https://app.example/api/jobs/schedule-roster-sync", {
   headers: { authorization: "Bearer scheduler-secret" },
 });
 
-function queuedJob(orgId: string): RosterSyncJob {
-  return { id: `job-${orgId}`, orgId, status: "queued", trigger: "scheduled" } as RosterSyncJob;
+function queuedJob(orgId: string): RosterSyncJobView {
+  return {
+    id: `job-${orgId}`,
+    status: "queued",
+    trigger: "scheduled",
+    summary: null,
+    refusalReason: null,
+    errorMessage: null,
+  };
 }
 
 test("the schedule route requires the same bearer secret as the drain route", async () => {
@@ -30,7 +36,7 @@ test("the schedule route requires the same bearer secret as the drain route", as
 });
 
 test("eligible organizations are staggered and existing work is skipped", async () => {
-  const inputs: Array<{ orgId: string; trigger: "scheduled"; availableAt: Date }> = [];
+  const inputs: Array<{ orgId: string; trigger: "scheduled"; startAfter: Date }> = [];
   const handler = createRosterSyncScheduleHandler({
     env: {
       CRON_SECRET: "scheduler-secret",
@@ -53,15 +59,15 @@ test("eligible organizations are staggered and existing work is skipped", async 
   assert.equal(response.status, 200);
   assert.deepEqual(await response.json(), { eligible: 3, enqueued: 2, skipped: 1, failed: 0 });
   assert.deepEqual(
-    inputs.map(({ orgId, trigger, availableAt }) => ({
+    inputs.map(({ orgId, trigger, startAfter }) => ({
       orgId,
       trigger,
-      availableAt: availableAt.toISOString(),
+      startAfter: startAfter.toISOString(),
     })),
     [
-      { orgId: "org-1", trigger: "scheduled", availableAt: "2026-09-02T08:00:00.000Z" },
-      { orgId: "org-2", trigger: "scheduled", availableAt: "2026-09-02T08:01:00.000Z" },
-      { orgId: "org-3", trigger: "scheduled", availableAt: "2026-09-02T08:02:00.000Z" },
+      { orgId: "org-1", trigger: "scheduled", startAfter: "2026-09-02T08:00:00.000Z" },
+      { orgId: "org-2", trigger: "scheduled", startAfter: "2026-09-02T08:01:00.000Z" },
+      { orgId: "org-3", trigger: "scheduled", startAfter: "2026-09-02T08:02:00.000Z" },
     ],
   );
 });
