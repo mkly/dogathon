@@ -1,3 +1,5 @@
+import * as cheerio from "cheerio";
+
 import { createChatCompletion, hasChatCompletionCredentials } from "./chat-completions.ts";
 
 export type CompanionRecord = {
@@ -23,6 +25,13 @@ export type ParseCompanionRosterOptions = {
 
 const FIELD_NAMES = ["Personality", "Breed", "Age", "Weight", "Sex"];
 
+type RosterSection = {
+  heading: string;
+  text: string;
+  careNotes: string[];
+  photoUrls: string[];
+};
+
 /**
  * Parse a hand-authored rescue roster. A configured chat-completions endpoint
  * is the primary parser; local parsing keeps imports, tests, and demos offline.
@@ -45,18 +54,21 @@ export async function parseCompanionRoster(
 export function parseCompanionRosterDeterministic(source: string): CompanionRecord[] {
   const sections = source.includes("<h3")
     ? splitHtmlSections(source)
-    : splitMarkdownSections(source);
+    : splitMarkdownSections(source).map(({ heading, body }) => ({
+        heading,
+        text: body,
+        careNotes: extractMarkdownCareNotes(body),
+        photoUrls: extractMarkdownPhotoUrls(body),
+      }));
 
-  return sections.flatMap(({ heading, body }) => {
+  return sections.flatMap(({ heading, text, careNotes, photoUrls }) => {
     const adopted = /\badopted\b/i.test(heading);
     const name = cleanHeading(heading);
-    const text = htmlToText(body);
     const breed = extractField(text, "Breed");
     const ageText = extractField(text, "Age");
     const sex = extractField(text, "Sex");
     const weightText = extractField(text, "Weight");
     const personality = extractField(text, "Personality");
-    const photoUrls = extractPhotoUrls(body);
 
     // Navigation and footer headings are not roster entries.
     if (!name || !photoUrls.length || ![breed, ageText, sex, weightText, personality].some(Boolean)) {
@@ -71,7 +83,7 @@ export function parseCompanionRosterDeterministic(source: string): CompanionReco
       sex,
       weightText,
       personality,
-      careNotes: extractCareNotes(body),
+      careNotes,
       photoUrls,
       adopted,
     }];
@@ -128,15 +140,31 @@ function normalizeRecord(value: unknown): CompanionRecord {
   };
 }
 
-function splitHtmlSections(source: string): Array<{ heading: string; body: string }> {
-  const headings = [...source.matchAll(/<h3\b[^>]*>([\s\S]*?)<\/h3>/gi)];
-  return headings.map((match, index) => ({
-    heading: htmlToText(match[1]),
-    body: source.slice(
-      (match.index ?? 0) + match[0].length,
-      headings[index + 1]?.index ?? source.length,
-    ),
-  }));
+function splitHtmlSections(source: string): RosterSection[] {
+  const $ = cheerio.load(source);
+  addTextBoundaries($);
+
+  return $("h3").toArray().map((heading) => {
+    const $heading = $(heading);
+    const followingSiblings = $heading.nextUntil("h3");
+    // Simple imports place the section content directly after the heading; site
+    // builders instead wrap each heading and its content in a per-companion card,
+    // the outermost ancestor that still covers only this heading.
+    const card = $heading.parents().filter((_index, element) => $(element).find("h3").length === 1);
+    const section = followingSiblings.length ? followingSiblings : card.length ? card.last() : $heading;
+    const images = section.filter("img").add(section.find("img"));
+
+    return {
+      heading: cleanText($heading.text()),
+      text: cleanText(section.text()),
+      careNotes: section.find("li").toArray()
+        .map((item) => cleanText($(item).text()))
+        .filter(Boolean),
+      photoUrls: uniquePhotoUrls(
+        images.toArray().map((image) => $(image).attr("src")),
+      ),
+    };
+  });
 }
 
 function splitMarkdownSections(source: string): Array<{ heading: string; body: string }> {
@@ -163,20 +191,15 @@ function extractDob(ageText: string): string {
   return cleanText(ageText.match(/\b(?:est(?:imated)?\s*)?DOB\s*:?\s*([^),;]+)/i)?.[1] ?? "");
 }
 
-function extractCareNotes(body: string): string[] {
-  const htmlNotes = [...body.matchAll(/<li\b[^>]*>([\s\S]*?)<\/li>/gi)]
-    .map((match) => htmlToText(match[1]))
-    .filter(Boolean);
-  if (htmlNotes.length) return htmlNotes;
-
+function extractMarkdownCareNotes(body: string): string[] {
   return [...body.matchAll(/^\s*[-*]\s+(.+)$/gm)]
     .map((match) => cleanText(match[1]))
     .filter(Boolean);
 }
 
-function extractPhotoUrls(body: string): string[] {
+function extractMarkdownPhotoUrls(body: string): string[] {
   const urls = body.match(/https?:\/\/[^"'\s<>]+?\.(?:avif|gif|jpe?g|png|webp)(?:\?[^"'\s<>]*)?/gi) ?? [];
-  return [...new Set(urls.map((url) => decodeEntities(url).split("?")[0]))];
+  return uniquePhotoUrls(urls);
 }
 
 function cleanHeading(heading: string): string {
@@ -184,55 +207,39 @@ function cleanHeading(heading: string): string {
 }
 
 function semanticPageText(source: string): string {
-  return htmlToText(
-    source
-      .replace(/<script\b[\s\S]*?<\/script>/gi, "")
-      .replace(/<style\b[\s\S]*?<\/style>/gi, "")
-      .replace(/<noscript\b[\s\S]*?<\/noscript>/gi, "")
-      // Photos live in tag attributes, which tag stripping would otherwise drop.
-      .replace(/<img\b[^>]*>/gi, imagePlaceholder),
-  ).slice(0, 180_000);
-}
-
-function imagePlaceholder(tag: string): string {
-  const src = tag.match(/\bsrc\s*=\s*["']([^"']+)["']/i)?.[1];
-  return src ? `\n[photo: ${decodeEntities(src).split("?")[0]}]\n` : " ";
-}
-
-function htmlToText(value: string): string {
-  return cleanText(
-    decodeEntities(
-      value
-        .replace(/<(?:br|\/p|\/li|\/h\d)\b[^>]*>/gi, "\n")
-        .replace(/<[^>]+>/g, " "),
-    ),
-  );
+  const $ = cheerio.load(source);
+  $("script, style, noscript").remove();
+  $("img").each((_index, image) => {
+    const src = normalizePhotoUrl($(image).attr("src"));
+    $(image).replaceWith(src ? `\n[photo: ${src}]\n` : " ");
+  });
+  addTextBoundaries($);
+  return cleanText($("body").text()).slice(0, 180_000);
 }
 
 function cleanText(value: string): string {
   return value
     .replace(/[\u200B-\u200D\u2060\uFEFF]/g, "")
-    .replace(/[ \t]+/g, " ")
+    // Cheerio decodes &nbsp; to U+00A0; roster text treats it as an ordinary space.
+    .replace(/[ \t\u00A0]+/g, " ")
     .replace(/ *\n */g, "\n")
     .replace(/\n{2,}/g, "\n")
     .trim();
 }
 
-function decodeEntities(value: string): string {
-  const named: Record<string, string> = {
-    amp: "&",
-    apos: "'",
-    gt: ">",
-    lt: "<",
-    nbsp: " ",
-    quot: '"',
-  };
-  return value.replace(/&(#x[\da-f]+|#\d+|[a-z]+);/gi, (entity, code: string) => {
-    if (code[0] !== "#") return named[code.toLowerCase()] ?? entity;
-    const radix = code[1]?.toLowerCase() === "x" ? 16 : 10;
-    const numeric = Number.parseInt(code.slice(radix === 16 ? 2 : 1), radix);
-    return Number.isFinite(numeric) ? String.fromCodePoint(numeric) : entity;
-  });
+function addTextBoundaries($: cheerio.CheerioAPI): void {
+  $("br").replaceWith("\n");
+  $("p, li, h1, h2, h3, h4, h5, h6").append("\n");
+}
+
+function uniquePhotoUrls(urls: Array<string | undefined>): string[] {
+  return [...new Set(urls.map(normalizePhotoUrl).filter((url): url is string => Boolean(url)))];
+}
+
+function normalizePhotoUrl(url: string | undefined): string | undefined {
+  if (!url || !/^https?:\/\//i.test(url)) return undefined;
+  const withoutQuery = url.split("?")[0];
+  return /\.(?:avif|gif|jpe?g|png|webp)$/i.test(withoutQuery) ? withoutQuery : undefined;
 }
 
 function extractJsonArray(value: string): string {
