@@ -1,13 +1,10 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { setTimeout } from "node:timers/promises";
+import { generateText, isStepCount, tool, type LanguageModel } from "ai";
+import { z } from "zod";
 
-import {
-  createToolCallingChatCompletion,
-  type ChatCompletionAssistantMessage,
-  type ChatCompletionMessage,
-  type ChatCompletionTool,
-} from "./chat-completions.ts";
+import { createAiModel } from "./ai-model.ts";
 import type { CompanionRecord } from "./parser.ts";
 import { parseCompanionRoster } from "./parser.ts";
 import { prisma } from "./prisma.ts";
@@ -306,15 +303,10 @@ export async function loadRosterSource(sourceUrl: string): Promise<string> {
 }
 
 type RosterToolName = "firecrawl_map" | "firecrawl_scrape" | "firecrawl_crawl";
-type RosterModel = (
-  messages: ChatCompletionMessage[],
-  tools: ChatCompletionTool[],
-  signal?: AbortSignal,
-) => Promise<ChatCompletionAssistantMessage>;
 type FirecrawlCaller = (name: RosterToolName, input: Record<string, unknown>) => Promise<unknown>;
 
 export type RosterDiscoveryOptions = {
-  model?: RosterModel;
+  model?: LanguageModel;
   firecrawl?: FirecrawlCaller;
   signal?: AbortSignal;
 };
@@ -344,60 +336,6 @@ type FirecrawlRequestOptions = {
   signal?: AbortSignal;
 };
 
-const ROSTER_TOOLS: ChatCompletionTool[] = [
-  {
-    type: "function",
-    function: {
-      name: "firecrawl_map",
-      description: "Find pages on the rescue website that may contain the adoptable companion roster.",
-      parameters: {
-        type: "object",
-        properties: {
-          url: { type: "string", description: "The rescue website URL to map." },
-          search: { type: "string", description: "Optional terms such as adoptable companions." },
-          limit: { type: "integer", minimum: 1, maximum: 25 },
-        },
-        required: ["url"],
-        additionalProperties: false,
-      },
-    },
-  },
-  {
-    type: "function",
-    function: {
-      name: "firecrawl_scrape",
-      description: "Fetch one page as clean markdown for roster parsing.",
-      parameters: {
-        type: "object",
-        properties: { url: { type: "string", description: "The page URL to scrape." } },
-        required: ["url"],
-        additionalProperties: false,
-      },
-    },
-  },
-  {
-    type: "function",
-    function: {
-      name: "firecrawl_crawl",
-      description: "Crawl the complete adoption listing, following pagination and companion detail links within the configured listing path.",
-      parameters: {
-        type: "object",
-        properties: {
-          url: { type: "string", description: "The adoption-listing URL to crawl." },
-          limit: { type: "integer", minimum: 1, maximum: MAX_FIRECRAWL_CRAWL_PAGES },
-          maxDiscoveryDepth: {
-            type: "integer",
-            minimum: 0,
-            maximum: MAX_FIRECRAWL_DISCOVERY_DEPTH,
-          },
-        },
-        required: ["url"],
-        additionalProperties: false,
-      },
-    },
-  },
-];
-
 export async function discoverRoster(
   sourceUrl: string,
   options: RosterDiscoveryOptions = {},
@@ -409,75 +347,86 @@ export async function discoverRosterWithCompleteness(
   sourceUrl: string,
   options: RosterDiscoveryOptions = {},
 ): Promise<{ text: string; rosterCompleteness: RosterCompleteness }> {
-  const model = options.model ?? defaultRosterModel;
   const firecrawl = options.firecrawl
     ?? ((name, input) => requestFirecrawl(name, input, { sourceUrl, signal: options.signal }));
-  const messages: ChatCompletionMessage[] = [
-    {
-      role: "system",
-      content: "Find the rescue's complete current adoptable companion roster. Use map when the supplied page may not be the adoption listing. Crawl the listing so you cover every pagination page and every companion detail page linked from it; use scrape only for a specific page that the crawl did not capture. Stay within the adoption listing and its linked companion details rather than exploring the rest of the site. When the gathered content is complete, reply with a short completion message. Do not invent roster content.",
-    },
-    {
-      role: "user",
-      content: `Find the current companion roster starting from ${sourceUrl}`,
-    },
-  ];
   const documents: string[] = [];
   const crawlCompleteness: RosterCompleteness[] = [];
   let toolCalls = 0;
-
-  for (let step = 0; step < MAX_ROSTER_AGENT_STEPS; step += 1) {
+  const executeTool = async (name: RosterToolName, input: Record<string, unknown>) => {
     options.signal?.throwIfAborted();
-    const response = await model(messages, ROSTER_TOOLS, options.signal);
-    options.signal?.throwIfAborted();
-    messages.push(response);
-    const calls = response.tool_calls ?? [];
-    if (calls.length === 0) break;
-
-    for (const call of calls) {
-      options.signal?.throwIfAborted();
-      let content: string;
-      let attemptedName: RosterToolName | undefined;
-      try {
-        if (call.type !== "function") {
-          throw new Error(`Unsupported roster tool call type: ${call.type}`);
-        }
-        if (toolCalls >= MAX_ROSTER_TOOL_CALLS) {
-          throw new Error(`Roster discovery is limited to ${MAX_ROSTER_TOOL_CALLS} Firecrawl calls`);
-        }
-        toolCalls += 1;
-        const name = rosterToolName(call.function.name);
-        attemptedName = name;
-        const input = parseToolInput(call.function.arguments);
-        assertRelatedUrl(sourceUrl, input.url);
-        const result = await firecrawl(name, input);
-        options.signal?.throwIfAborted();
-        if (name === "firecrawl_scrape" || name === "firecrawl_crawl") {
-          documents.push(...extractScrapedTexts(result));
-        }
-        if (name === "firecrawl_crawl") {
-          crawlCompleteness.push(readCrawlCompleteness(result));
-        }
-        content = name === "firecrawl_crawl"
-          ? summarizeCrawlToolResult(result)
-          : truncateToolResult(result);
-      } catch (error) {
-        if (attemptedName === "firecrawl_crawl") {
-          crawlCompleteness.push({
-            complete: false,
-            timedOut: false,
-            status: "failed",
-            completed: 0,
-            total: 0,
-          });
-        }
-        // Report a refused or failed call back to the model so the remaining
-        // steps can pick another page instead of discarding what was scraped.
-        content = `Tool call failed: ${error instanceof Error ? error.message : String(error)}`;
+    let attemptedName: RosterToolName | undefined;
+    try {
+      if (toolCalls >= MAX_ROSTER_TOOL_CALLS) {
+        throw new Error(`Roster discovery is limited to ${MAX_ROSTER_TOOL_CALLS} Firecrawl calls`);
       }
-      messages.push({ role: "tool", tool_call_id: call.id, content });
+      toolCalls += 1;
+      attemptedName = name;
+      assertRelatedUrl(sourceUrl, input.url);
+      const result = await firecrawl(name, input);
+      options.signal?.throwIfAborted();
+      if (name === "firecrawl_scrape" || name === "firecrawl_crawl") {
+        documents.push(...extractScrapedTexts(result));
+      }
+      if (name === "firecrawl_crawl") {
+        crawlCompleteness.push(readCrawlCompleteness(result));
+      }
+      return name === "firecrawl_crawl"
+        ? summarizeCrawlToolResult(result)
+        : truncateToolResult(result);
+    } catch (error) {
+      if (attemptedName === "firecrawl_crawl") {
+        crawlCompleteness.push({
+          complete: false,
+          timedOut: false,
+          status: "failed",
+          completed: 0,
+          total: 0,
+        });
+      }
+      // Return failures to the model so another in-scope page can be tried.
+      return `Tool call failed: ${error instanceof Error ? error.message : String(error)}`;
     }
-  }
+  };
+  const tools = {
+    firecrawl_map: tool({
+      description: "Find pages on the rescue website that may contain the adoptable companion roster.",
+      inputSchema: z.object({
+        url: z.string().describe("The rescue website URL to map."),
+        search: z.string().optional().describe("Optional terms such as adoptable companions."),
+        limit: z.number().int().min(1).max(25).optional(),
+      }),
+      execute: (input) => executeTool("firecrawl_map", input),
+    }),
+    firecrawl_scrape: tool({
+      description: "Fetch one page as clean markdown for roster parsing.",
+      inputSchema: z.object({
+        url: z.string().describe("The page URL to scrape."),
+      }),
+      execute: (input) => executeTool("firecrawl_scrape", input),
+    }),
+    firecrawl_crawl: tool({
+      description: "Crawl the complete adoption listing, following pagination and companion detail links within the configured listing path.",
+      inputSchema: z.object({
+        url: z.string().describe("The adoption-listing URL to crawl."),
+        limit: z.number().int().min(1).max(MAX_FIRECRAWL_CRAWL_PAGES).optional(),
+        maxDiscoveryDepth: z.number().int().min(0).max(MAX_FIRECRAWL_DISCOVERY_DEPTH).optional(),
+      }),
+      execute: (input) => executeTool("firecrawl_crawl", input),
+    }),
+  };
+
+  options.signal?.throwIfAborted();
+  await generateText({
+    model: options.model ?? createAiModel(),
+    maxOutputTokens: 1_000,
+    instructions: "Find the rescue's complete current adoptable companion roster. Use map when the supplied page may not be the adoption listing. Crawl the listing so you cover every pagination page and every companion detail page linked from it; use scrape only for a specific page that the crawl did not capture. Stay within the adoption listing and its linked companion details rather than exploring the rest of the site. When the gathered content is complete, reply with a short completion message. Do not invent roster content.",
+    prompt: `Find the current companion roster starting from ${sourceUrl}`,
+    tools,
+    stopWhen: isStepCount(MAX_ROSTER_AGENT_STEPS),
+    prepareStep: () => toolCalls >= MAX_ROSTER_TOOL_CALLS ? { activeTools: [] } : undefined,
+    abortSignal: options.signal,
+  });
+  options.signal?.throwIfAborted();
 
   if (documents.length === 0) {
     throw new Error("Roster discovery completed without scraping roster content");
@@ -532,14 +481,6 @@ function combineCrawlCompleteness(crawls: RosterCompleteness[]): RosterCompleten
     completed: crawls.reduce((sum, crawl) => sum + crawl.completed, 0),
     total: crawls.reduce((sum, crawl) => sum + crawl.total, 0),
   };
-}
-
-async function defaultRosterModel(
-  messages: ChatCompletionMessage[],
-  tools: ChatCompletionTool[],
-  signal?: AbortSignal,
-): Promise<ChatCompletionAssistantMessage> {
-  return createToolCallingChatCompletion({ messages, tools, maxTokens: 1_000, signal });
 }
 
 export function requestFirecrawl(
@@ -777,23 +718,6 @@ function finiteNonNegativeInteger(value: unknown, fallback: number): number {
   return typeof value === "number" && Number.isFinite(value)
     ? Math.max(0, Math.floor(value))
     : fallback;
-}
-
-function rosterToolName(value: string): RosterToolName {
-  if (
-    value === "firecrawl_map"
-    || value === "firecrawl_scrape"
-    || value === "firecrawl_crawl"
-  ) return value;
-  throw new Error(`Unsupported roster tool: ${value}`);
-}
-
-function parseToolInput(value: string): Record<string, unknown> {
-  const input = JSON.parse(value) as unknown;
-  if (!input || typeof input !== "object" || Array.isArray(input)) {
-    throw new Error("Roster tool arguments must be a JSON object");
-  }
-  return input as Record<string, unknown>;
 }
 
 function assertRelatedUrl(sourceUrl: string, candidate: unknown) {

@@ -76,7 +76,7 @@ function stubFetch(body: unknown) {
     const payload = JSON.parse(String(init?.body)) as { messages: Array<{ content: string }> };
     prompts.push(payload.messages[0].content);
     return Response.json({
-      choices: [{ message: { content: JSON.stringify(body) } }],
+      choices: [{ message: { content: JSON.stringify({ elements: body }) } }],
     });
   }) as unknown as typeof fetch;
 
