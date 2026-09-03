@@ -59,6 +59,7 @@ test("isReservedOrganizationSlug rejects every slug from reserved-slugs", () => 
 
 test("isReservedOrganizationSlug normalizes input and accepts rescue slugs", () => {
   assert.equal(isReservedOrganizationSlug("STAFF"), true);
+  assert.equal(isReservedOrganizationSlug("next"), true);
   assert.equal(isReservedOrganizationSlug("Sign In"), true);
   for (const slug of ["happy-tails-rescue", "paws", "shelter", "humane"]) {
     assert.equal(isReservedOrganizationSlug(slug), false, slug);
@@ -69,5 +70,12 @@ test("reserved organization slug errors name the rejected slug and suggest an al
   assert.equal(
     reservedOrganizationSlugMessage("support"),
     "The URL /support is reserved because it is used or may be needed by Dogathon itself (routes like /support, /login, /api). Pick a different slug, for example support-rescue.",
+  );
+});
+
+test("reserved organization slug errors name a submittable slug for unnormalized input", () => {
+  assert.equal(
+    reservedOrganizationSlugMessage("Sign In"),
+    "The URL /sign-in is reserved because it is used or may be needed by Dogathon itself (routes like /support, /login, /api). Pick a different slug, for example sign-in-rescue.",
   );
 });
