@@ -6,12 +6,14 @@ export const ORGANIZATION_ROLES = ["owner", "admin", "member", "volunteer"] as c
 export type OrganizationRole = (typeof ORGANIZATION_ROLES)[number];
 
 export type OrganizationContext = {
+  memberId: string;
   orgId: string;
   role: OrganizationRole;
   userId: string;
 };
 
 type MembershipLike = {
+  id: string;
   organizationId: string;
   role: string;
   userId: string;
@@ -62,7 +64,7 @@ function organizationContext(
   if (!membership) return null;
   if (membership.organizationId !== orgId || membership.userId !== userId) return null;
   if (!ORGANIZATION_ROLES.includes(membership.role as OrganizationRole)) return null;
-  return { orgId, role: membership.role as OrganizationRole, userId };
+  return { memberId: membership.id, orgId, role: membership.role as OrganizationRole, userId };
 }
 
 export async function getOrganizationAccessBySlug(
@@ -83,7 +85,7 @@ export async function getOrganizationAccessBySlug(
     where: {
       organizationId_userId: { organizationId: organization.id, userId: session.user.id },
     },
-    select: { organizationId: true, role: true, userId: true },
+    select: { id: true, organizationId: true, role: true, userId: true },
   });
   const permitted = await checkOrganizationPermission(
     requestHeaders,
@@ -112,7 +114,7 @@ export async function getOrganizationContext(
     where: {
       organizationId_userId: { organizationId: orgId, userId: session.user.id },
     },
-    select: { organizationId: true, role: true, userId: true },
+    select: { id: true, organizationId: true, role: true, userId: true },
   });
   const permitted = await checkOrganizationPermission(requestHeaders, orgId, permission);
 
