@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 
 import { prisma } from "@/lib/prisma";
 import { createStripeCheckout, ResidentUnavailableError } from "@/lib/stripe-billing";
+import { isUuid } from "@/lib/uuid";
 
 function text(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
@@ -20,6 +21,7 @@ export async function createSponsorship(formData: FormData) {
   if (!orgSlug || !residentId) {
     redirect("/");
   }
+  if (!isUuid(residentId)) notFound();
 
   const companionPath = `/${encodeURIComponent(orgSlug)}/companions/${encodeURIComponent(residentId)}`;
 

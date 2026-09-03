@@ -5,6 +5,7 @@ import { notFound, redirect } from "next/navigation";
 import { AdminBadge, AdminLink, AdminSurface } from "@/components/admin-ui";
 import { getOrganizationAccessBySlug } from "@/lib/organization-access";
 import { prisma } from "@/lib/prisma";
+import { isUuid } from "@/lib/uuid";
 
 import styles from "../sponsors.module.css";
 
@@ -28,6 +29,7 @@ function formatDate(date: Date) {
 
 export default async function SponsorDetailPage({ params }: SponsorDetailPageProps) {
   const { sponsorId, orgSlug } = await params;
+  if (!isUuid(sponsorId)) notFound();
   const access = await getOrganizationAccessBySlug(await headers(), orgSlug, ["owner", "admin"]);
 
   if (!access) notFound();

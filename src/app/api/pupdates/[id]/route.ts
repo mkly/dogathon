@@ -1,6 +1,7 @@
 import { requireApiOrganization } from "@/lib/organization-access";
 import { MAX_SMS_LENGTH } from "@/lib/pupdate-sms";
 import { prisma } from "@/lib/prisma";
+import { isUuid } from "@/lib/uuid";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -36,6 +37,11 @@ function validateDraft(input: DraftInput) {
 }
 
 export async function PATCH(request: Request, { params }: RouteContext) {
+  const { id } = await params;
+  if (!isUuid(id)) {
+    return Response.json({ error: "Pupdate not found" }, { status: 404 });
+  }
+
   const access = await requireApiOrganization(request.headers, ["owner", "admin"]);
   if (!access.ok) return access.response;
   const { orgId } = access.context;
@@ -52,7 +58,6 @@ export async function PATCH(request: Request, { params }: RouteContext) {
     return Response.json({ error: validated.error }, { status: 400 });
   }
 
-  const { id } = await params;
   const updated = await prisma.pupdate.updateMany({
     where: { id, orgId, status: "draft" },
     data: validated.data,
@@ -71,11 +76,15 @@ export async function PATCH(request: Request, { params }: RouteContext) {
 }
 
 export async function DELETE(request: Request, { params }: RouteContext) {
+  const { id } = await params;
+  if (!isUuid(id)) {
+    return Response.json({ error: "Pupdate not found" }, { status: 404 });
+  }
+
   const access = await requireApiOrganization(request.headers, ["owner", "admin"]);
   if (!access.ok) return access.response;
   const { orgId } = access.context;
 
-  const { id } = await params;
   const deleted = await prisma.pupdate.deleteMany({ where: { id, orgId, status: "draft" } });
 
   if (deleted.count !== 1) {

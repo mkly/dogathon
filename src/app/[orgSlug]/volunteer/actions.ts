@@ -7,6 +7,7 @@ import { notFound, redirect } from "next/navigation";
 
 import { getOrganizationAccessBySlug } from "@/lib/organization-access";
 import { prisma } from "@/lib/prisma";
+import { isUuid } from "@/lib/uuid";
 
 import type { VolunteerErrorCode } from "./errors";
 
@@ -44,7 +45,7 @@ export async function submitVolunteerNote(formData: FormData) {
     .trim();
   const photo = formData.get("photo");
 
-  if (!residentId) {
+  if (!isUuid(residentId)) {
     redirect(volunteerErrorUrl(orgSlug, "no-companion"));
   }
 

@@ -3,15 +3,20 @@ import { requireApiOrganization } from "@/lib/organization-access";
 import { deliverPupdate, companionPageUrl } from "@/lib/pupdate-delivery";
 import { prisma } from "@/lib/prisma";
 import { renderPupdateEmail } from "@/lib/pupdate-email";
+import { isUuid } from "@/lib/uuid";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
 export async function POST(request: Request, { params }: RouteContext) {
+  const { id } = await params;
+  if (!isUuid(id)) {
+    return Response.json({ error: "Pupdate not found" }, { status: 404 });
+  }
+
   const access = await requireApiOrganization(request.headers, ["owner", "admin"]);
   if (!access.ok) return access.response;
   const { orgId } = access.context;
 
-  const { id } = await params;
   const pupdate = await prisma.pupdate.findFirst({
     where: { id, orgId },
     include: {

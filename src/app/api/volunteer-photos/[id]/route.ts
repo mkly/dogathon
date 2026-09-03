@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { isUuid } from "@/lib/uuid";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -9,7 +10,9 @@ type RouteContext = { params: Promise<{ id: string }> };
 export async function GET(request: Request, { params }: RouteContext) {
   const { id } = await params;
   const orgId = new URL(request.url).searchParams.get("org");
-  if (!orgId) return Response.json({ error: "Photo not found" }, { status: 404 });
+  if (!isUuid(id) || !isUuid(orgId)) {
+    return Response.json({ error: "Photo not found" }, { status: 404 });
+  }
   const note = await prisma.volunteerNote.findFirst({
     where: { id, orgId },
     select: { photoData: true, photoMime: true },

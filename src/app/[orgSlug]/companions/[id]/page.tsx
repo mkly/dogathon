@@ -5,6 +5,7 @@ import { createSponsorship } from "@/app/actions";
 import { FeltButton, FeltField, FeltPanel, PhotoPatch, StitchBadge } from "@/components/felt";
 import { prisma } from "@/lib/prisma";
 import { getPublicOrganization } from "@/lib/public-organization";
+import { isUuid } from "@/lib/uuid";
 
 import styles from "../../../public.module.css";
 
@@ -18,6 +19,7 @@ type CompanionPageProps = {
 export default async function CompanionPage({ params, searchParams }: CompanionPageProps) {
   const { id, orgSlug } = await params;
   const query = await searchParams;
+  if (!isUuid(id)) notFound();
   const organization = await getPublicOrganization(orgSlug);
   if (!organization) notFound();
   const resident = await prisma.resident.findFirst({ where: { id, orgId: organization.id } });
