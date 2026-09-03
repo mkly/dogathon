@@ -11,16 +11,7 @@ import { prisma } from "@/lib/prisma";
 import { uuidSchema } from "@/lib/uuid";
 
 import type { VolunteerErrorCode } from "./errors";
-
-const MAX_PHOTO_BYTES = 8 * 1024 * 1024;
-const PHOTO_EXTENSIONS: Record<string, string> = {
-  "image/gif": ".gif",
-  "image/heic": ".heic",
-  "image/heif": ".heif",
-  "image/jpeg": ".jpg",
-  "image/png": ".png",
-  "image/webp": ".webp",
-};
+import { MAX_PHOTO_BYTES, processVolunteerPhoto } from "./photo";
 const volunteerOrganizationSchema = z.object({ orgSlug: z.string().trim().min(1) });
 const volunteerNoteSchema = z.object({
   residentId: z.string().trim(),
@@ -87,16 +78,17 @@ export async function submitVolunteerNote(formData: FormData) {
   let photoMime: string | undefined;
 
   if (photo && photo.size > 0) {
-    if (!PHOTO_EXTENSIONS[photo.type]) {
-      redirect(volunteerErrorUrl(orgSlug, "photo-type"));
-    }
-
     if (photo.size > MAX_PHOTO_BYTES) {
       redirect(volunteerErrorUrl(orgSlug, "photo-size"));
     }
 
-    photoData = new Uint8Array(await photo.arrayBuffer());
-    photoMime = photo.type;
+    const processedPhoto = await processVolunteerPhoto(new Uint8Array(await photo.arrayBuffer()));
+    if (!processedPhoto) {
+      redirect(volunteerErrorUrl(orgSlug, "photo-type"));
+    }
+
+    photoData = processedPhoto.data;
+    photoMime = processedPhoto.mime;
   }
 
   const noteId = randomUUID();
