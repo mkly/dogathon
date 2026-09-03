@@ -1,11 +1,13 @@
 import {
+  decryptEmailConnectorOAuthSession,
+  EMAIL_CONNECTOR_OAUTH_COOKIE,
   encryptEmailSecret,
   exchangeEmailConnectorCode,
-  hashOAuthState,
   type EmailConnectorKind,
 } from "@/lib/email-connectors";
-import { getOrganizationAccessBySlug } from "@/lib/organization-access";
+import { requireApiOrganization } from "@/lib/organization-access";
 import { prisma } from "@/lib/prisma";
+import { NextResponse, type NextRequest } from "next/server";
 
 type OAuthProvider = Exclude<EmailConnectorKind, "smtp">;
 
@@ -13,68 +15,82 @@ function providerFrom(value: string): OAuthProvider | null {
   return value === "gmail" || value === "microsoft" ? value : null;
 }
 
-function adminRedirect(request: Request, orgSlug: string | null, result: "connected" | "error") {
+function adminRedirect(request: NextRequest, orgSlug: string | null, result: "connected" | "error") {
   const path = orgSlug
     ? `/${orgSlug}/admin/settings?emailConnector=${result}`
     : `/staff/organizations?emailConnector=${result}`;
-  return Response.redirect(new URL(path, request.url), 303);
+  const response = NextResponse.redirect(new URL(path, request.url), 303);
+  response.cookies.delete(EMAIL_CONNECTOR_OAUTH_COOKIE);
+  return response;
 }
 
 export async function GET(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ provider: string }> },
 ) {
   const provider = providerFrom((await params).provider);
   const url = new URL(request.url);
-  const code = url.searchParams.get("code");
-  const state = url.searchParams.get("state");
-  if (!provider || !code || !state || url.searchParams.has("error")) {
+  const cookie = request.cookies.get(EMAIL_CONNECTOR_OAUTH_COOKIE)?.value;
+  if (!provider || !cookie || url.searchParams.has("error")) {
     return adminRedirect(request, null, "error");
   }
 
-  // The provider redirects the browser here without the organization header the
-  // rest of the staff API carries, so the pending state hash — written by the
-  // authorize route for exactly one organization — names the organization.
-  const connector = await prisma.emailConnector.findFirst({
-    where: { oauthProvider: provider, oauthStateHash: hashOAuthState(state) },
-    select: {
-      orgId: true,
-      oauthStateExpiresAt: true,
-      organization: { select: { slug: true } },
-    },
+  let session;
+  try {
+    session = await decryptEmailConnectorOAuthSession(cookie);
+  } catch {
+    return adminRedirect(request, null, "error");
+  }
+  if (session.provider !== provider) return adminRedirect(request, null, "error");
+
+  const organization = await prisma.organization.findUnique({
+    where: { id: session.orgId },
+    select: { slug: true },
   });
-  if (!connector || !connector.oauthStateExpiresAt || connector.oauthStateExpiresAt <= new Date()) {
-    return adminRedirect(request, null, "error");
-  }
+  if (!organization) return adminRedirect(request, null, "error");
 
-  const orgSlug = connector.organization.slug;
-  const access = await getOrganizationAccessBySlug(request.headers, orgSlug, ["owner", "admin"]);
-  if (!access?.context) return adminRedirect(request, orgSlug, "error");
+  // OAuth redirects do not retain the staff UI's organization header. Restore
+  // it from the encrypted session, then let the standard API gate re-check the
+  // signed-in user's membership and role.
+  const accessHeaders = new Headers(request.headers);
+  accessHeaders.set("x-organization-slug", organization.slug);
+  const access = await requireApiOrganization(accessHeaders, ["owner", "admin"]);
+  if (!access.ok || access.context.orgId !== session.orgId) {
+    return adminRedirect(request, organization.slug, "error");
+  }
 
   try {
-    const tokens = await exchangeEmailConnectorCode(provider, code, url.origin);
-    await prisma.emailConnector.update({
-      where: { orgId: connector.orgId },
-      data: {
+    const tokens = await exchangeEmailConnectorCode(provider, url, url.origin, session);
+    const accessTokenEncrypted = await encryptEmailSecret(tokens.accessToken);
+    const refreshTokenEncrypted = await encryptEmailSecret(tokens.refreshToken);
+    await prisma.emailConnector.upsert({
+      where: { orgId: session.orgId },
+      update: {
         type: provider,
         fromEmail: tokens.fromEmail,
-        accessTokenEncrypted: encryptEmailSecret(tokens.accessToken),
-        refreshTokenEncrypted: encryptEmailSecret(tokens.refreshToken),
+        accessTokenEncrypted,
+        refreshTokenEncrypted,
         accessTokenExpiresAt: tokens.expiresAt,
         smtpHost: null,
         smtpPort: null,
         smtpSecure: null,
         smtpUser: null,
         smtpPasswordEncrypted: null,
-        oauthProvider: null,
-        oauthStateHash: null,
-        oauthStateExpiresAt: null,
+        verifiedAt: new Date(),
+      },
+      create: {
+        orgId: session.orgId,
+        type: provider,
+        fromEmail: tokens.fromEmail,
+        accessTokenEncrypted,
+        refreshTokenEncrypted,
+        accessTokenExpiresAt: tokens.expiresAt,
         verifiedAt: new Date(),
       },
     });
-    return adminRedirect(request, orgSlug, "connected");
+    return adminRedirect(request, organization.slug, "connected");
   } catch (error) {
     console.error(`${provider} email connector callback failed`, error);
-    return adminRedirect(request, orgSlug, "error");
+    return adminRedirect(request, organization.slug, "error");
   }
 }

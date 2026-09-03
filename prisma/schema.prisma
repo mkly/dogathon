@@ -88,9 +88,6 @@ model EmailConnector {
   smtpSecure            Boolean?
   smtpUser              String?
   smtpPasswordEncrypted String?
-  oauthProvider         EmailConnectorType?
-  oauthStateHash        String?
-  oauthStateExpiresAt   DateTime?
   verifiedAt            DateTime?
   createdAt             DateTime            @default(now())
   updatedAt             DateTime            @updatedAt
