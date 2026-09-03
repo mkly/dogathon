@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { constantTimeEqual } from "better-auth/crypto";
 
 export type SchedulerEnvironment = Record<string, string | undefined>;
 
@@ -11,7 +11,5 @@ export function isAuthorizedSchedulerRequest(
   if (!secret || !authorization?.startsWith("Bearer ")) return false;
 
   const supplied = authorization.slice("Bearer ".length);
-  return createHash("sha256").update(supplied).digest().equals(
-    createHash("sha256").update(secret).digest(),
-  );
+  return constantTimeEqual(supplied, secret);
 }
