@@ -16,7 +16,7 @@ function text(value: unknown): string {
 }
 
 export async function POST(request: Request) {
-  const access = await requireApiOrganization(request.headers, ["owner", "admin"]);
+  const access = await requireApiOrganization(request.headers, { settings: ["manage"] });
   if (!access.ok) return access.response;
 
   const input = await request.json().catch(() => null) as SmtpInput | null;

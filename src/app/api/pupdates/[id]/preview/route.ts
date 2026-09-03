@@ -16,7 +16,7 @@ export async function GET(request: Request, { params }: RouteContext) {
   const requestHeaders = new Headers(request.headers);
   const orgSlug = new URL(request.url).searchParams.get("org");
   if (orgSlug) requestHeaders.set("x-organization-slug", orgSlug);
-  const access = await requireApiOrganization(requestHeaders, ["owner", "admin"]);
+  const access = await requireApiOrganization(requestHeaders, { pupdate: ["manage"] });
   if (!access.ok) return access.response;
   const { orgId } = access.context;
 

@@ -1,3 +1,4 @@
+import { auth, type OrganizationPermission } from "@/lib/auth";
 import { getSession } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
 
@@ -8,11 +9,6 @@ export type OrganizationContext = {
   orgId: string;
   role: OrganizationRole;
   userId: string;
-};
-
-type SessionLike = {
-  session: { activeOrganizationId?: string | null };
-  user: { id: string };
 };
 
 type MembershipLike = {
@@ -33,33 +29,21 @@ export type OrganizationSlugAccess = {
   organization: OrganizationSummary;
 };
 
-export function authorizeOrganizationId(
-  session: SessionLike | null,
+function organizationContext(
+  userId: string,
   membership: MembershipLike | null,
   orgId: string,
-  allowedRoles: readonly OrganizationRole[] = ORGANIZATION_ROLES,
 ): OrganizationContext | null {
-  if (!session || !membership) return null;
-  if (membership.organizationId !== orgId || membership.userId !== session.user.id) return null;
+  if (!membership) return null;
+  if (membership.organizationId !== orgId || membership.userId !== userId) return null;
   if (!ORGANIZATION_ROLES.includes(membership.role as OrganizationRole)) return null;
-  if (!allowedRoles.includes(membership.role as OrganizationRole)) return null;
-  return { orgId, role: membership.role as OrganizationRole, userId: session.user.id };
-}
-
-export function authorizeOrganization(
-  session: SessionLike | null,
-  membership: MembershipLike | null,
-  allowedRoles: readonly OrganizationRole[] = ORGANIZATION_ROLES,
-): OrganizationContext | null {
-  const orgId = session?.session.activeOrganizationId;
-  if (!orgId) return null;
-  return authorizeOrganizationId(session, membership, orgId, allowedRoles);
+  return { orgId, role: membership.role as OrganizationRole, userId };
 }
 
 export async function getOrganizationAccessBySlug(
   requestHeaders: Headers,
   slug: string,
-  allowedRoles: readonly OrganizationRole[] = ORGANIZATION_ROLES,
+  permission: OrganizationPermission,
 ): Promise<OrganizationSlugAccess | null> {
   const organization = await prisma.organization.findUnique({
     where: { slug },
@@ -76,17 +60,23 @@ export async function getOrganizationAccessBySlug(
     },
     select: { organizationId: true, role: true, userId: true },
   });
+  const permitted = await auth.api.hasPermission({
+    body: { organizationId: organization.id, permissions: permission },
+    headers: requestHeaders,
+  });
 
   return {
     authenticated: true,
-    context: authorizeOrganizationId(session, membership, organization.id, allowedRoles),
+    context: permitted.success
+      ? organizationContext(session.user.id, membership, organization.id)
+      : null,
     organization,
   };
 }
 
 export async function getOrganizationContext(
   requestHeaders: Headers,
-  allowedRoles: readonly OrganizationRole[] = ORGANIZATION_ROLES,
+  permission: OrganizationPermission,
 ): Promise<OrganizationContext | null> {
   const session = await getSession(requestHeaders);
   const orgId = session?.session.activeOrganizationId;
@@ -98,20 +88,24 @@ export async function getOrganizationContext(
     },
     select: { organizationId: true, role: true, userId: true },
   });
+  const permitted = await auth.api.hasPermission({
+    body: { organizationId: orgId, permissions: permission },
+    headers: requestHeaders,
+  });
 
-  return authorizeOrganization(session, membership, allowedRoles);
+  return permitted.success ? organizationContext(session.user.id, membership, orgId) : null;
 }
 
 export async function requireApiOrganization(
   requestHeaders: Headers,
-  allowedRoles: readonly OrganizationRole[] = ORGANIZATION_ROLES,
+  permission: OrganizationPermission,
 ): Promise<
   | { ok: false; response: Response }
   | { ok: true; context: OrganizationContext }
 > {
   const slug = requestHeaders.get("x-organization-slug");
   if (slug) {
-    const access = await getOrganizationAccessBySlug(requestHeaders, slug, allowedRoles);
+    const access = await getOrganizationAccessBySlug(requestHeaders, slug, permission);
     if (!access?.context) {
       return {
         ok: false,
@@ -121,7 +115,7 @@ export async function requireApiOrganization(
     return { ok: true, context: access.context };
   }
 
-  const context = await getOrganizationContext(requestHeaders, allowedRoles);
+  const context = await getOrganizationContext(requestHeaders, permission);
   if (!context) {
     return {
       ok: false,

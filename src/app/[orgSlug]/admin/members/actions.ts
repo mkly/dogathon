@@ -59,7 +59,9 @@ function invitationApiErrorMessage(error: unknown, fallback: string) {
 
 async function invitationContext(orgSlug: string) {
   const requestHeaders = await headers();
-  const access = await getOrganizationAccessBySlug(requestHeaders, orgSlug, ["owner", "admin"]);
+  const access = await getOrganizationAccessBySlug(requestHeaders, orgSlug, {
+    members: ["manage"],
+  });
   if (!access?.context) return null;
 
   return {
@@ -140,7 +142,9 @@ export async function cancelOrganizationInvitation(input: {
 
 async function mutationContext(orgSlug: string, memberId: string) {
   const requestHeaders = await headers();
-  const access = await getOrganizationAccessBySlug(requestHeaders, orgSlug, ["owner", "admin"]);
+  const access = await getOrganizationAccessBySlug(requestHeaders, orgSlug, {
+    members: ["manage"],
+  });
   if (!access?.context) return null;
 
   const firstPage = await auth.api.listMembers({

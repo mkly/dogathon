@@ -17,7 +17,9 @@ export type SettingsState = {
 
 export async function beginStripeOnboarding(formData: FormData) {
   const orgSlug = String(formData.get("orgSlug") ?? "").trim();
-  const access = await getOrganizationAccessBySlug(await headers(), orgSlug, ["owner"]);
+  const access = await getOrganizationAccessBySlug(await headers(), orgSlug, {
+    billing: ["manage"],
+  });
 
   if (!access) notFound();
   if (!access.context) redirect("/staff/organizations");
@@ -38,7 +40,9 @@ export async function saveSettings(
   formData: FormData,
 ): Promise<SettingsState> {
   const orgSlug = String(formData.get("orgSlug") ?? "").trim();
-  const access = await getOrganizationAccessBySlug(await headers(), orgSlug, ["owner", "admin"]);
+  const access = await getOrganizationAccessBySlug(await headers(), orgSlug, {
+    settings: ["manage"],
+  });
 
   if (!access) notFound();
   if (!access.context) redirect("/staff/organizations");

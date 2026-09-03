@@ -22,7 +22,9 @@ type AdminPageProps = { params: Promise<{ orgSlug: string }> };
 
 export default async function AdminPage({ params }: AdminPageProps) {
   const { orgSlug } = await params;
-  const access = await getOrganizationAccessBySlug(await headers(), orgSlug, ["owner", "admin"]);
+  const access = await getOrganizationAccessBySlug(await headers(), orgSlug, {
+    pupdate: ["manage"],
+  });
 
   if (!access) notFound();
   if (!access.context) {

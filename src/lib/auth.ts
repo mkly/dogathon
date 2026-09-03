@@ -19,8 +19,66 @@ import {
 } from "@/lib/organization-slug";
 import { prisma } from "@/lib/prisma";
 
-const organizationAccessControl = createAccessControl(defaultStatements);
-const volunteerAc = organizationAccessControl.newRole({});
+export const organizationStatements = {
+  ...defaultStatements,
+  pupdate: ["manage"],
+  billing: ["manage"],
+  settings: ["manage"],
+  members: ["manage"],
+  roster: ["manage", "contribute"],
+  sponsors: ["read"],
+} as const;
+
+const organizationAccessControl = createAccessControl(organizationStatements);
+
+export const organizationRoles = {
+  owner: organizationAccessControl.newRole({
+    ...ownerAc.statements,
+    pupdate: ["manage"],
+    billing: ["manage"],
+    settings: ["manage"],
+    members: ["manage"],
+    roster: ["manage", "contribute"],
+    sponsors: ["read"],
+  }),
+  admin: organizationAccessControl.newRole({
+    ...adminAc.statements,
+    pupdate: ["manage"],
+    billing: [],
+    settings: ["manage"],
+    members: ["manage"],
+    roster: ["manage", "contribute"],
+    sponsors: ["read"],
+  }),
+  member: organizationAccessControl.newRole({
+    ...memberAc.statements,
+    pupdate: [],
+    billing: [],
+    settings: [],
+    members: [],
+    roster: ["contribute"],
+    sponsors: [],
+  }),
+  volunteer: organizationAccessControl.newRole({
+    organization: [],
+    member: [],
+    invitation: [],
+    team: [],
+    ac: [],
+    pupdate: [],
+    billing: [],
+    settings: [],
+    members: [],
+    roster: ["contribute"],
+    sponsors: [],
+  }),
+};
+
+export type OrganizationPermission = {
+  [Resource in keyof typeof organizationStatements]?: Array<
+    (typeof organizationStatements)[Resource][number]
+  >;
+};
 
 function rejectReservedOrganizationSlug(slug: string | undefined) {
   if (slug && isReservedOrganizationSlug(slug)) {
@@ -64,10 +122,7 @@ export const auth = betterAuth({
         },
       },
       roles: {
-        owner: ownerAc,
-        admin: adminAc,
-        member: memberAc,
-        volunteer: volunteerAc,
+        ...organizationRoles,
       },
       sendInvitationEmail: async ({ email, id, organization: invitedOrganization, role }) => {
         const baseUrl = process.env.BETTER_AUTH_URL ?? "http://localhost:3000";

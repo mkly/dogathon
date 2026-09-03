@@ -15,7 +15,7 @@ export type RosterSyncJobResponse = Pick<
 type OrganizationAccess = Awaited<ReturnType<typeof requireApiOrganization>>;
 type Authorize = (
   headers: Headers,
-  roles: readonly ["owner", "admin"],
+  permission: { roster: ["manage"] },
 ) => Promise<OrganizationAccess>;
 
 type Dependencies = {
@@ -34,7 +34,7 @@ export function createEnqueueRosterSyncHandler(
   dependencies: Pick<Dependencies, "authorize" | "enqueue"> = defaultDependencies,
 ) {
   return async function POST(request: Request) {
-    const access = await dependencies.authorize(request.headers, ["owner", "admin"]);
+    const access = await dependencies.authorize(request.headers, { roster: ["manage"] });
     if (!access.ok) return access.response;
 
     const job = await dependencies.enqueue({
@@ -50,7 +50,7 @@ export function createGetRosterSyncJobHandler(
   dependencies: Pick<Dependencies, "authorize" | "get"> = defaultDependencies,
 ) {
   return async function GET(request: Request, jobId: string) {
-    const access = await dependencies.authorize(request.headers, ["owner", "admin"]);
+    const access = await dependencies.authorize(request.headers, { roster: ["manage"] });
     if (!access.ok) return access.response;
 
     try {

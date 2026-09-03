@@ -26,7 +26,9 @@ type SponsorsPageProps = { params: Promise<{ orgSlug: string }> };
 
 export default async function SponsorsPage({ params }: SponsorsPageProps) {
   const { orgSlug } = await params;
-  const access = await getOrganizationAccessBySlug(await headers(), orgSlug, ["owner", "admin"]);
+  const access = await getOrganizationAccessBySlug(await headers(), orgSlug, {
+    sponsors: ["read"],
+  });
 
   if (!access) notFound();
   if (!access.context) redirect("/staff/organizations");

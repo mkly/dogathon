@@ -25,7 +25,9 @@ type MembersPageProps = { params: Promise<{ orgSlug: string }> };
 export default async function MembersPage({ params }: MembersPageProps) {
   const { orgSlug } = await params;
   const requestHeaders = await headers();
-  const access = await getOrganizationAccessBySlug(requestHeaders, orgSlug, ["owner", "admin"]);
+  const access = await getOrganizationAccessBySlug(requestHeaders, orgSlug, {
+    members: ["manage"],
+  });
 
   if (!access) notFound();
   if (!access.context) {

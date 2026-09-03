@@ -29,7 +29,9 @@ type VolunteerPageProps = {
 
 export default async function VolunteerPage({ params, searchParams }: VolunteerPageProps) {
   const { orgSlug } = await params;
-  const access = await getOrganizationAccessBySlug(await headers(), orgSlug);
+  const access = await getOrganizationAccessBySlug(await headers(), orgSlug, {
+    roster: ["contribute"],
+  });
   if (!access) notFound();
   if (!access.context) {
     const next = encodeURIComponent(`/${orgSlug}/volunteer`);

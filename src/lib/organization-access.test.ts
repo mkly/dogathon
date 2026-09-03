@@ -1,53 +1,24 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import {
-  authorizeOrganization,
-  authorizeOrganizationId,
-  forOrganization,
-} from "./organization-access.ts";
+import { organizationRoles } from "./auth.ts";
+import { forOrganization } from "./organization-access.ts";
 
-const session = {
-  session: { activeOrganizationId: "org-a" },
-  user: { id: "user-a" },
-};
-
-test("authorizes every recognized membership in the active organization by default", () => {
-  for (const role of ["owner", "admin", "member", "volunteer"] as const) {
-    assert.deepEqual(
-      authorizeOrganization(session, { organizationId: "org-a", userId: "user-a", role }),
-      { orgId: "org-a", userId: "user-a", role },
-    );
+test("owners and admins can manage staff resources while billing remains owner-only", () => {
+  for (const resource of ["pupdate", "settings", "members", "roster"] as const) {
+    assert.equal(organizationRoles.owner.authorize({ [resource]: ["manage"] }).success, true);
+    assert.equal(organizationRoles.admin.authorize({ [resource]: ["manage"] }).success, true);
   }
+  assert.equal(organizationRoles.owner.authorize({ billing: ["manage"] }).success, true);
+  assert.equal(organizationRoles.admin.authorize({ billing: ["manage"] }).success, false);
 });
 
-test("rejects cross-organization membership and disallowed roles", () => {
-  assert.equal(
-    authorizeOrganization(session, { organizationId: "org-b", userId: "user-a", role: "owner" }),
-    null,
-  );
-  for (const role of ["member", "volunteer"] as const) {
-    assert.equal(
-      authorizeOrganization(
-        session,
-        { organizationId: "org-a", userId: "user-a", role },
-        ["owner", "admin"],
-      ),
-      null,
-    );
+test("member and volunteer roles can contribute roster notes but cannot enter staff areas", () => {
+  for (const role of [organizationRoles.member, organizationRoles.volunteer]) {
+    assert.equal(role.authorize({ roster: ["contribute"] }).success, true);
+    assert.equal(role.authorize({ roster: ["manage"] }).success, false);
+    assert.equal(role.authorize({ sponsors: ["read"] }).success, false);
   }
-});
-
-test("authorizes the organization named by a route independently of the active organization", () => {
-  assert.deepEqual(
-    authorizeOrganizationId(
-      session,
-      { organizationId: "org-b", userId: "user-a", role: "admin" },
-      "org-b",
-      ["owner", "admin"],
-    ),
-    { orgId: "org-b", userId: "user-a", role: "admin" },
-  );
 });
 
 test("trusted organization scope replaces client-provided scope", () => {
