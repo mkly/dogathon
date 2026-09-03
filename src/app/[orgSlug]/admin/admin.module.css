@@ -114,19 +114,29 @@
   justify-content: center;
   text-decoration: none;
 }
+.dialogOverlay {
+  position: fixed;
+  z-index: 40;
+  inset: 0;
+  background: rgb(34 29 24 / 62%);
+  backdrop-filter: blur(2px);
+}
+
 .draftDialog,
-.connectorDialog {
+.connectorDialog,
+.alertDialog {
+  position: fixed;
+  z-index: 41;
+  top: 50%;
+  left: 50%;
   width: min(680px, calc(100vw - 32px));
   max-height: calc(100vh - 32px);
-  padding: 0;
   overflow: auto;
-  border: 0;
-  border-radius: 8px;
-  background: transparent;
   color: var(--felt-ink);
+  outline: none;
+  transform: translate(-50%, -50%);
 }
-.draftDialog::backdrop,
-.connectorDialog::backdrop { background: rgb(34 29 24 / 62%); backdrop-filter: blur(2px); }
+.alertDialog { width: min(460px, calc(100vw - 32px)); }
 .dialogPanel {
   padding: 24px;
   border-radius: 8px;
@@ -134,6 +144,9 @@
 .dialogHeader { display: flex; align-items: start; justify-content: space-between; gap: 18px; margin-bottom: 20px; }
 .dialogHeader h2 { margin: 0; font-size: 1.65rem; font-weight: 900; letter-spacing: -0.035em; }
 .dialogHeader button { min-width: 42px; padding-inline: 12px; }
+.alertDialog h2 { margin: 0; font-size: 1.5rem; font-weight: 900; letter-spacing: -0.035em; }
+.dialogDescription { margin: -8px 0 18px; font-size: 0.82rem; font-weight: 700; line-height: 1.5; opacity: 0.78; }
+.alertDialog .dialogDescription { margin: 10px 0 22px; }
 .modalActions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 12px; }
 .actionStack { display: grid; gap: 10px; }
 /* one calm strip above the queue, in the dashed-notice idiom the directory

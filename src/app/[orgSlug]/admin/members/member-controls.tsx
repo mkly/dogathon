@@ -1,5 +1,6 @@
 "use client";
 
+import * as AlertDialog from "@radix-ui/react-alert-dialog";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
@@ -39,6 +40,7 @@ export function MemberList({
   orgSlug: string;
 }) {
   const router = useRouter();
+  const [memberToRemove, setMemberToRemove] = useState<MemberView | null>(null);
   const [pendingMemberId, setPendingMemberId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const ownerCount = members.filter((member) => member.role === "owner").length;
@@ -59,8 +61,6 @@ export function MemberList({
   }
 
   function remove(member: MemberView) {
-    if (!window.confirm(`Remove ${member.name || member.email} from this organization?`)) return;
-
     setPendingMemberId(member.id);
     startTransition(async () => {
       try {
@@ -125,7 +125,7 @@ export function MemberList({
               )}
               <AdminButton
                 disabled={isPending || isSelf || isProtectedOwner}
-                onClick={() => remove(member)}
+                onClick={() => setMemberToRemove(member)}
                 title={isSelf ? "You cannot remove yourself." : undefined}
                 tone="brick"
               >
@@ -135,6 +135,41 @@ export function MemberList({
           </AdminSurface>
         );
       })}
+      <AlertDialog.Root
+        onOpenChange={(open) => {
+          if (!open) setMemberToRemove(null);
+        }}
+        open={memberToRemove !== null}
+      >
+        <AlertDialog.Portal>
+          <AlertDialog.Overlay className={styles.dialogOverlay} />
+          <AlertDialog.Content className={styles.alertDialog}>
+            <AdminSurface className={styles.dialogPanel} tone="oatmeal">
+              <AlertDialog.Title asChild>
+                <h2>Remove organization member?</h2>
+              </AlertDialog.Title>
+              <AlertDialog.Description className={styles.dialogDescription}>
+                Remove {memberToRemove?.name || memberToRemove?.email} from this organization?
+              </AlertDialog.Description>
+              <div className={styles.dialogActions}>
+                <AlertDialog.Cancel asChild>
+                  <AdminButton tone="oatmeal">Cancel</AdminButton>
+                </AlertDialog.Cancel>
+                <AlertDialog.Action asChild>
+                  <AdminButton
+                    onClick={() => {
+                      if (memberToRemove) remove(memberToRemove);
+                    }}
+                    tone="brick"
+                  >
+                    Remove member
+                  </AdminButton>
+                </AlertDialog.Action>
+              </div>
+            </AdminSurface>
+          </AlertDialog.Content>
+        </AlertDialog.Portal>
+      </AlertDialog.Root>
     </div>
   );
 }
