@@ -29,6 +29,31 @@ export type OrganizationSlugAccess = {
   organization: OrganizationSummary;
 };
 
+type PermissionApi = Pick<typeof auth.api, "hasPermission">;
+
+/**
+ * better-auth's hasPermission endpoint throws (UNAUTHORIZED) when the caller is
+ * not a member of the organization, and rejects rather than resolving false for
+ * other request problems. Every caller here treats "cannot prove permission" the
+ * same way, so collapse both shapes into one boolean.
+ */
+export async function checkOrganizationPermission(
+  requestHeaders: Headers,
+  organizationId: string,
+  permission: OrganizationPermission,
+  api: PermissionApi = auth.api,
+): Promise<boolean> {
+  try {
+    const result = await api.hasPermission({
+      body: { organizationId, permissions: permission },
+      headers: requestHeaders,
+    });
+    return result.success;
+  } catch {
+    return false;
+  }
+}
+
 function organizationContext(
   userId: string,
   membership: MembershipLike | null,
@@ -60,14 +85,15 @@ export async function getOrganizationAccessBySlug(
     },
     select: { organizationId: true, role: true, userId: true },
   });
-  const permitted = await auth.api.hasPermission({
-    body: { organizationId: organization.id, permissions: permission },
-    headers: requestHeaders,
-  });
+  const permitted = await checkOrganizationPermission(
+    requestHeaders,
+    organization.id,
+    permission,
+  );
 
   return {
     authenticated: true,
-    context: permitted.success
+    context: permitted
       ? organizationContext(session.user.id, membership, organization.id)
       : null,
     organization,
@@ -88,12 +114,9 @@ export async function getOrganizationContext(
     },
     select: { organizationId: true, role: true, userId: true },
   });
-  const permitted = await auth.api.hasPermission({
-    body: { organizationId: orgId, permissions: permission },
-    headers: requestHeaders,
-  });
+  const permitted = await checkOrganizationPermission(requestHeaders, orgId, permission);
 
-  return permitted.success ? organizationContext(session.user.id, membership, orgId) : null;
+  return permitted ? organizationContext(session.user.id, membership, orgId) : null;
 }
 
 export async function requireApiOrganization(

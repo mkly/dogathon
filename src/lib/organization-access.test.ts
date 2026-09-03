@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { organizationRoles } from "./auth.ts";
-import { forOrganization } from "./organization-access.ts";
+import { checkOrganizationPermission, forOrganization } from "./organization-access.ts";
 
 test("owners and admins can manage staff resources while billing remains owner-only", () => {
   for (const resource of ["pupdate", "settings", "members", "roster"] as const) {
@@ -26,4 +26,33 @@ test("trusted organization scope replaces client-provided scope", () => {
     id: "companion-a",
     orgId: "org-a",
   });
+});
+
+test("permission checks fail closed when better-auth rejects the caller", async () => {
+  const headers = new Headers();
+  const api = {
+    hasPermission: async () => {
+      throw new Error("You are not a member of this organization");
+    },
+  } as unknown as Parameters<typeof checkOrganizationPermission>[3];
+
+  assert.equal(
+    await checkOrganizationPermission(headers, "org-a", { roster: ["contribute"] }, api),
+    false,
+  );
+});
+
+test("permission checks pass through the better-auth verdict", async () => {
+  const headers = new Headers();
+  const verdicts = [true, false];
+  for (const success of verdicts) {
+    const api = {
+      hasPermission: async () => ({ error: null, success }),
+    } as unknown as Parameters<typeof checkOrganizationPermission>[3];
+
+    assert.equal(
+      await checkOrganizationPermission(headers, "org-a", { billing: ["manage"] }, api),
+      success,
+    );
+  }
 });

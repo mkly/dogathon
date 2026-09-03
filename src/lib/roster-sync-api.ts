@@ -1,5 +1,6 @@
 import type { RosterSyncJob } from "@/generated/prisma/client";
 
+import type { OrganizationPermission } from "./auth.ts";
 import { requireApiOrganization } from "./organization-access.ts";
 import {
   enqueueRosterSyncJob,
@@ -15,7 +16,7 @@ export type RosterSyncJobResponse = Pick<
 type OrganizationAccess = Awaited<ReturnType<typeof requireApiOrganization>>;
 type Authorize = (
   headers: Headers,
-  permission: { roster: ["manage"] },
+  permission: OrganizationPermission,
 ) => Promise<OrganizationAccess>;
 
 type Dependencies = {
