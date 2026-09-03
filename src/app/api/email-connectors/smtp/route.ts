@@ -54,10 +54,7 @@ export async function POST(request: Request) {
         smtpPort: port,
         smtpSecure: secure,
         smtpUser: user,
-        smtpPasswordEncrypted: encryptEmailSecret(password),
-        oauthProvider: null,
-        oauthStateHash: null,
-        oauthStateExpiresAt: null,
+        smtpPasswordEncrypted: await encryptEmailSecret(password),
         verifiedAt: new Date(),
       },
       create: {
@@ -68,7 +65,7 @@ export async function POST(request: Request) {
         smtpPort: port,
         smtpSecure: secure,
         smtpUser: user,
-        smtpPasswordEncrypted: encryptEmailSecret(password),
+        smtpPasswordEncrypted: await encryptEmailSecret(password),
         verifiedAt: new Date(),
       },
     });

@@ -1,10 +1,11 @@
 import {
-  createOAuthState,
-  emailConnectorAuthorizationUrl,
+  createEmailConnectorAuthorization,
+  EMAIL_CONNECTOR_OAUTH_COOKIE,
+  EMAIL_CONNECTOR_OAUTH_COOKIE_PATH,
   type EmailConnectorKind,
 } from "@/lib/email-connectors";
 import { requireApiOrganization } from "@/lib/organization-access";
-import { prisma } from "@/lib/prisma";
+import { NextResponse, type NextRequest } from "next/server";
 
 type OAuthProvider = Exclude<EmailConnectorKind, "smtp">;
 
@@ -13,7 +14,7 @@ function providerFrom(value: string): OAuthProvider | null {
 }
 
 export async function POST(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ provider: string }> },
 ) {
   const access = await requireApiOrganization(request.headers, { settings: ["manage"] });
@@ -23,25 +24,20 @@ export async function POST(
   if (!provider) return Response.json({ error: "Unknown email connector" }, { status: 404 });
 
   try {
-    const oauthState = createOAuthState();
-    const url = emailConnectorAuthorizationUrl(provider, new URL(request.url).origin, oauthState.state);
-    await prisma.emailConnector.upsert({
-      where: { orgId: access.context.orgId },
-      update: {
-        oauthProvider: provider,
-        oauthStateHash: oauthState.hash,
-        oauthStateExpiresAt: oauthState.expiresAt,
-      },
-      create: {
-        orgId: access.context.orgId,
-        type: provider,
-        fromEmail: "",
-        oauthProvider: provider,
-        oauthStateHash: oauthState.hash,
-        oauthStateExpiresAt: oauthState.expiresAt,
-      },
+    const authorization = await createEmailConnectorAuthorization(
+      provider,
+      new URL(request.url).origin,
+      access.context.orgId,
+    );
+    const response = NextResponse.json({ url: authorization.url });
+    response.cookies.set(EMAIL_CONNECTOR_OAUTH_COOKIE, authorization.cookie, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: EMAIL_CONNECTOR_OAUTH_COOKIE_PATH,
+      maxAge: 10 * 60,
     });
-    return Response.json({ url });
+    return response;
   } catch (error) {
     const message = error instanceof Error ? error.message : "Email connector setup failed";
     return Response.json({ error: message }, { status: 503 });

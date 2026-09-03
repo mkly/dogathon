@@ -3,8 +3,9 @@ import { createServer } from "node:net";
 import test, { after, before } from "node:test";
 
 import {
+  createEmailConnectorAuthorization,
+  decryptEmailConnectorOAuthSession,
   decryptEmailSecret,
-  emailConnectorAuthorizationUrl,
   encryptEmailSecret,
   exchangeEmailConnectorCode,
   sendEmailWithConnector,
@@ -12,6 +13,9 @@ import {
   verifySmtpConfiguration,
   type StoredEmailConnector,
 } from "./email-connectors.ts";
+
+let encryptedAccessToken = "";
+let encryptedRefreshToken = "";
 
 const originalEnvironment = {
   encryption: process.env.EMAIL_CONNECTOR_ENCRYPTION_KEY,
@@ -22,13 +26,15 @@ const originalEnvironment = {
   microsoftTenant: process.env.MICROSOFT_TENANT_ID,
 };
 
-before(() => {
+before(async () => {
   process.env.EMAIL_CONNECTOR_ENCRYPTION_KEY = Buffer.alloc(32, 7).toString("base64");
   process.env.GOOGLE_CLIENT_ID = "gmail-client";
   process.env.GOOGLE_CLIENT_SECRET = "gmail-secret";
   process.env.MICROSOFT_CLIENT_ID = "microsoft-client";
   process.env.MICROSOFT_CLIENT_SECRET = "microsoft-secret";
   process.env.MICROSOFT_TENANT_ID = "organizations";
+  encryptedAccessToken = await encryptEmailSecret("access-token");
+  encryptedRefreshToken = await encryptEmailSecret("refresh-token");
 });
 
 after(() => {
@@ -52,8 +58,8 @@ function connector(
     orgId: "org-a",
     type,
     fromEmail: "rescue@example.com",
-    accessTokenEncrypted: encryptEmailSecret("access-token"),
-    refreshTokenEncrypted: encryptEmailSecret("refresh-token"),
+    accessTokenEncrypted: encryptedAccessToken,
+    refreshTokenEncrypted: encryptedRefreshToken,
     accessTokenExpiresAt: new Date(Date.now() + 3_600_000),
     smtpHost: null,
     smtpPort: null,
@@ -65,31 +71,47 @@ function connector(
   };
 }
 
-test("encrypts connector credentials with authenticated encryption", () => {
-  const encrypted = encryptEmailSecret("not-plain-text");
+test("encrypts connector credentials as authenticated compact JWE", async () => {
+  const encrypted = await encryptEmailSecret("not-plain-text");
   assert.notEqual(encrypted, "not-plain-text");
-  assert.equal(decryptEmailSecret(encrypted), "not-plain-text");
-  // Tamper with a ciphertext byte rather than the last base64url character:
-  // that character only carries partial bits, so swapping it can decode to the
-  // same bytes and leave the assertion flaky.
-  const [iv, tag, ciphertext] = encrypted.split(".");
-  const tamperedCiphertext = Buffer.from(ciphertext, "base64url");
+  assert.equal(encrypted.split(".").length, 5);
+  assert.equal(await decryptEmailSecret(encrypted), "not-plain-text");
+  const parts = encrypted.split(".");
+  const tamperedCiphertext = Buffer.from(parts[3]!, "base64url");
   tamperedCiphertext[0] ^= 0x01;
-  assert.throws(() =>
-    decryptEmailSecret([iv, tag, tamperedCiphertext.toString("base64url")].join(".")),
+  parts[3] = tamperedCiphertext.toString("base64url");
+  await assert.rejects(
+    decryptEmailSecret(parts.join(".")),
+    /Stored email credential is invalid/u,
   );
 });
 
-test("builds provider authorization URLs with offline access and state", () => {
-  const gmail = new URL(emailConnectorAuthorizationUrl("gmail", "https://dogathon.test", "state-a"));
+test("builds PKCE authorization URLs and stores OAuth state in encrypted sessions", async () => {
+  const gmailAuthorization = await createEmailConnectorAuthorization(
+    "gmail",
+    "https://dogathon.test",
+    "org-a",
+  );
+  const gmailSession = await decryptEmailConnectorOAuthSession(gmailAuthorization.cookie);
+  const gmail = new URL(gmailAuthorization.url);
   assert.equal(gmail.origin, "https://accounts.google.com");
   assert.equal(gmail.searchParams.get("access_type"), "offline");
-  assert.equal(gmail.searchParams.get("state"), "state-a");
+  assert.equal(gmail.searchParams.get("state"), gmailSession.state);
+  assert.equal(gmail.searchParams.get("code_challenge_method"), "S256");
+  assert.ok(gmail.searchParams.get("code_challenge"));
+  assert.equal(gmailSession.orgId, "org-a");
   assert.match(gmail.searchParams.get("scope") ?? "", /gmail\.send/u);
 
-  const microsoft = new URL(emailConnectorAuthorizationUrl("microsoft", "https://dogathon.test", "state-b"));
+  const microsoftAuthorization = await createEmailConnectorAuthorization(
+    "microsoft",
+    "https://dogathon.test",
+    "org-b",
+  );
+  const microsoftSession = await decryptEmailConnectorOAuthSession(microsoftAuthorization.cookie);
+  const microsoft = new URL(microsoftAuthorization.url);
   assert.match(microsoft.pathname, /organizations\/oauth2\/v2\.0\/authorize$/u);
-  assert.equal(microsoft.searchParams.get("state"), "state-b");
+  assert.equal(microsoft.searchParams.get("state"), microsoftSession.state);
+  assert.equal(microsoftSession.orgId, "org-b");
   assert.match(microsoft.searchParams.get("scope") ?? "", /offline_access/u);
   assert.match(microsoft.searchParams.get("scope") ?? "", /Mail\.Send/u);
 });
@@ -97,16 +119,16 @@ test("builds provider authorization URLs with offline access and state", () => {
 test("completes Gmail and Microsoft OAuth flows against stubbed providers", async () => {
   const requests: string[] = [];
   const providerFetch = async (input: string | URL | Request) => {
-    const url = String(input);
+    const url = input instanceof Request ? input.url : String(input);
     requests.push(url);
     if (url.includes("oauth2.googleapis.com/token")) {
-      return Response.json({ access_token: "google-access", refresh_token: "google-refresh", expires_in: 1200 });
+      return Response.json({ access_token: "google-access", refresh_token: "google-refresh", expires_in: 1200, token_type: "Bearer" });
     }
     if (url.includes("openidconnect.googleapis.com")) {
       return Response.json({ email: "gmail@example.com" });
     }
     if (url.includes("login.microsoftonline.com")) {
-      return Response.json({ access_token: "ms-access", refresh_token: "ms-refresh", expires_in: 1200 });
+      return Response.json({ access_token: "ms-access", refresh_token: "ms-refresh", expires_in: 1200, token_type: "Bearer" });
     }
     if (url.includes("graph.microsoft.com/v1.0/me")) {
       return Response.json({ mail: "microsoft@example.com" });
@@ -114,8 +136,16 @@ test("completes Gmail and Microsoft OAuth flows against stubbed providers", asyn
     return new Response("unexpected request", { status: 500 });
   };
 
-  const gmail = await exchangeEmailConnectorCode("gmail", "code-a", "https://dogathon.test", providerFetch as typeof fetch);
-  const microsoft = await exchangeEmailConnectorCode("microsoft", "code-b", "https://dogathon.test", providerFetch as typeof fetch);
+  const gmailAuthorization = await createEmailConnectorAuthorization("gmail", "https://dogathon.test", "org-a");
+  const gmailSession = await decryptEmailConnectorOAuthSession(gmailAuthorization.cookie);
+  const gmailCallback = new URL("https://dogathon.test/api/email-connectors/gmail/callback");
+  gmailCallback.search = new URLSearchParams({ code: "code-a", state: gmailSession.state }).toString();
+  const microsoftAuthorization = await createEmailConnectorAuthorization("microsoft", "https://dogathon.test", "org-b");
+  const microsoftSession = await decryptEmailConnectorOAuthSession(microsoftAuthorization.cookie);
+  const microsoftCallback = new URL("https://dogathon.test/api/email-connectors/microsoft/callback");
+  microsoftCallback.search = new URLSearchParams({ code: "code-b", state: microsoftSession.state }).toString();
+  const gmail = await exchangeEmailConnectorCode("gmail", gmailCallback, "https://dogathon.test", gmailSession, providerFetch as typeof fetch);
+  const microsoft = await exchangeEmailConnectorCode("microsoft", microsoftCallback, "https://dogathon.test", microsoftSession, providerFetch as typeof fetch);
   assert.equal(gmail.fromEmail, "gmail@example.com");
   assert.equal(gmail.refreshToken, "google-refresh");
   assert.equal(microsoft.fromEmail, "microsoft@example.com");
@@ -123,11 +153,49 @@ test("completes Gmail and Microsoft OAuth flows against stubbed providers", asyn
   assert.equal(requests.length, 4);
 });
 
+test("completes the Microsoft flow when the tenant returns a foreign-issuer ID token", async () => {
+  // The organizations/common tenants sign ID tokens with the resolved tenant's
+  // issuer, which never matches the literal tenant in our provider metadata.
+  const segment = (value: object) => Buffer.from(JSON.stringify(value)).toString("base64url");
+  const issuedAt = Math.floor(Date.now() / 1000);
+  const idToken = [
+    segment({ alg: "RS256" }),
+    segment({
+      iss: "https://login.microsoftonline.com/9188040d-6c67-4c5b-b112-36a304b66dad/v2.0",
+      aud: "microsoft-client",
+      sub: "user-a",
+      iat: issuedAt,
+      exp: issuedAt + 3600,
+    }),
+    "signature",
+  ].join(".");
+  const providerFetch = async (input: string | URL | Request) => {
+    const url = input instanceof Request ? input.url : String(input);
+    if (url.includes("login.microsoftonline.com")) {
+      return Response.json({ access_token: "ms-access", refresh_token: "ms-refresh", expires_in: 1200, token_type: "Bearer", id_token: idToken });
+    }
+    if (url.includes("graph.microsoft.com/v1.0/me")) {
+      return Response.json({ mail: "microsoft@example.com" });
+    }
+    return new Response("unexpected request", { status: 500 });
+  };
+
+  const authorization = await createEmailConnectorAuthorization("microsoft", "https://dogathon.test", "org-b");
+  const session = await decryptEmailConnectorOAuthSession(authorization.cookie);
+  const callback = new URL("https://dogathon.test/api/email-connectors/microsoft/callback");
+  callback.search = new URLSearchParams({ code: "code-b", state: session.state }).toString();
+
+  const tokens = await exchangeEmailConnectorCode("microsoft", callback, "https://dogathon.test", session, providerFetch as typeof fetch);
+  assert.equal(tokens.fromEmail, "microsoft@example.com");
+  assert.equal(tokens.refreshToken, "ms-refresh");
+});
+
 test("sends RFC-compliant MIME through Gmail and JSON through Microsoft", async () => {
-  const calls: Array<{ url: string; init?: RequestInit }> = [];
+  const calls: Request[] = [];
   const providerFetch = async (input: string | URL | Request, init?: RequestInit) => {
-    calls.push({ url: String(input), init });
-    return String(input).includes("gmail")
+    const request = input instanceof Request ? input : new Request(input, init);
+    calls.push(request);
+    return request.url.includes("gmail")
       ? Response.json({ id: "message-a" })
       : new Response(null, { status: 202 });
   };
@@ -142,11 +210,8 @@ test("sends RFC-compliant MIME through Gmail and JSON through Microsoft", async 
   await sendEmailWithConnector(connector("microsoft"), message, { fetch: providerFetch as typeof fetch });
 
   assert.match(calls[0]!.url, /gmail.*messages\/send/u);
-  assert.equal(
-    calls[0]!.init?.headers && (calls[0]!.init.headers as Record<string, string>).Authorization,
-    "Bearer access-token",
-  );
-  const gmailRequest = JSON.parse(String(calls[0]!.init?.body)) as { raw: string };
+  assert.equal(calls[0]!.headers.get("authorization"), "Bearer access-token");
+  const gmailRequest = await calls[0]!.json() as { raw: string };
   const gmailMessage = Buffer.from(gmailRequest.raw, "base64url").toString("utf8");
   assert.match(gmailMessage, /^Date: .+$/mu);
   assert.match(gmailMessage, /^Message-ID: <.+>$/mu);
@@ -155,7 +220,7 @@ test("sends RFC-compliant MIME through Gmail and JSON through Microsoft", async 
     /^Subject: =\?UTF-8\?[BQ]\?.+\?=\r\n[ \t]+=\?UTF-8\?[BQ]\?.+\?=/mu,
   );
   assert.match(calls[1]!.url, /graph\.microsoft\.com\/v1\.0\/me\/sendMail/u);
-  assert.match(String(calls[1]!.init?.body), /sponsor@example\.com/u);
+  assert.match(await calls[1]!.text(), /sponsor@example\.com/u);
 });
 
 test("describes the send for every connector type when its credentials are unset", async () => {
@@ -214,7 +279,7 @@ test("describes the send for every connector type when its credentials are unset
 
   // A fully configured SMTP org still stays offline without the encryption key
   // that would let the stored password be read.
-  const withoutKey = { ...connector("smtp"), smtpHost: "smtp.example.com", smtpPort: 587, smtpSecure: false, smtpUser: "u", smtpPasswordEncrypted: encryptEmailSecret("p") };
+  const withoutKey = { ...connector("smtp"), smtpHost: "smtp.example.com", smtpPort: 587, smtpSecure: false, smtpUser: "u", smtpPasswordEncrypted: await encryptEmailSecret("p") };
   const key = process.env.EMAIL_CONNECTOR_ENCRYPTION_KEY;
   delete process.env.EMAIL_CONNECTOR_ENCRYPTION_KEY;
   try {
@@ -364,7 +429,7 @@ test("verifies and sends through a password-authenticated SMTP server", async ()
         smtpPort: smtp.port,
         smtpSecure: smtp.secure,
         smtpUser: smtp.user,
-        smtpPasswordEncrypted: encryptEmailSecret(smtp.password),
+        smtpPasswordEncrypted: await encryptEmailSecret(smtp.password),
       }),
       { to: "sponsor@example.com", subject: "SMTP pupdate", body: "Biscuit says hello" },
     );
