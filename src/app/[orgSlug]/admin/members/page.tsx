@@ -97,6 +97,7 @@ export default async function MembersPage({ params }: MembersPageProps) {
             <SignOutButton />
           </>
         }
+        actionsClassName={styles.membersHeaderActions}
         brand={<Link href={`/${orgSlug}`}>
           <Image alt="Pawcast" priority src={pawcastWordmark} />
         </Link>}

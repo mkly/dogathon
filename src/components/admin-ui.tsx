@@ -46,6 +46,7 @@ type AdminHeaderVariant = "brand" | "directory" | "volunteer";
 
 export type AdminHeaderProps = Omit<HTMLAttributes<HTMLElement>, "title"> & {
   actions?: ReactNode;
+  actionsClassName?: string;
   brand?: ReactNode;
   eyebrow?: ReactNode;
   lede?: ReactNode;
@@ -56,6 +57,7 @@ export type AdminHeaderProps = Omit<HTMLAttributes<HTMLElement>, "title"> & {
 
 export function AdminHeader({
   actions,
+  actionsClassName,
   brand,
   className,
   eyebrow,
@@ -78,7 +80,9 @@ export function AdminHeader({
         <h1 id={titleId}>{title}</h1>
         {lede ? <p className={styles.lede}>{lede}</p> : null}
       </div>
-      {actions ? <div className={styles.headerActions}>{actions}</div> : null}
+      {actions ? (
+        <div className={classes(styles.headerActions, actionsClassName)}>{actions}</div>
+      ) : null}
     </header>
   );
 }

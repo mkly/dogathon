@@ -41,8 +41,11 @@
 .sectionHeader h2 {
   margin: 0;
   color: var(--felt-ink);
-  font-weight: 900;
 }
+
+.header-brand h1,
+.header-directory h1,
+.sectionHeader h2 { font-weight: 900; }
 
 .header-brand h1,
 .sectionHeader h2 { letter-spacing: -0.035em; }
@@ -317,5 +320,15 @@
   .header-brand .headerActions {
     align-items: stretch;
     flex-direction: column;
+  }
+}
+
+@media (min-width: 42rem) {
+  .page-volunteer { padding: 2.5rem 1.5rem 3.5rem; }
+  .header-volunteer { margin-bottom: 1.75rem; }
+
+  .header-volunteer h1 {
+    margin-top: 0.9rem;
+    font-size: 3.25rem;
   }
 }
