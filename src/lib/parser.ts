@@ -1,5 +1,8 @@
 import * as cheerio from "cheerio";
+import * as chrono from "chrono-node";
 import { generateText, Output } from "ai";
+import { toString } from "mdast-util-to-string";
+import { remark } from "remark";
 import { z } from "zod";
 
 import { createAiModel, hasAiCredentials } from "./ai-model.ts";
@@ -96,7 +99,7 @@ export function parseCompanionRosterDeterministic(source: string): CompanionReco
     return [{
       name,
       breed,
-      dobText: extractDob(ageText),
+      dobText: extractDob(ageText) ?? "",
       ageText,
       sex,
       weightText,
@@ -155,12 +158,21 @@ function splitHtmlSections(source: string): RosterSection[] {
 }
 
 function splitMarkdownSections(source: string): Array<{ heading: string; body: string }> {
-  const headings = [...source.matchAll(/^#{1,6}\s+(.+)$/gm)];
-  return headings.map((match, index) => ({
-    heading: match[1],
+  const tree = remark().parse(source);
+  const headings = tree.children.flatMap((node) => {
+    const start = node.position?.start.offset;
+    const end = node.position?.end.offset;
+
+    return node.type === "heading" && start !== undefined && end !== undefined
+      ? [{ heading: toString(node), start, end }]
+      : [];
+  });
+
+  return headings.map((heading, index) => ({
+    heading: heading.heading,
     body: source.slice(
-      (match.index ?? 0) + match[0].length,
-      headings[index + 1]?.index ?? source.length,
+      heading.end,
+      headings[index + 1]?.start ?? source.length,
     ),
   }));
 }
@@ -174,8 +186,14 @@ function extractField(text: string, field: string): string {
   return cleanText(text.match(pattern)?.[1] ?? "");
 }
 
-function extractDob(ageText: string): string {
-  return cleanText(ageText.match(/\b(?:est(?:imated)?\s*)?DOB\s*:?\s*([^),;]+)/i)?.[1] ?? "");
+function extractDob(ageText: string): string | null {
+  const date = chrono.parseDate(ageText);
+  if (!date) return null;
+
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 function extractMarkdownCareNotes(body: string): string[] {
