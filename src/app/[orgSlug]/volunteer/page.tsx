@@ -3,6 +3,7 @@ import Link from "next/link";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 
+import { AdminEmptyState, AdminHeader, AdminPage } from "@/components/admin-ui";
 import { FeltButton, FeltField, FeltPanel, PhotoPatch, StitchBadge } from "@/components/felt";
 import { prisma } from "@/lib/prisma";
 import { getOrganizationAccessBySlug } from "@/lib/organization-access";
@@ -55,7 +56,7 @@ export default async function VolunteerPage({ params, searchParams }: VolunteerP
 
   if (submitted === "1") {
     return (
-      <main className={styles.main}>
+      <AdminPage variant="volunteer">
         <FeltPanel className={styles.confirmation} tone="moss">
           <StitchBadge tone="cream">Note tucked in</StitchBadge>
           <div aria-hidden="true" className={styles.confirmationMark}>✓</div>
@@ -69,18 +70,19 @@ export default async function VolunteerPage({ params, searchParams }: VolunteerP
             Submit another
           </Link>
         </FeltPanel>
-      </main>
+      </AdminPage>
     );
   }
 
   return (
-    <main className={styles.main}>
+    <AdminPage variant="volunteer">
       <section className={styles.shell}>
-        <header className={styles.header}>
-          <StitchBadge tone="denim">Volunteer check-in</StitchBadge>
-          <h1>How’s a pup doing?</h1>
-          <p>Three quick steps, made for the phone in your pocket.</p>
-        </header>
+        <AdminHeader
+          eyebrow={<StitchBadge tone="denim">Volunteer check-in</StitchBadge>}
+          lede="Three quick steps, made for the phone in your pocket."
+          title="How’s a pup doing?"
+          variant="volunteer"
+        />
 
         <form action={submitVolunteerNote} className={styles.form}>
           <input name="orgSlug" type="hidden" value={orgSlug} />
@@ -112,8 +114,10 @@ export default async function VolunteerPage({ params, searchParams }: VolunteerP
                 ))}
               </div>
             ) : (
-              <FeltPanel className={styles.empty} tone="oatmeal">
-                No companions have active sponsors right now, so there’s no one to send a pup-date to yet.
+              <FeltPanel tone="oatmeal">
+                <AdminEmptyState variant="volunteer">
+                  No companions have active sponsors right now, so there’s no one to send a pup-date to yet.
+                </AdminEmptyState>
               </FeltPanel>
             )}
           </fieldset>
@@ -155,6 +159,6 @@ export default async function VolunteerPage({ params, searchParams }: VolunteerP
           </FeltButton>
         </form>
       </section>
-    </main>
+    </AdminPage>
   );
 }

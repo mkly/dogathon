@@ -2,7 +2,15 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 
-import { AdminBadge, AdminLink, AdminSurface } from "@/components/admin-ui";
+import {
+  AdminBadge,
+  AdminEmptyState,
+  AdminHeader,
+  AdminLink,
+  AdminPage,
+  AdminSurface,
+  AdminTable,
+} from "@/components/admin-ui";
 import { PhotoPatch } from "@/components/felt";
 import { getOrganizationAccessBySlug } from "@/lib/organization-access";
 import { prisma } from "@/lib/prisma";
@@ -56,17 +64,16 @@ export default async function CompanionsCoveredPage({ params }: CompanionsCovere
   ).length;
 
   return (
-    <main className={`admin-shell ${styles.page}`}>
-      <header className={styles.header}>
-        <div>
-          <p className={styles.eyebrow}>Private staff directory</p>
-          <h1>Companions covered</h1>
-          <p>Every sponsored resident and the people supporting them.</p>
-        </div>
-        <AdminLink className={styles.backLink} href={`/${orgSlug}/admin`}>
+    <AdminPage variant="directory">
+      <AdminHeader
+        actions={<AdminLink className={styles.backLink} href={`/${orgSlug}/admin`}>
           Back to staff room
-        </AdminLink>
-      </header>
+        </AdminLink>}
+        eyebrow="Private staff directory"
+        lede="Every sponsored resident and the people supporting them."
+        title="Companions covered"
+        variant="directory"
+      />
 
       <div className={styles.summary}>
         <p>
@@ -78,10 +85,12 @@ export default async function CompanionsCoveredPage({ params }: CompanionsCovere
       </div>
 
       {residents.length === 0 ? (
-        <AdminSurface className={styles.empty} tone="oatmeal">
-          <span aria-hidden="true">🐾</span>
-          <h2>No companions covered yet</h2>
-          <p>Residents will appear here when their first sponsorship begins.</p>
+        <AdminSurface tone="oatmeal">
+          <AdminEmptyState>
+            <span aria-hidden="true">🐾</span>
+            <h2>No companions covered yet</h2>
+            <p>Residents will appear here when their first sponsorship begins.</p>
+          </AdminEmptyState>
         </AdminSurface>
       ) : (
         <section aria-label="Companions covered directory" className={styles.companionList}>
@@ -120,44 +129,42 @@ export default async function CompanionsCoveredPage({ params }: CompanionsCovere
                   </AdminLink>
                 </div>
 
-                <div className={styles.tableWrap}>
-                  <table className={styles.table}>
-                    <thead>
-                      <tr>
-                        <th scope="col">Sponsor</th>
-                        <th scope="col">Contact</th>
-                        <th scope="col">Channel</th>
-                        <th scope="col">Status</th>
-                        <th scope="col">Started</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {resident.sponsorships.map((sponsorship) => (
-                        <tr key={sponsorship.id}>
-                          <td>{sponsorship.sponsor.name}</td>
-                          <td className={styles.contact}>
-                            <a href={`mailto:${sponsorship.sponsor.email}`}>
-                              {sponsorship.sponsor.email}
+                <AdminTable>
+                  <thead>
+                    <tr>
+                      <th scope="col">Sponsor</th>
+                      <th scope="col">Contact</th>
+                      <th scope="col">Channel</th>
+                      <th scope="col">Status</th>
+                      <th scope="col">Started</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {resident.sponsorships.map((sponsorship) => (
+                      <tr key={sponsorship.id}>
+                        <td>{sponsorship.sponsor.name}</td>
+                        <td className={styles.contact}>
+                          <a href={`mailto:${sponsorship.sponsor.email}`}>
+                            {sponsorship.sponsor.email}
+                          </a>
+                          {sponsorship.sponsor.phone && (
+                            <a href={`tel:${sponsorship.sponsor.phone}`}>
+                              {sponsorship.sponsor.phone}
                             </a>
-                            {sponsorship.sponsor.phone && (
-                              <a href={`tel:${sponsorship.sponsor.phone}`}>
-                                {sponsorship.sponsor.phone}
-                              </a>
-                            )}
-                          </td>
-                          <td className={styles.capitalize}>{sponsorship.sponsor.channel}</td>
-                          <td className={styles.capitalize}>{sponsorship.status}</td>
-                          <td>{formatDate(sponsorship.createdAt)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                          )}
+                        </td>
+                        <td className={styles.capitalize}>{sponsorship.sponsor.channel}</td>
+                        <td className={styles.capitalize}>{sponsorship.status}</td>
+                        <td>{formatDate(sponsorship.createdAt)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </AdminTable>
               </AdminSurface>
             );
           })}
         </section>
       )}
-    </main>
+    </AdminPage>
   );
 }

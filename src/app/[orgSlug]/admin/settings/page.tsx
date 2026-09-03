@@ -3,7 +3,15 @@ import Link from "next/link";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 
-import { AdminButton, AdminLink, AdminSurface } from "@/components/admin-ui";
+import {
+  AdminButton,
+  AdminEyebrow,
+  AdminFooter,
+  AdminHeader,
+  AdminLink,
+  AdminPage,
+  AdminSurface,
+} from "@/components/admin-ui";
 import { SignOutButton } from "@/components/sign-out-button";
 import { getEmailConnectorStatus } from "@/lib/email-connectors";
 import { getOrganizationAccessBySlug } from "@/lib/organization-access";
@@ -53,26 +61,26 @@ export default async function AdminSettingsPage({ params }: AdminSettingsPagePro
   };
 
   return (
-    <main className={`admin-shell ${styles.page}`}>
-      <header className={styles.header}>
-        <Link className={styles.logo} href={`/${orgSlug}`}>
+    <AdminPage>
+      <AdminHeader
+        actions={
+          <>
+            <AdminLink href={`/${orgSlug}/admin`} tone="oatmeal">
+              Back to staff room
+            </AdminLink>
+            <SignOutButton />
+          </>
+        }
+        brand={<Link href={`/${orgSlug}`}>
           <Image alt="Pawcast" priority src={pawcastWordmark} />
-        </Link>
-        <div>
-          <h1>Staff settings</h1>
-        </div>
-        <div className={styles.headerActions}>
-          <AdminLink href={`/${orgSlug}/admin`} tone="oatmeal">
-            Back to staff room
-          </AdminLink>
-          <SignOutButton />
-        </div>
-      </header>
+        </Link>}
+        title="Staff settings"
+      />
 
       <div className={styles.settingsStack}>
         <AdminSurface className={styles.settings} tone="mustard">
           <div className={styles.settingsIntro}>
-            <p className={styles.eyebrow}>Stripe Connect</p>
+            <AdminEyebrow>Stripe Connect</AdminEyebrow>
             <h2>Monthly sponsorship payments</h2>
             <p>
               {organization?.stripeChargesEnabled
@@ -100,7 +108,7 @@ export default async function AdminSettingsPage({ params }: AdminSettingsPagePro
 
         <AdminSurface className={styles.settings} tone="denim">
           <div className={styles.settingsIntro}>
-            <p className={styles.eyebrowLight}>Staff settings</p>
+            <AdminEyebrow tone="denim">Staff settings</AdminEyebrow>
             <h2>Pinned to every email this month</h2>
             <p>The postscript rides at the bottom of each pupdate.</p>
           </div>
@@ -109,7 +117,7 @@ export default async function AdminSettingsPage({ params }: AdminSettingsPagePro
 
         <AdminSurface className={styles.settings} tone="moss">
           <div className={styles.settingsIntro}>
-            <p className={styles.eyebrow}>Roster sync</p>
+            <AdminEyebrow>Roster sync</AdminEyebrow>
             <h2>Keep the adoption roster current</h2>
             <p>
               Save the adoption-page source, then sync its current companions into the staff roster.
@@ -119,7 +127,7 @@ export default async function AdminSettingsPage({ params }: AdminSettingsPagePro
         </AdminSurface>
       </div>
 
-      <footer className={styles.footer}>staff settings · everything in its place</footer>
-    </main>
+      <AdminFooter>staff settings · everything in its place</AdminFooter>
+    </AdminPage>
   );
 }

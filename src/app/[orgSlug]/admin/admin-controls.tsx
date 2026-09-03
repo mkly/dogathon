@@ -3,7 +3,14 @@
 import { useActionState, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { AdminBadge, AdminButton, AdminField, AdminLink, AdminSurface } from "@/components/admin-ui";
+import {
+  AdminBadge,
+  AdminButton,
+  AdminEyebrow,
+  AdminField,
+  AdminLink,
+  AdminSurface,
+} from "@/components/admin-ui";
 import { pushToast } from "@/components/toast";
 import { MAX_SMS_LENGTH } from "@/lib/pupdate-sms";
 import {
@@ -213,7 +220,7 @@ export function DraftEditor({
         <AdminSurface className={styles.dialogPanel} tone="oatmeal">
           <div className={styles.dialogHeader}>
             <div>
-              <p className={styles.eyebrow}>Draft pupdate</p>
+              <AdminEyebrow>Draft pupdate</AdminEyebrow>
               <h2 id={`edit-draft-title-${id}`}>Edit message</h2>
             </div>
             <AdminButton aria-label="Close editor" onClick={closeEditor} tone="oatmeal">
@@ -554,7 +561,7 @@ export function EmailConnectorSettings({
     <AdminSurface className={styles.connectorSettings} tone="oatmeal">
       <div className={styles.connectorHeader}>
         <div>
-          <p className={styles.eyebrow}>Organization email</p>
+          <AdminEyebrow>Organization email</AdminEyebrow>
           <h2>Choose one sending connection</h2>
           <p>Connecting a provider replaces this organization&apos;s previous email connection.</p>
         </div>
@@ -595,7 +602,7 @@ export function EmailConnectorSettings({
         <AdminSurface className={styles.dialogPanel} tone="oatmeal">
           <div className={styles.dialogHeader}>
             <div>
-              <p className={styles.eyebrow}>Organization email</p>
+              <AdminEyebrow>Organization email</AdminEyebrow>
               <h2 id="smtp-dialog-title">Connect SMTP with password</h2>
             </div>
             <AdminButton aria-label="Close SMTP connection form" onClick={() => setSmtpOpen(false)} tone="oatmeal">

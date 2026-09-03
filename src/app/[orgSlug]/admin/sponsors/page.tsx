@@ -2,7 +2,16 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 
-import { AdminBadge, AdminLink, AdminSurface } from "@/components/admin-ui";
+import {
+  AdminBadge,
+  AdminEmptyState,
+  AdminHeader,
+  AdminLink,
+  AdminPage,
+  AdminStatus,
+  AdminSurface,
+  AdminTable,
+} from "@/components/admin-ui";
 import { getOrganizationAccessBySlug } from "@/lib/organization-access";
 import { prisma } from "@/lib/prisma";
 
@@ -49,17 +58,16 @@ export default async function SponsorsPage({ params }: SponsorsPageProps) {
   );
 
   return (
-    <main className={`admin-shell ${styles.page}`}>
-      <header className={styles.header}>
-        <div>
-          <p className={styles.eyebrow}>Private staff directory</p>
-          <h1>Sponsors</h1>
-          <p>Contact preferences and every companion supported by each sponsor.</p>
-        </div>
-        <AdminLink className={styles.backLink} href={`/${orgSlug}/admin`}>
+    <AdminPage variant="directory">
+      <AdminHeader
+        actions={<AdminLink className={styles.backLink} href={`/${orgSlug}/admin`}>
           Back to staff room
-        </AdminLink>
-      </header>
+        </AdminLink>}
+        eyebrow="Private staff directory"
+        lede="Contact preferences and every companion supported by each sponsor."
+        title="Sponsors"
+        variant="directory"
+      />
 
       <div className={styles.summary}>
         <p>{sponsors.length} {sponsors.length === 1 ? "person" : "people"} · {sponsorshipCount} {sponsorshipCount === 1 ? "sponsorship" : "sponsorships"}</p>
@@ -67,10 +75,12 @@ export default async function SponsorsPage({ params }: SponsorsPageProps) {
       </div>
 
       {sponsors.length === 0 ? (
-        <AdminSurface className={styles.empty} tone="oatmeal">
-          <span aria-hidden="true">🧵</span>
-          <h2>No sponsors yet</h2>
-          <p>New sponsorships will be tucked into this directory.</p>
+        <AdminSurface tone="oatmeal">
+          <AdminEmptyState>
+            <span aria-hidden="true">🧵</span>
+            <h2>No sponsors yet</h2>
+            <p>New sponsorships will be tucked into this directory.</p>
+          </AdminEmptyState>
         </AdminSurface>
       ) : (
         <section aria-label="Sponsor directory" className={styles.sponsorList}>
@@ -93,30 +103,28 @@ export default async function SponsorsPage({ params }: SponsorsPageProps) {
                 </div>
               </div>
 
-              <div className={styles.tableWrap}>
-                <table className={styles.table}>
-                  <thead>
-                    <tr>
-                      <th scope="col">Sponsored companion</th>
-                      <th scope="col">Status</th>
-                      <th scope="col">Started</th>
+              <AdminTable>
+                <thead>
+                  <tr>
+                    <th scope="col">Sponsored companion</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Started</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sponsor.sponsorships.map((record) => (
+                    <tr key={record.id}>
+                      <td>{record.resident.name}</td>
+                      <td><AdminStatus>{record.status}</AdminStatus></td>
+                      <td>{formatDate(record.createdAt)}</td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {sponsor.sponsorships.map((record) => (
-                      <tr key={record.id}>
-                        <td>{record.resident.name}</td>
-                        <td><span className={styles.status}>{record.status}</span></td>
-                        <td>{formatDate(record.createdAt)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                  ))}
+                </tbody>
+              </AdminTable>
             </AdminSurface>
           ))}
         </section>
       )}
-    </main>
+    </AdminPage>
   );
 }

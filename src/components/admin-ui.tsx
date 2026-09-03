@@ -2,7 +2,10 @@ import Link from "next/link";
 import type {
   ButtonHTMLAttributes,
   ComponentProps,
+  ComponentPropsWithoutRef,
   HTMLAttributes,
+  ReactNode,
+  TableHTMLAttributes,
 } from "react";
 
 import styles from "./admin-ui.module.css";
@@ -14,6 +17,165 @@ function classes(...values: Array<string | undefined>) {
 }
 
 type ToneProps = { tone?: AdminTone };
+
+type AdminPageVariant = "wide" | "directory" | "volunteer";
+
+export type AdminPageProps = ComponentPropsWithoutRef<"main"> & {
+  variant?: AdminPageVariant;
+};
+
+export function AdminPage({
+  className,
+  variant = "wide",
+  ...props
+}: AdminPageProps) {
+  return (
+    <main
+      className={classes(
+        variant === "volunteer" ? undefined : "admin-shell",
+        styles.page,
+        styles[`page-${variant}`],
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+type AdminHeaderVariant = "brand" | "directory" | "volunteer";
+
+export type AdminHeaderProps = Omit<HTMLAttributes<HTMLElement>, "title"> & {
+  actions?: ReactNode;
+  actionsClassName?: string;
+  brand?: ReactNode;
+  eyebrow?: ReactNode;
+  lede?: ReactNode;
+  title: ReactNode;
+  titleId?: string;
+  variant?: AdminHeaderVariant;
+};
+
+export function AdminHeader({
+  actions,
+  actionsClassName,
+  brand,
+  className,
+  eyebrow,
+  lede,
+  title,
+  titleId,
+  variant = "brand",
+  ...props
+}: AdminHeaderProps) {
+  return (
+    <header
+      className={classes(styles.header, styles[`header-${variant}`], className)}
+      {...props}
+    >
+      {brand ? <div className={styles.brand}>{brand}</div> : null}
+      <div>
+        {eyebrow ? (
+          variant === "volunteer" ? eyebrow : <AdminEyebrow>{eyebrow}</AdminEyebrow>
+        ) : null}
+        <h1 id={titleId}>{title}</h1>
+        {lede ? <p className={styles.lede}>{lede}</p> : null}
+      </div>
+      {actions ? (
+        <div className={classes(styles.headerActions, actionsClassName)}>{actions}</div>
+      ) : null}
+    </header>
+  );
+}
+
+export type AdminEyebrowProps = HTMLAttributes<HTMLParagraphElement> & {
+  tone?: "brick" | "denim";
+};
+
+export function AdminEyebrow({
+  className,
+  tone = "brick",
+  ...props
+}: AdminEyebrowProps) {
+  return (
+    <p
+      className={classes(styles.eyebrow, tone === "denim" ? styles.eyebrowDenim : undefined, className)}
+      {...props}
+    />
+  );
+}
+
+export type AdminSectionHeaderProps = HTMLAttributes<HTMLDivElement> & {
+  actions?: ReactNode;
+  eyebrow?: ReactNode;
+  title: ReactNode;
+  titleId?: string;
+};
+
+export function AdminSectionHeader({
+  actions,
+  className,
+  eyebrow,
+  title,
+  titleId,
+  ...props
+}: AdminSectionHeaderProps) {
+  return (
+    <div className={classes(styles.sectionHeader, className)} {...props}>
+      <div>
+        {eyebrow ? <AdminEyebrow>{eyebrow}</AdminEyebrow> : null}
+        <h2 id={titleId}>{title}</h2>
+      </div>
+      {actions}
+    </div>
+  );
+}
+
+type AdminEmptyStateVariant = "dashboard" | "directory" | "volunteer";
+
+export type AdminEmptyStateProps = HTMLAttributes<HTMLDivElement> & {
+  variant?: AdminEmptyStateVariant;
+};
+
+export function AdminEmptyState({
+  className,
+  variant = "directory",
+  ...props
+}: AdminEmptyStateProps) {
+  return (
+    <div
+      className={classes(styles.empty, styles[`empty-${variant}`], className)}
+      {...props}
+    />
+  );
+}
+
+export type AdminTableProps = TableHTMLAttributes<HTMLTableElement> & {
+  wrapperClassName?: string;
+};
+
+export function AdminTable({
+  className,
+  wrapperClassName,
+  ...props
+}: AdminTableProps) {
+  return (
+    <div className={classes(styles.tableWrap, wrapperClassName)}>
+      <table className={classes(styles.table, className)} {...props} />
+    </div>
+  );
+}
+
+export type AdminStatusProps = HTMLAttributes<HTMLSpanElement>;
+
+export function AdminStatus({ className, ...props }: AdminStatusProps) {
+  return <span className={classes(styles.status, className)} {...props} />;
+}
+
+export type AdminFooterProps = HTMLAttributes<HTMLElement>;
+
+export function AdminFooter({ className, ...props }: AdminFooterProps) {
+  return <footer className={classes(styles.footer, className)} {...props} />;
+}
 
 export type AdminSurfaceProps = HTMLAttributes<HTMLDivElement> & ToneProps;
 

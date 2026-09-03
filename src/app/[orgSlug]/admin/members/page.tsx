@@ -3,7 +3,14 @@ import Link from "next/link";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 
-import { AdminBadge, AdminLink } from "@/components/admin-ui";
+import {
+  AdminBadge,
+  AdminFooter,
+  AdminHeader,
+  AdminLink,
+  AdminPage,
+  AdminSectionHeader,
+} from "@/components/admin-ui";
 import { SignOutButton } from "@/components/sign-out-button";
 import { auth } from "@/lib/auth";
 import {
@@ -81,30 +88,31 @@ export default async function MembersPage({ params }: MembersPageProps) {
   });
 
   return (
-    <main className={`admin-shell ${styles.page}`}>
-      <header className={styles.header}>
-        <Link className={styles.logo} href={`/${orgSlug}`}>
+    <AdminPage>
+      <AdminHeader
+        actions={
+          <>
+            <AdminLink href={`/${orgSlug}/admin/settings`} tone="oatmeal">Settings</AdminLink>
+            <AdminLink href={`/${orgSlug}/admin`} tone="oatmeal">Back to staff room</AdminLink>
+            <SignOutButton />
+          </>
+        }
+        actionsClassName={styles.membersHeaderActions}
+        brand={<Link href={`/${orgSlug}`}>
           <Image alt="Pawcast" priority src={pawcastWordmark} />
-        </Link>
-        <div>
-          <h1>Organization members</h1>
-          <p>{access.organization.name}</p>
-        </div>
-        <div className={styles.headerActions}>
-          <AdminLink href={`/${orgSlug}/admin/settings`} tone="oatmeal">Settings</AdminLink>
-          <AdminLink href={`/${orgSlug}/admin`} tone="oatmeal">Back to staff room</AdminLink>
-          <SignOutButton />
-        </div>
-      </header>
+        </Link>}
+        className={styles.membersHeader}
+        lede={access.organization.name}
+        title="Organization members"
+      />
 
       <section aria-labelledby="member-list-title">
-        <div className={styles.sectionTitle}>
-          <div>
-            <p className={styles.eyebrow}>People with access</p>
-            <h2 id="member-list-title">Members</h2>
-          </div>
-          <AdminBadge tone="denim">{members.length} {members.length === 1 ? "person" : "people"}</AdminBadge>
-        </div>
+        <AdminSectionHeader
+          actions={<AdminBadge tone="denim">{members.length} {members.length === 1 ? "person" : "people"}</AdminBadge>}
+          eyebrow="People with access"
+          title="Members"
+          titleId="member-list-title"
+        />
         <MemberList
           actorRole={access.context.role as "owner" | "admin"}
           actorUserId={access.context.userId}
@@ -114,19 +122,18 @@ export default async function MembersPage({ params }: MembersPageProps) {
       </section>
 
       <section aria-labelledby="invitation-list-title" className={styles.invitationsSection}>
-        <div className={styles.sectionTitle}>
-          <div>
-            <p className={styles.eyebrow}>Bring someone into the room</p>
-            <h2 id="invitation-list-title">Invitations</h2>
-          </div>
-          <AdminBadge tone="mustard">
+        <AdminSectionHeader
+          actions={<AdminBadge tone="mustard">
             {invitations.length} pending
-          </AdminBadge>
-        </div>
+          </AdminBadge>}
+          eyebrow="Bring someone into the room"
+          title="Invitations"
+          titleId="invitation-list-title"
+        />
         <InvitationManager invitations={invitations} orgSlug={orgSlug} />
       </section>
 
-      <footer className={styles.footer}>organization members · keep the right people in the room</footer>
-    </main>
+      <AdminFooter>organization members · keep the right people in the room</AdminFooter>
+    </AdminPage>
   );
 }
