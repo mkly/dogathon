@@ -33,7 +33,7 @@ export default async function VolunteerPage({ params, searchParams }: VolunteerP
   if (!access) notFound();
   if (!access.context) {
     const next = encodeURIComponent(`/${orgSlug}/volunteer`);
-    redirect(access.authenticated ? "/organizations" : `/sign-in?next=${next}`);
+    redirect(access.authenticated ? "/staff/organizations" : `/staff/sign-in?next=${next}`);
   }
   const { context } = access;
 

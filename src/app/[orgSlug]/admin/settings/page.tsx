@@ -31,7 +31,7 @@ export default async function AdminSettingsPage({ params }: AdminSettingsPagePro
   if (!access) notFound();
   if (!access.context) {
     const next = encodeURIComponent(`/${orgSlug}/admin/settings`);
-    redirect(access.authenticated ? "/organizations" : `/sign-in?next=${next}`);
+    redirect(access.authenticated ? "/staff/organizations" : `/staff/sign-in?next=${next}`);
   }
   const { context } = access;
 

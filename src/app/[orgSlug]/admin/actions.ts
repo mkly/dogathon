@@ -20,7 +20,7 @@ export async function beginStripeOnboarding(formData: FormData) {
   const access = await getOrganizationAccessBySlug(await headers(), orgSlug, ["owner"]);
 
   if (!access) notFound();
-  if (!access.context) redirect("/organizations");
+  if (!access.context) redirect("/staff/organizations");
 
   const appUrl = process.env.BETTER_AUTH_URL?.replace(/\/$/, "") ?? "http://localhost:3000";
   // Stripe sends the owner back to a bare API route, so the org has to ride along
@@ -41,7 +41,7 @@ export async function saveSettings(
   const access = await getOrganizationAccessBySlug(await headers(), orgSlug, ["owner", "admin"]);
 
   if (!access) notFound();
-  if (!access.context) redirect("/organizations");
+  if (!access.context) redirect("/staff/organizations");
   const { context } = access;
 
   const parsed = parseSettingsForm(formData);

@@ -31,7 +31,7 @@ export default async function SponsorDetailPage({ params }: SponsorDetailPagePro
   const access = await getOrganizationAccessBySlug(await headers(), orgSlug, ["owner", "admin"]);
 
   if (!access) notFound();
-  if (!access.context) redirect("/organizations");
+  if (!access.context) redirect("/staff/organizations");
   const { context } = access;
 
   const sponsor = await prisma.sponsor.findFirst({

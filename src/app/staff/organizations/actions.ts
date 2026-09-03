@@ -54,21 +54,21 @@ export async function createOrganization(
 export async function setActiveOrganization(formData: FormData) {
   const requestHeaders = await headers();
   const organizationId = value(formData, "organizationId");
-  if (!organizationId) redirect("/organizations?error=invalid-organization");
+  if (!organizationId) redirect("/staff/organizations?error=invalid-organization");
 
   await auth.api.setActiveOrganization({ body: { organizationId }, headers: requestHeaders });
   const organization = await prisma.organization.findUnique({
     where: { id: organizationId },
     select: { slug: true },
   });
-  if (!organization) redirect("/organizations?error=invalid-organization");
+  if (!organization) redirect("/staff/organizations?error=invalid-organization");
   redirect(`/${organization.slug}/admin`);
 }
 
 export async function acceptOrganizationInvitation(formData: FormData) {
   const requestHeaders = await headers();
   const invitationId = value(formData, "invitationId");
-  if (!invitationId) redirect("/organizations?error=invalid-invitation");
+  if (!invitationId) redirect("/staff/organizations?error=invalid-invitation");
 
   const accepted = await auth.api.acceptInvitation({ body: { invitationId }, headers: requestHeaders });
   await auth.api.setActiveOrganization({
@@ -79,6 +79,6 @@ export async function acceptOrganizationInvitation(formData: FormData) {
     where: { id: accepted.member.organizationId },
     select: { slug: true },
   });
-  if (!organization) redirect("/organizations?error=invalid-organization");
+  if (!organization) redirect("/staff/organizations?error=invalid-organization");
   redirect(`/${organization.slug}/admin`);
 }

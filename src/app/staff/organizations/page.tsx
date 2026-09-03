@@ -20,7 +20,7 @@ type OrganizationsPageProps = {
 export default async function OrganizationsPage({ searchParams }: OrganizationsPageProps) {
   const requestHeaders = await headers();
   const session = await getSession(requestHeaders);
-  if (!session) redirect("/sign-in?next=/organizations");
+  if (!session) redirect("/staff/sign-in?next=/staff/organizations");
 
   const query = await searchParams;
   const organizations = await auth.api.listOrganizations({ headers: requestHeaders });

@@ -30,7 +30,7 @@ export default async function MembersPage({ params }: MembersPageProps) {
   if (!access) notFound();
   if (!access.context) {
     const next = encodeURIComponent(`/${orgSlug}/admin/members`);
-    redirect(access.authenticated ? "/organizations" : `/sign-in?next=${next}`);
+    redirect(access.authenticated ? "/staff/organizations" : `/staff/sign-in?next=${next}`);
   }
 
   const [firstPage, invitationResult] = await Promise.all([

@@ -16,7 +16,7 @@ function providerFrom(value: string): OAuthProvider | null {
 function adminRedirect(request: Request, orgSlug: string | null, result: "connected" | "error") {
   const path = orgSlug
     ? `/${orgSlug}/admin/settings?emailConnector=${result}`
-    : `/organizations?emailConnector=${result}`;
+    : `/staff/organizations?emailConnector=${result}`;
   return Response.redirect(new URL(path, request.url), 303);
 }
 

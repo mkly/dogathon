@@ -5,7 +5,7 @@ import { FeltPanel } from "@/components/felt";
 import { MagicLinkForm } from "@/components/magic-link-form";
 import { getSession } from "@/lib/auth-session";
 
-import styles from "../../sign-in/sign-in.module.css";
+import styles from "../../staff/sign-in/sign-in.module.css";
 
 export const dynamic = "force-dynamic";
 
