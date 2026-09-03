@@ -17,10 +17,11 @@ import {
   ROSTER_SYNC_RETRY_LIMIT,
 } from "./roster-sync-queue.ts";
 import { createRosterSyncDrainer } from "./roster-sync-worker.ts";
+import { env, subprocessEnvironment } from "./env.ts";
 
 const execFileAsync = promisify(execFile);
 const repoRoot = fileURLToPath(new URL("../..", import.meta.url));
-const sourceDatabaseUrl = process.env.DATABASE_URL;
+const sourceDatabaseUrl = env.DATABASE_URL;
 const databaseName = `dogathon_pgboss_${process.pid}_${randomUUID().replaceAll("-", "")}`;
 
 let admin: pg.Client;
@@ -37,7 +38,7 @@ before(async () => {
 
   await execFileAsync("./node_modules/.bin/prisma", ["migrate", "deploy"], {
     cwd: repoRoot,
-    env: { ...process.env, DATABASE_URL: databaseUrl },
+    env: subprocessEnvironment({ DATABASE_URL: databaseUrl }),
   });
   boss = new PgBoss({ connectionString: databaseUrl });
   await boss.start();

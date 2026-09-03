@@ -3,6 +3,7 @@
 import { notFound, redirect } from "next/navigation";
 
 import { prisma } from "@/lib/prisma";
+import { env } from "@/lib/env";
 import { createStripeCheckout, ResidentUnavailableError } from "@/lib/stripe-billing";
 import { isUuid } from "@/lib/uuid";
 
@@ -40,7 +41,6 @@ export async function createSponsorship(formData: FormData) {
   });
   if (!organization) notFound();
 
-  const appUrl = process.env.BETTER_AUTH_URL?.replace(/\/$/, "") ?? "http://localhost:3000";
   let checkoutUrl: string;
   try {
     const session = await createStripeCheckout({
@@ -48,8 +48,8 @@ export async function createSponsorship(formData: FormData) {
       residentId,
       sponsorName,
       sponsorEmail,
-      successUrl: `${appUrl}${companionPath}?sponsored=1&session_id={CHECKOUT_SESSION_ID}`,
-      cancelUrl: `${appUrl}${companionPath}?checkout=canceled`,
+      successUrl: `${env.BETTER_AUTH_URL}${companionPath}?sponsored=1&session_id={CHECKOUT_SESSION_ID}`,
+      cancelUrl: `${env.BETTER_AUTH_URL}${companionPath}?checkout=canceled`,
     });
     checkoutUrl = session.url;
   } catch (error) {

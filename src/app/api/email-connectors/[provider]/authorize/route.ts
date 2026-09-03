@@ -5,6 +5,7 @@ import {
   type EmailConnectorKind,
 } from "@/lib/email-connectors";
 import { requireApiOrganization } from "@/lib/organization-access";
+import { env } from "@/lib/env";
 import { NextResponse, type NextRequest } from "next/server";
 
 type OAuthProvider = Exclude<EmailConnectorKind, "smtp">;
@@ -33,7 +34,7 @@ export async function POST(
     response.cookies.set(EMAIL_CONNECTOR_OAUTH_COOKIE, authorization.cookie, {
       httpOnly: true,
       sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
+      secure: env.NODE_ENV === "production",
       path: EMAIL_CONNECTOR_OAUTH_COOKIE_PATH,
       maxAge: 10 * 60,
     });

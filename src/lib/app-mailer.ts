@@ -6,12 +6,13 @@ import {
   type SmtpConfiguration,
   type TransportFactory,
 } from "./email-connectors.ts";
+import { env as appEnv } from "./env.ts";
 
 export type AppMailerEnvironment = {
-  [key: string]: string | undefined;
+  [key: string]: string | number | boolean | undefined;
   APP_SMTP_HOST?: string;
-  APP_SMTP_PORT?: string;
-  APP_SMTP_SECURE?: string;
+  APP_SMTP_PORT?: string | number;
+  APP_SMTP_SECURE?: string | boolean;
   APP_SMTP_USER?: string;
   APP_SMTP_PASSWORD?: string;
   APP_EMAIL_FROM?: string;
@@ -22,15 +23,16 @@ export type AppMailerDependencies = {
   transportFactory?: TransportFactory;
 };
 
-function smtpSecure(value: string | undefined): boolean {
+function smtpSecure(value: string | boolean | undefined): boolean {
+  if (typeof value === "boolean") return value;
   const normalized = value?.trim().toLowerCase();
   if (!normalized || ["false", "0", "no", "off"].includes(normalized)) return false;
   if (["true", "1", "yes", "on"].includes(normalized)) return true;
   throw new Error("APP_SMTP_SECURE must be a boolean");
 }
 
-function smtpPort(value: string | undefined, secure: boolean): number {
-  const normalized = value?.trim();
+function smtpPort(value: string | number | undefined, secure: boolean): number {
+  const normalized = typeof value === "string" ? value.trim() : value;
   if (!normalized) return secure ? 465 : 587;
 
   const port = Number(normalized);
@@ -63,11 +65,11 @@ export async function sendAppEmail(
   input: EmailInput,
   dependencies: AppMailerDependencies = {},
 ): Promise<DescribedSend | null> {
-  const env = dependencies.env ?? process.env;
-  const from = env.APP_EMAIL_FROM?.trim() ?? "";
+  const environment = dependencies.env ?? appEnv;
+  const from = environment.APP_EMAIL_FROM?.trim() ?? "";
   validateEmailHeaders(input, from);
 
-  const config = configuration(env);
+  const config = configuration(environment);
   if (!config) {
     return {
       dryRun: true,

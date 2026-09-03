@@ -1,6 +1,7 @@
 import { PgBoss, type Job, type JobWithMetadata } from "pg-boss";
 
 import type { RosterSyncJobView } from "./roster-sync-client.ts";
+import { env } from "./env.ts";
 import type { SyncSummary } from "./roster-sync.ts";
 
 export const ROSTER_SYNC_QUEUE = "roster-sync";
@@ -55,10 +56,9 @@ export class RosterSyncJobNotFoundError extends Error {
 
 export async function getRosterSyncBoss(): Promise<PgBoss> {
   if (!globalForRosterSync.rosterSyncBossStart) {
-    const connectionString = process.env.DATABASE_URL;
-    if (!connectionString) throw new Error("DATABASE_URL is required for roster sync jobs");
-
-    const boss = globalForRosterSync.rosterSyncBoss ?? new PgBoss({ connectionString });
+    const boss = globalForRosterSync.rosterSyncBoss ?? new PgBoss({
+      connectionString: env.DATABASE_URL,
+    });
     boss.on("error", (error) => console.error("pg-boss error", error));
     globalForRosterSync.rosterSyncBoss = boss;
     globalForRosterSync.rosterSyncBossStart = boss.start().then(async () => {

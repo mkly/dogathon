@@ -8,6 +8,8 @@ import {
 import type { RosterSyncJobView } from "./roster-sync-client.ts";
 import { RosterSyncRefusal, syncRoster, type SyncSummary } from "./roster-sync.ts";
 import { isAuthorizedSchedulerRequest } from "./scheduler-auth.ts";
+import { env as appEnv } from "./env.ts";
+import type { SchedulerEnvironment } from "./scheduler-auth.ts";
 
 export const DEFAULT_ROSTER_SYNC_DRAIN_BUDGET_MS = 4 * 60 * 1000;
 
@@ -63,21 +65,21 @@ export function createRosterSyncDrainer(dependencies: DrainDependencies = defaul
 
 type DrainRouteDependencies = {
   drain?: ReturnType<typeof createRosterSyncDrainer>;
-  env?: Record<string, string | undefined>;
+  env?: SchedulerEnvironment;
 };
 
 export function createRosterSyncDrainHandler(dependencies: DrainRouteDependencies = {}) {
   const drain = dependencies.drain ?? createRosterSyncDrainer();
-  const env = dependencies.env ?? process.env;
+  const environment = dependencies.env ?? appEnv;
 
   return async function POST(request: Request): Promise<Response> {
-    if (!isAuthorizedSchedulerRequest(request, env)) {
+    if (!isAuthorizedSchedulerRequest(request, environment)) {
       return Response.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     try {
       return Response.json(await drain({
-        budgetMs: configuredBudget(env.ROSTER_SYNC_DRAIN_BUDGET_MS),
+        budgetMs: configuredBudget(environment.ROSTER_SYNC_DRAIN_BUDGET_MS),
       }));
     } catch (error) {
       console.error("Roster sync drain failed", error);
@@ -86,8 +88,10 @@ export function createRosterSyncDrainHandler(dependencies: DrainRouteDependencie
   };
 }
 
-function configuredBudget(value: string | undefined): number {
-  if (!value?.trim()) return DEFAULT_ROSTER_SYNC_DRAIN_BUDGET_MS;
+function configuredBudget(value: string | number | undefined): number {
+  if (value === undefined || (typeof value === "string" && !value.trim())) {
+    return DEFAULT_ROSTER_SYNC_DRAIN_BUDGET_MS;
+  }
   return positiveDuration(Number(value), "ROSTER_SYNC_DRAIN_BUDGET_MS");
 }
 

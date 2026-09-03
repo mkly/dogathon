@@ -5,6 +5,7 @@ import { generateText, isStepCount, tool, type LanguageModel } from "ai";
 import { z } from "zod";
 
 import { createAiModel } from "./ai-model.ts";
+import { env } from "./env.ts";
 import type { CompanionRecord } from "./parser.ts";
 import { parseCompanionRoster } from "./parser.ts";
 import { prisma } from "./prisma.ts";
@@ -503,9 +504,9 @@ export async function requestFirecrawl(
   input: Record<string, unknown>,
   options: FirecrawlRequestOptions = {},
 ): Promise<unknown> {
-  const apiKey = (options.apiKey ?? process.env.FIRECRAWL_API_KEY)?.trim();
+  const apiKey = (options.apiKey ?? env.FIRECRAWL_API_KEY)?.trim();
   if (!apiKey) throw new Error("FIRECRAWL_API_KEY is required to fetch a live roster");
-  const baseUrl = (options.baseUrl ?? process.env.FIRECRAWL_BASE_URL ?? DEFAULT_FIRECRAWL_BASE_URL)
+  const baseUrl = (options.baseUrl ?? env.FIRECRAWL_BASE_URL ?? DEFAULT_FIRECRAWL_BASE_URL)
     .replace(/\/+$/u, "");
   const fetcher = options.fetch ?? fetch;
 

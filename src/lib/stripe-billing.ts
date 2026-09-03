@@ -1,5 +1,7 @@
 import Stripe from "stripe";
 
+import { env } from "./env.ts";
+
 import { prisma } from "@/lib/prisma";
 
 export const SPONSORSHIP_MONTHLY_USD = 25;
@@ -154,14 +156,14 @@ const prismaBillingStore: BillingStore = {
 let stripeClient: Stripe | undefined;
 
 function stripe() {
-  const apiKey = process.env.STRIPE_SECRET_KEY?.trim();
+  const apiKey = env.STRIPE_SECRET_KEY?.trim();
   if (!apiKey) throw new Error("STRIPE_SECRET_KEY is required for billing");
   stripeClient ??= new Stripe(apiKey, { httpClient: Stripe.createFetchHttpClient() });
   return stripeClient;
 }
 
 export function stripeWebhookSecret() {
-  const secret = process.env.STRIPE_WEBHOOK_SECRET?.trim();
+  const secret = env.STRIPE_WEBHOOK_SECRET?.trim();
   if (!secret) throw new Error("STRIPE_WEBHOOK_SECRET is required for billing webhooks");
   return secret;
 }

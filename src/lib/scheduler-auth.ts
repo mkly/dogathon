@@ -1,6 +1,11 @@
 import { constantTimeEqual } from "better-auth/crypto";
 
-export type SchedulerEnvironment = Record<string, string | undefined>;
+export type SchedulerEnvironment = {
+  CRON_SECRET?: string;
+  ROSTER_SYNC_DRAIN_SECRET?: string;
+  ROSTER_SYNC_DRAIN_BUDGET_MS?: string | number;
+  ROSTER_SYNC_SCHEDULE_STAGGER_MS?: string | number;
+};
 
 export function isAuthorizedSchedulerRequest(
   request: Request,
