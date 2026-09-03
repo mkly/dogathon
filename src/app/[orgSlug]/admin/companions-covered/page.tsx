@@ -30,7 +30,7 @@ export default async function CompanionsCoveredPage({ params }: CompanionsCovere
   const access = await getOrganizationAccessBySlug(await headers(), orgSlug, ["owner", "admin"]);
 
   if (!access) notFound();
-  if (!access.context) redirect("/organizations");
+  if (!access.context) redirect("/staff/organizations");
   const { context } = access;
 
   const residents = await prisma.resident.findMany({

@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 type SignInPageProps = { searchParams: Promise<{ next?: string }> };
 
 function safeNextPath(value: string | undefined) {
-  return value?.startsWith("/") && !value.startsWith("//") ? value : "/organizations";
+  return value?.startsWith("/") && !value.startsWith("//") ? value : "/staff/organizations";
 }
 
 export default async function SignInPage({ searchParams }: SignInPageProps) {

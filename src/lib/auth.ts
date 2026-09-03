@@ -43,7 +43,7 @@ export const auth = betterAuth({
       },
       sendInvitationEmail: async ({ email, id, organization: invitedOrganization, role }) => {
         const baseUrl = process.env.BETTER_AUTH_URL ?? "http://localhost:3000";
-        const invitationUrl = new URL("/organizations", baseUrl);
+        const invitationUrl = new URL("/staff/organizations", baseUrl);
         invitationUrl.searchParams.set("invitation", id);
 
         const describedSend = await sendAppEmail({
