@@ -16,7 +16,7 @@ import { sendMagicLinkEmail } from "@/lib/magic-link-email";
 import {
   isReservedOrganizationSlug,
   RESERVED_ORGANIZATION_SLUG_ERROR,
-  RESERVED_ORGANIZATION_SLUG_MESSAGE,
+  reservedOrganizationSlugMessage,
 } from "@/lib/organization-slug";
 import { prisma } from "@/lib/prisma";
 
@@ -85,7 +85,7 @@ function rejectReservedOrganizationSlug(slug: string | undefined) {
   if (slug && isReservedOrganizationSlug(slug)) {
     throw new APIError("BAD_REQUEST", {
       code: RESERVED_ORGANIZATION_SLUG_ERROR,
-      message: RESERVED_ORGANIZATION_SLUG_MESSAGE,
+      message: reservedOrganizationSlugMessage(slug),
     });
   }
 }

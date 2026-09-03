@@ -1,26 +1,28 @@
-import slugify from "slugify";
+import { reservedSlugs } from "reserved-slugs";
+
+export { organizationSlug, organizationSlugWhileTyping } from "./organization-slug-client";
+
+import { organizationSlug } from "./organization-slug-client";
 
 export const RESERVED_ORGANIZATION_SLUG_ERROR = "ORGANIZATION_SLUG_RESERVED";
-export const RESERVED_ORGANIZATION_SLUG_MESSAGE = "That slug is reserved. Choose another slug.";
 
-const RESERVED_ORGANIZATION_SLUGS = new Set([
+const PROJECT_ONLY_RESERVED_ORGANIZATION_SLUGS = [
   "_next",
-  "account",
-  "admin",
-  "api",
   "brand",
   "felt",
   "mascot",
-  "next",
-  "organizations",
-  "sign-in",
-  "staff",
   "textures",
   "uploads",
+];
+
+const RESERVED_ORGANIZATION_SLUGS = new Set([
+  ...reservedSlugs,
+  ...PROJECT_ONLY_RESERVED_ORGANIZATION_SLUGS,
 ]);
 
-export function organizationSlug(name: string) {
-  return slugify(name, { lower: true, strict: true });
+export function reservedOrganizationSlugMessage(slug: string) {
+  const rejectedSlug = slug.trim().toLowerCase();
+  return `The URL /${rejectedSlug} is reserved because it is used or may be needed by Dogathon itself (routes like /support, /login, /api). Pick a different slug, for example ${rejectedSlug}-rescue.`;
 }
 
 export function isReservedOrganizationSlug(slug: string) {
@@ -29,12 +31,4 @@ export function isReservedOrganizationSlug(slug: string) {
     RESERVED_ORGANIZATION_SLUGS.has(slug.trim().toLowerCase()) ||
     RESERVED_ORGANIZATION_SLUGS.has(normalized)
   );
-}
-
-// While a slug is being typed by hand, the separator the last keystroke
-// produced has to survive it — organizationSlug alone trims it, which makes
-// "happy-tails" impossible to type. The field normalizes again on blur.
-export function organizationSlugWhileTyping(typed: string) {
-  const slug = organizationSlug(typed);
-  return slug && /[^a-z0-9]$/.test(typed.toLowerCase()) ? `${slug}-` : slug;
 }

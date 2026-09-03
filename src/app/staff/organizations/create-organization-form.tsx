@@ -3,7 +3,7 @@
 import { useActionState, useState } from "react";
 
 import { FeltButton, FeltField } from "@/components/felt";
-import { organizationSlug, organizationSlugWhileTyping } from "@/lib/organization-slug";
+import { organizationSlug, organizationSlugWhileTyping } from "@/lib/organization-slug-client";
 
 import { createOrganization } from "./actions";
 

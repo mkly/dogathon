@@ -9,7 +9,6 @@ import { auth } from "@/lib/auth";
 import {
   organizationSlug,
   RESERVED_ORGANIZATION_SLUG_ERROR,
-  RESERVED_ORGANIZATION_SLUG_MESSAGE,
 } from "@/lib/organization-slug";
 import { prisma } from "@/lib/prisma";
 import { uuidSchema } from "@/lib/uuid";
@@ -29,7 +28,7 @@ function isSlugCollision(error: unknown) {
   return code === "ORGANIZATION_ALREADY_EXISTS" || code === "ORGANIZATION_SLUG_ALREADY_TAKEN";
 }
 
-function isReservedSlug(error: unknown) {
+function isReservedSlug(error: unknown): error is APIError {
   return error instanceof APIError && error.body?.code === RESERVED_ORGANIZATION_SLUG_ERROR;
 }
 
@@ -46,7 +45,9 @@ export async function createOrganization(
   try {
     organization = await auth.api.createOrganization({ body: { name, slug }, headers: requestHeaders });
   } catch (error) {
-    if (isReservedSlug(error)) return { error: RESERVED_ORGANIZATION_SLUG_MESSAGE };
+    if (isReservedSlug(error)) {
+      return { error: error.body?.message ?? "That organization slug is reserved. Choose another slug." };
+    }
     if (isSlugCollision(error)) {
       return { error: "That organization slug is already taken. Choose another slug." };
     }
