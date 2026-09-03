@@ -1,20 +1,70 @@
 import assert from "node:assert/strict";
-import test from "node:test";
+import { after, afterEach, before, test } from "node:test";
 
 import Stripe from "stripe";
+import { http, HttpResponse } from "msw";
+import { setupServer } from "msw/node";
 
 import {
   type BillingStore,
   ResidentUnavailableError,
   constructStripeEvent,
+  createBillingPortalSession,
   createConnectOnboardingLink,
   createStripeCheckout,
   processStripeEvent,
   refreshConnectStatus,
-  type SponsorshipCheckout,
-  type StripeBillingGateway,
-  StripeSdkGateway,
 } from "./stripe-billing";
+
+process.env.STRIPE_SECRET_KEY = "sk_test_fixture";
+
+const stripeApi = "https://api.stripe.com";
+
+function formData(request: Request) {
+  return request.text().then((body) => new URLSearchParams(body));
+}
+
+const server = setupServer(
+  http.post(`${stripeApi}/v1/accounts`, async ({ request }) => {
+    const body = await formData(request);
+    assert.equal(body.get("type"), "express");
+    assert.equal(body.get("business_profile[name]"), "Fixture Rescue");
+    assert.equal(body.get("metadata[orgId]"), "org_rescue");
+    return HttpResponse.json({ id: "acct_fixture_rescue", object: "account" });
+  }),
+  http.post(`${stripeApi}/v1/account_links`, async ({ request }) => {
+    const body = await formData(request);
+    assert.equal(body.get("account"), "acct_fixture_rescue");
+    assert.equal(body.get("type"), "account_onboarding");
+    return HttpResponse.json({
+      object: "account_link",
+      url: "https://connect.stripe.test/onboard/acct_fixture_rescue",
+    });
+  }),
+  http.get(`${stripeApi}/v1/accounts/:accountId`, ({ params }) => {
+    assert.equal(params.accountId, "acct_fixture_rescue");
+    return HttpResponse.json({
+      id: "acct_fixture_rescue",
+      object: "account",
+      details_submitted: true,
+      charges_enabled: true,
+    });
+  }),
+  http.post(`${stripeApi}/v1/checkout/sessions`, () => HttpResponse.json({
+    id: "cs_fixture",
+    object: "checkout.session",
+    url: "https://checkout.stripe.test/cs_fixture",
+  })),
+  http.post(`${stripeApi}/v1/billing_portal/sessions`, () => HttpResponse.json({
+    id: "bps_fixture",
+    object: "billing_portal.session",
+    url: "https://billing.stripe.test/session_fixture",
+  })),
+);
+
+before(() => server.listen({ onUnhandledRequest: "error" }));
+afterEach(() => server.resetHandlers());
+after(() => server.close());
 
 type SponsorshipRecord = Parameters<BillingStore["activateSponsorship"]>[0] & {
   sponsorId: string;
@@ -104,36 +154,6 @@ class MemoryBillingStore implements BillingStore {
   }
 }
 
-class FixtureStripeGateway implements StripeBillingGateway {
-  checkoutInput?: SponsorshipCheckout & { accountId: string; residentName: string };
-
-  async createExpressAccount(input: { orgId: string; organizationName: string }) {
-    assert.deepEqual(input, { orgId: "org_rescue", organizationName: "Fixture Rescue" });
-    return { id: "acct_fixture_rescue" };
-  }
-
-  async createAccountLink(input: { accountId: string; refreshUrl: string; returnUrl: string }) {
-    assert.equal(input.accountId, "acct_fixture_rescue");
-    return { url: "https://connect.stripe.test/onboard/acct_fixture_rescue" };
-  }
-
-  async retrieveAccount(accountId: string) {
-    assert.equal(accountId, "acct_fixture_rescue");
-    return { id: accountId, detailsSubmitted: true, chargesEnabled: true };
-  }
-
-  async createSubscriptionCheckout(
-    input: SponsorshipCheckout & { accountId: string; residentName: string },
-  ) {
-    this.checkoutInput = input;
-    return { id: "cs_fixture", url: "https://checkout.stripe.test/cs_fixture" };
-  }
-
-  async createBillingPortalSession() {
-    return { url: "https://billing.stripe.test/session_fixture" };
-  }
-}
-
 function signedEvent(object: Record<string, unknown>, type: string) {
   const secret = "whsec_fixture_secret";
   const payload = JSON.stringify({
@@ -153,84 +173,70 @@ function signedEvent(object: Record<string, unknown>, type: string) {
 }
 
 test("Stripe SDK checkout request is a $25 direct subscription on the connected account", async () => {
-  let checkoutParams: Stripe.Checkout.SessionCreateParams | undefined;
-  let requestOptions: Stripe.RequestOptions | undefined;
-  const stripeFixture = {
-    checkout: {
-      sessions: {
-        create: async (params: Stripe.Checkout.SessionCreateParams, options: Stripe.RequestOptions) => {
-          checkoutParams = params;
-          requestOptions = options;
-          return { id: "cs_sdk_fixture", url: "https://checkout.stripe.test/cs_sdk_fixture" };
-        },
-      },
-    },
-  } as unknown as Stripe;
+  server.use(http.post(`${stripeApi}/v1/checkout/sessions`, async ({ request }) => {
+    const body = await formData(request);
+    assert.equal(body.get("mode"), "subscription");
+    assert.equal(body.get("line_items[0][price_data][unit_amount]"), "2500");
+    assert.equal(body.get("line_items[0][price_data][recurring][interval]"), "month");
+    assert.equal(body.get("line_items[0][price_data][product_data][name]"), "Sponsor Mabel");
+    assert.equal(body.get("subscription_data[metadata][orgId]"), "org_rescue");
+    assert.equal(request.headers.get("stripe-account"), "acct_fixture_rescue");
+    return HttpResponse.json({
+      id: "cs_sdk_fixture",
+      object: "checkout.session",
+      url: "https://checkout.stripe.test/cs_sdk_fixture",
+    });
+  }));
 
-  const gateway = new StripeSdkGateway(stripeFixture);
-  await gateway.createSubscriptionCheckout({
-    accountId: "acct_fixture_rescue",
+  const store = new MemoryBillingStore();
+  store.organization.stripeAccountId = "acct_fixture_rescue";
+  store.organization.stripeChargesEnabled = true;
+  const checkout = await createStripeCheckout({
     orgId: "org_rescue",
     residentId: "companion_mabel",
-    residentName: "Mabel",
     sponsorName: "Avery Sponsor",
     sponsorEmail: "avery@example.com",
     successUrl: "https://app.test/success",
     cancelUrl: "https://app.test/cancel",
-  });
+  }, store);
 
-  assert.equal(checkoutParams?.mode, "subscription");
-  assert.equal(checkoutParams?.line_items?.[0]?.price_data?.unit_amount, 2_500);
-  assert.equal(checkoutParams?.line_items?.[0]?.price_data?.recurring?.interval, "month");
-  assert.equal(checkoutParams?.subscription_data?.metadata?.orgId, "org_rescue");
-  assert.equal(requestOptions?.stripeAccount, "acct_fixture_rescue");
+  assert.equal(checkout.id, "cs_sdk_fixture");
 });
 
 test("Stripe SDK billing portal uses the sponsorship customer on the connected account", async () => {
-  let portalParams: Stripe.BillingPortal.SessionCreateParams | undefined;
-  let requestOptions: Stripe.RequestOptions | undefined;
-  const stripeFixture = {
-    billingPortal: {
-      sessions: {
-        create: async (
-          params: Stripe.BillingPortal.SessionCreateParams,
-          options: Stripe.RequestOptions,
-        ) => {
-          portalParams = params;
-          requestOptions = options;
-          return { url: "https://billing.stripe.test/session_fixture" };
-        },
-      },
-    },
-  } as unknown as Stripe;
+  server.use(http.post(`${stripeApi}/v1/billing_portal/sessions`, async ({ request }) => {
+    const body = await formData(request);
+    assert.equal(body.get("customer"), "cus_fixture_sponsor");
+    assert.equal(body.get("return_url"), "https://app.test/account");
+    assert.equal(request.headers.get("stripe-account"), "acct_fixture_rescue");
+    return HttpResponse.json({
+      id: "bps_fixture",
+      object: "billing_portal.session",
+      url: "https://billing.stripe.test/session_fixture",
+    });
+  }));
 
-  const gateway = new StripeSdkGateway(stripeFixture);
-  const portal = await gateway.createBillingPortalSession({
+  const portal = await createBillingPortalSession({
     accountId: "acct_fixture_rescue",
     customerId: "cus_fixture_sponsor",
     returnUrl: "https://app.test/account",
   });
 
   assert.equal(portal.url, "https://billing.stripe.test/session_fixture");
-  assert.equal(portalParams?.customer, "cus_fixture_sponsor");
-  assert.equal(portalParams?.return_url, "https://app.test/account");
-  assert.equal(requestOptions?.stripeAccount, "acct_fixture_rescue");
 });
 
 test("Stripe Connect onboarding, checkout, and signed webhooks maintain sponsorship state", async () => {
   const store = new MemoryBillingStore();
-  const gateway = new FixtureStripeGateway();
 
   const onboarding = await createConnectOnboardingLink(
     "org_rescue",
     { refreshUrl: "https://app.test/connect/refresh", returnUrl: "https://app.test/connect/return" },
-    gateway,
     store,
   );
   assert.equal(onboarding.url, "https://connect.stripe.test/onboard/acct_fixture_rescue");
   assert.equal(store.organization.stripeAccountId, "acct_fixture_rescue");
 
-  const connected = await refreshConnectStatus("org_rescue", gateway, store);
+  const connected = await refreshConnectStatus("org_rescue", store);
   assert.equal(connected.detailsSubmitted, true);
   assert.equal(store.organization.stripeChargesEnabled, true);
 
@@ -243,12 +249,9 @@ test("Stripe Connect onboarding, checkout, and signed webhooks maintain sponsors
       successUrl: "https://app.test/companions/companion_mabel?sponsored=1",
       cancelUrl: "https://app.test/companions/companion_mabel?checkout=canceled",
     },
-    gateway,
     store,
   );
   assert.equal(checkout.url, "https://checkout.stripe.test/cs_fixture");
-  assert.equal(gateway.checkoutInput?.accountId, "acct_fixture_rescue");
-  assert.equal(gateway.checkoutInput?.residentName, "Mabel");
 
   await processStripeEvent(signedEvent({
     id: "cs_fixture",
@@ -331,7 +334,6 @@ test("checkout refuses an unavailable resident with a distinguishable error", as
         successUrl: "https://app.test/success",
         cancelUrl: "https://app.test/cancel",
       },
-      new FixtureStripeGateway(),
       store,
     ),
     ResidentUnavailableError,

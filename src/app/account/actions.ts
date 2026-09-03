@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 
 import { prisma } from "@/lib/prisma";
 import { getSponsorContext } from "@/lib/sponsor-access";
-import { stripeGateway } from "@/lib/stripe-billing";
+import { createBillingPortalSession } from "@/lib/stripe-billing";
 import { isUuid } from "@/lib/uuid";
 
 const SPONSORSHIP_CHANNELS = ["email", "sms", "both"] as const;
@@ -62,7 +62,7 @@ export async function openBillingPortal(sponsorshipId: string) {
   }
 
   const baseUrl = process.env.BETTER_AUTH_URL ?? "http://localhost:3000";
-  const portal = await stripeGateway().createBillingPortalSession({
+  const portal = await createBillingPortalSession({
     accountId,
     customerId,
     returnUrl: new URL("/account", baseUrl).toString(),
