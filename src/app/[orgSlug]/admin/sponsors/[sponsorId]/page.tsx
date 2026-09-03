@@ -16,7 +16,7 @@ export const metadata: Metadata = {
 };
 
 type SponsorDetailPageProps = {
-  params: Promise<{ email: string; orgSlug: string }>;
+  params: Promise<{ sponsorId: string; orgSlug: string }>;
 };
 
 function formatDate(date: Date) {
@@ -27,31 +27,32 @@ function formatDate(date: Date) {
 }
 
 export default async function SponsorDetailPage({ params }: SponsorDetailPageProps) {
-  const { email, orgSlug } = await params;
+  const { sponsorId, orgSlug } = await params;
   const access = await getOrganizationAccessBySlug(await headers(), orgSlug, ["owner", "admin"]);
 
   if (!access) notFound();
   if (!access.context) redirect("/organizations");
   const { context } = access;
 
-  const sponsorships = await prisma.sponsorship.findMany({
-    where: { orgId: context.orgId, sponsorEmail: { equals: email, mode: "insensitive" } },
-    include: { resident: { select: { name: true } } },
-    orderBy: { createdAt: "asc" },
+  const sponsor = await prisma.sponsor.findFirst({
+    where: { id: sponsorId, sponsorships: { some: { orgId: context.orgId } } },
+    include: {
+      sponsorships: {
+        where: { orgId: context.orgId },
+        include: { resident: { select: { name: true } } },
+        orderBy: { createdAt: "asc" },
+      },
+    },
   });
 
-  if (sponsorships.length === 0) {
-    notFound();
-  }
-
-  const latest = sponsorships.at(-1)!;
+  if (!sponsor) notFound();
 
   return (
     <main className={`admin-shell ${styles.page}`}>
       <header className={styles.header}>
         <div>
           <p className={styles.eyebrow}>Sponsor record</p>
-          <h1>{latest.sponsorName}</h1>
+          <h1>{sponsor.name}</h1>
           <p>Full contact details and sponsorship history.</p>
         </div>
         <AdminLink className={styles.backLink} href={`/${orgSlug}/admin/sponsors`}>
@@ -62,22 +63,22 @@ export default async function SponsorDetailPage({ params }: SponsorDetailPagePro
       <AdminSurface className={styles.profile} tone="denim">
         <div className={styles.profileItem}>
           <small>Email</small>
-          <a href={`mailto:${latest.sponsorEmail}`}>{latest.sponsorEmail}</a>
+          <a href={`mailto:${sponsor.email}`}>{sponsor.email}</a>
         </div>
         <div className={styles.profileItem}>
           <small>Phone</small>
-          {latest.sponsorPhone ? <a href={`tel:${latest.sponsorPhone}`}>{latest.sponsorPhone}</a> : <strong>Not provided</strong>}
+          {sponsor.phone ? <a href={`tel:${sponsor.phone}`}>{sponsor.phone}</a> : <strong>Not provided</strong>}
         </div>
         <div className={styles.profileItem}>
           <small>Preferred updates</small>
-          <strong>{latest.channel}</strong>
+          <strong>{sponsor.channel}</strong>
         </div>
       </AdminSurface>
 
       <section aria-labelledby="history-heading">
         <div className={styles.historyTitle}>
           <h2 id="history-heading">Sponsorship history</h2>
-          <AdminBadge tone="mustard">{sponsorships.length} {sponsorships.length === 1 ? "companion" : "companions"}</AdminBadge>
+          <AdminBadge tone="mustard">{sponsor.sponsorships.length} {sponsor.sponsorships.length === 1 ? "companion" : "companions"}</AdminBadge>
         </div>
         <AdminSurface className={styles.historyPanel} tone="oatmeal">
           <div className={styles.tableWrap}>
@@ -86,18 +87,16 @@ export default async function SponsorDetailPage({ params }: SponsorDetailPagePro
                 <tr>
                   <th scope="col">Companion</th>
                   <th scope="col">Status</th>
-                  <th scope="col">Updates</th>
                   <th scope="col">Started</th>
                   <th scope="col">Ended</th>
                   <th scope="col">Reason</th>
                 </tr>
               </thead>
               <tbody>
-                {sponsorships.map((sponsorship) => (
+                {sponsor.sponsorships.map((sponsorship) => (
                   <tr key={sponsorship.id}>
                     <td>{sponsorship.resident.name}</td>
                     <td><span className={styles.status}>{sponsorship.status}</span></td>
-                    <td>{sponsorship.channel}</td>
                     <td>{formatDate(sponsorship.createdAt)}</td>
                     <td>{sponsorship.status === "ended" ? formatDate(sponsorship.updatedAt) : "Ongoing"}</td>
                     <td className={styles.reason}>{sponsorship.endedReason ?? "—"}</td>

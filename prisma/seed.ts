@@ -67,21 +67,32 @@ async function main() {
   const sponsorships = [
     {
       id: "demo-sponsorship-email",
-      sponsorName: "Alex Rivera",
-      sponsorEmail: "alex@example.com",
-      sponsorPhone: null,
-      channel: "email" as const,
+      sponsor: {
+        id: "demo-sponsor-alex",
+        name: "Alex Rivera",
+        email: "alex@example.com",
+        phone: null,
+        channel: "email" as const,
+      },
     },
     {
       id: "demo-sponsorship-both",
-      sponsorName: "Jordan Lee",
-      sponsorEmail: "jordan@example.com",
-      sponsorPhone: "+14155550123",
-      channel: "both" as const,
+      sponsor: {
+        id: "demo-sponsor-jordan",
+        name: "Jordan Lee",
+        email: "jordan@example.com",
+        phone: "+14155550123",
+        channel: "both" as const,
+      },
     },
   ];
 
   for (const sponsorship of sponsorships) {
+    const sponsor = await prisma.sponsor.upsert({
+      where: { email: sponsorship.sponsor.email },
+      update: sponsorship.sponsor,
+      create: sponsorship.sponsor,
+    });
     await prisma.sponsorship.upsert({
       where: {
         id_orgId: { id: sponsorship.id, orgId: organization.id },
@@ -89,15 +100,16 @@ async function main() {
       update: {
         orgId: organization.id,
         residentId: biscuit.id,
-        ...sponsorship,
+        sponsorId: sponsor.id,
         monthlyUsd: 25,
         status: "active",
         endedReason: null,
       },
       create: {
+        id: sponsorship.id,
         orgId: organization.id,
         residentId: biscuit.id,
-        ...sponsorship,
+        sponsorId: sponsor.id,
       },
     });
   }
@@ -168,6 +180,22 @@ async function main() {
     },
   });
 
+  const sam = await prisma.sponsor.upsert({
+    where: { email: "sam@example.com" },
+    update: {
+      name: "Sam Chen",
+      phone: null,
+      channel: "email",
+    },
+    create: {
+      id: "demo-sponsor-sam",
+      name: "Sam Chen",
+      email: "sam@example.com",
+      phone: null,
+      channel: "email",
+    },
+  });
+
   await prisma.sponsorship.upsert({
     where: {
       id_orgId: { id: "demo-sponsorship-happy-tails", orgId: secondOrganization.id },
@@ -175,10 +203,7 @@ async function main() {
     update: {
       orgId: secondOrganization.id,
       residentId: juniper.id,
-      sponsorName: "Sam Chen",
-      sponsorEmail: "sam@example.com",
-      sponsorPhone: null,
-      channel: "email",
+      sponsorId: sam.id,
       monthlyUsd: 25,
       status: "active",
       endedReason: null,
@@ -187,10 +212,7 @@ async function main() {
       id: "demo-sponsorship-happy-tails",
       orgId: secondOrganization.id,
       residentId: juniper.id,
-      sponsorName: "Sam Chen",
-      sponsorEmail: "sam@example.com",
-      sponsorPhone: null,
-      channel: "email",
+      sponsorId: sam.id,
     },
   });
 

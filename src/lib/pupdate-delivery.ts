@@ -6,9 +6,11 @@ import {
 
 export type DeliverySponsorship = {
   id: string;
-  sponsorEmail: string;
-  sponsorPhone: string | null;
-  channel: "email" | "sms" | "both";
+  sponsor: {
+    email: string;
+    phone: string | null;
+    channel: "email" | "sms" | "both";
+  };
 };
 
 export type PupdateForDelivery = {
@@ -80,7 +82,7 @@ export async function deliverPupdate(
       await attempt(
         () =>
           sendEmail(orgId, {
-            to: sponsorship.sponsorEmail,
+            to: sponsorship.sponsor.email,
             subject: pupdate.subject,
             body: pupdate.bodyHtml ?? pupdate.bodyText,
             contentType: pupdate.bodyHtml ? "html" : "plain",

@@ -32,33 +32,21 @@ export default async function SponsorsPage({ params }: SponsorsPageProps) {
   if (!access.context) redirect("/organizations");
   const { context } = access;
 
-  const sponsorships = await prisma.sponsorship.findMany({
-    where: { orgId: context.orgId },
-    include: { resident: { select: { name: true } } },
-    orderBy: [{ sponsorEmail: "asc" }, { createdAt: "asc" }],
+  const sponsors = await prisma.sponsor.findMany({
+    where: { sponsorships: { some: { orgId: context.orgId } } },
+    include: {
+      sponsorships: {
+        where: { orgId: context.orgId },
+        include: { resident: { select: { name: true } } },
+        orderBy: { createdAt: "asc" },
+      },
+    },
+    orderBy: { email: "asc" },
   });
-
-  const grouped = new Map<string, typeof sponsorships>();
-
-  for (const sponsorship of sponsorships) {
-    const key = sponsorship.sponsorEmail.trim().toLocaleLowerCase();
-    const records = grouped.get(key);
-
-    if (records) {
-      records.push(sponsorship);
-    } else {
-      grouped.set(key, [sponsorship]);
-    }
-  }
-
-  const sponsors = Array.from(grouped.entries()).map(([email, records]) => {
-    // The query sorts by raw email first, so mixed-case duplicates of one
-    // address can land out of date order inside a group; re-sort so the card
-    // shows the same newest contact details as the detail page.
-    records.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
-
-    return { email, records, latest: records.at(-1)! };
-  });
+  const sponsorshipCount = sponsors.reduce(
+    (total, sponsor) => total + sponsor.sponsorships.length,
+    0,
+  );
 
   return (
     <main className={`admin-shell ${styles.page}`}>
@@ -66,7 +54,7 @@ export default async function SponsorsPage({ params }: SponsorsPageProps) {
         <div>
           <p className={styles.eyebrow}>Private staff directory</p>
           <h1>Sponsors</h1>
-          <p>Contact preferences and every companion supported, grouped by sponsor email.</p>
+          <p>Contact preferences and every companion supported by each sponsor.</p>
         </div>
         <AdminLink className={styles.backLink} href={`/${orgSlug}/admin`}>
           Back to staff room
@@ -74,7 +62,7 @@ export default async function SponsorsPage({ params }: SponsorsPageProps) {
       </header>
 
       <div className={styles.summary}>
-        <p>{sponsors.length} {sponsors.length === 1 ? "person" : "people"} · {sponsorships.length} {sponsorships.length === 1 ? "sponsorship" : "sponsorships"}</p>
+        <p>{sponsors.length} {sponsors.length === 1 ? "person" : "people"} · {sponsorshipCount} {sponsorshipCount === 1 ? "sponsorship" : "sponsorships"}</p>
         <AdminBadge tone="moss">staff only</AdminBadge>
       </div>
 
@@ -86,19 +74,22 @@ export default async function SponsorsPage({ params }: SponsorsPageProps) {
         </AdminSurface>
       ) : (
         <section aria-label="Sponsor directory" className={styles.sponsorList}>
-          {sponsors.map(({ email, latest, records }) => (
-            <AdminSurface className={styles.sponsorCard} key={email} tone="oatmeal">
+          {sponsors.map((sponsor) => (
+            <AdminSurface className={styles.sponsorCard} key={sponsor.id} tone="oatmeal">
               <div className={styles.sponsorHeading}>
                 <div>
-                  <h2>{latest.sponsorName}</h2>
-                  <AdminBadge tone={records.some(({ status }) => status === "active") ? "moss" : "brick"}>
-                    {records.length} {records.length === 1 ? "companion" : "companions"}
+                  <h2>{sponsor.name}</h2>
+                  <AdminBadge tone={sponsor.sponsorships.some(({ status }) => status === "active") ? "moss" : "brick"}>
+                    {sponsor.sponsorships.length} {sponsor.sponsorships.length === 1 ? "companion" : "companions"}
                   </AdminBadge>
                 </div>
                 <div className={styles.contact}>
-                  <p><a href={`mailto:${email}`}>{email}</a></p>
-                  <p>{latest.sponsorPhone ? <a href={`tel:${latest.sponsorPhone}`}>{latest.sponsorPhone}</a> : "No phone provided"}</p>
-                  <p>Updates: {latest.channel}</p>
+                  <p><a href={`mailto:${sponsor.email}`}>{sponsor.email}</a></p>
+                  <p>{sponsor.phone ? <a href={`tel:${sponsor.phone}`}>{sponsor.phone}</a> : "No phone provided"}</p>
+                  <p>Updates: {sponsor.channel}</p>
+                  <AdminLink href={`/${orgSlug}/admin/sponsors/${sponsor.id}`} tone="mustard">
+                    View sponsor
+                  </AdminLink>
                 </div>
               </div>
 
@@ -112,7 +103,7 @@ export default async function SponsorsPage({ params }: SponsorsPageProps) {
                     </tr>
                   </thead>
                   <tbody>
-                    {records.map((record) => (
+                    {sponsor.sponsorships.map((record) => (
                       <tr key={record.id}>
                         <td>{record.resident.name}</td>
                         <td><span className={styles.status}>{record.status}</span></td>

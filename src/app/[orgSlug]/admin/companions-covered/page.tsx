@@ -36,7 +36,11 @@ export default async function CompanionsCoveredPage({ params }: CompanionsCovere
   const residents = await prisma.resident.findMany({
     where: { orgId: context.orgId, sponsorships: { some: { orgId: context.orgId } } },
     include: {
-      sponsorships: { where: { orgId: context.orgId }, orderBy: { createdAt: "asc" } },
+      sponsorships: {
+        where: { orgId: context.orgId },
+        include: { sponsor: true },
+        orderBy: { createdAt: "asc" },
+      },
     },
     orderBy: { name: "asc" },
   });
@@ -130,18 +134,18 @@ export default async function CompanionsCoveredPage({ params }: CompanionsCovere
                     <tbody>
                       {resident.sponsorships.map((sponsorship) => (
                         <tr key={sponsorship.id}>
-                          <td>{sponsorship.sponsorName}</td>
+                          <td>{sponsorship.sponsor.name}</td>
                           <td className={styles.contact}>
-                            <a href={`mailto:${sponsorship.sponsorEmail}`}>
-                              {sponsorship.sponsorEmail}
+                            <a href={`mailto:${sponsorship.sponsor.email}`}>
+                              {sponsorship.sponsor.email}
                             </a>
-                            {sponsorship.sponsorPhone && (
-                              <a href={`tel:${sponsorship.sponsorPhone}`}>
-                                {sponsorship.sponsorPhone}
+                            {sponsorship.sponsor.phone && (
+                              <a href={`tel:${sponsorship.sponsor.phone}`}>
+                                {sponsorship.sponsor.phone}
                               </a>
                             )}
                           </td>
-                          <td className={styles.capitalize}>{sponsorship.channel}</td>
+                          <td className={styles.capitalize}>{sponsorship.sponsor.channel}</td>
                           <td className={styles.capitalize}>{sponsorship.status}</td>
                           <td>{formatDate(sponsorship.createdAt)}</td>
                         </tr>

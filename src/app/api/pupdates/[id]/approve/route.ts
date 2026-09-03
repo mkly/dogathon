@@ -18,7 +18,11 @@ export async function POST(request: Request, { params }: RouteContext) {
       organization: { select: { slug: true } },
       resident: {
         include: {
-          sponsorships: { where: { orgId, status: "active" }, orderBy: { createdAt: "asc" } },
+          sponsorships: {
+            where: { orgId, status: "active" },
+            include: { sponsor: { select: { email: true, phone: true, channel: true } } },
+            orderBy: { createdAt: "asc" },
+          },
         },
       },
     },

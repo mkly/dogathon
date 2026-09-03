@@ -22,9 +22,9 @@ test("delivers exactly one organization email to every sponsor, including legacy
     "org-a",
     pupdate,
     [
-      { id: "email", sponsorEmail: "email@example.com", sponsorPhone: null, channel: "email" },
-      { id: "both", sponsorEmail: "both@example.com", sponsorPhone: "+15551234567", channel: "both" },
-      { id: "sms", sponsorEmail: "sms@example.com", sponsorPhone: "+15557654321", channel: "sms" },
+      { id: "email", sponsor: { email: "email@example.com", phone: null, channel: "email" } },
+      { id: "both", sponsor: { email: "both@example.com", phone: "+15551234567", channel: "both" } },
+      { id: "sms", sponsor: { email: "sms@example.com", phone: "+15557654321", channel: "sms" } },
     ],
     async (orgId, input) => {
       calls.push({ orgId, to: input.to, subject: input.subject, body: input.body });
@@ -48,8 +48,8 @@ test("records a failed email and continues with the remaining sponsors", async (
     "org-a",
     pupdate,
     [
-      { id: "broken", sponsorEmail: "broken@example.com", sponsorPhone: null, channel: "email" },
-      { id: "working", sponsorEmail: "working@example.com", sponsorPhone: null, channel: "email" },
+      { id: "broken", sponsor: { email: "broken@example.com", phone: null, channel: "email" } },
+      { id: "working", sponsor: { email: "working@example.com", phone: null, channel: "email" } },
     ],
     async (_orgId, input) => {
       if (input.to === "broken@example.com") throw new Error("Connector rejected the message");
@@ -80,11 +80,26 @@ test("carries a described send through the delivery record", async () => {
   const deliveries = await deliverPupdate(
     "org-a",
     pupdate,
-    [{ id: "email", sponsorEmail: "email@example.com", sponsorPhone: null, channel: "email" }],
+    [{ id: "email", sponsor: { email: "email@example.com", phone: null, channel: "email" } }],
     async () => described,
   );
 
   assert.deepEqual(deliveries, [
     { sponsorshipId: "email", channel: "email", status: "sent", describedSend: described },
   ]);
+});
+
+test("delivers to the Sponsor email currently loaded at approval time", async () => {
+  const sponsorship = {
+    id: "updated",
+    sponsor: { email: "old@example.com", phone: null, channel: "email" as const },
+  };
+  sponsorship.sponsor.email = "new@example.com";
+
+  let deliveredTo = "";
+  await deliverPupdate("org-a", pupdate, [sponsorship], async (_orgId, input) => {
+    deliveredTo = input.to;
+  });
+
+  assert.equal(deliveredTo, "new@example.com");
 });
