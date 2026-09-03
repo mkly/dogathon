@@ -477,7 +477,7 @@ test("refuses a crawl request for an unrelated host before fetching", async () =
   assert.equal(fetchCalls, 0);
 });
 
-test("refuses a public suffix host without a registrable domain", async () => {
+test("refuses a sibling host under a shared public suffix", async () => {
   let fetchCalls = 0;
   const fetcher: typeof fetch = async () => {
     fetchCalls += 1;
@@ -495,6 +495,28 @@ test("refuses a public suffix host without a registrable domain", async () => {
       },
     ),
     /refused unrelated host: unrelated\.co\.uk/,
+  );
+  assert.equal(fetchCalls, 0);
+});
+
+test("refuses a sibling tenant on a shared private suffix", async () => {
+  let fetchCalls = 0;
+  const fetcher: typeof fetch = async () => {
+    fetchCalls += 1;
+    return Response.json({ success: true, id: "should-not-run" });
+  };
+
+  await assert.rejects(
+    requestFirecrawl(
+      "firecrawl_crawl",
+      { url: "https://unrelated.github.io/companions" },
+      {
+        apiKey: "fc-test",
+        sourceUrl: "https://rescue.github.io/companions",
+        fetch: fetcher,
+      },
+    ),
+    /refused unrelated host: unrelated\.github\.io/,
   );
   assert.equal(fetchCalls, 0);
 });

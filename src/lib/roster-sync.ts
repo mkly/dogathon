@@ -735,9 +735,12 @@ function assertRelatedUrl(sourceUrl: string, candidate: unknown) {
 
 // Rescue sites routinely map to a `www.` or `adopt.` host of the configured
 // source, so keep those in scope while still refusing unrelated domains.
+// Private suffixes count: two tenants of a shared host (`a.github.io` and
+// `b.github.io`, two S3 buckets) are unrelated parties, so treat the tenant
+// label as part of the registrable domain rather than sharing `github.io`.
 function isRelatedHost(sourceHost: string, requestedHost: string): boolean {
-  const sourceDomain = getDomain(sourceHost);
-  const requestedDomain = getDomain(requestedHost);
+  const sourceDomain = getDomain(sourceHost, { allowPrivateDomains: true });
+  const requestedDomain = getDomain(requestedHost, { allowPrivateDomains: true });
   return sourceDomain !== null && sourceDomain === requestedDomain;
 }
 
