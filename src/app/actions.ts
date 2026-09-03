@@ -1,38 +1,40 @@
 "use server";
 
 import { notFound, redirect } from "next/navigation";
+import { z } from "zod";
 
 import { prisma } from "@/lib/prisma";
 import { createStripeCheckout, ResidentUnavailableError } from "@/lib/stripe-billing";
-import { isUuid } from "@/lib/uuid";
+import { uuidSchema } from "@/lib/uuid";
 
-function text(formData: FormData, key: string) {
-  return String(formData.get(key) ?? "").trim();
-}
+const sponsorshipRouteSchema = z.object({
+  residentId: z.string().trim().min(1),
+  orgSlug: z.string().trim().min(1),
+});
+const sponsorshipDetailsSchema = z.object({
+  sponsorName: z.string().trim().min(1).max(100),
+  sponsorEmail: z.string().trim().email().max(254),
+});
 
 export async function createSponsorship(formData: FormData) {
-  const residentId = text(formData, "residentId");
-  const orgSlug = text(formData, "orgSlug");
-  const sponsorName = text(formData, "sponsorName");
-  const sponsorEmail = text(formData, "sponsorEmail");
+  const input = Object.fromEntries(formData);
+  const route = sponsorshipRouteSchema.safeParse(input);
 
   // Without both segments the path collapses to "//companions/..." — a scheme-relative
   // URL the browser would read as another host, so send those back to the index.
-  if (!orgSlug || !residentId) {
+  if (!route.success) {
     redirect("/");
   }
-  if (!isUuid(residentId)) notFound();
+  const { orgSlug, residentId } = route.data;
+  if (!uuidSchema.safeParse(residentId).success) notFound();
 
   const companionPath = `/${encodeURIComponent(orgSlug)}/companions/${encodeURIComponent(residentId)}`;
 
-  if (
-    !sponsorName
-    || sponsorName.length > 100
-    || !sponsorEmail.includes("@")
-    || sponsorEmail.length > 254
-  ) {
+  const details = sponsorshipDetailsSchema.safeParse(input);
+  if (!details.success) {
     redirect(`${companionPath}?error=invalid`);
   }
+  const { sponsorName, sponsorEmail } = details.data;
 
   const organization = await prisma.organization.findUnique({
     where: { slug: orgSlug },

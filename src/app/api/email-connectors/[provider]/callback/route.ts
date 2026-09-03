@@ -4,14 +4,16 @@ import {
   hashOAuthState,
   type EmailConnectorKind,
 } from "@/lib/email-connectors";
+import { z } from "zod";
 import { getOrganizationAccessBySlug } from "@/lib/organization-access";
 import { prisma } from "@/lib/prisma";
 
-type OAuthProvider = Exclude<EmailConnectorKind, "smtp">;
-
-function providerFrom(value: string): OAuthProvider | null {
-  return value === "gmail" || value === "microsoft" ? value : null;
-}
+const oauthProviderSchema = z.enum(["gmail", "microsoft"] satisfies Array<Exclude<EmailConnectorKind, "smtp">>);
+const oauthCallbackSchema = z.object({
+  code: z.string().min(1),
+  state: z.string().min(1),
+  error: z.string().optional(),
+});
 
 function adminRedirect(request: Request, orgSlug: string | null, result: "connected" | "error") {
   const path = orgSlug
@@ -24,19 +26,19 @@ export async function GET(
   request: Request,
   { params }: { params: Promise<{ provider: string }> },
 ) {
-  const provider = providerFrom((await params).provider);
+  const provider = oauthProviderSchema.safeParse((await params).provider);
   const url = new URL(request.url);
-  const code = url.searchParams.get("code");
-  const state = url.searchParams.get("state");
-  if (!provider || !code || !state || url.searchParams.has("error")) {
+  const query = oauthCallbackSchema.safeParse(Object.fromEntries(url.searchParams));
+  if (!provider.success || !query.success || query.data.error !== undefined) {
     return adminRedirect(request, null, "error");
   }
+  const { code, state } = query.data;
 
   // The provider redirects the browser here without the organization header the
   // rest of the staff API carries, so the pending state hash — written by the
   // authorize route for exactly one organization — names the organization.
   const connector = await prisma.emailConnector.findFirst({
-    where: { oauthProvider: provider, oauthStateHash: hashOAuthState(state) },
+    where: { oauthProvider: provider.data, oauthStateHash: hashOAuthState(state) },
     select: {
       orgId: true,
       oauthStateExpiresAt: true,
@@ -54,11 +56,11 @@ export async function GET(
   if (!access?.context) return adminRedirect(request, orgSlug, "error");
 
   try {
-    const tokens = await exchangeEmailConnectorCode(provider, code, url.origin);
+    const tokens = await exchangeEmailConnectorCode(provider.data, code, url.origin);
     await prisma.emailConnector.update({
       where: { orgId: connector.orgId },
       data: {
-        type: provider,
+        type: provider.data,
         fromEmail: tokens.fromEmail,
         accessTokenEncrypted: encryptEmailSecret(tokens.accessToken),
         refreshTokenEncrypted: encryptEmailSecret(tokens.refreshToken),
@@ -76,7 +78,7 @@ export async function GET(
     });
     return adminRedirect(request, orgSlug, "connected");
   } catch (error) {
-    console.error(`${provider} email connector callback failed`, error);
+    console.error(`${provider.data} email connector callback failed`, error);
     return adminRedirect(request, orgSlug, "error");
   }
 }

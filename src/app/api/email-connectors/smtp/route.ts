@@ -1,43 +1,27 @@
+import { z } from "zod";
+
 import { encryptEmailSecret, verifySmtpConfiguration } from "@/lib/email-connectors";
 import { requireApiOrganization } from "@/lib/organization-access";
 import { prisma } from "@/lib/prisma";
 
-type SmtpInput = {
-  host?: unknown;
-  port?: unknown;
-  secure?: unknown;
-  user?: unknown;
-  password?: unknown;
-  fromEmail?: unknown;
-};
-
-function text(value: unknown): string {
-  return typeof value === "string" ? value.trim() : "";
-}
+const smtpInputSchema = z.object({
+  host: z.string().trim().min(1),
+  port: z.coerce.number().int().min(1).max(65_535),
+  secure: z.boolean(),
+  user: z.string().trim().min(1),
+  password: z.string().trim().min(1),
+  fromEmail: z.string().trim().toLowerCase().email(),
+});
 
 export async function POST(request: Request) {
   const access = await requireApiOrganization(request.headers, { settings: ["manage"] });
   if (!access.ok) return access.response;
 
-  const input = await request.json().catch(() => null) as SmtpInput | null;
-  const host = text(input?.host);
-  const port = Number(input?.port);
-  const secure = input?.secure === true;
-  const user = text(input?.user);
-  const password = text(input?.password);
-  const fromEmail = text(input?.fromEmail).toLowerCase();
-  if (
-    !host ||
-    !Number.isInteger(port) ||
-    port < 1 ||
-    port > 65535 ||
-    !user ||
-    !password ||
-    !fromEmail.includes("@") ||
-    /[\r\n]/u.test(fromEmail)
-  ) {
+  const input = smtpInputSchema.safeParse(await request.json().catch(() => null));
+  if (!input.success) {
     return Response.json({ error: "Enter valid SMTP host, port, credentials, and sender email" }, { status: 400 });
   }
+  const { host, port, secure, user, password, fromEmail } = input.data;
 
   try {
     const config = { host, port, secure, user, password, fromEmail };

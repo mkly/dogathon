@@ -3,13 +3,13 @@ import { requireApiOrganization } from "@/lib/organization-access";
 import { deliverPupdate, companionPageUrl } from "@/lib/pupdate-delivery";
 import { prisma } from "@/lib/prisma";
 import { renderPupdateEmail } from "@/lib/pupdate-email";
-import { isUuid } from "@/lib/uuid";
+import { uuidSchema } from "@/lib/uuid";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
 export async function POST(request: Request, { params }: RouteContext) {
   const { id } = await params;
-  if (!isUuid(id)) {
+  if (!uuidSchema.safeParse(id).success) {
     return Response.json({ error: "Pupdate not found" }, { status: 404 });
   }
 

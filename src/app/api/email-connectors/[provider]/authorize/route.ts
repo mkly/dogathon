@@ -3,14 +3,11 @@ import {
   emailConnectorAuthorizationUrl,
   type EmailConnectorKind,
 } from "@/lib/email-connectors";
+import { z } from "zod";
 import { requireApiOrganization } from "@/lib/organization-access";
 import { prisma } from "@/lib/prisma";
 
-type OAuthProvider = Exclude<EmailConnectorKind, "smtp">;
-
-function providerFrom(value: string): OAuthProvider | null {
-  return value === "gmail" || value === "microsoft" ? value : null;
-}
+const oauthProviderSchema = z.enum(["gmail", "microsoft"] satisfies Array<Exclude<EmailConnectorKind, "smtp">>);
 
 export async function POST(
   request: Request,
@@ -19,24 +16,24 @@ export async function POST(
   const access = await requireApiOrganization(request.headers, { settings: ["manage"] });
   if (!access.ok) return access.response;
 
-  const provider = providerFrom((await params).provider);
-  if (!provider) return Response.json({ error: "Unknown email connector" }, { status: 404 });
+  const provider = oauthProviderSchema.safeParse((await params).provider);
+  if (!provider.success) return Response.json({ error: "Unknown email connector" }, { status: 404 });
 
   try {
     const oauthState = createOAuthState();
-    const url = emailConnectorAuthorizationUrl(provider, new URL(request.url).origin, oauthState.state);
+    const url = emailConnectorAuthorizationUrl(provider.data, new URL(request.url).origin, oauthState.state);
     await prisma.emailConnector.upsert({
       where: { orgId: access.context.orgId },
       update: {
-        oauthProvider: provider,
+        oauthProvider: provider.data,
         oauthStateHash: oauthState.hash,
         oauthStateExpiresAt: oauthState.expiresAt,
       },
       create: {
         orgId: access.context.orgId,
-        type: provider,
+        type: provider.data,
         fromEmail: "",
-        oauthProvider: provider,
+        oauthProvider: provider.data,
         oauthStateHash: oauthState.hash,
         oauthStateExpiresAt: oauthState.expiresAt,
       },

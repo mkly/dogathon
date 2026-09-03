@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
+import { z } from "zod";
 
 import { getOrganizationAccessBySlug } from "@/lib/organization-access";
 import { prisma } from "@/lib/prisma";
@@ -14,9 +15,12 @@ export type SettingsState = {
   savedSourceInput?: string;
   status: "idle" | "error" | "success";
 };
+const organizationFormSchema = z.object({ orgSlug: z.string().trim().min(1) });
 
 export async function beginStripeOnboarding(formData: FormData) {
-  const orgSlug = String(formData.get("orgSlug") ?? "").trim();
+  const input = organizationFormSchema.safeParse(Object.fromEntries(formData));
+  if (!input.success) notFound();
+  const { orgSlug } = input.data;
   const access = await getOrganizationAccessBySlug(await headers(), orgSlug, {
     billing: ["manage"],
   });
@@ -39,7 +43,9 @@ export async function saveSettings(
   previousState: SettingsState,
   formData: FormData,
 ): Promise<SettingsState> {
-  const orgSlug = String(formData.get("orgSlug") ?? "").trim();
+  const input = organizationFormSchema.safeParse(Object.fromEntries(formData));
+  if (!input.success) notFound();
+  const { orgSlug } = input.data;
   const access = await getOrganizationAccessBySlug(await headers(), orgSlug, {
     settings: ["manage"],
   });
