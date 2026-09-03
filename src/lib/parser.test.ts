@@ -40,13 +40,46 @@ test("HTML parsing uses DOM sections, decoded attributes, and list items", async
   assert.deepEqual(companions, [{
     name: "Peanut & Butter",
     breed: "terrier mix",
-    dobText: "1/2/23",
+    dobText: "2023-01-02",
     ageText: "est DOB 1/2/23",
     sex: "female",
     weightText: "18 lbs",
     personality: "gentle",
     careNotes: ["Likes naps & snacks"],
     photoUrls: ["https://example.test/peanut.jpg"],
+    adopted: false,
+  }]);
+});
+
+test("DOB phrases are normalized and markdown sections come from the mdast", async () => {
+  const companions = await parseCompanionRoster(`
+Willow
+------
+
+Personality: curious
+Breed: shepherd mix
+Age: Estimated DOB: January 2, 2023
+Weight: 42 lbs
+Sex: female
+
+- Needs a quiet home
+
+![Willow](https://example.test/willow.jpg)
+
+Footer
+------
+  `, { deterministic: true });
+
+  assert.deepEqual(companions, [{
+    name: "Willow",
+    breed: "shepherd mix",
+    dobText: "2023-01-02",
+    ageText: "Estimated DOB: January 2, 2023",
+    sex: "female",
+    weightText: "42 lbs",
+    personality: "curious",
+    careNotes: ["Needs a quiet home"],
+    photoUrls: ["https://example.test/willow.jpg"],
     adopted: false,
   }]);
 });
