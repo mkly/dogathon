@@ -30,3 +30,17 @@ test("rejects data without an allowed image signature", async () => {
 
   assert.equal(photo, undefined);
 });
+
+test("rejects a HEIC upload the re-encoder cannot decode", async () => {
+  const heic = Buffer.concat([
+    Buffer.from([0, 0, 0, 0x18]),
+    Buffer.from("ftypheic"),
+    Buffer.from([0, 0, 0, 0]),
+    Buffer.from("heicmif1"),
+    Buffer.alloc(32),
+  ]);
+
+  const photo = await processVolunteerPhoto(heic);
+
+  assert.equal(photo, undefined);
+});

@@ -4,10 +4,10 @@ import sharp from "sharp";
 export const MAX_PHOTO_BYTES = 8 * 1024 * 1024;
 const MAX_PHOTO_DIMENSION = 2048;
 
+// HEIC/HEIF are absent: sharp's prebuilt libvips carries no HEVC decoder, so
+// accepting them here would only fail later in the re-encode.
 const ALLOWED_PHOTO_MIME_TYPES = new Set([
   "image/gif",
-  "image/heic",
-  "image/heif",
   "image/jpeg",
   "image/png",
   "image/webp",
