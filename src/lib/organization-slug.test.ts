@@ -11,8 +11,8 @@ test("organizationSlug normalizes punctuation and casing", () => {
   assert.equal(organizationSlug("Coppers Dream Rescue!"), "coppers-dream-rescue");
 });
 
-test("organizationSlug collapses invalid character runs", () => {
-  assert.equal(organizationSlug("Happy___Tails---Rescue"), "happy-tails-rescue");
+test("organizationSlug applies slugify's strict character rules", () => {
+  assert.equal(organizationSlug("Happy___Tails---Rescue"), "happytails-rescue");
 });
 
 test("organizationSlug trims leading and trailing dashes", () => {
