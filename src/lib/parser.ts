@@ -1,6 +1,8 @@
 import * as cheerio from "cheerio";
+import { generateText, Output } from "ai";
+import { z } from "zod";
 
-import { createChatCompletion, hasChatCompletionCredentials } from "./chat-completions.ts";
+import { createAiModel, hasAiCredentials } from "./ai-model.ts";
 
 export type CompanionRecord = {
   name: string;
@@ -32,6 +34,22 @@ type RosterSection = {
   photoUrls: string[];
 };
 
+const trimmedString = z.string().catch("").transform((value) => value.trim());
+const trimmedStrings = z.array(z.string()).catch([])
+  .transform((values) => values.map((value) => value.trim()).filter(Boolean));
+const companionRecordSchema = z.object({
+  name: trimmedString,
+  breed: trimmedString,
+  dobText: trimmedString,
+  ageText: trimmedString,
+  sex: trimmedString,
+  weightText: trimmedString,
+  personality: trimmedString,
+  careNotes: trimmedStrings,
+  photoUrls: trimmedStrings,
+  adopted: z.boolean().catch(false),
+});
+
 /**
  * Parse a hand-authored rescue roster. A configured chat-completions endpoint
  * is the primary parser; local parsing keeps imports, tests, and demos offline.
@@ -40,7 +58,7 @@ export async function parseCompanionRoster(
   source: string,
   options: ParseCompanionRosterOptions = {},
 ): Promise<CompanionRecord[]> {
-  if (hasChatCompletionCredentials(options.apiKey) && !options.deterministic) {
+  if (hasAiCredentials(options.apiKey) && !options.deterministic) {
     try {
       return await parseWithModel(source, options);
     } catch (error) {
@@ -94,50 +112,19 @@ async function parseWithModel(
   source: string,
   options: ParseCompanionRosterOptions,
 ): Promise<CompanionRecord[]> {
-  const text = await createChatCompletion({
-    apiKey: options.apiKey,
-    baseUrl: options.baseUrl,
-    model: options.model,
-    fetch: options.fetch,
-    maxTokens: 12_000,
-    messages: [{
-        role: "user",
-        content: `Extract the rescue companions from the page below. Return only a JSON array. Each item must have exactly these fields: name, breed, dobText, ageText, sex, weightText, personality, careNotes (string array), photoUrls (string array), and adopted (boolean). Preserve the page's wording. A heading containing an Adopted marker means adopted is true. Photos appear as [photo: URL] markers; put the markers that follow a companion's heading in that companion's photoUrls. Do not include navigation, footer, or courtesy-listing headings.\n\n${semanticPageText(source)}`,
-      }],
+  const { output } = await generateText({
+    model: createAiModel(options),
+    maxOutputTokens: 12_000,
+    output: Output.array({ element: companionRecordSchema }),
+    prompt: `Extract the rescue companions from the page below. Each item must have exactly these fields: name, breed, dobText, ageText, sex, weightText, personality, careNotes (string array), photoUrls (string array), and adopted (boolean). Preserve the page's wording. A heading containing an Adopted marker means adopted is true. Photos appear as [photo: URL] markers; put the markers that follow a companion's heading in that companion's photoUrls. Do not include navigation, footer, or courtesy-listing headings.\n\n${semanticPageText(source)}`,
   });
 
-  const parsed = JSON.parse(extractJsonArray(text)) as unknown;
-  if (!Array.isArray(parsed)) throw new Error("Model response was not an array");
-
-  const companions = parsed.map(normalizeRecord).filter((companion) => companion.name && companion.photoUrls.length);
+  const companions = output.filter((companion) => companion.name && companion.photoUrls.length);
   // An empty roster reads downstream as "every companion was adopted", so treat it as
   // a failed parse and let the deterministic path answer instead.
   if (!companions.length) throw new Error("Model response contained no usable companion records");
 
   return companions;
-}
-
-function normalizeRecord(value: unknown): CompanionRecord {
-  const record = value && typeof value === "object"
-    ? value as Record<string, unknown>
-    : {};
-  const stringValue = (key: string) => typeof record[key] === "string" ? record[key] : "";
-  const stringArray = (key: string) => Array.isArray(record[key])
-    ? record[key].filter((item): item is string => typeof item === "string")
-    : [];
-
-  return {
-    name: stringValue("name").trim(),
-    breed: stringValue("breed").trim(),
-    dobText: stringValue("dobText").trim(),
-    ageText: stringValue("ageText").trim(),
-    sex: stringValue("sex").trim(),
-    weightText: stringValue("weightText").trim(),
-    personality: stringValue("personality").trim(),
-    careNotes: stringArray("careNotes").map((item) => item.trim()).filter(Boolean),
-    photoUrls: stringArray("photoUrls").map((item) => item.trim()).filter(Boolean),
-    adopted: record.adopted === true,
-  };
 }
 
 function splitHtmlSections(source: string): RosterSection[] {
@@ -240,11 +227,4 @@ function normalizePhotoUrl(url: string | undefined): string | undefined {
   if (!url || !/^https?:\/\//i.test(url)) return undefined;
   const withoutQuery = url.split("?")[0];
   return /\.(?:avif|gif|jpe?g|png|webp)$/i.test(withoutQuery) ? withoutQuery : undefined;
-}
-
-function extractJsonArray(value: string): string {
-  const start = value.indexOf("[");
-  const end = value.lastIndexOf("]");
-  if (start < 0 || end <= start) throw new Error("Model response did not contain a JSON array");
-  return value.slice(start, end + 1);
 }

@@ -1,4 +1,7 @@
-import { createChatCompletion, hasChatCompletionCredentials } from "./chat-completions.ts";
+import { generateText, Output } from "ai";
+import { z } from "zod";
+
+import { createAiModel, hasAiCredentials } from "./ai-model.ts";
 
 export type PupdateType = "regular" | "graduation";
 
@@ -24,6 +27,11 @@ export interface ComposedPupdate {
   bodyText: string;
 }
 
+const composedPupdateSchema = z.object({
+  subject: z.string(),
+  bodyText: z.string(),
+});
+
 function cleanNotes(notes: PupdateNote[]): string[] {
   return notes
     .map((note) => (typeof note === "string" ? note : note.note))
@@ -47,20 +55,6 @@ function deterministicCompose(input: ComposePupdateInput): ComposedPupdate {
   };
 }
 
-function parseJsonObject(text: string): unknown {
-  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/iu);
-  return JSON.parse((fenced?.[1] ?? text).trim());
-}
-
-function isComposedPupdate(value: unknown): value is ComposedPupdate {
-  if (!value || typeof value !== "object") return false;
-  const candidate = value as Record<string, unknown>;
-  return (
-    typeof candidate.subject === "string" &&
-    typeof candidate.bodyText === "string"
-  );
-}
-
 function ensureRequiredContent(
   draft: ComposedPupdate,
   input: ComposePupdateInput,
@@ -77,27 +71,16 @@ async function composeWithModel(input: ComposePupdateInput): Promise<ComposedPup
   const regularUpdateGuidance = input.type === "regular"
     ? " Treat the volunteer notes as the update: lead with what happened lately, such as activities, fun, or new friends. Use the companion profile only as light background flavor; do not turn the email into a profile or biography."
     : "";
-  const text = await createChatCompletion({
-    maxTokens: 900,
-    messages: [
-      {
-        role: "system",
-        content:
-          `You write warm, short email updates in an animal shelter's voice. Use only facts in the supplied JSON; never invent details.${regularUpdateGuidance} Return only a JSON object with subject and bodyText strings.`,
-      },
-      {
-        role: "user",
-        content: JSON.stringify(input),
-      },
-    ],
+  const { output } = await generateText({
+    model: createAiModel(),
+    maxOutputTokens: 900,
+    output: Output.object({ schema: composedPupdateSchema }),
+    instructions:
+      `You write warm, short email updates in an animal shelter's voice. Use only facts in the supplied JSON; never invent details.${regularUpdateGuidance}`,
+    prompt: JSON.stringify(input),
   });
 
-  const parsed = parseJsonObject(text);
-  if (!isComposedPupdate(parsed)) {
-    throw new Error("Chat completion returned an invalid pupdate draft");
-  }
-
-  return ensureRequiredContent(parsed, input);
+  return ensureRequiredContent(output, input);
 }
 
 /**
@@ -111,5 +94,5 @@ export async function composePupdate(input: ComposePupdateInput): Promise<Compos
     throw new Error("type must be regular or graduation");
   }
 
-  return hasChatCompletionCredentials() ? composeWithModel(input) : deterministicCompose(input);
+  return hasAiCredentials() ? composeWithModel(input) : deterministicCompose(input);
 }

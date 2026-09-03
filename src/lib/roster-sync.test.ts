@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import { MockLanguageModelV3 } from "ai/test";
 
 import {
   assertPlausibleAdoptionCount,
@@ -16,6 +17,70 @@ import {
   RosterSyncRefusal,
 } from "./roster-sync.ts";
 import { parseCompanionRoster } from "./parser.ts";
+
+type ScriptMessage = { role: string; content: string | null };
+type ScriptTool = { function: { name: string } };
+type ScriptResponse = {
+  role: "assistant";
+  content: string | null;
+  tool_calls?: Array<{
+    id: string;
+    type: "function";
+    function: { name: string; arguments: string };
+  }>;
+};
+
+function promptContent(content: unknown): string | null {
+  if (typeof content === "string") return content;
+  if (!Array.isArray(content)) return null;
+  return content.map((part) => {
+    if (!part || typeof part !== "object") return "";
+    const value = part as Record<string, unknown>;
+    if (value.type === "text") return String(value.text ?? "");
+    if (value.type === "tool-result") {
+      const output = value.output as Record<string, unknown> | undefined;
+      return output?.type === "text" ? String(output.value ?? "") : JSON.stringify(output ?? "");
+    }
+    return "";
+  }).join("");
+}
+
+function scriptedModel(
+  next: (messages: ScriptMessage[], tools: ScriptTool[]) => Promise<ScriptResponse>,
+) {
+  return new MockLanguageModelV3({
+    doGenerate: async (request) => {
+      const messages = request.prompt.map((message) => ({
+        role: message.role,
+        content: promptContent(message.content),
+      }));
+      const tools = (request.tools ?? [])
+        .filter((entry) => entry.type === "function")
+        .map((entry) => ({ function: { name: entry.name } }));
+      const response = await next(messages, tools);
+      return {
+        content: [
+          ...(response.content ? [{ type: "text" as const, text: response.content }] : []),
+          ...(response.tool_calls ?? []).map((call) => ({
+            type: "tool-call" as const,
+            toolCallId: call.id,
+            toolName: call.function.name,
+            input: call.function.arguments,
+          })),
+        ],
+        finishReason: {
+          unified: response.tool_calls?.length ? "tool-calls" as const : "stop" as const,
+          raw: undefined,
+        },
+        usage: {
+          inputTokens: { total: 0, noCache: 0, cacheRead: 0, cacheWrite: 0 },
+          outputTokens: { total: 0, text: 0, reasoning: 0 },
+        },
+        warnings: [],
+      };
+    },
+  });
+}
 
 function rosterCompanion(name: string, adopted: boolean) {
   return {
@@ -63,7 +128,7 @@ test("a bounded model loop maps the rescue site and scrapes the selected roster"
   const firecrawlCalls: Array<{ name: string; input: Record<string, unknown> }> = [];
   let step = 0;
   const text = await discoverRoster("https://rescue.example/landing", {
-    model: async (messages, tools) => {
+    model: scriptedModel(async (messages, tools) => {
       modelSteps.push(messages.map((message) => message.role));
       assert.deepEqual(tools.map((tool) => tool.function.name), [
         "firecrawl_map",
@@ -100,7 +165,7 @@ test("a bounded model loop maps the rescue site and scrapes the selected roster"
         };
       }
       return { role: "assistant", content: "The roster is ready." };
-    },
+    }),
     firecrawl: async (name, input) => {
       firecrawlCalls.push({ name, input });
       return name === "firecrawl_map"
@@ -120,7 +185,7 @@ test("a bounded model loop maps the rescue site and scrapes the selected roster"
 test("a scrape without a completed crawl is not treated as a complete roster", async () => {
   let step = 0;
   const discovery = await discoverRosterWithCompleteness("https://rescue.example/companions", {
-    model: async () => {
+    model: scriptedModel(async () => {
       step += 1;
       if (step > 1) return { role: "assistant", content: "Done." };
       return {
@@ -135,7 +200,7 @@ test("a scrape without a completed crawl is not treated as a complete roster", a
           },
         }],
       };
-    },
+    }),
     firecrawl: async () => ({ success: true, data: { markdown: "# Hattie" } }),
   });
 
@@ -153,7 +218,7 @@ test("a crawl contributes every document to roster parsing while returning a bou
   ];
 
   const text = await discoverRoster("https://rescue.example/adopt/companions", {
-    model: async (messages, tools) => {
+    model: scriptedModel(async (messages, tools) => {
       const systemContent = messages.find((message) => message.role === "system")?.content;
       const systemPrompt = typeof systemContent === "string" ? systemContent : "";
       assert.match(systemPrompt, /every pagination page/);
@@ -180,7 +245,7 @@ test("a crawl contributes every document to roster parsing while returning a bou
           },
         }],
       };
-    },
+    }),
     firecrawl: async () => ({
       success: true,
       status: "completed",
@@ -202,7 +267,7 @@ test("roster discovery retains an incomplete crawl's progress", async () => {
   const discovery = await discoverRosterWithCompleteness(
     "https://rescue.example/adopt/companions",
     {
-      model: async () => {
+      model: scriptedModel(async () => {
         step += 1;
         if (step > 1) return { role: "assistant", content: "Done." };
         return {
@@ -217,7 +282,7 @@ test("roster discovery retains an incomplete crawl's progress", async () => {
             },
           }],
         };
-      },
+      }),
       firecrawl: async () => ({
         success: true,
         status: "scraping",
@@ -251,7 +316,7 @@ test("bounds total Firecrawl calls even when the model requests a large batch", 
 
   await assert.rejects(
     discoverRoster("https://rescue.example/adopt/companions", {
-      model: async () => {
+      model: scriptedModel(async () => {
         modelCalls += 1;
         if (modelCalls > 1) return { role: "assistant", content: "Done." };
         return {
@@ -266,7 +331,7 @@ test("bounds total Firecrawl calls even when the model requests a large batch", 
             },
           })),
         };
-      },
+      }),
       firecrawl: async () => {
         firecrawlCalls += 1;
         return { success: true, links: [] };
@@ -501,7 +566,7 @@ test("reports a refused tool call back to the model and keeps scraped content", 
   });
 
   const text = await discoverRoster("https://rescue.example/companions", {
-    model: async (messages) => {
+    model: scriptedModel(async (messages) => {
       const last = messages.at(-1);
       if (last?.role === "tool" && typeof last.content === "string") toolReplies.push(last.content);
       step += 1;
@@ -520,7 +585,7 @@ test("reports a refused tool call back to the model and keeps scraped content", 
         };
       }
       return { role: "assistant", content: "Done." };
-    },
+    }),
     firecrawl: async () => ({ success: true, data: { markdown: "# Hattie" } }),
   });
 
@@ -533,7 +598,7 @@ test("scrapes subdomains of the configured source but refuses other protocols", 
   let step = 0;
 
   const text = await discoverRoster("https://www.rescue.example/", {
-    model: async (messages) => {
+    model: scriptedModel(async (messages) => {
       const last = messages.at(-1);
       if (last?.role === "tool" && typeof last.content === "string") toolReplies.push(last.content);
       step += 1;
@@ -548,7 +613,7 @@ test("scrapes subdomains of the configured source but refuses other protocols", 
           function: { name: "firecrawl_scrape", arguments: JSON.stringify({ url }) },
         }],
       };
-    },
+    }),
     firecrawl: async () => ({ success: true, data: { markdown: "# Walnut" } }),
   });
 
@@ -561,7 +626,7 @@ test("stops roster discovery after eight model steps", async () => {
 
   await assert.rejects(
     discoverRoster("https://rescue.example/companions", {
-      model: async () => {
+      model: scriptedModel(async () => {
         modelCalls += 1;
         return {
           role: "assistant",
@@ -575,7 +640,7 @@ test("stops roster discovery after eight model steps", async () => {
             },
           }],
         };
-      },
+      }),
       firecrawl: async () => ({ success: true, links: [] }),
     }),
     /without scraping roster content/,
