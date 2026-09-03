@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import { Nunito } from "next/font/google";
+import { Toaster } from "sonner";
 
 import { FeltFilters } from "@/components/felt";
-import { ToastViewport } from "@/components/toast";
 
 import "./felt.css";
 import "./globals.css";
+import toastStyles from "./toaster.module.css";
 
 // The sirius-proto mockups load Nunito wght 500–900 from Google Fonts.
 const nunito = Nunito({
@@ -30,7 +31,26 @@ export default function RootLayout({
       <body className={nunito.className}>
         <FeltFilters />
         {children}
-        <ToastViewport />
+        <Toaster
+          closeButton
+          gap={12}
+          mobileOffset={14}
+          offset={18}
+          position="bottom-left"
+          toastOptions={{
+            unstyled: true,
+            classNames: {
+              toast: toastStyles.toast,
+              title: toastStyles.title,
+              content: toastStyles.content,
+              closeButton: toastStyles.closeButton,
+              icon: toastStyles.icon,
+              success: toastStyles.success,
+              warning: toastStyles.warning,
+              error: toastStyles.error,
+            },
+          }}
+        />
       </body>
     </html>
   );

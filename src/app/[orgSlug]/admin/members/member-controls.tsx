@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
 import { AdminBadge, AdminButton, AdminField, AdminSurface } from "@/components/admin-ui";
-import { pushToast } from "@/components/toast";
+import { pushToast } from "@/lib/toast";
 import type { OrganizationRole } from "@/lib/organization-access";
 
 import { removeOrganizationMember, updateOrganizationMemberRole } from "./actions";

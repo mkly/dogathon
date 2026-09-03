@@ -1,0 +1,83 @@
+.toast {
+  display: flex;
+  width: min(24rem, calc(100vw - 36px));
+  align-items: flex-start;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: 22px;
+  background-color: var(--toast-color);
+  background-image:
+    radial-gradient(
+      ellipse 90% 80% at 50% 40%,
+      rgb(255 255 255 / 14%),
+      rgb(255 255 255 / 0%) 62%,
+      rgb(0 0 0 / 7%) 100%
+    ),
+    url("/textures/Fabric034_1K-JPG_Color.jpg");
+  background-size: auto, 200px;
+  background-blend-mode: normal, soft-light;
+  color: var(--toast-contrast);
+  filter:
+    drop-shadow(0 5px 4px rgb(0 0 0 / 28%))
+    drop-shadow(0 1px 1.5px rgb(0 0 0 / 18%));
+}
+
+.success {
+  --toast-color: var(--felt-moss);
+  --toast-contrast: var(--felt-cream);
+}
+
+.warning {
+  --toast-color: var(--felt-mustard);
+  --toast-contrast: var(--felt-ink);
+}
+
+.error {
+  --toast-color: var(--felt-brick);
+  --toast-contrast: var(--felt-cream);
+}
+
+.icon {
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+
+.content {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.title {
+  font-size: 0.82rem;
+  font-weight: 800;
+  line-height: 1.4;
+}
+
+.closeButton {
+  display: grid;
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 18%);
+  color: inherit;
+  cursor: pointer;
+  place-items: center;
+}
+
+.closeButton:hover {
+  background: rgb(255 255 255 / 30%);
+}
+
+.closeButton:focus-visible {
+  outline: 3px solid var(--felt-mustard);
+  outline-offset: 3px;
+}
+
+@media (max-width: 620px) {
+  .toast {
+    width: calc(100vw - 28px);
+  }
+}

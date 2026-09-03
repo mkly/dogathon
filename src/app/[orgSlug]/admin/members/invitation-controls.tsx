@@ -4,7 +4,7 @@ import { FormEvent, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
 import { AdminBadge, AdminButton, AdminField, AdminSurface } from "@/components/admin-ui";
-import { pushToast } from "@/components/toast";
+import { pushToast } from "@/lib/toast";
 
 import { cancelOrganizationInvitation, inviteOrganizationMember } from "./actions";
 import styles from "./members.module.css";
