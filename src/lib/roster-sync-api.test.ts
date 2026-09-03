@@ -23,7 +23,7 @@ const queuedJob = {
 function authorized(orgId: string) {
   return async () => ({
     ok: true as const,
-    context: { orgId, role: "admin" as const, userId: "user-1" },
+    context: { memberId: "member-1", orgId, role: "admin" as const, userId: "user-1" },
   });
 }
 

@@ -5,12 +5,7 @@ import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 
 import { auth } from "@/lib/auth";
-import { removalBlockedReason, roleChangeBlockedReason } from "@/lib/member-management";
-import {
-  getOrganizationAccessBySlug,
-  ORGANIZATION_ROLES,
-  type OrganizationRole,
-} from "@/lib/organization-access";
+import { getOrganizationAccessBySlug } from "@/lib/organization-access";
 
 const ASSIGNABLE_ROLES = ["admin", "member", "volunteer"] as const;
 type AssignableRole = (typeof ASSIGNABLE_ROLES)[number];
@@ -140,39 +135,17 @@ export async function cancelOrganizationInvitation(input: {
   return { ok: true, message: "Invitation cancelled." };
 }
 
-async function mutationContext(orgSlug: string, memberId: string) {
+async function mutationContext(orgSlug: string) {
   const requestHeaders = await headers();
   const access = await getOrganizationAccessBySlug(requestHeaders, orgSlug, {
     members: ["manage"],
   });
   if (!access?.context) return null;
 
-  const firstPage = await auth.api.listMembers({
-    headers: requestHeaders,
-    query: { limit: 100, organizationId: access.context.orgId },
-  });
-  const result = firstPage.members.length < firstPage.total
-    ? await auth.api.listMembers({
-        headers: requestHeaders,
-        query: { limit: firstPage.total, organizationId: access.context.orgId },
-      })
-    : firstPage;
-  const target = result.members.find((member) => member.id === memberId);
-  if (!target) return null;
-
-  const targetRole = ORGANIZATION_ROLES.includes(target.role as OrganizationRole)
-    ? target.role as OrganizationRole
-    : null;
-  if (!targetRole) return null;
-
   return {
-    actorRole: access.context.role as "owner" | "admin",
-    actorUserId: access.context.userId,
+    actorMemberId: access.context.memberId,
     headers: requestHeaders,
     organizationId: access.context.orgId,
-    ownerCount: result.members.filter((member) => member.role === "owner").length,
-    targetRole,
-    targetUserId: target.userId,
   };
 }
 
@@ -187,7 +160,7 @@ export async function updateOrganizationMemberRole(input: {
 
   let context: Awaited<ReturnType<typeof mutationContext>>;
   try {
-    context = await mutationContext(input.orgSlug, input.memberId);
+    context = await mutationContext(input.orgSlug);
   } catch (error) {
     return {
       ok: false,
@@ -197,8 +170,6 @@ export async function updateOrganizationMemberRole(input: {
   if (!context) {
     return { ok: false, message: "You no longer have permission to manage this member." };
   }
-  const blocked = roleChangeBlockedReason(context);
-  if (blocked) return { ok: false, message: blocked };
 
   try {
     await auth.api.updateMemberRole({
@@ -223,7 +194,7 @@ export async function removeOrganizationMember(input: {
 }): Promise<MemberActionResult> {
   let context: Awaited<ReturnType<typeof mutationContext>>;
   try {
-    context = await mutationContext(input.orgSlug, input.memberId);
+    context = await mutationContext(input.orgSlug);
   } catch (error) {
     return {
       ok: false,
@@ -233,8 +204,7 @@ export async function removeOrganizationMember(input: {
   if (!context) {
     return { ok: false, message: "You no longer have permission to manage this member." };
   }
-  const blocked = removalBlockedReason(context);
-  if (blocked) return { ok: false, message: blocked };
+  if (input.memberId === context.actorMemberId) return { ok: false, message: "You cannot remove yourself from the members list." };
 
   try {
     await auth.api.removeMember({
