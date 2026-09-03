@@ -112,7 +112,7 @@ export default async function AdminSettingsPage({ params }: AdminSettingsPagePro
             <p className={styles.eyebrow}>Roster sync</p>
             <h2>Keep the adoption roster current</h2>
             <p>
-              Save the adoption-page source, then sync its current dogs into the staff roster.
+              Save the adoption-page source, then sync its current companions into the staff roster.
             </p>
           </div>
           <RosterSyncSettings initialSourceUrl={settings.sourceUrl} orgSlug={orgSlug} />

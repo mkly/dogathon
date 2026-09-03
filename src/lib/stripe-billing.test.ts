@@ -29,7 +29,7 @@ class MemoryBillingStore implements BillingStore {
     stripeChargesEnabled: false,
   };
 
-  resident = { id: "dog_mabel", name: "Mabel", orgId: "org_rescue" };
+  resident = { id: "companion_mabel", name: "Mabel", orgId: "org_rescue" };
   sponsorships = new Map<string, SponsorshipRecord>();
 
   async getOrganization(orgId: string) {
@@ -139,7 +139,7 @@ test("Stripe SDK checkout request is a $25 direct subscription on the connected 
   await gateway.createSubscriptionCheckout({
     accountId: "acct_fixture_rescue",
     orgId: "org_rescue",
-    residentId: "dog_mabel",
+    residentId: "companion_mabel",
     residentName: "Mabel",
     sponsorName: "Avery Sponsor",
     sponsorEmail: "avery@example.com",
@@ -174,11 +174,11 @@ test("Stripe Connect onboarding, checkout, and signed webhooks maintain sponsors
   const checkout = await createStripeCheckout(
     {
       orgId: "org_rescue",
-      residentId: "dog_mabel",
+      residentId: "companion_mabel",
       sponsorName: "Avery Sponsor",
       sponsorEmail: "avery@example.com",
-      successUrl: "https://app.test/dogs/dog_mabel?sponsored=1",
-      cancelUrl: "https://app.test/dogs/dog_mabel?checkout=canceled",
+      successUrl: "https://app.test/companions/companion_mabel?sponsored=1",
+      cancelUrl: "https://app.test/companions/companion_mabel?checkout=canceled",
     },
     gateway,
     store,
@@ -193,7 +193,7 @@ test("Stripe Connect onboarding, checkout, and signed webhooks maintain sponsors
     customer: "cus_fixture",
     metadata: {
       orgId: "org_rescue",
-      residentId: "dog_mabel",
+      residentId: "companion_mabel",
       sponsorName: "Avery Sponsor",
       sponsorEmail: "avery@example.com",
     },
@@ -203,7 +203,7 @@ test("Stripe Connect onboarding, checkout, and signed webhooks maintain sponsors
 
   assert.deepEqual(store.sponsorships.get("cs_fixture"), {
     orgId: "org_rescue",
-    residentId: "dog_mabel",
+    residentId: "companion_mabel",
     sponsorName: "Avery Sponsor",
     sponsorEmail: "avery@example.com",
     stripeAccountId: "acct_fixture_rescue",
@@ -216,7 +216,7 @@ test("Stripe Connect onboarding, checkout, and signed webhooks maintain sponsors
   await processStripeEvent(signedEvent({
     id: "sub_fixture",
     object: "subscription",
-    metadata: { orgId: "org_rescue", residentId: "dog_mabel" },
+    metadata: { orgId: "org_rescue", residentId: "companion_mabel" },
   }, "customer.subscription.deleted"), store);
   assert.equal(store.sponsorships.get("cs_fixture")?.status, "ended");
 });
@@ -232,7 +232,7 @@ test("webhooks ignore a connected account that does not belong to the organizati
     customer: "cus_fixture",
     metadata: {
       orgId: "org_rescue",
-      residentId: "dog_mabel",
+      residentId: "companion_mabel",
       sponsorName: "Mallory",
       sponsorEmail: "mallory@example.com",
     },
@@ -253,7 +253,7 @@ test("checkout refuses an unavailable resident with a distinguishable error", as
     createStripeCheckout(
       {
         orgId: "org_rescue",
-        residentId: "dog_mabel",
+        residentId: "companion_mabel",
         sponsorName: "Avery Sponsor",
         sponsorEmail: "avery@example.com",
         successUrl: "https://app.test/success",
@@ -278,7 +278,7 @@ test("a resident adopted mid-checkout still records the paid sponsorship", async
     customer: "cus_fixture",
     metadata: {
       orgId: "org_rescue",
-      residentId: "dog_mabel",
+      residentId: "companion_mabel",
       sponsorName: "Avery Sponsor",
       sponsorEmail: "avery@example.com",
     },

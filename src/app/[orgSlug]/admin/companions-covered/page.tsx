@@ -7,13 +7,13 @@ import { PhotoPatch } from "@/components/felt";
 import { getOrganizationAccessBySlug } from "@/lib/organization-access";
 import { prisma } from "@/lib/prisma";
 
-import styles from "./dogs-covered.module.css";
+import styles from "./companions-covered.module.css";
 
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Dogs covered | Dogathon staff",
-  description: "Private sponsorship directory grouped by dog for Dogathon staff.",
+  title: "Companions covered | Dogathon staff",
+  description: "Private sponsorship directory grouped by companion for Dogathon staff.",
 };
 
 function formatDate(date: Date) {
@@ -23,9 +23,9 @@ function formatDate(date: Date) {
   }).format(date);
 }
 
-type DogsCoveredPageProps = { params: Promise<{ orgSlug: string }> };
+type CompanionsCoveredPageProps = { params: Promise<{ orgSlug: string }> };
 
-export default async function DogsCoveredPage({ params }: DogsCoveredPageProps) {
+export default async function CompanionsCoveredPage({ params }: CompanionsCoveredPageProps) {
   const { orgSlug } = await params;
   const access = await getOrganizationAccessBySlug(await headers(), orgSlug, ["owner", "admin"]);
 
@@ -45,8 +45,8 @@ export default async function DogsCoveredPage({ params }: DogsCoveredPageProps) 
     (total, resident) => total + resident.sponsorships.length,
     0,
   );
-  // The /admin stat card counts only dogs with a live sponsor, so spell out that
-  // slice here too: this page also keeps dogs whose sponsorships have all ended.
+  // The /admin stat card counts only companions with a live sponsor, so spell out that
+  // slice here too: this page also keeps companions whose sponsorships have all ended.
   const activelyCoveredCount = residents.filter((resident) =>
     resident.sponsorships.some(({ status }) => status === "active"),
   ).length;
@@ -56,7 +56,7 @@ export default async function DogsCoveredPage({ params }: DogsCoveredPageProps) 
       <header className={styles.header}>
         <div>
           <p className={styles.eyebrow}>Private staff directory</p>
-          <h1>Dogs covered</h1>
+          <h1>Companions covered</h1>
           <p>Every sponsored resident and the people supporting them.</p>
         </div>
         <AdminLink className={styles.backLink} href={`/${orgSlug}/admin`}>
@@ -66,7 +66,7 @@ export default async function DogsCoveredPage({ params }: DogsCoveredPageProps) 
 
       <div className={styles.summary}>
         <p>
-          {residents.length} {residents.length === 1 ? "dog" : "dogs"} · {sponsorshipCount}{" "}
+          {residents.length} {residents.length === 1 ? "companion" : "companions"} · {sponsorshipCount}{" "}
           {sponsorshipCount === 1 ? "sponsorship" : "sponsorships"} · {activelyCoveredCount}{" "}
           actively covered
         </p>
@@ -76,25 +76,25 @@ export default async function DogsCoveredPage({ params }: DogsCoveredPageProps) 
       {residents.length === 0 ? (
         <AdminSurface className={styles.empty} tone="oatmeal">
           <span aria-hidden="true">🐾</span>
-          <h2>No dogs covered yet</h2>
+          <h2>No companions covered yet</h2>
           <p>Residents will appear here when their first sponsorship begins.</p>
         </AdminSurface>
       ) : (
-        <section aria-label="Dogs covered directory" className={styles.dogList}>
+        <section aria-label="Companions covered directory" className={styles.companionList}>
           {residents.map((resident) => {
             const hasActiveSponsor = resident.sponsorships.some(
               ({ status }) => status === "active",
             );
 
             return (
-              <AdminSurface className={styles.dogCard} key={resident.id} tone="oatmeal">
-                <div className={styles.dogHeading}>
+              <AdminSurface className={styles.companionCard} key={resident.id} tone="oatmeal">
+                <div className={styles.companionHeading}>
                   <PhotoPatch
                     alt={`${resident.name} portrait`}
                     className={styles.photo}
                     src={resident.photoUrls[0]}
                   />
-                  <div className={styles.dogDetails}>
+                  <div className={styles.companionDetails}>
                     <h2>{resident.name}</h2>
                     <p>{resident.breed}</p>
                     <div className={styles.badges}>
@@ -109,10 +109,10 @@ export default async function DogsCoveredPage({ params }: DogsCoveredPageProps) 
                   </div>
                   <AdminLink
                     className={styles.detailLink}
-                    href={`/${orgSlug}/dogs/${resident.id}`}
+                    href={`/${orgSlug}/companions/${resident.id}`}
                     tone="mustard"
                   >
-                    View dog page
+                    View companion page
                   </AdminLink>
                 </div>
 

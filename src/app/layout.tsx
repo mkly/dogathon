@@ -14,8 +14,8 @@ const nunito = Nunito({
 });
 
 export const metadata: Metadata = {
-  title: "Dogathon | Sponsor a rescue dog",
-  description: "Sponsor a rescue dog for $25 a month until adoption.",
+  title: "Dogathon | Sponsor a rescue companion",
+  description: "Sponsor a rescue companion for $25 a month until adoption.",
 };
 
 export default function RootLayout({

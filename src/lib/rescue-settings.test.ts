@@ -16,19 +16,19 @@ test("the postscript form does not clear the roster source", () => {
 
 test("the roster-source form does not clear the email postscript", () => {
   const formData = new FormData();
-  formData.set("sourceUrl", "https://example.com/adoptable-dogs");
+  formData.set("sourceUrl", "https://example.com/adoptable-companions");
 
   assert.deepEqual(parseSettingsForm(formData), {
     ok: true,
     message: "Roster source saved.",
-    savedSourceInput: "https://example.com/adoptable-dogs",
-    settings: { sourceUrl: "https://example.com/adoptable-dogs" },
+    savedSourceInput: "https://example.com/adoptable-companions",
+    settings: { sourceUrl: "https://example.com/adoptable-companions" },
   });
 });
 
 test("an invalid roster source is rejected without an update", () => {
   const formData = new FormData();
-  formData.set("sourceUrl", "../dogs.html");
+  formData.set("sourceUrl", "../companions.html");
 
   assert.deepEqual(parseSettingsForm(formData), {
     ok: false,

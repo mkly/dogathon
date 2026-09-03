@@ -1,7 +1,7 @@
 import { requireApiOrganization } from "@/lib/organization-access";
 import { prisma } from "@/lib/prisma";
 import { renderPupdateEmail } from "@/lib/pupdate-email";
-import { dogPageUrl } from "@/lib/pupdate-delivery";
+import { companionPageUrl } from "@/lib/pupdate-delivery";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -29,10 +29,10 @@ export async function GET(request: Request, { params }: RouteContext) {
 
   const origin = new URL(request.url).origin;
   const html = renderPupdateEmail({
-    dogName: pupdate.resident.name,
+    companionName: pupdate.resident.name,
     subject: pupdate.subject,
     bodyText: pupdate.bodyText,
-    dogUrl: dogPageUrl(origin, pupdate.organization.slug, pupdate.residentId),
+    companionUrl: companionPageUrl(origin, pupdate.organization.slug, pupdate.residentId),
     origin,
     photoUrl: pupdate.photoUrl ?? pupdate.resident.photoUrls[0] ?? null,
     type: pupdate.type === "graduation" ? "graduation" : "regular",

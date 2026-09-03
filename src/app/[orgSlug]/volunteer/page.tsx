@@ -15,13 +15,13 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Volunteer check-in | Dogathon",
-  description: "Share a quick photo or care note for a rescue dog.",
+  description: "Share a quick photo or care note for a rescue companion.",
 };
 
 type VolunteerPageProps = {
   params: Promise<{ orgSlug: string }>;
   searchParams: Promise<{
-    dog?: string;
+    companion?: string;
     error?: string;
     submitted?: string;
   }>;
@@ -37,7 +37,7 @@ export default async function VolunteerPage({ params, searchParams }: VolunteerP
   }
   const { context } = access;
 
-  const [{ dog, error, submitted }, residents] = await Promise.all([
+  const [{ companion, error, submitted }, residents] = await Promise.all([
     searchParams,
     prisma.resident.findMany({
       where: {
@@ -50,7 +50,7 @@ export default async function VolunteerPage({ params, searchParams }: VolunteerP
     }),
   ]);
 
-  const submittedDog = residents.find((resident) => resident.id === dog);
+  const submittedCompanion = residents.find((resident) => resident.id === companion);
   const errorMessage = volunteerErrorMessage(error);
 
   if (submitted === "1") {
@@ -61,8 +61,8 @@ export default async function VolunteerPage({ params, searchParams }: VolunteerP
           <div aria-hidden="true" className={styles.confirmationMark}>✓</div>
           <h1>Thanks for the pup-date!</h1>
           <p>
-            {submittedDog
-              ? `${submittedDog.name}’s care team can see your note now.`
+            {submittedCompanion
+              ? `${submittedCompanion.name}’s care team can see your note now.`
               : "The care team can see your note now."}
           </p>
           <Link className={`felt-button felt-mustard ${styles.againLink}`} href={`/${orgSlug}/volunteer`}>
@@ -85,11 +85,11 @@ export default async function VolunteerPage({ params, searchParams }: VolunteerP
         <form action={submitVolunteerNote} className={styles.form}>
           <input name="orgSlug" type="hidden" value={orgSlug} />
           <fieldset className={styles.fieldset}>
-            <legend>1. Pick a dog</legend>
+            <legend>1. Pick a companion</legend>
             {residents.length > 0 ? (
-              <div className={styles.dogGrid}>
+              <div className={styles.companionGrid}>
                 {residents.map((resident, index) => (
-                  <label className={styles.dogChoice} key={resident.id}>
+                  <label className={styles.companionChoice} key={resident.id}>
                     <input
                       defaultChecked={index === 0}
                       name="residentId"
@@ -97,13 +97,13 @@ export default async function VolunteerPage({ params, searchParams }: VolunteerP
                       type="radio"
                       value={resident.id}
                     />
-                    <FeltPanel className={styles.dogCard} stitched={false} tone="oatmeal">
+                    <FeltPanel className={styles.companionCard} stitched={false} tone="oatmeal">
                       <PhotoPatch
                         alt={resident.name}
                         className={styles.photo}
                         src={resident.photoUrls[0]}
                       />
-                      <span className={styles.dogName}>
+                      <span className={styles.companionName}>
                         <span aria-hidden="true" className={styles.pickMark}>✓</span>
                         <strong>{resident.name}</strong>
                       </span>
@@ -113,7 +113,7 @@ export default async function VolunteerPage({ params, searchParams }: VolunteerP
               </div>
             ) : (
               <FeltPanel className={styles.empty} tone="oatmeal">
-                No dogs have active sponsors right now, so there’s no one to send a pup-date to yet.
+                No companions have active sponsors right now, so there’s no one to send a pup-date to yet.
               </FeltPanel>
             )}
           </fieldset>

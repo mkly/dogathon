@@ -198,7 +198,7 @@ test("terminal transitions record a summary or refusal reason", async () => {
       completed: 3,
       total: 3,
     },
-    source: "https://rescue.example/dogs",
+    source: "https://rescue.example/companions",
   };
 
   const succeeded = await queue.succeed({

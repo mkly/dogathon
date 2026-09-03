@@ -23,7 +23,7 @@ const summary: SyncSummary = {
     completed: 1,
     total: 1,
   },
-  source: "https://rescue.example/dogs",
+  source: "https://rescue.example/companions",
 };
 
 const claim = { id: "job-1", orgId: "org-1", claimToken: "claim-1" };

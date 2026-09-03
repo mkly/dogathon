@@ -120,11 +120,11 @@ async function main() {
     where: { orgId: organization.id },
     update: {
       sourceUrl: "https://www.coppersdream.org/dogs-and-more-back-up",
-      pinnedPostscript: "Come meet the dogs at our next adoption fair!",
+      pinnedPostscript: "Come meet the companions at our next adoption fair!",
     },
     create: {
       orgId: organization.id,
-      pinnedPostscript: "Come meet the dogs at our next adoption fair!",
+      pinnedPostscript: "Come meet the companions at our next adoption fair!",
     },
   });
 

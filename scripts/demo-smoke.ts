@@ -145,11 +145,11 @@ async function signInStaff() {
   );
 }
 
-async function sponsorDog(
+async function sponsorCompanion(
   residentId: string,
   sponsor: { name: string; email: string; phone?: string; channel: string },
 ) {
-  const location = await submitActionForm(`/dogs/${residentId}`, {
+  const location = await submitActionForm(`/companions/${residentId}`, {
     orgId: DEMO_ORG_ID,
     residentId,
     sponsorName: sponsor.name,
@@ -190,12 +190,12 @@ async function main() {
   }
   ok("Public page lists Biscuit");
 
-  await sponsorDog(biscuit.id, {
+  await sponsorCompanion(biscuit.id, {
     name: "Demo Smoke Sponsor",
     email: `smoke-${Date.now()}@example.com`,
     channel: "email",
   });
-  ok("Sponsored Biscuit from the public dog page");
+  ok("Sponsored Biscuit from the public companion page");
 
   await signInStaff();
   ok(`Signed in to the staff room as ${STAFF_EMAIL}`);
@@ -242,26 +242,26 @@ async function main() {
   }
   ok(`Approved the pupdate; ${approved.deliveries.length} deliveries fanned out per sponsor channel`);
 
-  // Beat 5a: sync the roster from capture A; the grid fills with ~33 dogs.
+  // Beat 5a: sync the roster from capture A; the grid fills with ~33 companions.
   await setSourceCapture("A");
   const syncA = (await postJson("/api/sync")) as { created: number; updated: number };
   const available = await prisma.resident.count({
     where: { orgId: DEMO_ORG_ID, status: "available" },
   });
   if (syncA.created + syncA.updated < 30) {
-    fail(`Sync A processed only ${syncA.created + syncA.updated} dogs`);
+    fail(`Sync A processed only ${syncA.created + syncA.updated} companions`);
   }
-  // Capture A carries ~33 dogs, but a few are already marked adopted in it
+  // Capture A carries ~33 companions, but a few are already marked adopted in it
   // (and seeded Biscuit, absent from the roster, is adopted on sync).
-  if (available < 25) fail(`Only ${available} dogs are available after sync A`);
+  if (available < 25) fail(`Only ${available} companions are available after sync A`);
   const hattie = await prisma.resident.findUnique({
     where: { orgId_name: { orgId: DEMO_ORG_ID, name: "Hattie" } },
   });
   if (!hattie || hattie.status !== "available") fail("Hattie is not available after sync A");
   if (!(await pageHtml("/")).includes("Hattie")) fail("Public grid does not show Hattie after sync A");
-  ok(`Synced capture A; ${available} dogs on the public grid`);
+  ok(`Synced capture A; ${available} companions on the public grid`);
 
-  await sponsorDog(hattie.id, {
+  await sponsorCompanion(hattie.id, {
     name: "Hattie Smoke Sponsor",
     email: `hattie-smoke-${Date.now()}@example.com`,
     phone: "+14155550199",
@@ -276,7 +276,7 @@ async function main() {
     adopted: number;
     sponsorshipsClosed: number;
   };
-  if (syncB.adopted < 1) fail("Sync B adopted no dogs");
+  if (syncB.adopted < 1) fail("Sync B adopted no companions");
   if (syncB.sponsorshipsClosed < 1) fail("Sync B closed no sponsorships");
 
   const hattieAfter = await prisma.resident.findUnique({
@@ -294,8 +294,8 @@ async function main() {
     fail("Hattie's sponsorship was not closed as adopted");
   }
   if (hattieAfter.pupdates.length < 1) fail("No graduation draft queued for Hattie");
-  if (!(await pageHtml(`/dogs/${hattie.id}`)).includes("Adopted")) {
-    fail("Hattie's dog page does not show the Adopted state");
+  if (!(await pageHtml(`/companions/${hattie.id}`)).includes("Adopted")) {
+    fail("Hattie's companion page does not show the Adopted state");
   }
   ok("Synced capture B; Hattie adopted, sponsorship closed, graduation draft queued");
 

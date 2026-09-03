@@ -47,7 +47,7 @@ export default function FeltStyleguidePage() {
         </FeltPanel>
 
         <FeltPanel className={styles.photoSample} tone="cream">
-          <PhotoPatch alt="Dog photo placeholder" />
+          <PhotoPatch alt="Companion photo placeholder" />
           <div>
             <StitchBadge tone="moss">PhotoPatch</StitchBadge>
             <h2>Photos stitched on, never boxed in.</h2>

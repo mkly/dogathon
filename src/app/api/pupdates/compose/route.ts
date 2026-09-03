@@ -1,6 +1,6 @@
 import { composePupdate } from "@/lib/composer";
 import { requireApiOrganization } from "@/lib/organization-access";
-import { dogPageUrl } from "@/lib/pupdate-delivery";
+import { companionPageUrl } from "@/lib/pupdate-delivery";
 import { prisma } from "@/lib/prisma";
 
 type ComposeRequest = {
@@ -48,7 +48,7 @@ export async function POST(request: Request) {
   let composed;
   try {
     composed = await composePupdate({
-      dog: {
+      companion: {
         name: resident.name,
         breed: resident.breed,
         sex: resident.sex,
@@ -57,7 +57,7 @@ export async function POST(request: Request) {
       notes: resident.volunteerNotes,
       pinnedPostscript: settings?.pinnedPostscript ?? "",
       type,
-      dogPageUrl: dogPageUrl(request.url, resident.organization.slug, resident.id),
+      companionPageUrl: companionPageUrl(request.url, resident.organization.slug, resident.id),
     });
   } catch (error) {
     console.error("Pupdate composition failed", error);
@@ -69,7 +69,7 @@ export async function POST(request: Request) {
       residentId: resident.id,
       type,
       // pin the picture from the notes this draft was written from: the roster
-      // profile shot is the dog, but the update is about the day
+      // profile shot is the companion, but the update is about the day
       photoUrl: resident.volunteerNotes.find((note) => note.photoUrl)?.photoUrl ?? null,
       // Kept only until the sibling delivery task removes the legacy column.
       smsText: "",

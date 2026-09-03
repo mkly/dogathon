@@ -1,12 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { deliverPupdate, dogPageUrl } from "./pupdate-delivery.ts";
+import { deliverPupdate, companionPageUrl } from "./pupdate-delivery.ts";
 
-test("builds an organization-scoped dog URL", () => {
+test("builds an organization-scoped companion URL", () => {
   assert.equal(
-    dogPageUrl("https://rescue.example", "second-chance", "dog/one"),
-    "https://rescue.example/second-chance/dogs/dog%2Fone",
+    companionPageUrl("https://rescue.example", "second-chance", "companion/one"),
+    "https://rescue.example/second-chance/companions/companion%2Fone",
   );
 });
 

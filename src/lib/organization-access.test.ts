@@ -51,8 +51,8 @@ test("authorizes the organization named by a route independently of the active o
 });
 
 test("trusted organization scope replaces client-provided scope", () => {
-  assert.deepEqual(forOrganization("org-a", { id: "dog-a", orgId: "org-b" }), {
-    id: "dog-a",
+  assert.deepEqual(forOrganization("org-a", { id: "companion-a", orgId: "org-b" }), {
+    id: "companion-a",
     orgId: "org-a",
   });
 });

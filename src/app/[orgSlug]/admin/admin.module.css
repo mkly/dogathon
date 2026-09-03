@@ -144,9 +144,9 @@
 
 .photo { width: 120px; }
 .photo img { aspect-ratio: 1; }
-.dogSummary h3 { margin: 10px 0 6px; font-size: 1.25rem; font-weight: 900; }
-.dogSummary p { margin: 0; font-size: 0.83rem; font-weight: 650; line-height: 1.45; }
-.dogSummary small { display: block; margin-top: 12px; font-weight: 800; opacity: 0.65; }
+.companionSummary h3 { margin: 10px 0 6px; font-size: 1.25rem; font-weight: 900; }
+.companionSummary p { margin: 0; font-size: 0.83rem; font-weight: 650; line-height: 1.45; }
+.companionSummary small { display: block; margin-top: 12px; font-weight: 800; opacity: 0.65; }
 
 .draftControls { display: grid; min-width: 0; gap: 14px; }
 .draftPreview { display: grid; min-width: 0; gap: 7px; }

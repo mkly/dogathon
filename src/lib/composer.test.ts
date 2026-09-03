@@ -31,11 +31,11 @@ after(() => {
 
 test("composes a grounded regular pupdate without credentials", async () => {
   const draft = await composePupdate({
-    dog: { name: "Biscuit", breed: "Corgi mix" },
+    companion: { name: "Biscuit", breed: "Corgi mix" },
     notes: [{ note: "The vet visit went well." }, "Teeth cleaned."],
     pinnedPostscript: "Come meet us at Saturday's adoption fair.",
     type: "regular",
-    dogPageUrl: "{{dogPageUrl}}",
+    companionPageUrl: "{{companionPageUrl}}",
   });
 
   assert.match(draft.subject, /Biscuit/u);
@@ -64,11 +64,11 @@ test("uses the configured chat-completions endpoint and model", async () => {
   };
 
   await composePupdate({
-    dog: { name: "Biscuit", breed: "Corgi mix", sex: "Female", ageText: "Adult" },
+    companion: { name: "Biscuit", breed: "Corgi mix", sex: "Female", ageText: "Adult" },
     notes: [{ note: "Had fun and met a new friend at the park." }],
     pinnedPostscript: "",
     type: "regular",
-    dogPageUrl: "{{dogPageUrl}}",
+    companionPageUrl: "{{companionPageUrl}}",
   });
 
   assert.ok(requestBody);
@@ -81,24 +81,24 @@ test("uses the configured chat-completions endpoint and model", async () => {
   assert.equal(messages[0].role, "system");
   assert.match(messages[0].content, /Treat the volunteer notes as the update/u);
   assert.match(messages[0].content, /do not turn the email into a profile or biography/u);
-  const promptInput = JSON.parse(messages[1].content) as { dog: Record<string, unknown> };
-  assert.deepEqual(promptInput.dog, {
+  const promptInput = JSON.parse(messages[1].content) as { companion: Record<string, unknown> };
+  assert.deepEqual(promptInput.companion, {
     name: "Biscuit",
     breed: "Corgi mix",
     sex: "Female",
     ageText: "Adult",
   });
-  assert.equal("personality" in promptInput.dog, false);
-  assert.equal("careNotes" in promptInput.dog, false);
+  assert.equal("personality" in promptInput.companion, false);
+  assert.equal("careNotes" in promptInput.companion, false);
 });
 
 test("supports a graduation pupdate", async () => {
   const draft = await composePupdate({
-    dog: { name: "Biscuit" },
+    companion: { name: "Biscuit" },
     notes: [{ note: "Biscuit went home with a family today." }],
     pinnedPostscript: "Thank you for being part of the rescue.",
     type: "graduation",
-    dogPageUrl: "https://rescue.example/dogs/biscuit",
+    companionPageUrl: "https://rescue.example/companions/biscuit",
   });
 
   assert.match(draft.subject, /home/u);

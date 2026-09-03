@@ -23,7 +23,7 @@ const summary = {
     completed: 3,
     total: 3,
   },
-  source: "https://rescue.example/dogs",
+  source: "https://rescue.example/companions",
 };
 
 function job(overrides: Partial<RosterSyncJobView>): RosterSyncJobView {
@@ -51,7 +51,7 @@ test("a successful job preserves the existing live and fallback result meanings"
     rosterSyncResultToast(job({ status: "succeeded", summary })),
     {
       tone: "success",
-      text: "Roster synced from live source (https://rescue.example/dogs).",
+      text: "Roster synced from live source (https://rescue.example/companions).",
     },
   );
   assert.deepEqual(
@@ -153,7 +153,7 @@ test("an incomplete crawl is presented as a partial sync that left residents alo
     })),
     {
       tone: "warning",
-      text: "Partial roster synced from https://rescue.example/dogs."
+      text: "Partial roster synced from https://rescue.example/companions."
         + " About 3 of 5 expected pages were not fetched."
         + " Missing residents were left unchanged.",
     },

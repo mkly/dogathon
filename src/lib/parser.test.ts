@@ -2,25 +2,25 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-import { parseDogRoster } from "./parser.ts";
+import { parseCompanionRoster } from "./parser.ts";
 
 const pageA = readFile(new URL("../../seed/dogs-page-A.html", import.meta.url), "utf8");
 const pageB = readFile(new URL("../../seed/dogs-page-B.html", import.meta.url), "utf8");
 
 test("offline fixture parsing returns a complete roster", async () => {
-  const dogs = await parseDogRoster(await pageA, { deterministic: true });
+  const companions = await parseCompanionRoster(await pageA, { deterministic: true });
 
-  assert.ok(dogs.length >= 30);
-  assert.ok(dogs.every((dog) => dog.name && dog.photoUrls.length > 0));
-  assert.equal(dogs.find((dog) => dog.name === "Hattie")?.adopted, false);
-  assert.equal(dogs.find((dog) => dog.name === "Charlie")?.adopted, true);
-  assert.equal(dogs.find((dog) => dog.name === "Jack")?.adopted, true);
-  assert.equal(dogs.find((dog) => dog.name === "Romulus")?.adopted, true);
+  assert.ok(companions.length >= 30);
+  assert.ok(companions.every((companion) => companion.name && companion.photoUrls.length > 0));
+  assert.equal(companions.find((companion) => companion.name === "Hattie")?.adopted, false);
+  assert.equal(companions.find((companion) => companion.name === "Charlie")?.adopted, true);
+  assert.equal(companions.find((companion) => companion.name === "Jack")?.adopted, true);
+  assert.equal(companions.find((companion) => companion.name === "Romulus")?.adopted, true);
 });
 
 test("a hand-typed adoption marker updates the parsed record", async () => {
-  const dogs = await parseDogRoster(await pageB, { deterministic: true });
-  const hattie = dogs.find((dog) => dog.name === "Hattie");
+  const companions = await parseCompanionRoster(await pageB, { deterministic: true });
+  const hattie = companions.find((companion) => companion.name === "Hattie");
 
   assert.ok(hattie);
   assert.equal(hattie.adopted, true);
@@ -42,7 +42,7 @@ function stubFetch(body: unknown) {
 test("the model prompt carries the photo URLs the records need", async () => {
   const { fetcher, prompts } = stubFetch([]);
 
-  await parseDogRoster(await pageA, {
+  await parseCompanionRoster(await pageA, {
     apiKey: "test-key",
     baseUrl: "https://model.example/v1",
     model: "roster-parser",
@@ -56,15 +56,15 @@ test("the model prompt carries the photo URLs the records need", async () => {
 test("a model parse with no usable records falls back to the offline parser", async () => {
   const { fetcher } = stubFetch([{ name: "Ghost", photoUrls: [] }]);
 
-  const dogs = await parseDogRoster(await pageA, {
+  const companions = await parseCompanionRoster(await pageA, {
     apiKey: "test-key",
     baseUrl: "https://model.example/v1",
     model: "roster-parser",
     fetch: fetcher,
   });
 
-  assert.ok(dogs.length >= 30);
-  assert.equal(dogs.find((dog) => dog.name === "Ghost"), undefined);
+  assert.ok(companions.length >= 30);
+  assert.equal(companions.find((companion) => companion.name === "Ghost"), undefined);
 });
 
 test("a successful model parse is returned as-is", async () => {
@@ -72,14 +72,14 @@ test("a successful model parse is returned as-is", async () => {
     { name: "Biscuit", breed: "corgi mix", photoUrls: ["https://example.test/biscuit.jpg"], adopted: true },
   ]);
 
-  const dogs = await parseDogRoster(await pageA, {
+  const companions = await parseCompanionRoster(await pageA, {
     apiKey: "test-key",
     baseUrl: "https://model.example/v1",
     model: "roster-parser",
     fetch: fetcher,
   });
 
-  assert.deepEqual(dogs.map((dog) => dog.name), ["Biscuit"]);
-  assert.equal(dogs[0].adopted, true);
-  assert.deepEqual(dogs[0].careNotes, []);
+  assert.deepEqual(companions.map((companion) => companion.name), ["Biscuit"]);
+  assert.equal(companions[0].adopted, true);
+  assert.deepEqual(companions[0].careNotes, []);
 });

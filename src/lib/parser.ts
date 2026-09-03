@@ -1,6 +1,6 @@
 import { createChatCompletion, hasChatCompletionCredentials } from "./chat-completions.ts";
 
-export type DogRecord = {
+export type CompanionRecord = {
   name: string;
   breed: string;
   dobText: string;
@@ -13,7 +13,7 @@ export type DogRecord = {
   adopted: boolean;
 };
 
-export type ParseDogRosterOptions = {
+export type ParseCompanionRosterOptions = {
   apiKey?: string;
   deterministic?: boolean;
   fetch?: typeof fetch;
@@ -27,10 +27,10 @@ const FIELD_NAMES = ["Personality", "Breed", "Age", "Weight", "Sex"];
  * Parse a hand-authored rescue roster. A configured chat-completions endpoint
  * is the primary parser; local parsing keeps imports, tests, and demos offline.
  */
-export async function parseDogRoster(
+export async function parseCompanionRoster(
   source: string,
-  options: ParseDogRosterOptions = {},
-): Promise<DogRecord[]> {
+  options: ParseCompanionRosterOptions = {},
+): Promise<CompanionRecord[]> {
   if (hasChatCompletionCredentials(options.apiKey) && !options.deterministic) {
     try {
       return await parseWithModel(source, options);
@@ -39,10 +39,10 @@ export async function parseDogRoster(
     }
   }
 
-  return parseDogRosterDeterministic(source);
+  return parseCompanionRosterDeterministic(source);
 }
 
-export function parseDogRosterDeterministic(source: string): DogRecord[] {
+export function parseCompanionRosterDeterministic(source: string): CompanionRecord[] {
   const sections = source.includes("<h3")
     ? splitHtmlSections(source)
     : splitMarkdownSections(source);
@@ -80,8 +80,8 @@ export function parseDogRosterDeterministic(source: string): DogRecord[] {
 
 async function parseWithModel(
   source: string,
-  options: ParseDogRosterOptions,
-): Promise<DogRecord[]> {
+  options: ParseCompanionRosterOptions,
+): Promise<CompanionRecord[]> {
   const text = await createChatCompletion({
     apiKey: options.apiKey,
     baseUrl: options.baseUrl,
@@ -90,22 +90,22 @@ async function parseWithModel(
     maxTokens: 12_000,
     messages: [{
         role: "user",
-        content: `Extract the rescue dogs from the page below. Return only a JSON array. Each item must have exactly these fields: name, breed, dobText, ageText, sex, weightText, personality, careNotes (string array), photoUrls (string array), and adopted (boolean). Preserve the page's wording. A heading containing an Adopted marker means adopted is true. Photos appear as [photo: URL] markers; put the markers that follow a dog's heading in that dog's photoUrls. Do not include navigation, footer, or courtesy-listing headings.\n\n${semanticPageText(source)}`,
+        content: `Extract the rescue companions from the page below. Return only a JSON array. Each item must have exactly these fields: name, breed, dobText, ageText, sex, weightText, personality, careNotes (string array), photoUrls (string array), and adopted (boolean). Preserve the page's wording. A heading containing an Adopted marker means adopted is true. Photos appear as [photo: URL] markers; put the markers that follow a companion's heading in that companion's photoUrls. Do not include navigation, footer, or courtesy-listing headings.\n\n${semanticPageText(source)}`,
       }],
   });
 
   const parsed = JSON.parse(extractJsonArray(text)) as unknown;
   if (!Array.isArray(parsed)) throw new Error("Model response was not an array");
 
-  const dogs = parsed.map(normalizeRecord).filter((dog) => dog.name && dog.photoUrls.length);
-  // An empty roster reads downstream as "every dog was adopted", so treat it as
+  const companions = parsed.map(normalizeRecord).filter((companion) => companion.name && companion.photoUrls.length);
+  // An empty roster reads downstream as "every companion was adopted", so treat it as
   // a failed parse and let the deterministic path answer instead.
-  if (!dogs.length) throw new Error("Model response contained no usable dog records");
+  if (!companions.length) throw new Error("Model response contained no usable companion records");
 
-  return dogs;
+  return companions;
 }
 
-function normalizeRecord(value: unknown): DogRecord {
+function normalizeRecord(value: unknown): CompanionRecord {
   const record = value && typeof value === "object"
     ? value as Record<string, unknown>
     : {};

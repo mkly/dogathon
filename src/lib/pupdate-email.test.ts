@@ -4,10 +4,10 @@ import test from "node:test";
 import { renderPupdateEmail } from "./pupdate-email.ts";
 
 const base = {
-  dogName: "Biscuit",
+  companionName: "Biscuit",
   subject: "A pupdate from Biscuit",
   bodyText: "Here is the latest.\n\nRecent notes:\n- Took a treat from a stranger.\n- Slept through the night.\n\nThank you.",
-  dogUrl: "https://pawcast.test/dogs/abc",
+  companionUrl: "https://pawcast.test/companions/abc",
   origin: "https://pawcast.test",
   photoUrl: "/uploads/biscuit.jpg",
 } as const;
@@ -29,7 +29,7 @@ test("resolves every asset and link to an absolute URL", () => {
   assert.match(html, /https:\/\/pawcast\.test\/uploads\/biscuit\.jpg/u);
   assert.match(html, /https:\/\/pawcast\.test\/brand\/pawcast-wordmark\.png/u);
   assert.match(html, /https:\/\/pawcast\.test\/textures\/email\/ground\.jpg/u);
-  assert.match(html, /href="https:\/\/pawcast\.test\/dogs\/abc"/u);
+  assert.match(html, /href="https:\/\/pawcast\.test\/companions\/abc"/u);
 });
 
 test("omits the photo block when the resident has no photo", () => {
@@ -42,7 +42,7 @@ test("omits the photo block when the resident has no photo", () => {
 test("escapes sponsor-facing copy instead of injecting it as markup", () => {
   const html = renderPupdateEmail({
     ...base,
-    dogName: "Biscuit <script>",
+    companionName: "Biscuit <script>",
     bodyText: "A note with <b>tags</b> & an ampersand.",
   });
 

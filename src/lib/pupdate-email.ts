@@ -17,10 +17,10 @@
  */
 
 export type PupdateEmailInput = {
-  dogName: string;
+  companionName: string;
   subject: string;
   bodyText: string;
-  dogUrl: string;
+  companionUrl: string;
   /** Absolute origin for the wordmark, texture, and photo. */
   origin: string;
   photoUrl?: string | null;
@@ -141,12 +141,12 @@ function panel(tone: string, tile: string, radius: string, inner: string): strin
 }
 
 export function renderPupdateEmail(input: PupdateEmailInput): string {
-  const name = escapeHtml(input.dogName.trim());
+  const name = escapeHtml(input.companionName.trim());
   const graduation = input.type === "graduation";
   const wordmark = absolute(input.origin, "/brand/pawcast-wordmark.png");
   const ground = absolute(input.origin, TILE.ground);
   const photo = input.photoUrl ? absolute(input.origin, input.photoUrl) : null;
-  const dogUrl = escapeHtml(input.dogUrl);
+  const companionUrl = escapeHtml(input.companionUrl);
   const headline = escapeHtml(input.subject.trim());
   const eyebrow = graduation ? "Adoption day" : "A new pupdate";
   const heroTone = graduation ? MUSTARD : MOSS;
@@ -176,7 +176,7 @@ export function renderPupdateEmail(input: PupdateEmailInput): string {
 
   const cta = `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:separate;margin:6px auto 0;">
   <tr><td align="center" style="background-color:${MUSTARD};background-image:url('${absolute(input.origin, TILE.mustard)}');background-size:200px;border-radius:15px;">
-    <a href="${dogUrl}" style="display:inline-block;padding:15px 30px;color:${INK};font-family:${FONT};font-size:16px;font-weight:900;text-decoration:none;">See ${name}&rsquo;s page &rarr;</a>
+    <a href="${companionUrl}" style="display:inline-block;padding:15px 30px;color:${INK};font-family:${FONT};font-size:16px;font-weight:900;text-decoration:none;">See ${name}&rsquo;s page &rarr;</a>
   </td></tr>
 </table>`;
 

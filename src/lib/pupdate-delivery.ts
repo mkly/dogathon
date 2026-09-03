@@ -33,9 +33,9 @@ type EmailSender = (
   input: EmailInput,
 ) => Promise<DescribedSend | null | void>;
 
-export function dogPageUrl(origin: string, orgSlug: string, residentId: string): string {
+export function companionPageUrl(origin: string, orgSlug: string, residentId: string): string {
   return new URL(
-    `/${encodeURIComponent(orgSlug)}/dogs/${encodeURIComponent(residentId)}`,
+    `/${encodeURIComponent(orgSlug)}/companions/${encodeURIComponent(residentId)}`,
     origin,
   ).toString();
 }

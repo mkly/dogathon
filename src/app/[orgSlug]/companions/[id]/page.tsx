@@ -10,12 +10,12 @@ import styles from "../../../public.module.css";
 
 export const dynamic = "force-dynamic";
 
-type DogPageProps = {
+type CompanionPageProps = {
   params: Promise<{ id: string; orgSlug: string }>;
   searchParams: Promise<{ error?: string; sponsored?: string }>;
 };
 
-export default async function DogPage({ params, searchParams }: DogPageProps) {
+export default async function CompanionPage({ params, searchParams }: CompanionPageProps) {
   const { id, orgSlug } = await params;
   const query = await searchParams;
   const organization = await getPublicOrganization(orgSlug);
@@ -56,7 +56,7 @@ export default async function DogPage({ params, searchParams }: DogPageProps) {
             {available ? "Available" : "Adopted"}
           </StitchBadge>
           <h1>{resident.name}</h1>
-          <p className={styles.dogFacts}>
+          <p className={styles.companionFacts}>
             {resident.breed} · {resident.sex} · {resident.ageText} · {resident.weightText}
           </p>
           <p className={styles.personality}>{resident.personality}</p>
@@ -114,7 +114,7 @@ export default async function DogPage({ params, searchParams }: DogPageProps) {
         <FeltPanel className={styles.confirmation} tone="brick">
           <h2>{resident.name} has been adopted!</h2>
           <p>Their sponsorship chapter is complete. Meet another resident who could use your help.</p>
-          <Link className={`felt-button felt-cream ${styles.cardLink}`} href={`/${orgSlug}`}>Meet the dogs</Link>
+          <Link className={`felt-button felt-cream ${styles.cardLink}`} href={`/${orgSlug}`}>Meet the companions</Link>
         </FeltPanel>
       ) : null}
     </main>

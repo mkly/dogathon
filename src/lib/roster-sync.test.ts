@@ -15,9 +15,9 @@ import {
   requestFirecrawl,
   RosterSyncRefusal,
 } from "./roster-sync.ts";
-import { parseDogRoster } from "./parser.ts";
+import { parseCompanionRoster } from "./parser.ts";
 
-function rosterDog(name: string, adopted: boolean) {
+function rosterCompanion(name: string, adopted: boolean) {
   return {
     name,
     breed: "",
@@ -80,7 +80,7 @@ test("a bounded model loop maps the rescue site and scrapes the selected roster"
             type: "function",
             function: {
               name: "firecrawl_map",
-              arguments: JSON.stringify({ url: "https://rescue.example", search: "adoptable dogs" }),
+              arguments: JSON.stringify({ url: "https://rescue.example", search: "adoptable companions" }),
             },
           }],
         };
@@ -94,7 +94,7 @@ test("a bounded model loop maps the rescue site and scrapes the selected roster"
             type: "function",
             function: {
               name: "firecrawl_scrape",
-              arguments: JSON.stringify({ url: "https://rescue.example/adopt/dogs" }),
+              arguments: JSON.stringify({ url: "https://rescue.example/adopt/companions" }),
             },
           }],
         };
@@ -104,7 +104,7 @@ test("a bounded model loop maps the rescue site and scrapes the selected roster"
     firecrawl: async (name, input) => {
       firecrawlCalls.push({ name, input });
       return name === "firecrawl_map"
-        ? { success: true, links: [{ url: "https://rescue.example/adopt/dogs" }] }
+        ? { success: true, links: [{ url: "https://rescue.example/adopt/companions" }] }
         : { success: true, data: { markdown: "# Hattie\nBreed: Mixed" } };
     },
   });
@@ -119,7 +119,7 @@ test("a bounded model loop maps the rescue site and scrapes the selected roster"
 
 test("a scrape without a completed crawl is not treated as a complete roster", async () => {
   let step = 0;
-  const discovery = await discoverRosterWithCompleteness("https://rescue.example/dogs", {
+  const discovery = await discoverRosterWithCompleteness("https://rescue.example/companions", {
     model: async () => {
       step += 1;
       if (step > 1) return { role: "assistant", content: "Done." };
@@ -131,7 +131,7 @@ test("a scrape without a completed crawl is not treated as a complete roster", a
           type: "function",
           function: {
             name: "firecrawl_scrape",
-            arguments: JSON.stringify({ url: "https://rescue.example/dogs" }),
+            arguments: JSON.stringify({ url: "https://rescue.example/companions" }),
           },
         }],
       };
@@ -152,11 +152,11 @@ test("a crawl contributes every document to roster parsing while returning a bou
     `# June\nPersonality: Sweet\n![June](https://rescue.example/june.jpg)\n${"details ".repeat(8_000)}`,
   ];
 
-  const text = await discoverRoster("https://rescue.example/adopt/dogs", {
+  const text = await discoverRoster("https://rescue.example/adopt/companions", {
     model: async (messages, tools) => {
       const systemPrompt = messages.find((message) => message.role === "system")?.content ?? "";
       assert.match(systemPrompt, /every pagination page/);
-      assert.match(systemPrompt, /every dog-detail page/);
+      assert.match(systemPrompt, /every companion detail page/);
       assert.match(systemPrompt, /rather than exploring the rest of the site/);
       assert.deepEqual(tools.map((tool) => tool.function.name), [
         "firecrawl_map",
@@ -175,7 +175,7 @@ test("a crawl contributes every document to roster parsing while returning a bou
           type: "function",
           function: {
             name: "firecrawl_crawl",
-            arguments: JSON.stringify({ url: "https://rescue.example/adopt/dogs" }),
+            arguments: JSON.stringify({ url: "https://rescue.example/adopt/companions" }),
           },
         }],
       };
@@ -188,8 +188,8 @@ test("a crawl contributes every document to roster parsing while returning a bou
     }),
   });
 
-  const dogs = await parseDogRoster(text, { deterministic: true });
-  assert.deepEqual(dogs.map((dog) => dog.name), ["Hattie", "Walnut", "June"]);
+  const companions = await parseCompanionRoster(text, { deterministic: true });
+  assert.deepEqual(companions.map((companion) => companion.name), ["Hattie", "Walnut", "June"]);
   assert.equal(toolReplies.length, 1);
   assert.ok((toolReplies[0]?.length ?? Infinity) <= 4_100);
   assert.match(toolReplies[0] ?? "", /"documents":3/);
@@ -199,7 +199,7 @@ test("a crawl contributes every document to roster parsing while returning a bou
 test("roster discovery retains an incomplete crawl's progress", async () => {
   let step = 0;
   const discovery = await discoverRosterWithCompleteness(
-    "https://rescue.example/adopt/dogs",
+    "https://rescue.example/adopt/companions",
     {
       model: async () => {
         step += 1;
@@ -212,7 +212,7 @@ test("roster discovery retains an incomplete crawl's progress", async () => {
             type: "function",
             function: {
               name: "firecrawl_crawl",
-              arguments: JSON.stringify({ url: "https://rescue.example/adopt/dogs" }),
+              arguments: JSON.stringify({ url: "https://rescue.example/adopt/companions" }),
             },
           }],
         };
@@ -249,7 +249,7 @@ test("bounds total Firecrawl calls even when the model requests a large batch", 
   let modelCalls = 0;
 
   await assert.rejects(
-    discoverRoster("https://rescue.example/adopt/dogs", {
+    discoverRoster("https://rescue.example/adopt/companions", {
       model: async () => {
         modelCalls += 1;
         if (modelCalls > 1) return { role: "assistant", content: "Done." };
@@ -261,7 +261,7 @@ test("bounds total Firecrawl calls even when the model requests a large batch", 
             type: "function" as const,
             function: {
               name: "firecrawl_map",
-              arguments: JSON.stringify({ url: "https://rescue.example/adopt/dogs" }),
+              arguments: JSON.stringify({ url: "https://rescue.example/adopt/companions" }),
             },
           })),
         };
@@ -289,14 +289,14 @@ test("calls the direct Firecrawl v2 endpoints with bearer authentication", async
 
   await requestFirecrawl(
     "firecrawl_scrape",
-    { url: "https://rescue.example/dogs" },
+    { url: "https://rescue.example/companions" },
     { apiKey: "fc-test", baseUrl: "https://firecrawl.example/v2/", fetch: fetcher },
   );
 
   assert.equal(requests[0]?.url, "https://firecrawl.example/v2/scrape");
   assert.equal((requests[0]?.init?.headers as Record<string, string>).authorization, "Bearer fc-test");
   assert.deepEqual(JSON.parse(String(requests[0]?.init?.body)), {
-    url: "https://rescue.example/dogs",
+    url: "https://rescue.example/companions",
     formats: ["markdown"],
     onlyMainContent: true,
   });
@@ -328,11 +328,11 @@ test("submits a Firecrawl v2 crawl job and polls it to completion", async () => 
 
   const result = await requestFirecrawl(
     "firecrawl_crawl",
-    { url: "https://rescue.example/adopt/dogs" },
+    { url: "https://rescue.example/adopt/companions" },
     {
       apiKey: "fc-test",
       baseUrl: "https://firecrawl.example/v2",
-      sourceUrl: "https://rescue.example/adopt/dogs",
+      sourceUrl: "https://rescue.example/adopt/companions",
       fetch: fetcher,
       pollIntervalMs: 0,
     },
@@ -374,14 +374,14 @@ test("narrows a broad crawl request to the configured listing path", async () =>
     },
     {
       apiKey: "fc-test",
-      sourceUrl: "https://rescue.example/adopt/dogs/",
+      sourceUrl: "https://rescue.example/adopt/companions/",
       fetch: fetcher,
       pollIntervalMs: 0,
     },
   );
 
-  assert.equal(submittedBody?.url, "https://rescue.example/adopt/dogs/");
-  assert.deepEqual(submittedBody?.includePaths, ["adopt/dogs(?:/.*)?"]);
+  assert.equal(submittedBody?.url, "https://rescue.example/adopt/companions/");
+  assert.deepEqual(submittedBody?.includePaths, ["adopt/companions(?:/.*)?"]);
   assert.equal(submittedBody?.regexOnFullURL, false);
   assert.equal(submittedBody?.crawlEntireDomain, false);
   assert.equal(submittedBody?.allowExternalLinks, false);
@@ -399,10 +399,10 @@ test("refuses a crawl request for an unrelated host before fetching", async () =
   await assert.rejects(
     requestFirecrawl(
       "firecrawl_crawl",
-      { url: "https://elsewhere.test/dogs" },
+      { url: "https://elsewhere.test/companions" },
       {
         apiKey: "fc-test",
-        sourceUrl: "https://rescue.example/adopt/dogs",
+        sourceUrl: "https://rescue.example/adopt/companions",
         fetch: fetcher,
       },
     ),
@@ -424,13 +424,13 @@ test("clamps Firecrawl crawl page and discovery limits", async () => {
   await requestFirecrawl(
     "firecrawl_crawl",
     {
-      url: "https://rescue.example/adopt/dogs",
+      url: "https://rescue.example/adopt/companions",
       limit: 100_000,
       maxDiscoveryDepth: 99,
     },
     {
       apiKey: "fc-test",
-      sourceUrl: "https://rescue.example/adopt/dogs",
+      sourceUrl: "https://rescue.example/adopt/companions",
       fetch: fetcher,
       pollIntervalMs: 0,
     },
@@ -449,10 +449,10 @@ test("reports a Firecrawl crawl polling timeout as incomplete", async () => {
 
   const result = await requestFirecrawl(
     "firecrawl_crawl",
-    { url: "https://rescue.example/adopt/dogs" },
+    { url: "https://rescue.example/adopt/companions" },
     {
       apiKey: "fc-test",
-      sourceUrl: "https://rescue.example/adopt/dogs",
+      sourceUrl: "https://rescue.example/adopt/companions",
       fetch: fetcher,
       crawlTimeoutMs: 0,
     },
@@ -478,10 +478,10 @@ test("a crawl without Firecrawl credentials never contacts the network", async (
   await assert.rejects(
     requestFirecrawl(
       "firecrawl_crawl",
-      { url: "https://rescue.example/adopt/dogs" },
+      { url: "https://rescue.example/adopt/companions" },
       {
         apiKey: "",
-        sourceUrl: "https://rescue.example/adopt/dogs",
+        sourceUrl: "https://rescue.example/adopt/companions",
         fetch: fetcher,
       },
     ),
@@ -499,7 +499,7 @@ test("reports a refused tool call back to the model and keeps scraped content", 
     function: { name, arguments: JSON.stringify(args) },
   });
 
-  const text = await discoverRoster("https://rescue.example/dogs", {
+  const text = await discoverRoster("https://rescue.example/companions", {
     model: async (messages) => {
       const last = messages.at(-1);
       if (last?.role === "tool") toolReplies.push(last.content);
@@ -508,14 +508,14 @@ test("reports a refused tool call back to the model and keeps scraped content", 
         return {
           role: "assistant",
           content: null,
-          tool_calls: [call("scrape-off", "firecrawl_scrape", { url: "https://elsewhere.test/dogs" })],
+          tool_calls: [call("scrape-off", "firecrawl_scrape", { url: "https://elsewhere.test/companions" })],
         };
       }
       if (step === 2) {
         return {
           role: "assistant",
           content: null,
-          tool_calls: [call("scrape-www", "firecrawl_scrape", { url: "https://www.rescue.example/dogs" })],
+          tool_calls: [call("scrape-www", "firecrawl_scrape", { url: "https://www.rescue.example/companions" })],
         };
       }
       return { role: "assistant", content: "Done." };
@@ -537,7 +537,7 @@ test("scrapes subdomains of the configured source but refuses other protocols", 
       if (last?.role === "tool") toolReplies.push(last.content);
       step += 1;
       if (step > 2) return { role: "assistant", content: "Done." };
-      const url = step === 1 ? "file:///etc/passwd" : "https://adopt.rescue.example/dogs";
+      const url = step === 1 ? "file:///etc/passwd" : "https://adopt.rescue.example/companions";
       return {
         role: "assistant",
         content: null,
@@ -559,7 +559,7 @@ test("stops roster discovery after eight model steps", async () => {
   let modelCalls = 0;
 
   await assert.rejects(
-    discoverRoster("https://rescue.example/dogs", {
+    discoverRoster("https://rescue.example/companions", {
       model: async () => {
         modelCalls += 1;
         return {
@@ -570,7 +570,7 @@ test("stops roster discovery after eight model steps", async () => {
             type: "function",
             function: {
               name: "firecrawl_map",
-              arguments: JSON.stringify({ url: "https://rescue.example/dogs" }),
+              arguments: JSON.stringify({ url: "https://rescue.example/companions" }),
             },
           }],
         };
@@ -584,7 +584,7 @@ test("stops roster discovery after eight model steps", async () => {
 });
 
 test("graduation drafts are queued and sponsor-specific", () => {
-  const draft = graduationDraft("dog-1", "Hattie", "Sam");
+  const draft = graduationDraft("companion-1", "Hattie", "Sam");
 
   assert.equal(draft.type, "graduation");
   assert.equal(draft.status, "draft");
@@ -611,7 +611,7 @@ test("preserves explicit adoption handling for fallback captures", () => {
 test("an incomplete crawl does not adopt a resident missing from the partial roster", () => {
   const changes = planRosterStatusChanges(
     [{ id: "resident-1", name: "Hattie", status: "available" }],
-    [rosterDog("Walnut", false)],
+    [rosterCompanion("Walnut", false)],
     { usedFallbackCapture: false, rosterComplete: false },
   );
 
@@ -622,7 +622,7 @@ test("an incomplete crawl still adopts a resident with an explicit Adopted marke
   const resident = { id: "resident-1", name: "Hattie", status: "available" };
   const changes = planRosterStatusChanges(
     [resident],
-    [rosterDog("Hattie", true)],
+    [rosterCompanion("Hattie", true)],
     { usedFallbackCapture: false, rosterComplete: false },
   );
 
@@ -633,7 +633,7 @@ test("a complete crawl still adopts an available resident missing from the roste
   const resident = { id: "resident-1", name: "Hattie", status: "available" };
   const changes = planRosterStatusChanges(
     [resident],
-    [rosterDog("Walnut", false)],
+    [rosterCompanion("Walnut", false)],
     { usedFallbackCapture: false, rosterComplete: true },
   );
 
@@ -643,7 +643,7 @@ test("a complete crawl still adopts an available resident missing from the roste
 test("an incomplete crawl does not restore an adopted resident", () => {
   const changes = planRosterStatusChanges(
     [{ id: "resident-1", name: "Hattie", status: "adopted" }],
-    [rosterDog("Hattie", false)],
+    [rosterCompanion("Hattie", false)],
     { usedFallbackCapture: false, rosterComplete: false },
   );
 
@@ -660,7 +660,7 @@ test("a configured local capture is the real source, not a scrape fallback", asy
 });
 
 test("an unreachable remote source is flagged as a fallback capture", async () => {
-  const roster = await loadRoster("https://example.test/dogs-and-more");
+  const roster = await loadRoster("https://example.test/companions-and-more");
 
   assert.equal(roster.usedFallbackCapture, true);
   assert.equal(roster.rosterComplete, false);

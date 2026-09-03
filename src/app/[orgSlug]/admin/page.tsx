@@ -35,7 +35,7 @@ export default async function AdminPage({ params }: AdminPageProps) {
     drafts,
     noteResidents,
     activeSponsorCount,
-    sponsoredDogCount,
+    sponsoredCompanionCount,
     emailConnector,
   ] =
     await Promise.all([
@@ -54,7 +54,7 @@ export default async function AdminPage({ params }: AdminPageProps) {
         },
       }),
       prisma.resident.findMany({
-        // once a draft exists the dog moves to the approval queue below,
+        // once a draft exists the companion moves to the approval queue below,
         // so keep it out of the compose list until that draft is resolved
         where: {
           orgId: context.orgId,
@@ -125,20 +125,20 @@ export default async function AdminPage({ params }: AdminPageProps) {
           </AdminSurface>
         </Link>
         <Link
-          aria-label={`View dogs covered (${sponsoredDogCount} with active sponsors)`}
+          aria-label={`View companions covered (${sponsoredCompanionCount} with active sponsors)`}
           className={styles.statLink}
-          href={`/${orgSlug}/admin/dogs-covered`}
+          href={`/${orgSlug}/admin/companions-covered`}
         >
           <AdminSurface className={styles.stat} tone="denim">
-            <strong>{sponsoredDogCount}</strong>
-            <span>dogs covered</span>
+            <strong>{sponsoredCompanionCount}</strong>
+            <span>companions covered</span>
             <small>with at least one active sponsor</small>
           </AdminSurface>
         </Link>
         <AdminSurface className={styles.stat} tone="brick">
           <strong>92%</strong>
           <span>updates opened</span>
-          <small>people love dog email</small>
+          <small>people love hearing from their companions</small>
         </AdminSurface>
       </section>
 
@@ -149,7 +149,7 @@ export default async function AdminPage({ params }: AdminPageProps) {
             <h2>Notes ready for a pupdate</h2>
           </div>
           <AdminBadge tone="mustard">
-            {noteResidents.length} {noteResidents.length === 1 ? "dog" : "dogs"}
+            {noteResidents.length} {noteResidents.length === 1 ? "companion" : "companions"}
           </AdminBadge>
         </div>
 
@@ -230,7 +230,7 @@ export default async function AdminPage({ params }: AdminPageProps) {
                   className={styles.photo}
                   src={draft.resident.photoUrls[0]}
                 />
-                <div className={styles.dogSummary}>
+                <div className={styles.companionSummary}>
                   <AdminBadge tone={draft.type === "graduation" ? "mustard" : "denim"}>
                     {draft.type}
                   </AdminBadge>

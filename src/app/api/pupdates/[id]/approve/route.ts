@@ -1,6 +1,6 @@
 import { getEmailConnectorStatus } from "@/lib/email-connectors";
 import { requireApiOrganization } from "@/lib/organization-access";
-import { deliverPupdate, dogPageUrl } from "@/lib/pupdate-delivery";
+import { deliverPupdate, companionPageUrl } from "@/lib/pupdate-delivery";
 import { prisma } from "@/lib/prisma";
 import { renderPupdateEmail } from "@/lib/pupdate-email";
 
@@ -48,16 +48,16 @@ export async function POST(request: Request, { params }: RouteContext) {
   }
 
   const origin = new URL(request.url).origin;
-  const dogUrl = dogPageUrl(origin, pupdate.organization.slug, pupdate.residentId);
+  const companionUrl = companionPageUrl(origin, pupdate.organization.slug, pupdate.residentId);
   const deliveries = await deliverPupdate(
     orgId,
     {
       ...pupdate,
       bodyHtml: renderPupdateEmail({
-        dogName: pupdate.resident.name,
+        companionName: pupdate.resident.name,
         subject: pupdate.subject,
         bodyText: pupdate.bodyText,
-        dogUrl,
+        companionUrl,
         origin,
         photoUrl: pupdate.photoUrl ?? pupdate.resident.photoUrls[0] ?? null,
         type: pupdate.type === "graduation" ? "graduation" : "regular",

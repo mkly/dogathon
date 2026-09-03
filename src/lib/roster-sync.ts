@@ -7,8 +7,8 @@ import {
   type ChatCompletionMessage,
   type ChatCompletionTool,
 } from "./chat-completions.ts";
-import type { DogRecord } from "./parser.ts";
-import { parseDogRoster } from "./parser.ts";
+import type { CompanionRecord } from "./parser.ts";
+import { parseCompanionRoster } from "./parser.ts";
 import { prisma } from "./prisma.ts";
 
 export type SyncSummary = {
@@ -77,10 +77,10 @@ export async function syncRoster(
     source,
   } = await loadRoster(settings.sourceUrl, options);
   options.signal?.throwIfAborted();
-  const dogs = await parseDogRoster(text);
+  const companions = await parseCompanionRoster(text);
   options.signal?.throwIfAborted();
 
-  if (dogs.length === 0) {
+  if (companions.length === 0) {
     throw new Error("Roster sync refused to adopt every resident after parsing an empty roster");
   }
 
@@ -93,7 +93,7 @@ export async function syncRoster(
     const existingNames = new Set(before.map((resident) => resident.name));
     const { adoptionCandidates, restoreCandidates } = planRosterStatusChanges(
       before,
-      dogs,
+      companions,
       { usedFallbackCapture, rosterComplete },
     );
 
@@ -103,9 +103,9 @@ export async function syncRoster(
       usedFallbackCapture || !rosterComplete,
     );
 
-    for (const dog of dogs) {
+    for (const companion of companions) {
       options.signal?.throwIfAborted();
-      await upsertDog(tx, orgId, dog, !usedFallbackCapture && rosterComplete);
+      await upsertCompanion(tx, orgId, companion, !usedFallbackCapture && rosterComplete);
     }
 
     let sponsorshipsClosed = 0;
@@ -137,8 +137,8 @@ export async function syncRoster(
     }
 
     return {
-      created: dogs.filter((dog) => !existingNames.has(dog.name)).length,
-      updated: dogs.filter((dog) => existingNames.has(dog.name)).length,
+      created: companions.filter((companion) => !existingNames.has(companion.name)).length,
+      updated: companions.filter((companion) => existingNames.has(companion.name)).length,
       adopted: adoptionCandidates.length,
       restored: restoreCandidates.length,
       sponsorshipsClosed,
@@ -158,18 +158,18 @@ type ResidentStatusSnapshot = {
 
 export function planRosterStatusChanges<T extends ResidentStatusSnapshot>(
   before: T[],
-  dogs: DogRecord[],
+  companions: CompanionRecord[],
   source: Pick<RosterSource, "usedFallbackCapture" | "rosterComplete">,
 ) {
-  const rosterNames = new Set(dogs.map((dog) => dog.name));
+  const rosterNames = new Set(companions.map((companion) => companion.name));
   const explicitlyAdopted = new Set(
-    dogs.filter((dog) => dog.adopted).map((dog) => dog.name),
+    companions.filter((companion) => companion.adopted).map((companion) => companion.name),
   );
   const absenceIsReliable = !source.usedFallbackCapture && source.rosterComplete;
 
   // Absence only proves adoption after a complete read of the configured
   // source. Partial crawls and checked-in fallback captures still honor an
-  // explicit Adopted marker, but never infer a status from a missing dog.
+  // explicit Adopted marker, but never infer a status from a missing companion.
   const adoptionCandidates = before.filter(
     (resident) => resident.status === "available"
       && (explicitlyAdopted.has(resident.name)
@@ -192,7 +192,7 @@ export function assertPlausibleAdoptionCount(
   adoptionCandidates: number,
   usedFallbackCapture: boolean,
 ) {
-  // A bundled capture only adopts dogs carrying an explicit adoption marker,
+  // A bundled capture only adopts companions carrying an explicit adoption marker,
   // so preserve that intentionally conservative fallback behavior.
   if (usedFallbackCapture || availableResidents === 0) return;
 
@@ -205,38 +205,38 @@ export function assertPlausibleAdoptionCount(
 
 type SyncTransaction = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 
-async function upsertDog(
+async function upsertCompanion(
   tx: SyncTransaction,
   orgId: string,
-  dog: DogRecord,
+  companion: CompanionRecord,
   liveSource: boolean,
 ) {
   const profile = {
-    breed: dog.breed,
-    dobText: dog.dobText,
-    ageText: dog.ageText,
-    sex: dog.sex,
-    weightText: dog.weightText,
-    personality: dog.personality,
-    careNotes: dog.careNotes,
-    photoUrls: dog.photoUrls,
+    breed: companion.breed,
+    dobText: companion.dobText,
+    ageText: companion.ageText,
+    sex: companion.sex,
+    weightText: companion.weightText,
+    personality: companion.personality,
+    careNotes: companion.careNotes,
+    photoUrls: companion.photoUrls,
   };
 
   await tx.resident.upsert({
-    where: { orgId_name: { orgId, name: dog.name } },
+    where: { orgId_name: { orgId, name: companion.name } },
     create: {
       orgId,
-      name: dog.name,
+      name: companion.name,
       ...profile,
-      status: dog.adopted ? "adopted" : "available",
-      adoptedAt: dog.adopted ? new Date() : null,
+      status: companion.adopted ? "adopted" : "available",
+      adoptedAt: companion.adopted ? new Date() : null,
     },
     update: {
       ...profile,
       // Presence on the live source without an Adopted marker restores an
       // adopted resident to available. Explicit markers stay with the adoption
       // pass above, which owns the sponsorship-ending side effects.
-      ...(liveSource && !dog.adopted
+      ...(liveSource && !companion.adopted
         ? { status: "available" as const, adoptedAt: null }
         : {}),
     },
@@ -348,12 +348,12 @@ const ROSTER_TOOLS: ChatCompletionTool[] = [
     type: "function",
     function: {
       name: "firecrawl_map",
-      description: "Find pages on the rescue website that may contain the adoptable-dog roster.",
+      description: "Find pages on the rescue website that may contain the adoptable companion roster.",
       parameters: {
         type: "object",
         properties: {
           url: { type: "string", description: "The rescue website URL to map." },
-          search: { type: "string", description: "Optional terms such as adoptable dogs." },
+          search: { type: "string", description: "Optional terms such as adoptable companions." },
           limit: { type: "integer", minimum: 1, maximum: 25 },
         },
         required: ["url"],
@@ -378,7 +378,7 @@ const ROSTER_TOOLS: ChatCompletionTool[] = [
     type: "function",
     function: {
       name: "firecrawl_crawl",
-      description: "Crawl the complete adoption listing, following pagination and dog-detail links within the configured listing path.",
+      description: "Crawl the complete adoption listing, following pagination and companion detail links within the configured listing path.",
       parameters: {
         type: "object",
         properties: {
@@ -414,11 +414,11 @@ export async function discoverRosterWithCompleteness(
   const messages: ChatCompletionMessage[] = [
     {
       role: "system",
-      content: "Find the rescue's complete current adoptable-dog roster. Use map when the supplied page may not be the adoption listing. Crawl the listing so you cover every pagination page and every dog-detail page linked from it; use scrape only for a specific page that the crawl did not capture. Stay within the adoption listing and its linked dog details rather than exploring the rest of the site. When the gathered content is complete, reply with a short completion message. Do not invent roster content.",
+      content: "Find the rescue's complete current adoptable companion roster. Use map when the supplied page may not be the adoption listing. Crawl the listing so you cover every pagination page and every companion detail page linked from it; use scrape only for a specific page that the crawl did not capture. Stay within the adoption listing and its linked companion details rather than exploring the rest of the site. When the gathered content is complete, reply with a short completion message. Do not invent roster content.",
     },
     {
       role: "user",
-      content: `Find the current dog roster starting from ${sourceUrl}`,
+      content: `Find the current companion roster starting from ${sourceUrl}`,
     },
   ];
   const documents: string[] = [];
@@ -898,13 +898,13 @@ function seedCapturePath(capture: string): string {
   return path.join(process.cwd(), "seed", capture);
 }
 
-export function graduationDraft(residentId: string, dogName: string, sponsorName: string) {
+export function graduationDraft(residentId: string, companionName: string, sponsorName: string) {
   return {
     residentId,
     type: "graduation" as const,
     status: "draft" as const,
-    subject: `${dogName} has been adopted!`,
-    bodyText: `Great news, ${sponsorName} — ${dogName} has found a forever home. Your monthly sponsorship has ended automatically. Thank you for helping ${dogName} reach graduation day!`,
-    smsText: `${dogName} has been adopted! Your sponsorship has ended. Thank you for helping make this happy ending possible.`,
+    subject: `${companionName} has been adopted!`,
+    bodyText: `Great news, ${sponsorName} — ${companionName} has found a forever home. Your monthly sponsorship has ended automatically. Thank you for helping ${companionName} reach graduation day!`,
+    smsText: `${companionName} has been adopted! Your sponsorship has ended. Thank you for helping make this happy ending possible.`,
   };
 }

@@ -56,16 +56,16 @@
   font-weight: 750;
 }
 
-.dogList {
+.companionList {
   display: grid;
   gap: 14px;
 }
 
-.dogCard {
+.companionCard {
   padding: 18px;
 }
 
-.dogHeading {
+.companionHeading {
   display: grid;
   grid-template-columns: 96px minmax(180px, 1fr) auto;
   align-items: center;
@@ -85,13 +85,13 @@
   object-fit: cover;
 }
 
-.dogDetails h2 {
+.companionDetails h2 {
   margin: 0 0 4px;
   font-size: 1.35rem;
   font-weight: 900;
 }
 
-.dogDetails p {
+.companionDetails p {
   margin: 0 0 10px;
   font-size: 0.82rem;
   font-weight: 700;
@@ -193,7 +193,7 @@
     text-align: center;
   }
 
-  .dogHeading {
+  .companionHeading {
     grid-template-columns: 78px minmax(0, 1fr);
     gap: 14px;
   }

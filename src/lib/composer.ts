@@ -2,7 +2,7 @@ import { createChatCompletion, hasChatCompletionCredentials } from "./chat-compl
 
 export type PupdateType = "regular" | "graduation";
 
-export interface PupdateDog {
+export interface PupdateCompanion {
   name: string;
   breed?: string;
   sex?: string;
@@ -12,11 +12,11 @@ export interface PupdateDog {
 export type PupdateNote = string | { note: string; [key: string]: unknown };
 
 export interface ComposePupdateInput {
-  dog: PupdateDog;
+  companion: PupdateCompanion;
   notes: PupdateNote[];
   pinnedPostscript: string;
   type: PupdateType;
-  dogPageUrl: string;
+  companionPageUrl: string;
 }
 
 export interface ComposedPupdate {
@@ -32,7 +32,7 @@ function cleanNotes(notes: PupdateNote[]): string[] {
 }
 
 function deterministicCompose(input: ComposePupdateInput): ComposedPupdate {
-  const name = input.dog.name.trim();
+  const name = input.companion.name.trim();
   const notes = cleanNotes(input.notes);
   const intro =
     input.type === "graduation"
@@ -75,7 +75,7 @@ function ensureRequiredContent(
 
 async function composeWithModel(input: ComposePupdateInput): Promise<ComposedPupdate> {
   const regularUpdateGuidance = input.type === "regular"
-    ? " Treat the volunteer notes as the update: lead with what happened lately, such as activities, fun, or new friends. Use the dog profile only as light background flavor; do not turn the email into a profile or biography."
+    ? " Treat the volunteer notes as the update: lead with what happened lately, such as activities, fun, or new friends. Use the companion profile only as light background flavor; do not turn the email into a profile or biography."
     : "";
   const text = await createChatCompletion({
     maxTokens: 900,
@@ -83,7 +83,7 @@ async function composeWithModel(input: ComposePupdateInput): Promise<ComposedPup
       {
         role: "system",
         content:
-          `You write warm, short email updates in a dog rescue's voice. Use only facts in the supplied JSON; never invent details.${regularUpdateGuidance} Return only a JSON object with subject and bodyText strings.`,
+          `You write warm, short email updates in an animal shelter's voice. Use only facts in the supplied JSON; never invent details.${regularUpdateGuidance} Return only a JSON object with subject and bodyText strings.`,
       },
       {
         role: "user",
@@ -105,8 +105,8 @@ async function composeWithModel(input: ComposePupdateInput): Promise<ComposedPup
  * so local demos and tests never require network access.
  */
 export async function composePupdate(input: ComposePupdateInput): Promise<ComposedPupdate> {
-  const name = input.dog.name.trim();
-  if (!name) throw new Error("dog.name is required");
+  const name = input.companion.name.trim();
+  if (!name) throw new Error("companion.name is required");
   if (input.type !== "regular" && input.type !== "graduation") {
     throw new Error("type must be regular or graduation");
   }

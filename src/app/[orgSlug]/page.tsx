@@ -48,9 +48,9 @@ export default async function OrganizationHome({ params }: OrganizationHomeProps
       </FeltPanel>
 
       {residents.length ? (
-        <section aria-label="Dogs available to sponsor" className={styles.dogGrid}>
+        <section aria-label="Companions available to sponsor" className={styles.companionGrid}>
           {residents.map((resident) => (
-            <FeltPanel className={styles.dogCard} key={resident.id} tone="oatmeal">
+            <FeltPanel className={styles.companionCard} key={resident.id} tone="oatmeal">
               <PhotoPatch
                 alt={`${resident.name}, ${resident.breed}`}
                 className={styles.gridPhoto}
@@ -60,7 +60,7 @@ export default async function OrganizationHome({ params }: OrganizationHomeProps
                 <span className={styles.cardStatus}>Available</span>
                 <h2>{resident.name}</h2>
                 <p>{resident.breed} · {resident.ageText}</p>
-                <Link className={`felt-button felt-brick ${styles.cardLink}`} href={`/${orgSlug}/dogs/${resident.id}`}>
+                <Link className={`felt-button felt-brick ${styles.cardLink}`} href={`/${orgSlug}/companions/${resident.id}`}>
                   Meet {resident.name}
                 </Link>
               </div>
@@ -69,7 +69,7 @@ export default async function OrganizationHome({ params }: OrganizationHomeProps
         </section>
       ) : (
         <FeltPanel className={styles.emptyState} tone="oatmeal">
-          <h2>Every dog is tucked in for now.</h2>
+          <h2>Every companion is tucked in for now.</h2>
           <p>Check back soon to meet the next residents looking for a sponsor.</p>
         </FeltPanel>
       )}

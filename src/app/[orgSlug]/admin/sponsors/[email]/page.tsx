@@ -77,14 +77,14 @@ export default async function SponsorDetailPage({ params }: SponsorDetailPagePro
       <section aria-labelledby="history-heading">
         <div className={styles.historyTitle}>
           <h2 id="history-heading">Sponsorship history</h2>
-          <AdminBadge tone="mustard">{sponsorships.length} {sponsorships.length === 1 ? "dog" : "dogs"}</AdminBadge>
+          <AdminBadge tone="mustard">{sponsorships.length} {sponsorships.length === 1 ? "companion" : "companions"}</AdminBadge>
         </div>
         <AdminSurface className={styles.historyPanel} tone="oatmeal">
           <div className={styles.tableWrap}>
             <table className={styles.table}>
               <thead>
                 <tr>
-                  <th scope="col">Dog</th>
+                  <th scope="col">Companion</th>
                   <th scope="col">Status</th>
                   <th scope="col">Updates</th>
                   <th scope="col">Started</th>

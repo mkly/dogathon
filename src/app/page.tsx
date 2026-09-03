@@ -15,7 +15,7 @@ export default async function OrganizationIndexPage() {
     <main className="felt-page">
       <FeltPanel tone="denim">
         <h1>Rescue organizations</h1>
-        <p>Choose a rescue to meet the dogs currently looking for a sponsor.</p>
+        <p>Choose a rescue to meet the companions currently looking for a sponsor.</p>
       </FeltPanel>
       <FeltPanel tone="oatmeal">
         {organizations.length ? (

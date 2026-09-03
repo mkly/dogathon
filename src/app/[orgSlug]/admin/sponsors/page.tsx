@@ -66,7 +66,7 @@ export default async function SponsorsPage({ params }: SponsorsPageProps) {
         <div>
           <p className={styles.eyebrow}>Private staff directory</p>
           <h1>Sponsors</h1>
-          <p>Contact preferences and every dog supported, grouped by sponsor email.</p>
+          <p>Contact preferences and every companion supported, grouped by sponsor email.</p>
         </div>
         <AdminLink className={styles.backLink} href={`/${orgSlug}/admin`}>
           Back to staff room
@@ -92,7 +92,7 @@ export default async function SponsorsPage({ params }: SponsorsPageProps) {
                 <div>
                   <h2>{latest.sponsorName}</h2>
                   <AdminBadge tone={records.some(({ status }) => status === "active") ? "moss" : "brick"}>
-                    {records.length} {records.length === 1 ? "dog" : "dogs"}
+                    {records.length} {records.length === 1 ? "companion" : "companions"}
                   </AdminBadge>
                 </div>
                 <div className={styles.contact}>
@@ -106,7 +106,7 @@ export default async function SponsorsPage({ params }: SponsorsPageProps) {
                 <table className={styles.table}>
                   <thead>
                     <tr>
-                      <th scope="col">Sponsored dog</th>
+                      <th scope="col">Sponsored companion</th>
                       <th scope="col">Status</th>
                       <th scope="col">Started</th>
                     </tr>

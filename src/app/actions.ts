@@ -15,13 +15,13 @@ export async function createSponsorship(formData: FormData) {
   const sponsorName = text(formData, "sponsorName");
   const sponsorEmail = text(formData, "sponsorEmail");
 
-  // Without both segments the path collapses to "//dogs/..." — a scheme-relative
+  // Without both segments the path collapses to "//companions/..." — a scheme-relative
   // URL the browser would read as another host, so send those back to the index.
   if (!orgSlug || !residentId) {
     redirect("/");
   }
 
-  const dogPath = `/${encodeURIComponent(orgSlug)}/dogs/${encodeURIComponent(residentId)}`;
+  const companionPath = `/${encodeURIComponent(orgSlug)}/companions/${encodeURIComponent(residentId)}`;
 
   if (
     !sponsorName
@@ -29,7 +29,7 @@ export async function createSponsorship(formData: FormData) {
     || !sponsorEmail.includes("@")
     || sponsorEmail.length > 254
   ) {
-    redirect(`${dogPath}?error=invalid`);
+    redirect(`${companionPath}?error=invalid`);
   }
 
   const organization = await prisma.organization.findUnique({
@@ -46,16 +46,16 @@ export async function createSponsorship(formData: FormData) {
       residentId,
       sponsorName,
       sponsorEmail,
-      successUrl: `${appUrl}${dogPath}?sponsored=1&session_id={CHECKOUT_SESSION_ID}`,
-      cancelUrl: `${appUrl}${dogPath}?checkout=canceled`,
+      successUrl: `${appUrl}${companionPath}?sponsored=1&session_id={CHECKOUT_SESSION_ID}`,
+      cancelUrl: `${appUrl}${companionPath}?checkout=canceled`,
     });
     checkoutUrl = session.url;
   } catch (error) {
     if (error instanceof ResidentUnavailableError) {
-      redirect(`${dogPath}?error=unavailable`);
+      redirect(`${companionPath}?error=unavailable`);
     }
     console.error("Unable to create Stripe Checkout session", error);
-    redirect(`${dogPath}?error=billing`);
+    redirect(`${companionPath}?error=billing`);
   }
   redirect(checkoutUrl);
 }

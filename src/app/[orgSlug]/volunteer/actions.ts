@@ -45,7 +45,7 @@ export async function submitVolunteerNote(formData: FormData) {
   const photo = formData.get("photo");
 
   if (!residentId) {
-    redirect(volunteerErrorUrl(orgSlug, "no-dog"));
+    redirect(volunteerErrorUrl(orgSlug, "no-companion"));
   }
 
   if (!note) {
@@ -103,5 +103,5 @@ export async function submitVolunteerNote(formData: FormData) {
     },
   });
 
-  redirect(volunteerUrl(orgSlug, { dog: residentId, submitted: "1" }));
+  redirect(volunteerUrl(orgSlug, { companion: residentId, submitted: "1" }));
 }
