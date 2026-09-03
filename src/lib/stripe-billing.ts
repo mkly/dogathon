@@ -62,111 +62,6 @@ export interface BillingStore {
   }): Promise<void>;
 }
 
-export interface StripeBillingGateway {
-  createExpressAccount(input: { orgId: string; organizationName: string }): Promise<{ id: string }>;
-  createAccountLink(input: {
-    accountId: string;
-    refreshUrl: string;
-    returnUrl: string;
-  }): Promise<{ url: string }>;
-  retrieveAccount(accountId: string): Promise<{
-    id: string;
-    detailsSubmitted: boolean;
-    chargesEnabled: boolean;
-  }>;
-  createSubscriptionCheckout(input: SponsorshipCheckout & {
-    accountId: string;
-    residentName: string;
-  }): Promise<{ id: string; url: string | null }>;
-  createBillingPortalSession(input: {
-    accountId: string;
-    customerId: string;
-    returnUrl: string;
-  }): Promise<{ url: string }>;
-}
-
-export class StripeSdkGateway implements StripeBillingGateway {
-  constructor(private readonly stripe: Stripe) {}
-
-  async createExpressAccount(input: { orgId: string; organizationName: string }) {
-    return this.stripe.accounts.create({
-      type: "express",
-      business_profile: { name: input.organizationName },
-      metadata: { orgId: input.orgId },
-    });
-  }
-
-  async createAccountLink(input: { accountId: string; refreshUrl: string; returnUrl: string }) {
-    return this.stripe.accountLinks.create({
-      account: input.accountId,
-      refresh_url: input.refreshUrl,
-      return_url: input.returnUrl,
-      type: "account_onboarding",
-    });
-  }
-
-  async retrieveAccount(accountId: string) {
-    const account = await this.stripe.accounts.retrieve(accountId);
-    return {
-      id: account.id,
-      detailsSubmitted: account.details_submitted,
-      chargesEnabled: account.charges_enabled,
-    };
-  }
-
-  async createSubscriptionCheckout(input: SponsorshipCheckout & {
-    accountId: string;
-    residentName: string;
-  }) {
-    return this.stripe.checkout.sessions.create(
-      {
-        mode: "subscription",
-        customer_email: input.sponsorEmail,
-        line_items: [
-          {
-            price_data: {
-              currency: "usd",
-              unit_amount: SPONSORSHIP_MONTHLY_USD * 100,
-              recurring: { interval: "month" },
-              product_data: { name: `Sponsor ${input.residentName}` },
-            },
-            quantity: 1,
-          },
-        ],
-        metadata: {
-          orgId: input.orgId,
-          residentId: input.residentId,
-          sponsorName: input.sponsorName,
-          sponsorEmail: input.sponsorEmail,
-        },
-        subscription_data: {
-          metadata: {
-            orgId: input.orgId,
-            residentId: input.residentId,
-          },
-        },
-        success_url: input.successUrl,
-        cancel_url: input.cancelUrl,
-      },
-      { stripeAccount: input.accountId },
-    );
-  }
-
-  async createBillingPortalSession(input: {
-    accountId: string;
-    customerId: string;
-    returnUrl: string;
-  }) {
-    return this.stripe.billingPortal.sessions.create(
-      {
-        customer: input.customerId,
-        return_url: input.returnUrl,
-      },
-      { stripeAccount: input.accountId },
-    );
-  }
-}
-
 const prismaBillingStore: BillingStore = {
   async getOrganization(orgId) {
     return prisma.organization.findUnique({
@@ -258,11 +153,11 @@ const prismaBillingStore: BillingStore = {
 
 let stripeClient: Stripe | undefined;
 
-export function stripeGateway(): StripeBillingGateway {
+function stripe() {
   const apiKey = process.env.STRIPE_SECRET_KEY?.trim();
   if (!apiKey) throw new Error("STRIPE_SECRET_KEY is required for billing");
-  stripeClient ??= new Stripe(apiKey);
-  return new StripeSdkGateway(stripeClient);
+  stripeClient ??= new Stripe(apiKey, { httpClient: Stripe.createFetchHttpClient() });
+  return stripeClient;
 }
 
 export function stripeWebhookSecret() {
@@ -278,7 +173,6 @@ export function constructStripeEvent(payload: string, signature: string, secret:
 export async function createConnectOnboardingLink(
   orgId: string,
   urls: { refreshUrl: string; returnUrl: string },
-  gateway: StripeBillingGateway = stripeGateway(),
   store: BillingStore = prismaBillingStore,
 ) {
   const organization = await store.getOrganization(orgId);
@@ -286,32 +180,41 @@ export async function createConnectOnboardingLink(
 
   let accountId = organization.stripeAccountId;
   if (!accountId) {
-    const account = await gateway.createExpressAccount({
-      orgId,
-      organizationName: organization.name,
+    const account = await stripe().accounts.create({
+      type: "express",
+      business_profile: { name: organization.name },
+      metadata: { orgId },
     });
     accountId = account.id;
     await store.saveStripeAccount(orgId, accountId);
   }
 
-  return gateway.createAccountLink({ accountId, ...urls });
+  return stripe().accountLinks.create({
+    account: accountId,
+    refresh_url: urls.refreshUrl,
+    return_url: urls.returnUrl,
+    type: "account_onboarding",
+  });
 }
 
 export async function refreshConnectStatus(
   orgId: string,
-  gateway: StripeBillingGateway = stripeGateway(),
   store: BillingStore = prismaBillingStore,
 ) {
   const organization = await store.getOrganization(orgId);
   if (!organization?.stripeAccountId) throw new Error("Stripe onboarding has not started");
-  const account = await gateway.retrieveAccount(organization.stripeAccountId);
-  await store.saveStripeAccountStatus(orgId, account);
-  return account;
+  const account = await stripe().accounts.retrieve(organization.stripeAccountId);
+  const status = {
+    id: account.id,
+    detailsSubmitted: account.details_submitted,
+    chargesEnabled: account.charges_enabled,
+  };
+  await store.saveStripeAccountStatus(orgId, status);
+  return status;
 }
 
 export async function createStripeCheckout(
   input: SponsorshipCheckout,
-  gateway: StripeBillingGateway = stripeGateway(),
   store: BillingStore = prismaBillingStore,
 ) {
   const [organization, resident] = await Promise.all([
@@ -323,13 +226,54 @@ export async function createStripeCheckout(
   }
   if (!resident) throw new ResidentUnavailableError();
 
-  const session = await gateway.createSubscriptionCheckout({
-    ...input,
-    accountId: organization.stripeAccountId,
-    residentName: resident.name,
-  });
+  const session = await stripe().checkout.sessions.create(
+    {
+      mode: "subscription",
+      customer_email: input.sponsorEmail,
+      line_items: [
+        {
+          price_data: {
+            currency: "usd",
+            unit_amount: SPONSORSHIP_MONTHLY_USD * 100,
+            recurring: { interval: "month" },
+            product_data: { name: `Sponsor ${resident.name}` },
+          },
+          quantity: 1,
+        },
+      ],
+      metadata: {
+        orgId: input.orgId,
+        residentId: input.residentId,
+        sponsorName: input.sponsorName,
+        sponsorEmail: input.sponsorEmail,
+      },
+      subscription_data: {
+        metadata: {
+          orgId: input.orgId,
+          residentId: input.residentId,
+        },
+      },
+      success_url: input.successUrl,
+      cancel_url: input.cancelUrl,
+    },
+    { stripeAccount: organization.stripeAccountId },
+  );
   if (!session.url) throw new Error("Stripe did not return a Checkout URL");
   return { id: session.id, url: session.url };
+}
+
+export async function createBillingPortalSession(input: {
+  accountId: string;
+  customerId: string;
+  returnUrl: string;
+}) {
+  return stripe().billingPortal.sessions.create(
+    {
+      customer: input.customerId,
+      return_url: input.returnUrl,
+    },
+    { stripeAccount: input.accountId },
+  );
 }
 
 function id(value: string | { id: string } | null): string | null {
