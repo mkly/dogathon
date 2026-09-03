@@ -10,7 +10,7 @@ type ComposeRequest = {
 };
 
 export async function POST(request: Request) {
-  const access = await requireApiOrganization(request.headers, ["owner", "admin"]);
+  const access = await requireApiOrganization(request.headers, { pupdate: ["manage"] });
   if (!access.ok) return access.response;
   const { orgId } = access.context;
 

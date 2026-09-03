@@ -6,7 +6,9 @@ import { refreshConnectStatus } from "@/lib/stripe-billing";
 
 export async function GET(request: Request) {
   const orgSlug = new URL(request.url).searchParams.get("org") ?? "";
-  const access = await getOrganizationAccessBySlug(await headers(), orgSlug, ["owner"]);
+  const access = await getOrganizationAccessBySlug(await headers(), orgSlug, {
+    billing: ["manage"],
+  });
   if (!access?.context) redirect("/staff/organizations");
 
   await refreshConnectStatus(access.context.orgId);

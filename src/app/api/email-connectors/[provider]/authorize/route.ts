@@ -16,7 +16,7 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ provider: string }> },
 ) {
-  const access = await requireApiOrganization(request.headers, ["owner", "admin"]);
+  const access = await requireApiOrganization(request.headers, { settings: ["manage"] });
   if (!access.ok) return access.response;
 
   const provider = providerFrom((await params).provider);

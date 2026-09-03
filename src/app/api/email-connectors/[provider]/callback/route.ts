@@ -48,7 +48,9 @@ export async function GET(
   }
 
   const orgSlug = connector.organization.slug;
-  const access = await getOrganizationAccessBySlug(request.headers, orgSlug, ["owner", "admin"]);
+  const access = await getOrganizationAccessBySlug(request.headers, orgSlug, {
+    settings: ["manage"],
+  });
   if (!access?.context) return adminRedirect(request, orgSlug, "error");
 
   try {

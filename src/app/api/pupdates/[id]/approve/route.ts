@@ -13,7 +13,7 @@ export async function POST(request: Request, { params }: RouteContext) {
     return Response.json({ error: "Pupdate not found" }, { status: 404 });
   }
 
-  const access = await requireApiOrganization(request.headers, ["owner", "admin"]);
+  const access = await requireApiOrganization(request.headers, { pupdate: ["manage"] });
   if (!access.ok) return access.response;
   const { orgId } = access.context;
 

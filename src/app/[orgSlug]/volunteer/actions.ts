@@ -31,7 +31,9 @@ function volunteerErrorUrl(orgSlug: string, error: VolunteerErrorCode) {
 
 export async function submitVolunteerNote(formData: FormData) {
   const orgSlug = String(formData.get("orgSlug") ?? "").trim();
-  const access = await getOrganizationAccessBySlug(await headers(), orgSlug);
+  const access = await getOrganizationAccessBySlug(await headers(), orgSlug, {
+    roster: ["contribute"],
+  });
   if (!access) notFound();
   if (!access.context) {
     const next = encodeURIComponent(`/${orgSlug}/volunteer`);

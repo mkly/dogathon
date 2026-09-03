@@ -35,7 +35,9 @@ type CompanionsCoveredPageProps = { params: Promise<{ orgSlug: string }> };
 
 export default async function CompanionsCoveredPage({ params }: CompanionsCoveredPageProps) {
   const { orgSlug } = await params;
-  const access = await getOrganizationAccessBySlug(await headers(), orgSlug, ["owner", "admin"]);
+  const access = await getOrganizationAccessBySlug(await headers(), orgSlug, {
+    sponsors: ["read"],
+  });
 
   if (!access) notFound();
   if (!access.context) redirect("/staff/organizations");

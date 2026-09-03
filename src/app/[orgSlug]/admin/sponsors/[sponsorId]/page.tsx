@@ -38,7 +38,9 @@ function formatDate(date: Date) {
 export default async function SponsorDetailPage({ params }: SponsorDetailPageProps) {
   const { sponsorId, orgSlug } = await params;
   if (!isUuid(sponsorId)) notFound();
-  const access = await getOrganizationAccessBySlug(await headers(), orgSlug, ["owner", "admin"]);
+  const access = await getOrganizationAccessBySlug(await headers(), orgSlug, {
+    sponsors: ["read"],
+  });
 
   if (!access) notFound();
   if (!access.context) redirect("/staff/organizations");
