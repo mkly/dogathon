@@ -15,6 +15,8 @@ import {
 import { MAX_SMS_LENGTH } from "@/lib/pupdate-sms";
 import {
   isTerminalRosterSyncStatus,
+  ROSTER_SYNC_POLL_INTERVAL_MS,
+  ROSTER_SYNC_POLL_TIMEOUT_MS,
   rosterSyncResultToast,
   rosterSyncStatusLabel,
   type RosterSyncJobView,
@@ -324,6 +326,7 @@ export function RosterSyncSettings({
   const [state, formAction, saving] = useActionState(saveSettings, initialSettingsState);
   const [sourceUrl, setSourceUrl] = useState(initialSourceUrl);
   const [jobId, setJobId] = useState<string | null>(null);
+  const [pollDeadline, setPollDeadline] = useState<number | null>(null);
   const notifiedJobId = useRef<string | null>(null);
   const savedSourceInput = state.savedSourceInput ?? initialSourceUrl;
   const sourceDirty = sourceUrl !== savedSourceInput;
@@ -351,6 +354,7 @@ export function RosterSyncSettings({
       notifiedJobId.current = null;
       queryClient.setQueryData(["roster-sync", orgSlug, enqueued.id], enqueued);
       setJobId(enqueued.id);
+      setPollDeadline(Date.now() + ROSTER_SYNC_POLL_TIMEOUT_MS);
     },
   });
 
@@ -366,14 +370,18 @@ export function RosterSyncSettings({
     enabled: jobId !== null,
     refetchInterval: (query) => {
       if (query.state.status === "error") return false;
+      if (pollDeadline === null || Date.now() >= pollDeadline) return false;
       const currentJob = query.state.data;
-      return currentJob && isTerminalRosterSyncStatus(currentJob.status) ? false : 1_000;
+      return currentJob && isTerminalRosterSyncStatus(currentJob.status)
+        ? false
+        : ROSTER_SYNC_POLL_INTERVAL_MS;
     },
   });
 
   const job = jobQuery.data ?? syncMutation.data ?? null;
   const jobInProgress = Boolean(job && !isTerminalRosterSyncStatus(job.status))
-    && !jobQuery.isError;
+    && !jobQuery.isError
+    && pollDeadline !== null;
   const syncPending = syncMutation.isPending || jobInProgress;
 
   useEffect(() => {
@@ -384,10 +392,25 @@ export function RosterSyncSettings({
   useEffect(() => {
     if (!job || !isTerminalRosterSyncStatus(job.status) || notifiedJobId.current === job.id) return;
     notifiedJobId.current = job.id;
+    setPollDeadline(null);
     const toast = rosterSyncResultToast(job);
     if (toast) pushToast(toast.tone, toast.text);
     else pushToast("error", "Roster sync completed without a usable result.");
   }, [job]);
+
+  // Give up on a job that never drains, the way the hand-rolled poller did,
+  // instead of asking the status route for it once a second forever.
+  useEffect(() => {
+    if (pollDeadline === null) return;
+    const timer = setTimeout(() => {
+      setPollDeadline(null);
+      pushToast(
+        "warning",
+        "Roster sync is still working in the background. Reload to see the result.",
+      );
+    }, Math.max(0, pollDeadline - Date.now()));
+    return () => clearTimeout(timer);
+  }, [pollDeadline]);
 
   const label = job ? rosterSyncStatusLabel(job) : null;
   const buttonLabel = jobInProgress && job?.status === "queued"

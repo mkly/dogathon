@@ -24,6 +24,13 @@ export function rosterSyncStatusLabel(job: Pick<RosterSyncJobView, "status" | "t
   }
 }
 
+/**
+ * A drain runner may be minutes away — or, if no scheduler is running, may never
+ * arrive — so the admin page stops polling at a deadline rather than forever.
+ */
+export const ROSTER_SYNC_POLL_INTERVAL_MS = 1_000;
+export const ROSTER_SYNC_POLL_TIMEOUT_MS = 15 * 60 * 1_000;
+
 export function isTerminalRosterSyncStatus(status: RosterSyncJobStatus) {
   return status === "succeeded" || status === "refused" || status === "failed";
 }
