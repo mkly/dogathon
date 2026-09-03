@@ -31,9 +31,9 @@ function stubFetch(body: unknown) {
   const fetcher = (async (_url: string | URL | Request, init?: RequestInit) => {
     const payload = JSON.parse(String(init?.body)) as { messages: Array<{ content: string }> };
     prompts.push(payload.messages[0].content);
-    return new Response(JSON.stringify({
+    return Response.json({
       choices: [{ message: { content: JSON.stringify(body) } }],
-    }));
+    });
   }) as unknown as typeof fetch;
 
   return { fetcher, prompts };

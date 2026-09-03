@@ -1,25 +1,13 @@
-export type ChatCompletionToolCall = {
-  id: string;
-  type: "function";
-  function: {
-    name: string;
-    arguments: string;
-  };
-};
+import OpenAI from "openai";
+import type {
+  ChatCompletionAssistantMessageParam,
+  ChatCompletionFunctionTool,
+  ChatCompletionMessageParam,
+} from "openai/resources/chat/completions";
 
-export type ChatCompletionMessage =
-  | { role: "system" | "user"; content: string }
-  | { role: "assistant"; content: string | null; tool_calls?: ChatCompletionToolCall[] }
-  | { role: "tool"; content: string; tool_call_id: string };
-
-export type ChatCompletionTool = {
-  type: "function";
-  function: {
-    name: string;
-    description: string;
-    parameters: Record<string, unknown>;
-  };
-};
+export type ChatCompletionMessage = ChatCompletionMessageParam;
+export type ChatCompletionTool = ChatCompletionFunctionTool;
+export type ChatCompletionAssistantMessage = ChatCompletionAssistantMessageParam;
 
 export type ChatCompletionOptions = {
   messages: ChatCompletionMessage[];
@@ -30,17 +18,6 @@ export type ChatCompletionOptions = {
   model?: string;
   fetch?: typeof fetch;
   signal?: AbortSignal;
-};
-
-type ChatCompletionResponse = {
-  choices?: Array<{ message?: { content?: string | null; tool_calls?: ChatCompletionToolCall[] } }>;
-  error?: { message?: string };
-};
-
-export type ChatCompletionAssistantMessage = {
-  role: "assistant";
-  content: string | null;
-  tool_calls?: ChatCompletionToolCall[];
 };
 
 function requiredSetting(value: string | undefined, name: string): string {
@@ -57,41 +34,41 @@ async function requestChatCompletion(
   options: ChatCompletionOptions,
 ): Promise<ChatCompletionAssistantMessage> {
   const apiKey = requiredSetting(options.apiKey ?? process.env.OPENAI_API_KEY, "OPENAI_API_KEY");
-  const baseUrl = requiredSetting(options.baseUrl ?? process.env.OPENAI_BASE_URL, "OPENAI_BASE_URL");
+  const baseURL = requiredSetting(options.baseUrl ?? process.env.OPENAI_BASE_URL, "OPENAI_BASE_URL");
   const model = requiredSetting(options.model ?? process.env.OPENAI_MODEL, "OPENAI_MODEL");
-  const fetcher = options.fetch ?? fetch;
-  const response = await fetcher(`${baseUrl.replace(/\/+$/u, "")}/chat/completions`, {
-    method: "POST",
-    headers: {
-      authorization: `Bearer ${apiKey}`,
-      "content-type": "application/json",
-    },
-    body: JSON.stringify({
-      model,
-      max_tokens: options.maxTokens,
-      messages: options.messages,
-      ...(options.tools ? { tools: options.tools, tool_choice: "auto" } : {}),
-    }),
-    signal: options.signal,
+  const client = new OpenAI({
+    apiKey,
+    baseURL,
+    fetch: options.fetch,
+    // Make the SDK's default retry policy explicit because roster discovery used to fail fast.
+    maxRetries: 2,
   });
+  const completion = await client.chat.completions.create({
+    model,
+    max_tokens: options.maxTokens,
+    messages: options.messages,
+    ...(options.tools ? { tools: options.tools, tool_choice: "auto" as const } : {}),
+  }, { signal: options.signal });
 
-  const payload = (await response.json()) as ChatCompletionResponse;
-  if (!response.ok) {
-    throw new Error(payload.error?.message ?? `Chat completion request failed (${response.status})`);
-  }
-
-  const message = payload.choices?.[0]?.message;
+  const message = completion.choices[0]?.message;
   if (!message) throw new Error("Chat completion response contained no message");
   const content = message.content?.trim() || null;
   if (!content && !message.tool_calls?.length) {
     throw new Error("Chat completion response contained no text or tool calls");
   }
-  return { role: "assistant", content, tool_calls: message.tool_calls };
+  return {
+    role: "assistant",
+    content,
+    refusal: message.refusal,
+    tool_calls: message.tool_calls,
+  };
 }
 
 export async function createChatCompletion(options: ChatCompletionOptions): Promise<string> {
   const message = await requestChatCompletion(options);
-  if (!message.content) throw new Error("Chat completion response contained no text");
+  if (typeof message.content !== "string" || !message.content) {
+    throw new Error("Chat completion response contained no text");
+  }
   return message.content;
 }
 
