@@ -31,7 +31,6 @@ export type RosterCompleteness = {
 };
 
 const DEFAULT_CAPTURE = "dogs-page-A.html";
-const DEFAULT_FIRECRAWL_BASE_URL = "https://api.firecrawl.dev/v2";
 const MAX_FIRECRAWL_CRAWL_PAGES = 100;
 const MAX_FIRECRAWL_DISCOVERY_DEPTH = 3;
 const FIRECRAWL_CRAWL_TIMEOUT_MS = 30_000;
@@ -506,7 +505,7 @@ export async function requestFirecrawl(
 ): Promise<unknown> {
   const apiKey = (options.apiKey ?? env.FIRECRAWL_API_KEY)?.trim();
   if (!apiKey) throw new Error("FIRECRAWL_API_KEY is required to fetch a live roster");
-  const baseUrl = (options.baseUrl ?? env.FIRECRAWL_BASE_URL ?? DEFAULT_FIRECRAWL_BASE_URL)
+  const baseUrl = (options.baseUrl ?? env.FIRECRAWL_BASE_URL)
     .replace(/\/+$/u, "");
   const fetcher = options.fetch ?? fetch;
 

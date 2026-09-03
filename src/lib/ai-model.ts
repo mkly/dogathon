@@ -24,7 +24,7 @@ export function createAiModel(options: AiModelOptions = {}) {
   const baseURL = requiredSetting(
     options.baseUrl ?? env.OPENAI_BASE_URL,
     "OPENAI_BASE_URL",
-  );
+  ).replace(/\/+$/u, "");
   const model = requiredSetting(options.model ?? env.OPENAI_MODEL, "OPENAI_MODEL");
 
   return createOpenAICompatible({

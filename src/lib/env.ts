@@ -19,7 +19,7 @@ function urlWithDefault(fallback: string) {
 
 function positiveMillisecondsWithDefault(fallback: number) {
   return z.preprocess(
-  (value) => typeof value === "string" && value.trim() === "" ? undefined : value,
+    (value) => typeof value === "string" && value.trim() === "" ? undefined : value,
     z.coerce.number().positive().default(fallback),
   );
 }
