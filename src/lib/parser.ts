@@ -147,11 +147,11 @@ function splitHtmlSections(source: string): RosterSection[] {
   return $("h3").toArray().map((heading) => {
     const $heading = $(heading);
     const followingSiblings = $heading.nextUntil("h3");
-    // Square's roster cards wrap each heading and its content separately, while
-    // simpler imports place the section content directly after the heading.
-    const section = followingSiblings.length
-      ? followingSiblings
-      : $heading.closest(".grid__item");
+    // Simple imports place the section content directly after the heading; site
+    // builders instead wrap each heading and its content in a per-companion card,
+    // the outermost ancestor that still covers only this heading.
+    const card = $heading.parents().filter((_index, element) => $(element).find("h3").length === 1);
+    const section = followingSiblings.length ? followingSiblings : card.length ? card.last() : $heading;
     const images = section.filter("img").add(section.find("img"));
 
     return {
@@ -220,7 +220,8 @@ function semanticPageText(source: string): string {
 function cleanText(value: string): string {
   return value
     .replace(/[\u200B-\u200D\u2060\uFEFF]/g, "")
-    .replace(/[ \t]+/g, " ")
+    // Cheerio decodes &nbsp; to U+00A0; roster text treats it as an ordinary space.
+    .replace(/[ \t\u00A0]+/g, " ")
     .replace(/ *\n */g, "\n")
     .replace(/\n{2,}/g, "\n")
     .trim();
