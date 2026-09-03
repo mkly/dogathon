@@ -36,3 +36,22 @@
   font-weight: 800;
   line-height: 1.35;
 }
+
+.success {
+  padding: 1rem;
+  border: 2px dashed var(--felt-thread);
+  border-radius: 11px 5px 10px 6px;
+  color: var(--felt-ink);
+  background: var(--felt-cream);
+}
+
+.success h2 {
+  margin: 0 0 0.4rem;
+  font-size: 1.3rem;
+}
+
+.success p {
+  margin: 0;
+  font-weight: 700;
+  line-height: 1.45;
+}

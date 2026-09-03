@@ -7,7 +7,7 @@ import {
   type TransportFactory,
 } from "./email-connectors.ts";
 
-type AppMailerEnvironment = {
+export type AppMailerEnvironment = {
   [key: string]: string | undefined;
   APP_SMTP_HOST?: string;
   APP_SMTP_PORT?: string;
@@ -17,7 +17,7 @@ type AppMailerEnvironment = {
   APP_EMAIL_FROM?: string;
 };
 
-type AppMailerDependencies = {
+export type AppMailerDependencies = {
   env?: AppMailerEnvironment;
   transportFactory?: TransportFactory;
 };

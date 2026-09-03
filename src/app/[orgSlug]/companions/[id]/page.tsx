@@ -36,6 +36,9 @@ export default async function CompanionPage({ params, searchParams }: CompanionP
           <StitchBadge tone="cream">You&apos;re a hero!</StitchBadge>
           <h2>Thank you for sponsoring {resident.name}!</h2>
           <p>Your $25 monthly sponsorship is active until {resident.name} is adopted.</p>
+          <Link className={`felt-button felt-mustard ${styles.cardLink}`} href="/account/sign-in">
+            Create your sponsor account
+          </Link>
         </FeltPanel>
       )}
 

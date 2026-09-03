@@ -1,8 +1,7 @@
 import { betterAuth } from "better-auth/minimal";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { createAccessControl } from "better-auth/plugins/access";
-import { username } from "better-auth/plugins";
-import { organization } from "better-auth/plugins";
+import { magicLink, organization, username } from "better-auth/plugins";
 import {
   adminAc,
   defaultStatements,
@@ -11,6 +10,7 @@ import {
 } from "better-auth/plugins/organization/access";
 
 import { sendAppEmail } from "@/lib/app-mailer";
+import { sendMagicLinkEmail } from "@/lib/magic-link-email";
 import { prisma } from "@/lib/prisma";
 
 const organizationAccessControl = createAccessControl(defaultStatements);
@@ -28,6 +28,9 @@ export const auth = betterAuth({
     username({
       displayUsername: false,
       immutableUsername: true,
+    }),
+    magicLink({
+      sendMagicLink: (data) => sendMagicLinkEmail(data),
     }),
     organization({
       ac: organizationAccessControl,
