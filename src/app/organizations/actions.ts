@@ -5,7 +5,11 @@ import { redirect } from "next/navigation";
 import { APIError } from "better-auth";
 
 import { auth } from "@/lib/auth";
-import { organizationSlug } from "@/lib/organization-slug";
+import {
+  organizationSlug,
+  RESERVED_ORGANIZATION_SLUG_ERROR,
+  RESERVED_ORGANIZATION_SLUG_MESSAGE,
+} from "@/lib/organization-slug";
 import { prisma } from "@/lib/prisma";
 
 function value(formData: FormData, key: string) {
@@ -18,6 +22,10 @@ function isSlugCollision(error: unknown) {
   if (!(error instanceof APIError)) return false;
   const code = error.body?.code;
   return code === "ORGANIZATION_ALREADY_EXISTS" || code === "ORGANIZATION_SLUG_ALREADY_TAKEN";
+}
+
+function isReservedSlug(error: unknown) {
+  return error instanceof APIError && error.body?.code === RESERVED_ORGANIZATION_SLUG_ERROR;
 }
 
 export async function createOrganization(
@@ -33,6 +41,7 @@ export async function createOrganization(
   try {
     organization = await auth.api.createOrganization({ body: { name, slug }, headers: requestHeaders });
   } catch (error) {
+    if (isReservedSlug(error)) return { error: RESERVED_ORGANIZATION_SLUG_MESSAGE };
     if (isSlugCollision(error)) {
       return { error: "That organization slug is already taken. Choose another slug." };
     }

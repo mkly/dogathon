@@ -1,4 +1,5 @@
 import { betterAuth } from "better-auth/minimal";
+import { APIError } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { createAccessControl } from "better-auth/plugins/access";
 import { magicLink, organization, username } from "better-auth/plugins";
@@ -11,10 +12,24 @@ import {
 
 import { sendAppEmail } from "@/lib/app-mailer";
 import { sendMagicLinkEmail } from "@/lib/magic-link-email";
+import {
+  isReservedOrganizationSlug,
+  RESERVED_ORGANIZATION_SLUG_ERROR,
+  RESERVED_ORGANIZATION_SLUG_MESSAGE,
+} from "@/lib/organization-slug";
 import { prisma } from "@/lib/prisma";
 
 const organizationAccessControl = createAccessControl(defaultStatements);
 const volunteerAc = organizationAccessControl.newRole({});
+
+function rejectReservedOrganizationSlug(slug: string | undefined) {
+  if (slug && isReservedOrganizationSlug(slug)) {
+    throw new APIError("BAD_REQUEST", {
+      code: RESERVED_ORGANIZATION_SLUG_ERROR,
+      message: RESERVED_ORGANIZATION_SLUG_MESSAGE,
+    });
+  }
+}
 
 export const auth = betterAuth({
   database: prismaAdapter(prisma, {
@@ -35,6 +50,14 @@ export const auth = betterAuth({
     organization({
       ac: organizationAccessControl,
       creatorRole: "owner",
+      organizationHooks: {
+        beforeCreateOrganization: async ({ organization: candidate }) => {
+          rejectReservedOrganizationSlug(candidate.slug);
+        },
+        beforeUpdateOrganization: async ({ organization: candidate }) => {
+          rejectReservedOrganizationSlug(candidate.slug);
+        },
+      },
       roles: {
         owner: ownerAc,
         admin: adminAc,
