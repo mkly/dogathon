@@ -41,12 +41,48 @@ OpenAI-compatible model variables when those integrations are enabled. Vercel's
 install step runs the existing `postinstall` script, which generates the Prisma
 client.
 
-The checked-in `vercel.json` invokes `GET /api/jobs/drain` every five minutes
-and `GET /api/jobs/schedule-roster-sync` daily at 08:00 UTC. Set `CRON_SECRET`
-in the Vercel project; Vercel sends it to both routes as an Authorization Bearer
-token, and both refuse calls when neither it nor the legacy
-`ROSTER_SYNC_DRAIN_SECRET` is configured. `POST /api/jobs/drain` remains
-available for manual schedulers using the same authentication.
+Vercel Hobby only permits daily cron schedules, so the checked-in `vercel.json`
+does not register any Vercel Cron Jobs. Generate a strong scheduler secret and
+set it as the production `CRON_SECRET` environment variable in Vercel:
+
+```bash
+openssl rand -hex 32
+npx vercel env add CRON_SECRET production
+```
+
+Configure an external server to call `POST /api/jobs/drain` every five minutes
+and `GET /api/jobs/schedule-roster-sync` daily at 08:00 UTC. Both routes require
+the same value in an `Authorization: Bearer <CRON_SECRET>` header and refuse
+calls when neither `CRON_SECRET` nor the legacy `ROSTER_SYNC_DRAIN_SECRET` is
+configured.
+
+On the external server, store the secret in a curl config readable only by the
+cron user. Replace the example origin and secret below:
+
+```bash
+sudo install -d -m 700 /etc/dogathon
+sudo sh -c 'cat > /etc/dogathon/cron.curl' <<'EOF'
+silent
+show-error
+fail-with-body
+connect-timeout = 15
+max-time = 290
+header = "Authorization: Bearer replace-with-the-production-cron-secret"
+EOF
+sudo chmod 600 /etc/dogathon/cron.curl
+```
+
+Then install these entries in root's crontab with `sudo crontab -e`:
+
+```cron
+*/5 * * * * /usr/bin/flock -n /tmp/dogathon-drain.lock /usr/bin/curl --config /etc/dogathon/cron.curl --request POST https://dogathon.example/api/jobs/drain
+0 8 * * * /usr/bin/curl --config /etc/dogathon/cron.curl https://dogathon.example/api/jobs/schedule-roster-sync
+```
+
+The `flock` guard prevents overlapping drain invocations. Confirm the paths to
+`flock` and `curl` with `command -v flock curl` on the scheduler server. Cron
+uses that server's clock, so set the entry accordingly if 08:00 UTC is required
+and the server is not configured for UTC.
 
 The nightly route enqueues every organization with a saved adoption-page source
 URL. Jobs become eligible one at a time, spaced by
