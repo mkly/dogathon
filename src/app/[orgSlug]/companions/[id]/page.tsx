@@ -56,6 +56,8 @@ export default async function CompanionPage({ params, searchParams }: CompanionP
               alt={`${resident.name}${index ? `, photo ${index + 1}` : ""}`}
               className={index === 0 ? styles.heroPhoto : styles.extraPhoto}
               key={photo}
+              preload={index === 0}
+              sizes="(max-width: 720px) calc(100vw - 48px), 22rem"
               src={photo}
             />
           )) : <PhotoPatch alt={resident.name} className={styles.heroPhoto} />}

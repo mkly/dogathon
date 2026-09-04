@@ -3,10 +3,10 @@ import type {
   ButtonHTMLAttributes,
   ComponentProps,
   HTMLAttributes,
-  ImgHTMLAttributes,
 } from "react";
 import { clsx } from "clsx";
 
+import { PhotoPatchImage } from "./photo-patch-image";
 import styles from "./felt.module.css";
 
 type FeltTone =
@@ -127,23 +127,23 @@ export function FeltField({
 
 export type PhotoPatchProps = HTMLAttributes<HTMLElement> & {
   alt: string;
+  preload?: boolean;
+  sizes?: string;
   src?: string;
-  imageProps?: Omit<ImgHTMLAttributes<HTMLImageElement>, "alt" | "src">;
 };
 
 export function PhotoPatch({
   alt,
   className,
-  imageProps,
+  preload,
+  sizes,
   src,
   ...props
 }: PhotoPatchProps) {
   return (
     <figure className={clsx(styles["photo-patch"], className)} {...props}>
       {src ? (
-        // This primitive intentionally accepts local, uploaded, or remote rescue photos.
-        // eslint-disable-next-line @next/next/no-img-element
-        <img alt={alt} src={src} {...imageProps} />
+        <PhotoPatchImage alt={alt} preload={preload} sizes={sizes} src={src} />
       ) : (
         <div
           aria-label={alt}
@@ -176,8 +176,6 @@ export function StitchBadge({
   );
 }
 
-// Ink-wobble text filters ported from the mockups' shared <defs>: #ink for
-// display headings, #ink-s (gentler displacement) for body copy.
 export function FeltFilters() {
   return (
     <svg aria-hidden="true" className={styles["felt-filter-definitions"]}>
@@ -193,22 +191,6 @@ export function FeltFilters() {
           in="SourceGraphic"
           in2="inkNoise"
           scale="1.3"
-          xChannelSelector="R"
-          yChannelSelector="G"
-        />
-      </filter>
-      <filter id="ink-s">
-        <feTurbulence
-          baseFrequency="0.06"
-          numOctaves="2"
-          result="inkNoiseSoft"
-          seed="7"
-          type="fractalNoise"
-        />
-        <feDisplacementMap
-          in="SourceGraphic"
-          in2="inkNoiseSoft"
-          scale="0.6"
           xChannelSelector="R"
           yChannelSelector="G"
         />

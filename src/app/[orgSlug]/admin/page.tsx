@@ -137,7 +137,7 @@ export default async function AdminPage({ params }: AdminPageProps) {
           </>
         }
         brand={<Link href={`/${orgSlug}`}>
-          <Image alt="Pawcast" priority src={pawcastWordmark} />
+          <Image alt="Pawcast" preload src={pawcastWordmark} />
         </Link>}
         title="Staff room"
       />
@@ -214,6 +214,7 @@ export default async function AdminPage({ params }: AdminPageProps) {
                   <PhotoPatch
                     alt={`${resident.name} portrait`}
                     className={styles.composePhoto}
+                    sizes="(max-width: 720px) 72px, 84px"
                     src={resident.photoUrls[0]}
                   />
                   <div className={styles.composeCopy}>
@@ -273,6 +274,7 @@ export default async function AdminPage({ params }: AdminPageProps) {
                 <PhotoPatch
                   alt={`${draft.resident.name} portrait`}
                   className={styles.photo}
+                  sizes="(max-width: 720px) 104px, 120px"
                   src={draft.resident.photoUrls[0]}
                 />
                 <div className={styles.companionSummary}>

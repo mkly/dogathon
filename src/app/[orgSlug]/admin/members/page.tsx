@@ -93,7 +93,7 @@ export default async function MembersPage({ params }: MembersPageProps) {
         }
         actionsClassName={styles.membersHeaderActions}
         brand={<Link href={`/${orgSlug}`}>
-          <Image alt="Pawcast" priority src={pawcastWordmark} />
+          <Image alt="Pawcast" preload src={pawcastWordmark} />
         </Link>}
         className={styles.membersHeader}
         lede={access.organization.name}

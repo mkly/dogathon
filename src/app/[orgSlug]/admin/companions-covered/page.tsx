@@ -102,6 +102,7 @@ export default async function CompanionsCoveredPage({ params }: CompanionsCovere
                   <PhotoPatch
                     alt={`${resident.name} portrait`}
                     className={styles.photo}
+                    sizes="(max-width: 720px) 78px, 96px"
                     src={resident.photoUrls[0]}
                   />
                   <div className={styles.companionDetails}>

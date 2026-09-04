@@ -25,7 +25,7 @@
   inset: 0;
   border-radius: inherit;
   background-color: var(--felt-color, var(--felt-cream));
-  background-image: url("/textures/Fabric034_1K-JPG_Color.jpg");
+  background-image: url("/textures/fabric-tile.webp");
   background-size: 200px;
   background-blend-mode: soft-light;
   content: "";
@@ -113,7 +113,7 @@ svg.stitch.fine rect.thread { stroke-width: 1.4; }
   position: relative;
   border-radius: 12px;
   background-color: var(--felt-color, var(--felt-cream));
-  background-image: url("/textures/Fabric034_1K-JPG_Color.jpg");
+  background-image: url("/textures/fabric-tile.webp");
   background-size: 200px;
   background-blend-mode: soft-light;
   box-shadow:
@@ -201,6 +201,15 @@ svg.stitch.fine rect.thread { stroke-width: 1.4; }
   aspect-ratio: 4 / 3;
   border-radius: 10px;
   object-fit: cover;
+}
+
+.photo-patch-image {
+  opacity: 0;
+  transition: opacity 240ms ease;
+}
+
+.photo-patch-image.loaded {
+  opacity: 1;
 }
 
 .photo-patch::after {
