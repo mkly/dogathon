@@ -184,36 +184,36 @@ export default async function AdminSettingsPage({ params }: AdminSettingsPagePro
   return (
     <PageViewTransition>
       <AdminPage>
-      <AdminHeader
-        actions={
-          <>
-            <AdminLink href={`/${orgSlug}/admin`} tone="oatmeal" transitionTypes={["nav-back"]}>
-              Back to staff room
-            </AdminLink>
-            <SignOutButton />
-          </>
-        }
-        brand={<Link href={`/${orgSlug}`} transitionTypes={["nav-back"]}>
-          <Image alt="Pawcast" priority src={pawcastWordmark} />
-        </Link>}
-        title="Staff settings"
-      />
+        <AdminHeader
+          actions={
+            <>
+              <AdminLink href={`/${orgSlug}/admin`} tone="oatmeal" transitionTypes={["nav-back"]}>
+                Back to staff room
+              </AdminLink>
+              <SignOutButton />
+            </>
+          }
+          brand={<Link href={`/${orgSlug}`} transitionTypes={["nav-back"]}>
+            <Image alt="Pawcast" priority src={pawcastWordmark} />
+          </Link>}
+          title="Staff settings"
+        />
 
-      <div className={styles.settingsStack}>
-        <Suspense fallback={<SuspenseFallback><SettingsCardLoading tone="mustard" /></SuspenseFallback>}>
-          <SuspenseReveal><StripeConnection canOnboard={context.role === "owner"} orgId={context.orgId} orgSlug={orgSlug} /></SuspenseReveal>
-        </Suspense>
+        <div className={styles.settingsStack}>
+          <Suspense fallback={<SuspenseFallback><SettingsCardLoading tone="mustard" /></SuspenseFallback>}>
+            <SuspenseReveal><StripeConnection canOnboard={context.role === "owner"} orgId={context.orgId} orgSlug={orgSlug} /></SuspenseReveal>
+          </Suspense>
 
-        <Suspense fallback={<SuspenseFallback><SettingsCardLoading tone="oatmeal" /></SuspenseFallback>}>
-          <SuspenseReveal><EmailSettings orgId={context.orgId} orgSlug={orgSlug} /></SuspenseReveal>
-        </Suspense>
+          <Suspense fallback={<SuspenseFallback><SettingsCardLoading tone="oatmeal" /></SuspenseFallback>}>
+            <SuspenseReveal><EmailSettings orgId={context.orgId} orgSlug={orgSlug} /></SuspenseReveal>
+          </Suspense>
 
-        <Suspense fallback={<SuspenseFallback><><SettingsCardLoading tone="denim" /><SettingsCardLoading tone="moss" /></></SuspenseFallback>}>
-          <SuspenseReveal><RescueSettings orgId={context.orgId} orgSlug={orgSlug} /></SuspenseReveal>
-        </Suspense>
-      </div>
+          <Suspense fallback={<SuspenseFallback><><SettingsCardLoading tone="denim" /><SettingsCardLoading tone="moss" /></></SuspenseFallback>}>
+            <SuspenseReveal><RescueSettings orgId={context.orgId} orgSlug={orgSlug} /></SuspenseReveal>
+          </Suspense>
+        </div>
 
-      <AdminFooter>staff settings · everything in its place</AdminFooter>
+        <AdminFooter>staff settings · everything in its place</AdminFooter>
       </AdminPage>
     </PageViewTransition>
   );

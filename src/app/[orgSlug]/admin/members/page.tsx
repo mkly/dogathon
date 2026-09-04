@@ -156,41 +156,41 @@ export default async function MembersPage({ params }: MembersPageProps) {
   return (
     <PageViewTransition>
       <AdminPage>
-      <AdminHeader
-        actions={
-          <>
-            <AdminLink href={`/${orgSlug}/admin/settings`} tone="oatmeal">Settings</AdminLink>
-            <AdminLink href={`/${orgSlug}/admin`} tone="oatmeal" transitionTypes={["nav-back"]}>Back to staff room</AdminLink>
-            <SignOutButton />
-          </>
-        }
-        actionsClassName={styles.membersHeaderActions}
-        brand={<Link href={`/${orgSlug}`} transitionTypes={["nav-back"]}>
-          <Image alt="Pawcast" priority src={pawcastWordmark} />
-        </Link>}
-        className={styles.membersHeader}
-        lede={access.organization.name}
-        title="Organization members"
-      />
+        <AdminHeader
+          actions={
+            <>
+              <AdminLink href={`/${orgSlug}/admin/settings`} tone="oatmeal">Settings</AdminLink>
+              <AdminLink href={`/${orgSlug}/admin`} tone="oatmeal" transitionTypes={["nav-back"]}>Back to staff room</AdminLink>
+              <SignOutButton />
+            </>
+          }
+          actionsClassName={styles.membersHeaderActions}
+          brand={<Link href={`/${orgSlug}`} transitionTypes={["nav-back"]}>
+            <Image alt="Pawcast" priority src={pawcastWordmark} />
+          </Link>}
+          className={styles.membersHeader}
+          lede={access.organization.name}
+          title="Organization members"
+        />
 
-      <Suspense fallback={<SuspenseFallback><MemberSectionLoading /></SuspenseFallback>}>
-        <SuspenseReveal><MembersSection
-          actorRole={access.context.role as "owner" | "admin"}
-          actorUserId={access.context.userId}
-          membersPromise={membersPromise}
-          orgSlug={orgSlug}
-        /></SuspenseReveal>
-      </Suspense>
+        <Suspense fallback={<SuspenseFallback><MemberSectionLoading /></SuspenseFallback>}>
+          <SuspenseReveal><MembersSection
+            actorRole={access.context.role as "owner" | "admin"}
+            actorUserId={access.context.userId}
+            membersPromise={membersPromise}
+            orgSlug={orgSlug}
+          /></SuspenseReveal>
+        </Suspense>
 
-      <Suspense fallback={<SuspenseFallback><MemberSectionLoading invitation /></SuspenseFallback>}>
-        <SuspenseReveal><InvitationsSection
-          invitationsPromise={invitationsPromise}
-          membersPromise={membersPromise}
-          orgSlug={orgSlug}
-        /></SuspenseReveal>
-      </Suspense>
+        <Suspense fallback={<SuspenseFallback><MemberSectionLoading invitation /></SuspenseFallback>}>
+          <SuspenseReveal><InvitationsSection
+            invitationsPromise={invitationsPromise}
+            membersPromise={membersPromise}
+            orgSlug={orgSlug}
+          /></SuspenseReveal>
+        </Suspense>
 
-      <AdminFooter>organization members · keep the right people in the room</AdminFooter>
+        <AdminFooter>organization members · keep the right people in the room</AdminFooter>
       </AdminPage>
     </PageViewTransition>
   );

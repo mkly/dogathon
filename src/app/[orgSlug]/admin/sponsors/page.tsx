@@ -58,72 +58,72 @@ export default async function SponsorsPage({ params }: SponsorsPageProps) {
   return (
     <PageViewTransition>
       <AdminPage variant="directory">
-      <AdminHeader
-        actions={<AdminLink className={styles.backLink} href={`/${orgSlug}/admin`} transitionTypes={["nav-back"]}>
-          Back to staff room
-        </AdminLink>}
-        eyebrow="Private staff directory"
-        lede="Contact preferences and every companion supported by each sponsor."
-        title="Sponsors"
-        variant="directory"
-      />
+        <AdminHeader
+          actions={<AdminLink className={styles.backLink} href={`/${orgSlug}/admin`} transitionTypes={["nav-back"]}>
+            Back to staff room
+          </AdminLink>}
+          eyebrow="Private staff directory"
+          lede="Contact preferences and every companion supported by each sponsor."
+          title="Sponsors"
+          variant="directory"
+        />
 
-      <div className={styles.summary}>
-        <p>{sponsors.length} {pluralize("person", sponsors.length)} · {sponsorshipCount} {pluralize("sponsorship", sponsorshipCount)}</p>
-        <AdminBadge tone="moss">staff only</AdminBadge>
-      </div>
+        <div className={styles.summary}>
+          <p>{sponsors.length} {pluralize("person", sponsors.length)} · {sponsorshipCount} {pluralize("sponsorship", sponsorshipCount)}</p>
+          <AdminBadge tone="moss">staff only</AdminBadge>
+        </div>
 
-      {sponsors.length === 0 ? (
-        <AdminSurface tone="oatmeal">
-          <AdminEmptyState>
-            <span aria-hidden="true">🧵</span>
-            <h2>No sponsors yet</h2>
-            <p>New sponsorships will be tucked into this directory.</p>
-          </AdminEmptyState>
-        </AdminSurface>
-      ) : (
-        <section aria-label="Sponsor directory" className={styles.sponsorList}>
-          {sponsors.map((sponsor) => (
-            <AdminSurface className={styles.sponsorCard} key={sponsor.id} tone="oatmeal">
-              <div className={styles.sponsorHeading}>
-                <div>
-                  <h2>{sponsor.name}</h2>
-                  <AdminBadge tone={sponsor.sponsorships.some(({ status }) => status === "active") ? "moss" : "brick"}>
-                    {sponsor.sponsorships.length} {pluralize("companion", sponsor.sponsorships.length)}
-                  </AdminBadge>
+        {sponsors.length === 0 ? (
+          <AdminSurface tone="oatmeal">
+            <AdminEmptyState>
+              <span aria-hidden="true">🧵</span>
+              <h2>No sponsors yet</h2>
+              <p>New sponsorships will be tucked into this directory.</p>
+            </AdminEmptyState>
+          </AdminSurface>
+        ) : (
+          <section aria-label="Sponsor directory" className={styles.sponsorList}>
+            {sponsors.map((sponsor) => (
+              <AdminSurface className={styles.sponsorCard} key={sponsor.id} tone="oatmeal">
+                <div className={styles.sponsorHeading}>
+                  <div>
+                    <h2>{sponsor.name}</h2>
+                    <AdminBadge tone={sponsor.sponsorships.some(({ status }) => status === "active") ? "moss" : "brick"}>
+                      {sponsor.sponsorships.length} {pluralize("companion", sponsor.sponsorships.length)}
+                    </AdminBadge>
+                  </div>
+                  <div className={styles.contact}>
+                    <p><a href={`mailto:${sponsor.email}`}>{sponsor.email}</a></p>
+                    <p>{sponsor.phone ? <a href={`tel:${sponsor.phone}`}>{sponsor.phone}</a> : "No phone provided"}</p>
+                    <p>Updates: {sponsor.channel}</p>
+                    <AdminLink href={`/${orgSlug}/admin/sponsors/${sponsor.id}`} tone="mustard">
+                      View sponsor
+                    </AdminLink>
+                  </div>
                 </div>
-                <div className={styles.contact}>
-                  <p><a href={`mailto:${sponsor.email}`}>{sponsor.email}</a></p>
-                  <p>{sponsor.phone ? <a href={`tel:${sponsor.phone}`}>{sponsor.phone}</a> : "No phone provided"}</p>
-                  <p>Updates: {sponsor.channel}</p>
-                  <AdminLink href={`/${orgSlug}/admin/sponsors/${sponsor.id}`} tone="mustard">
-                    View sponsor
-                  </AdminLink>
-                </div>
-              </div>
 
-              <AdminTable>
-                <thead>
-                  <tr>
-                    <th scope="col">Sponsored companion</th>
-                    <th scope="col">Status</th>
-                    <th scope="col">Started</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {sponsor.sponsorships.map((record) => (
-                    <tr key={record.id}>
-                      <td>{record.resident.name}</td>
-                      <td><AdminStatus>{record.status}</AdminStatus></td>
-                      <td>{formatDate(record.createdAt)}</td>
+                <AdminTable>
+                  <thead>
+                    <tr>
+                      <th scope="col">Sponsored companion</th>
+                      <th scope="col">Status</th>
+                      <th scope="col">Started</th>
                     </tr>
-                  ))}
-                </tbody>
-              </AdminTable>
-            </AdminSurface>
-          ))}
-        </section>
-      )}
+                  </thead>
+                  <tbody>
+                    {sponsor.sponsorships.map((record) => (
+                      <tr key={record.id}>
+                        <td>{record.resident.name}</td>
+                        <td><AdminStatus>{record.status}</AdminStatus></td>
+                        <td>{formatDate(record.createdAt)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </AdminTable>
+              </AdminSurface>
+            ))}
+          </section>
+        )}
       </AdminPage>
     </PageViewTransition>
   );

@@ -323,49 +323,49 @@ export default async function AdminPage({ params }: AdminPageProps) {
   return (
     <PageViewTransition>
       <AdminPageShell>
-      <AdminHeader
-        actions={
-          <>
-            {canManageStaffArea && (
-              <>
-                <AdminLink href={`/${orgSlug}/admin/members`} tone="oatmeal">
-                  Members
-                </AdminLink>
-                <AdminLink href={`/${orgSlug}/admin/settings`} tone="oatmeal">
-                  Settings
-                </AdminLink>
-              </>
-            )}
-            <SignOutButton />
-          </>
-        }
-        brand={<Link href={`/${orgSlug}`} transitionTypes={["nav-back"]}>
-          <Image alt="Pawcast" priority src={pawcastWordmark} />
-        </Link>}
-        title="Staff room"
-      />
+        <AdminHeader
+          actions={
+            <>
+              {canManageStaffArea && (
+                <>
+                  <AdminLink href={`/${orgSlug}/admin/members`} tone="oatmeal">
+                    Members
+                  </AdminLink>
+                  <AdminLink href={`/${orgSlug}/admin/settings`} tone="oatmeal">
+                    Settings
+                  </AdminLink>
+                </>
+              )}
+              <SignOutButton />
+            </>
+          }
+          brand={<Link href={`/${orgSlug}`} transitionTypes={["nav-back"]}>
+            <Image alt="Pawcast" priority src={pawcastWordmark} />
+          </Link>}
+          title="Staff room"
+        />
 
-      {canManageStaffArea && (
-        <Suspense fallback={null}>
-          <StripeNotice orgId={context.orgId} orgSlug={orgSlug} />
+        {canManageStaffArea && (
+          <Suspense fallback={null}>
+            <StripeNotice orgId={context.orgId} orgSlug={orgSlug} />
+          </Suspense>
+        )}
+
+        {canManageStaffArea && (
+          <Suspense fallback={<SuspenseFallback><DashboardStatsLoading /></SuspenseFallback>}>
+            <SuspenseReveal><DashboardStats orgId={context.orgId} orgSlug={orgSlug} /></SuspenseReveal>
+          </Suspense>
+        )}
+
+        <Suspense fallback={<SuspenseFallback><ComposeSectionLoading /></SuspenseFallback>}>
+          <SuspenseReveal><ComposeSection orgId={context.orgId} orgSlug={orgSlug} /></SuspenseReveal>
         </Suspense>
-      )}
 
-      {canManageStaffArea && (
-        <Suspense fallback={<SuspenseFallback><DashboardStatsLoading /></SuspenseFallback>}>
-          <SuspenseReveal><DashboardStats orgId={context.orgId} orgSlug={orgSlug} /></SuspenseReveal>
+        <Suspense fallback={<SuspenseFallback><ApprovalQueueLoading /></SuspenseFallback>}>
+          <SuspenseReveal><ApprovalQueue canManageStaffArea={canManageStaffArea} orgId={context.orgId} orgSlug={orgSlug} /></SuspenseReveal>
         </Suspense>
-      )}
 
-      <Suspense fallback={<SuspenseFallback><ComposeSectionLoading /></SuspenseFallback>}>
-        <SuspenseReveal><ComposeSection orgId={context.orgId} orgSlug={orgSlug} /></SuspenseReveal>
-      </Suspense>
-
-      <Suspense fallback={<SuspenseFallback><ApprovalQueueLoading /></SuspenseFallback>}>
-        <SuspenseReveal><ApprovalQueue canManageStaffArea={canManageStaffArea} orgId={context.orgId} orgSlug={orgSlug} /></SuspenseReveal>
-      </Suspense>
-
-      <AdminFooter>the staff room · nobody wrote a single email today</AdminFooter>
+        <AdminFooter>the staff room · nobody wrote a single email today</AdminFooter>
       </AdminPageShell>
     </PageViewTransition>
   );

@@ -43,38 +43,38 @@ export default async function OrganizationsPage({ searchParams }: OrganizationsP
   return (
     <PageViewTransition>
       <main className="felt-page">
-      <FeltPanel tone="denim">
-        <h1>Your rescue organizations</h1>
-        {organizations.map((organization) => (
-          <form action={setActiveOrganization} key={organization.id}>
-            <input name="organizationId" type="hidden" value={organization.id} />
-            <FeltButton tone="mustard" type="submit">
-              Open {organization.name} ({organization.slug})
-            </FeltButton>
-          </form>
-        ))}
-      </FeltPanel>
+        <FeltPanel tone="denim">
+          <h1>Your rescue organizations</h1>
+          {organizations.map((organization) => (
+            <form action={setActiveOrganization} key={organization.id}>
+              <input name="organizationId" type="hidden" value={organization.id} />
+              <FeltButton tone="mustard" type="submit">
+                Open {organization.name} ({organization.slug})
+              </FeltButton>
+            </form>
+          ))}
+        </FeltPanel>
 
-      {pendingInvitations.map((pendingInvitation) => {
-        const role = describeInvitationRole(pendingInvitation.role);
+        {pendingInvitations.map((pendingInvitation) => {
+          const role = describeInvitationRole(pendingInvitation.role);
 
-        return (
-          <FeltPanel key={pendingInvitation.id} tone="mustard">
-            <h2>Invitation to {pendingInvitation.organization.name}</h2>
-            <p>
-              You were invited as a <strong>{role.label}</strong>.
-            </p>
-            <FeltLink href={`/staff/invitations/${pendingInvitation.id}`} tone="moss">
-              View invitation
-            </FeltLink>
-          </FeltPanel>
-        );
-      })}
+          return (
+            <FeltPanel key={pendingInvitation.id} tone="mustard">
+              <h2>Invitation to {pendingInvitation.organization.name}</h2>
+              <p>
+                You were invited as a <strong>{role.label}</strong>.
+              </p>
+              <FeltLink href={`/staff/invitations/${pendingInvitation.id}`} tone="moss">
+                View invitation
+              </FeltLink>
+            </FeltPanel>
+          );
+        })}
 
-      <FeltPanel tone="oatmeal">
-        <h2>Create an organization</h2>
-        <CreateOrganizationForm />
-      </FeltPanel>
+        <FeltPanel tone="oatmeal">
+          <h2>Create an organization</h2>
+          <CreateOrganizationForm />
+        </FeltPanel>
       </main>
     </PageViewTransition>
   );

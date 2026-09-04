@@ -20,14 +20,14 @@ export default async function SponsorSignInPage() {
   return (
     <PageViewTransition>
       <main className={styles.page}>
-      <FeltPanel className={styles.card} tone="denim">
-        <p className={styles.eyebrow}>Sponsor account</p>
-        <h1>Sign in by email</h1>
-        <p className={styles.lede}>
-          We&apos;ll email you a secure link—no password needed.
-        </p>
-        <MagicLinkForm />
-      </FeltPanel>
+        <FeltPanel className={styles.card} tone="denim">
+          <p className={styles.eyebrow}>Sponsor account</p>
+          <h1>Sign in by email</h1>
+          <p className={styles.lede}>
+            We&apos;ll email you a secure link—no password needed.
+          </p>
+          <MagicLinkForm />
+        </FeltPanel>
       </main>
     </PageViewTransition>
   );

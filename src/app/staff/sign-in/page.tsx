@@ -29,14 +29,14 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
   return (
     <PageViewTransition>
       <main className={styles.page}>
-      <FeltPanel className={styles.card} tone="denim">
-        <p className={styles.eyebrow}>Rescue staff</p>
-        <h1>Staff sign in</h1>
-        <p className={styles.lede}>
-          Sign in with your staff account to open the admin room.
-        </p>
-        <AuthForm redirectTo={redirectTo} />
-      </FeltPanel>
+        <FeltPanel className={styles.card} tone="denim">
+          <p className={styles.eyebrow}>Rescue staff</p>
+          <h1>Staff sign in</h1>
+          <p className={styles.lede}>
+            Sign in with your staff account to open the admin room.
+          </p>
+          <AuthForm redirectTo={redirectTo} />
+        </FeltPanel>
       </main>
     </PageViewTransition>
   );
