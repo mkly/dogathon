@@ -203,6 +203,8 @@ svg.stitch.fine rect.thread { stroke-width: 1.4; }
 .photo-patch-placeholder {
   display: block;
   width: 100%;
+  /* next/image sets height="768"; without this the attribute wins over aspect-ratio */
+  height: auto;
   aspect-ratio: 4 / 3;
   border-radius: 10px;
   object-fit: cover;
