@@ -49,7 +49,6 @@ export function MagicLinkForm() {
       <FeltField>
         <input
           autoComplete="email"
-          autoFocus
           id="sponsor-email"
           name="email"
           required

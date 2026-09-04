@@ -123,7 +123,7 @@ export function AuthForm({
           />
         </FeltField>
 
-        {error && <p className={styles.error}>{error}</p>}
+        {error && <p className={styles.error} role="alert">{error}</p>}
 
         <FeltButton
           className={styles.submit}

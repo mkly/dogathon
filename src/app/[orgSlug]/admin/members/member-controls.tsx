@@ -1,7 +1,7 @@
 "use client";
 
 import * as AlertDialog from "@radix-ui/react-alert-dialog";
-import { useOptimistic, useState, useTransition } from "react";
+import { useOptimistic, useRef, useState, useTransition } from "react";
 
 import { AdminBadge, AdminButton, AdminField, AdminSurface } from "@/components/admin-ui";
 import {
@@ -51,6 +51,8 @@ export function MemberList({
 }) {
   const [memberToRemove, setMemberToRemove] = useState<MemberView | null>(null);
   const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
+  const listRef = useRef<HTMLDivElement>(null);
+  const shouldRestoreFocus = useRef(false);
   const [pendingMemberActions, setPendingMemberActions] = useState<
     Record<string, "remove" | "role">
   >({});
@@ -108,7 +110,7 @@ export function MemberList({
   }
 
   return (
-    <div className={styles.memberList}>
+    <div className={styles.memberList} ref={listRef} tabIndex={-1}>
       <AnimatePresence initial={false} mode="popLayout">
         {optimisticMembers.map((member) => {
           const isSelf = member.userId === actorUserId;
@@ -202,7 +204,16 @@ export function MemberList({
           </AnimatePresence>
           <AnimatePresence onExitComplete={() => setMemberToRemove(null)}>
             {removeDialogOpen ? (
-              <AlertDialog.Content asChild forceMount>
+              <AlertDialog.Content
+                asChild
+                forceMount
+                onCloseAutoFocus={(event) => {
+                  if (!shouldRestoreFocus.current) return;
+                  event.preventDefault();
+                  shouldRestoreFocus.current = false;
+                  listRef.current?.focus();
+                }}
+              >
                 <motion.div
                   animate={{ opacity: 1, scale: 1, x: "-50%", y: "-50%" }}
                   className={styles.alertDialog}
@@ -224,7 +235,10 @@ export function MemberList({
                       <AlertDialog.Action asChild>
                         <AdminButton
                           onClick={() => {
-                            if (memberToRemove) remove(memberToRemove);
+                            if (memberToRemove) {
+                              shouldRestoreFocus.current = true;
+                              remove(memberToRemove);
+                            }
                           }}
                           tone="brick"
                         >
