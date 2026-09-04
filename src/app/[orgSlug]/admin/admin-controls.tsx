@@ -78,6 +78,7 @@ export function DraftEditor({
   bodyText: initialBodyText,
   children,
   emailConnected,
+  focusTargetId,
   id,
   orgSlug,
   smsText: initialSmsText,
@@ -86,6 +87,7 @@ export function DraftEditor({
   bodyText: string;
   children: ReactNode;
   emailConnected: boolean;
+  focusTargetId: string;
   id: string;
   orgSlug: string;
   smsText: string;
@@ -103,6 +105,7 @@ export function DraftEditor({
   const [smsText, setSmsText] = useState(initialSmsText);
   const [editorOpen, setEditorOpen] = useState(false);
   const [denyConfirmOpen, setDenyConfirmOpen] = useState(false);
+  const shouldRestoreFocus = useRef(false);
   const [pending, setPending] = useState<"save" | "approve" | "deny" | null>(
     null,
   );
@@ -438,7 +441,16 @@ export function DraftEditor({
                 </AnimatePresence>
                 <AnimatePresence>
                   {denyConfirmOpen ? (
-                    <AlertDialog.Content asChild forceMount>
+                    <AlertDialog.Content
+                      asChild
+                      forceMount
+                      onCloseAutoFocus={(event) => {
+                        if (!shouldRestoreFocus.current) return;
+                        event.preventDefault();
+                        shouldRestoreFocus.current = false;
+                        document.getElementById(focusTargetId)?.focus();
+                      }}
+                    >
                       <motion.div
                         animate={{ opacity: 1, scale: 1, x: "-50%", y: "-50%" }}
                         className={styles.alertDialog}
@@ -458,7 +470,13 @@ export function DraftEditor({
                               <AdminButton tone="oatmeal">Cancel</AdminButton>
                             </AlertDialog.Cancel>
                             <AlertDialog.Action asChild>
-                              <AdminButton onClick={deny} tone="brick">
+                              <AdminButton
+                                onClick={() => {
+                                  shouldRestoreFocus.current = true;
+                                  deny();
+                                }}
+                                tone="brick"
+                              >
                                 Discard draft
                               </AdminButton>
                             </AlertDialog.Action>

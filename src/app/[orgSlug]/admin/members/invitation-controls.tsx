@@ -1,6 +1,7 @@
 "use client";
 
-import { FormEvent, useOptimistic, useState, useTransition } from "react";
+import * as AlertDialog from "@radix-ui/react-alert-dialog";
+import { FormEvent, useOptimistic, useRef, useState, useTransition } from "react";
 
 import { AdminBadge, AdminButton, AdminField, AdminSurface } from "@/components/admin-ui";
 import {
@@ -55,6 +56,7 @@ export function InvitationManager({
   const [copyingInvitationId, setCopyingInvitationId] = useState<string | null>(null);
   const [visibleInviteUrlId, setVisibleInviteUrlId] = useState<string | null>(null);
   const [invitePending, setInvitePending] = useState(false);
+  const [invitationToCancel, setInvitationToCancel] = useState<InvitationView | null>(null);
   const [pendingInvitationActions, setPendingInvitationActions] = useState<
     Record<string, "cancel" | "resend">
   >({});
@@ -67,6 +69,8 @@ export function InvitationManager({
       : current.filter((invitation) => invitation.id !== update.id),
   );
   const [, startTransition] = useTransition();
+  const listRef = useRef<HTMLDivElement>(null);
+  const shouldRestoreFocus = useRef(false);
   const motionTransition = useMotionTiming();
 
   function setInvitationPending(
@@ -217,7 +221,7 @@ export function InvitationManager({
         <p aria-live="polite" className={styles.invitationMessage}>{message}</p>
       </AdminSurface>
 
-      <div className={styles.invitationList}>
+      <div className={styles.invitationList} ref={listRef} tabIndex={-1}>
         <AnimatePresence initial={false} mode="popLayout">
           {optimisticInvitations.length === 0 ? (
             <motion.p
@@ -277,7 +281,7 @@ export function InvitationManager({
                   <AdminButton
                     className={styles.cancelButton}
                     disabled={pendingInvitationActions[invitation.id] !== undefined}
-                    onClick={() => cancel(invitation)}
+                    onClick={() => setInvitationToCancel(invitation)}
                     tone="brick"
                   >
                     {pendingInvitationActions[invitation.id] === "cancel"
@@ -303,6 +307,75 @@ export function InvitationManager({
           ))}
         </AnimatePresence>
       </div>
+      <AlertDialog.Root
+        onOpenChange={(open) => {
+          if (!open) setInvitationToCancel(null);
+        }}
+        open={invitationToCancel !== null}
+      >
+        <AlertDialog.Portal forceMount>
+          <AnimatePresence>
+            {invitationToCancel ? (
+              <AlertDialog.Overlay asChild forceMount>
+                <motion.div
+                  animate={{ opacity: 1 }}
+                  className={styles.dialogOverlay}
+                  exit={{ opacity: 0 }}
+                  initial={{ opacity: 0 }}
+                  transition={motionTransition}
+                />
+              </AlertDialog.Overlay>
+            ) : null}
+          </AnimatePresence>
+          <AnimatePresence>
+            {invitationToCancel ? (
+              <AlertDialog.Content
+                asChild
+                forceMount
+                onCloseAutoFocus={(event) => {
+                  if (!shouldRestoreFocus.current) return;
+                  event.preventDefault();
+                  shouldRestoreFocus.current = false;
+                  listRef.current?.focus();
+                }}
+              >
+                <motion.div
+                  animate={{ opacity: 1, scale: 1, x: "-50%", y: "-50%" }}
+                  className={styles.alertDialog}
+                  exit={{ opacity: 0, scale: 0.96, x: "-50%", y: "-48%" }}
+                  initial={{ opacity: 0, scale: 0.96, x: "-50%", y: "-48%" }}
+                  transition={motionTransition}
+                >
+                  <AdminSurface className={styles.dialogPanel} tone="oatmeal">
+                    <AlertDialog.Title asChild>
+                      <h2>Cancel invitation?</h2>
+                    </AlertDialog.Title>
+                    <AlertDialog.Description className={styles.dialogDescription}>
+                      Cancel the invitation for {invitationToCancel.email}?
+                    </AlertDialog.Description>
+                    <div className={styles.dialogActions}>
+                      <AlertDialog.Cancel asChild>
+                        <AdminButton tone="oatmeal">Keep invitation</AdminButton>
+                      </AlertDialog.Cancel>
+                      <AlertDialog.Action asChild>
+                        <AdminButton
+                          onClick={() => {
+                            shouldRestoreFocus.current = true;
+                            cancel(invitationToCancel);
+                          }}
+                          tone="brick"
+                        >
+                          Cancel invitation
+                        </AdminButton>
+                      </AlertDialog.Action>
+                    </div>
+                  </AdminSurface>
+                </motion.div>
+              </AlertDialog.Content>
+            ) : null}
+          </AnimatePresence>
+        </AlertDialog.Portal>
+      </AlertDialog.Root>
     </div>
   );
 }

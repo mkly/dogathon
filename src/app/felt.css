@@ -21,16 +21,7 @@
 .felt-denim-lt { --felt-color: var(--felt-denim-lt); --felt-contrast: var(--felt-cream); }
 .felt-cream { --felt-color: var(--felt-cream); --felt-contrast: var(--felt-ink); }
 
-/* no focus rings anywhere: the browser default is chrome that reads as foreign
-   on cut felt, and the custom mustard/denim rings looked awkward too */
-:focus,
 :focus-visible {
-  outline: none;
-}
-
-/* Admin working surfaces deliberately restore conventional keyboard focus.
-   Public felt pages retain the chrome-free treatment above. */
-.admin-shell :focus-visible {
   outline: 3px solid var(--felt-mustard);
   outline-offset: 3px;
 }

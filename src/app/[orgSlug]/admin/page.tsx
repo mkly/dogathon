@@ -238,7 +238,7 @@ async function ApprovalQueue({
         </p>
       </MotionReveal>
 
-      <div className={styles.queue}>
+      <div className={styles.queue} id="draft-queue" tabIndex={-1}>
         {drafts.length === 0 ? (
           <AdminSurface tone="oatmeal">
             <AdminEmptyState variant="dashboard">
@@ -252,6 +252,7 @@ async function ApprovalQueue({
             <DraftEditor
               bodyText={draft.bodyText}
               emailConnected={emailConnector.connected}
+              focusTargetId="draft-queue"
               id={draft.id}
               key={draft.id}
               orgSlug={orgSlug}
