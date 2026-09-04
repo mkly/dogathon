@@ -94,6 +94,8 @@ function DashboardStatsLoading() {
 
 async function ComposeSection({ orgId, orgSlug }: { orgId: string; orgSlug: string }) {
   const noteResidents = await prisma.resident.findMany({
+    // once a draft exists the companion moves to the approval queue below,
+    // so keep it out of the compose list until that draft is resolved
     where: {
       orgId,
       volunteerNotes: { some: { orgId } },
