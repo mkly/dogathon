@@ -49,6 +49,8 @@ const MAX_BATCH_SCRAPE_URLS = 100;
 const MAX_SCRAPE_LINKS = 300;
 const MAX_SCRAPE_DATA_ENDPOINTS = 300;
 const MAX_SCRAPE_MARKDOWN_CHARS = 20_000;
+const MAX_FIRECRAWL_LOAD_MORE_CLICKS = 10;
+const FIRECRAWL_LOAD_MORE_WAIT_MS = 500;
 export const MAX_SYNC_NOTE_CHARS = 4_000;
 const MAX_CRAWL_SUMMARY_CHARS = 4_000;
 // A live scrape should never make most of the current roster disappear at once.
@@ -462,9 +464,14 @@ export async function discoverRosterWithCompleteness(
       execute: (input) => executeTool("firecrawl_map", input),
     }),
     firecrawl_scrape: tool({
-      description: "Fetch one page as clean markdown for roster parsing, together with its same-site links and data endpoints found in page scripts. A Show More, Load More, or infinite-scroll listing usually has a JSON or AJAX endpoint: scrape that endpoint with a large per-page value, or page until it reports its last page, instead of clicking. Record the endpoint and its parameters in save_sync_notes.",
+      description: "Fetch one page as clean markdown for roster parsing, together with its same-site links and data endpoints found in page scripts. A Show More, Load More, or infinite-scroll listing usually has a JSON or AJAX endpoint: scrape that endpoint with a large per-page value, or page until it reports its last page. Use loadMore only when the listing has such a control and no usable data endpoint. Record the endpoint or loadMore selector in save_sync_notes.",
       inputSchema: z.object({
         url: z.string().describe("The page URL to scrape."),
+        loadMore: z.object({
+          selector: z.string().min(1).describe("CSS selector for the Show More or Load More control."),
+          maxClicks: z.number().int().min(1).optional()
+            .describe(`Number of clicks to attempt, capped at ${MAX_FIRECRAWL_LOAD_MORE_CLICKS}.`),
+        }).optional(),
       }),
       execute: (input) => executeTool("firecrawl_scrape", input),
     }),
@@ -510,7 +517,7 @@ export async function discoverRosterWithCompleteness(
   const { steps } = await generateText({
     model: options.model ?? createAiModel(),
     maxOutputTokens: MAX_ROSTER_OUTPUT_TOKENS,
-    instructions: "Find the rescue's complete current adoptable companion roster. Use map only when the supplied page may not be the adoption listing. Scrape the listing page, read its links, and pick out exactly the links that lead to individual companion pages and to further pages of the same listing; then batch-scrape those chosen URLs. A Show More, Load More, or infinite-scroll control usually has a JSON or AJAX endpoint in dataEndpoints: prefer scraping it with a large per-page value, or paging until the response reports its last page, instead of clicking. Never fetch pages that are not part of the roster, such as other sections of the site, and only fall back to crawl when the listing exposes no usable links. When notes from the previous sync are given, follow them on your first steps rather than exploring, and explore only if they fail or gather fewer companions than the notes expect. Check that you gathered at least as many companions as the listing shows. Call save_sync_notes as soon as you have fetched the companion pages, and again before finishing if you learned more, with concise guidance for the next sync: the listing URL, what its companion and pagination links look like, the number of companions listed, data endpoints and their parameters, and any site quirks. Then reply with a short completion message. Do not invent roster content.",
+    instructions: "Find the rescue's complete current adoptable companion roster. Use map only when the supplied page may not be the adoption listing. Scrape the listing page, read its links, and pick out exactly the links that lead to individual companion pages and to further pages of the same listing; then batch-scrape those chosen URLs. A Show More, Load More, or infinite-scroll control usually has a JSON or AJAX endpoint in dataEndpoints: prefer scraping it with a large per-page value, or paging until the response reports its last page, instead of clicking. Use loadMore only when the scrape reply listed no usable data endpoint and the listing shows a Show More, Load More, or similar button. Compare the expanded reply's link count with the previous scrape and stop once it stops growing. Record the loadMore selector in save_sync_notes. Never fetch pages that are not part of the roster, such as other sections of the site, and only fall back to crawl when the listing exposes no usable links. When notes from the previous sync are given, follow them on your first steps rather than exploring, and explore only if they fail or gather fewer companions than the notes expect. Check that you gathered at least as many companions as the listing shows. Call save_sync_notes as soon as you have fetched the companion pages, and again before finishing if you learned more, with concise guidance for the next sync: the listing URL, what its companion and pagination links look like, the number of companions listed, data endpoints and their parameters, loadMore selectors, and any site quirks. Then reply with a short completion message. Do not invent roster content.",
     prompt: priorNotesPrompt(sourceUrl, options.priorNotes),
     tools,
     stopWhen: isStepCount(MAX_ROSTER_AGENT_STEPS),
@@ -563,12 +570,15 @@ function requestedUrls(input: Record<string, unknown>): string[] {
 }
 
 function describeToolInput(input: Record<string, unknown>): string {
-  const { url, urls, ...rest } = input;
+  const { url, urls, loadMore, ...rest } = input;
   const extras = Object.entries(rest)
     .filter(([, value]) => value !== undefined)
     .map(([key, value]) => `${key}=${JSON.stringify(value)}`);
+  const loadMoreDescription = loadMore === undefined
+    ? ""
+    : `loadMore selector=${JSON.stringify(loadMoreSelector(loadMore))} clicks=${loadMoreClickCount(loadMore)}`;
   const urlList = Array.isArray(urls) ? `${urls.length} urls (${urls.slice(0, 3).map(String).join(", ")}${urls.length > 3 ? ", ..." : ""})` : "";
-  return [typeof url === "string" ? url : "", urlList, ...extras].filter(Boolean).join(" ");
+  return [typeof url === "string" ? url : "", urlList, loadMoreDescription, ...extras].filter(Boolean).join(" ");
 }
 
 function elapsedSeconds(startedAt: number): string {
@@ -657,7 +667,7 @@ export async function requestFirecrawl(
   const endpoint = name === "firecrawl_map" ? "map" : "scrape";
   const body = name === "firecrawl_map"
     ? { ...input, limit: input.limit ?? 25 }
-    : { ...input, formats: ["markdown", "links", "rawHtml"], onlyMainContent: true };
+    : firecrawlScrapeBody(input);
   const response = await fetcher(`${baseUrl}/${endpoint}`, {
     method: "POST",
     headers: { authorization: `Bearer ${apiKey}`, "content-type": "application/json" },
@@ -669,6 +679,42 @@ export async function requestFirecrawl(
     throw new Error(payload.error ?? `Firecrawl ${endpoint} request failed (${response.status})`);
   }
   return payload;
+}
+
+function firecrawlScrapeBody(input: Record<string, unknown>): Record<string, unknown> {
+  const { loadMore, ...scrapeInput } = input;
+  const actions = loadMore === undefined ? [] : Array.from(
+    { length: loadMoreClickCount(loadMore) },
+    () => [
+      { type: "click", selector: loadMoreSelector(loadMore) },
+      { type: "wait", milliseconds: FIRECRAWL_LOAD_MORE_WAIT_MS },
+    ],
+  ).flat();
+  return {
+    ...scrapeInput,
+    formats: ["markdown", "links", "rawHtml"],
+    onlyMainContent: true,
+    ...(actions.length > 0 ? { actions } : {}),
+  };
+}
+
+function loadMoreSelector(value: unknown): string {
+  if (!value || typeof value !== "object" || typeof (value as Record<string, unknown>).selector !== "string") {
+    throw new Error("Roster scrape loadMore selector must be a string");
+  }
+  const selector = (value as Record<string, unknown>).selector as string;
+  if (!selector.trim()) throw new Error("Roster scrape loadMore selector must not be empty");
+  return selector;
+}
+
+function loadMoreClickCount(value: unknown): number {
+  if (!value || typeof value !== "object") throw new Error("Roster scrape loadMore must be an object");
+  const maxClicks = (value as Record<string, unknown>).maxClicks;
+  if (maxClicks === undefined) return 1;
+  if (typeof maxClicks !== "number" || !Number.isFinite(maxClicks) || maxClicks < 1) {
+    throw new Error("Roster scrape loadMore maxClicks must be a positive number");
+  }
+  return Math.min(MAX_FIRECRAWL_LOAD_MORE_CLICKS, Math.floor(maxClicks));
 }
 
 async function requestFirecrawlCrawl(
