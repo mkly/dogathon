@@ -1,8 +1,9 @@
 import { headers } from "next/headers";
 
 import { AuthForm } from "@/components/auth-form";
-import { FeltButton, FeltPanel, StitchBadge } from "@/components/felt";
+import { FeltPanel, StitchBadge } from "@/components/felt";
 import { SignOutButton } from "@/components/sign-out-button";
+import { PendingFeltSubmitButton } from "@/components/pending-submit-button";
 import { getSession } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
 import { uuidSchema } from "@/lib/uuid";
@@ -151,9 +152,9 @@ export default async function InvitationPage({ params }: InvitationPageProps) {
           </div>
         ) : matchingAccount ? (
           <form action={acceptThisInvitation} className={styles.actionArea}>
-            <FeltButton tone="mustard" type="submit">
+            <PendingFeltSubmitButton pendingLabel="Joining…" tone="mustard" type="submit">
               Join {invitation.organization.name}
-            </FeltButton>
+            </PendingFeltSubmitButton>
           </form>
         ) : (
           <div className={styles.actionArea}>

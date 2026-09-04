@@ -3,7 +3,8 @@ import { notFound } from "next/navigation";
 import { z } from "zod";
 
 import { createSponsorship } from "@/app/actions";
-import { FeltButton, FeltField, FeltLink, FeltPanel, PhotoPatch, StitchBadge } from "@/components/felt";
+import { FeltField, FeltLink, FeltPanel, PhotoPatch, StitchBadge } from "@/components/felt";
+import { PendingFeltSubmitButton } from "@/components/pending-submit-button";
 import { prisma } from "@/lib/prisma";
 import { getPublicOrganization } from "@/lib/public-organization";
 import { uuidSchema } from "@/lib/uuid";
@@ -115,9 +116,9 @@ export default async function CompanionPage({ params, searchParams }: CompanionP
               <input autoComplete="email" id="sponsorEmail" name="sponsorEmail" required type="email" />
             </FeltField>
 
-            <FeltButton className={styles.sponsorButton} tone="mustard" type="submit">
+            <PendingFeltSubmitButton className={styles.sponsorButton} pendingLabel="Opening checkout…" tone="mustard" type="submit">
               Sponsor for $25/month until adopted
-            </FeltButton>
+            </PendingFeltSubmitButton>
           </form>
         </FeltPanel>
       ) : !available ? (

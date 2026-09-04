@@ -4,7 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
 
 import { AdminEmptyState, AdminHeader, AdminPage } from "@/components/admin-ui";
-import { FeltButton, FeltField, FeltLink, FeltPanel, PhotoPatch, StitchBadge } from "@/components/felt";
+import { FeltField, FeltLink, FeltPanel, PhotoPatch, StitchBadge } from "@/components/felt";
 import { prisma } from "@/lib/prisma";
 import { getOrganizationAccessBySlug } from "@/lib/organization-access";
 import { uuidSchema } from "@/lib/uuid";
@@ -12,6 +12,7 @@ import { uuidSchema } from "@/lib/uuid";
 import { submitVolunteerNote } from "./actions";
 import { volunteerErrorMessage } from "./errors";
 import styles from "./volunteer.module.css";
+import { VolunteerPhotoInput, VolunteerSubmitButton } from "./volunteer-form";
 
 export const dynamic = "force-dynamic";
 
@@ -144,23 +145,13 @@ export default async function VolunteerPage({ params, searchParams }: VolunteerP
             <label className={styles.inputLabel} htmlFor="photo">
               3. Add a photo <span>(optional)</span>
             </label>
-            <FeltField className={`${styles.noteField} ${styles.photoField}`}>
-              <input
-                accept="image/jpeg,image/png,image/webp,image/gif"
-                capture="environment"
-                id="photo"
-                name="photo"
-                type="file"
-              />
-            </FeltField>
+            <VolunteerPhotoInput />
             <small>Take one now or choose one from your phone. Max 8 MB.</small>
           </FeltPanel>
 
           {errorMessage ? <p className={styles.error} role="alert">{errorMessage}</p> : null}
 
-          <FeltButton className={styles.submit} disabled={residents.length === 0} tone="brick" type="submit">
-            Send pup-date
-          </FeltButton>
+          <VolunteerSubmitButton disabled={residents.length === 0} />
         </form>
       </section>
     </AdminPage>

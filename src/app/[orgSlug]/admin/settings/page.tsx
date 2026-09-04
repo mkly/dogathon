@@ -5,7 +5,6 @@ import { notFound, redirect } from "next/navigation";
 
 import {
   AdminBadge,
-  AdminButton,
   AdminEyebrow,
   AdminFooter,
   AdminHeader,
@@ -14,6 +13,7 @@ import {
   AdminSurface,
 } from "@/components/admin-ui";
 import { SignOutButton } from "@/components/sign-out-button";
+import { PendingAdminSubmitButton } from "@/components/pending-submit-button";
 import { getEmailConnectorStatus } from "@/lib/email-connectors";
 import { getOrganizationAccessBySlug } from "@/lib/organization-access";
 import { prisma } from "@/lib/prisma";
@@ -137,13 +137,13 @@ export default async function AdminSettingsPage({ params }: AdminSettingsPagePro
           {stripeNotReady && context.role === "owner" && (
             <form action={beginStripeOnboarding} className={styles.stripeConnectForm}>
               <input name="orgSlug" type="hidden" value={orgSlug} />
-              <AdminButton tone="brick" type="submit">
+              <PendingAdminSubmitButton pendingLabel="Opening Stripe…" tone="brick" type="submit">
                 {organization?.stripeDetailsSubmitted
                   ? "Update Stripe details"
                   : organization?.stripeAccountId
                     ? "Continue Stripe onboarding"
                     : "Connect Stripe"}
-              </AdminButton>
+              </PendingAdminSubmitButton>
             </form>
           )}
         </AdminSurface>
