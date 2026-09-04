@@ -1,14 +1,16 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
-import { FeltButton, FeltPanel } from "@/components/felt";
+import { FeltButton, FeltLink, FeltPanel } from "@/components/felt";
 import { auth } from "@/lib/auth";
 import { getSession } from "@/lib/auth-session";
+import { prisma } from "@/lib/prisma";
 import {
   staffOrganizationsSignInPath,
   type SearchParams,
 } from "@/lib/staff-organizations-path";
 
+import { describeInvitationRole } from "../invitations/[id]/invitation-view";
 import { setActiveOrganization } from "./actions";
 import { CreateOrganizationForm } from "./create-organization-form";
 
@@ -24,7 +26,18 @@ export default async function OrganizationsPage({ searchParams }: OrganizationsP
   const session = await getSession(requestHeaders);
   if (!session) redirect(staffOrganizationsSignInPath(query));
 
-  const organizations = await auth.api.listOrganizations({ headers: requestHeaders });
+  const [organizations, pendingInvitations] = await Promise.all([
+    auth.api.listOrganizations({ headers: requestHeaders }),
+    prisma.invitation.findMany({
+      where: {
+        email: { equals: session.user.email, mode: "insensitive" },
+        expiresAt: { gt: new Date() },
+        status: "pending",
+      },
+      orderBy: { createdAt: "desc" },
+      include: { organization: { select: { name: true } } },
+    }),
+  ]);
 
   return (
     <main className="felt-page">
@@ -39,6 +52,22 @@ export default async function OrganizationsPage({ searchParams }: OrganizationsP
           </form>
         ))}
       </FeltPanel>
+
+      {pendingInvitations.map((pendingInvitation) => {
+        const role = describeInvitationRole(pendingInvitation.role);
+
+        return (
+          <FeltPanel key={pendingInvitation.id} tone="mustard">
+            <h2>Invitation to {pendingInvitation.organization.name}</h2>
+            <p>
+              You were invited as a <strong>{role.label}</strong>.
+            </p>
+            <FeltLink href={`/staff/invitations/${pendingInvitation.id}`} tone="moss">
+              View invitation
+            </FeltLink>
+          </FeltPanel>
+        );
+      })}
 
       <FeltPanel tone="oatmeal">
         <h2>Create an organization</h2>
