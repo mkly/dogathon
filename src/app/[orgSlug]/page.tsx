@@ -31,7 +31,7 @@ export default async function OrganizationHome({ params }: OrganizationHomeProps
 
   return (
     <main className={styles.siteShell}>
-      <Image alt="Pawcast" className={styles.wordmark} priority src={pawcastWordmark} />
+      <Image alt="Pawcast" className={styles.wordmark} src={pawcastWordmark} />
 
       <p>{organization.name}</p>
 
@@ -49,7 +49,7 @@ export default async function OrganizationHome({ params }: OrganizationHomeProps
           </p>
         </div>
         {/* decorative: the heading and lede already carry the meaning */}
-        <Image alt="" className={styles.mascot} priority src={feltPup} />
+        <Image alt="" className={styles.mascot} preload src={feltPup} />
       </FeltPanel>
 
       {residents.length ? (
@@ -59,6 +59,7 @@ export default async function OrganizationHome({ params }: OrganizationHomeProps
               <PhotoPatch
                 alt={`${resident.name}, ${resident.breed}`}
                 className={styles.gridPhoto}
+                sizes="(max-width: 640px) calc(100vw - 80px), (max-width: 1028px) 29vw, 274px"
                 src={resident.photoUrls[0]}
               />
               <div className={styles.cardCopy}>

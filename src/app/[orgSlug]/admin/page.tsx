@@ -141,6 +141,7 @@ async function ComposeSection({ orgId, orgSlug }: { orgId: string; orgSlug: stri
                 <PhotoPatch
                   alt={`${resident.name} portrait`}
                   className={styles.composePhoto}
+                  sizes="(max-width: 720px) 72px, 84px"
                   src={resident.photoUrls[0]}
                 />
                 <div className={styles.composeCopy}>
@@ -234,7 +235,7 @@ async function ApprovalQueue({
         ) : (
           drafts.map((draft) => (
             <AdminSurface className={styles.queueItem} key={draft.id} tone="oatmeal">
-              <PhotoPatch alt={`${draft.resident.name} portrait`} className={styles.photo} src={draft.resident.photoUrls[0]} />
+              <PhotoPatch alt={`${draft.resident.name} portrait`} className={styles.photo} sizes="(max-width: 720px) 104px, 120px" src={draft.resident.photoUrls[0]} />
               <div className={styles.companionSummary}>
                 <AdminBadge tone={draft.type === "graduation" ? "mustard" : "denim"}>{draft.type}</AdminBadge>
                 <h3>{draft.resident.name}</h3>
@@ -326,7 +327,7 @@ export default async function AdminPage({ params }: AdminPageProps) {
           </>
         }
         brand={<Link href={`/${orgSlug}`}>
-          <Image alt="Pawcast" priority src={pawcastWordmark} />
+          <Image alt="Pawcast" preload src={pawcastWordmark} />
         </Link>}
         title="Staff room"
       />

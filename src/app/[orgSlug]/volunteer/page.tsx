@@ -107,6 +107,7 @@ export default async function VolunteerPage({ params, searchParams }: VolunteerP
                       <PhotoPatch
                         alt={resident.name}
                         className={styles.photo}
+                        sizes="(max-width: 720px) calc(50vw - 44px), 208px"
                         src={resident.photoUrls[0]}
                       />
                       <span className={styles.companionName}>

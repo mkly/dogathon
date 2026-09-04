@@ -188,7 +188,7 @@ export default async function AdminSettingsPage({ params }: AdminSettingsPagePro
           </>
         }
         brand={<Link href={`/${orgSlug}`}>
-          <Image alt="Pawcast" priority src={pawcastWordmark} />
+          <Image alt="Pawcast" preload src={pawcastWordmark} />
         </Link>}
         title="Staff settings"
       />
