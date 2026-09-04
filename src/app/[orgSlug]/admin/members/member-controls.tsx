@@ -111,76 +111,76 @@ export function MemberList({
     <div className={styles.memberList}>
       <AnimatePresence initial={false} mode="popLayout">
         {optimisticMembers.map((member) => {
-        const isSelf = member.userId === actorUserId;
-        const isProtectedOwner = member.role === "owner" && (
-          actorRole === "admin" || ownerCount <= 1
-        );
-        const pendingAction = pendingMemberActions[member.id];
+          const isSelf = member.userId === actorUserId;
+          const isProtectedOwner = member.role === "owner" && (
+            actorRole === "admin" || ownerCount <= 1
+          );
+          const pendingAction = pendingMemberActions[member.id];
 
-        return (
-          <MotionAdminSurface
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            className={styles.memberRow}
-            exit={{ opacity: 0, scale: 0.98, y: -8 }}
-            initial={{ opacity: 0, scale: 0.98, y: 8 }}
-            key={member.id}
-            layout
-            tone="oatmeal"
-            transition={motionTransition}
-          >
-            <div className={styles.identity}>
-              <div className={styles.nameLine}>
-                <h2>{member.name || member.email}</h2>
-                {isSelf ? <span className={styles.you}>You</span> : null}
+          return (
+            <MotionAdminSurface
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              className={styles.memberRow}
+              exit={{ opacity: 0, scale: 0.98, y: -8 }}
+              initial={{ opacity: 0, scale: 0.98, y: 8 }}
+              key={member.id}
+              layout
+              tone="oatmeal"
+              transition={motionTransition}
+            >
+              <div className={styles.identity}>
+                <div className={styles.nameLine}>
+                  <h2>{member.name || member.email}</h2>
+                  {isSelf ? <span className={styles.you}>You</span> : null}
+                </div>
+                <a href={`mailto:${member.email}`}>{member.email}</a>
               </div>
-              <a href={`mailto:${member.email}`}>{member.email}</a>
-            </div>
-            <div className={styles.memberMeta}>
-              <AdminBadge tone={ROLE_TONES[member.role]}>{member.role}</AdminBadge>
-              <span>
-                Joined {formatDate(member.joinedAt)}
-              </span>
-            </div>
-            <div className={styles.controls}>
-              {isProtectedOwner ? (
-                <p className={styles.protectedNote}>
-                  {ownerCount <= 1 ? "Last owner" : "Only an owner can manage this person"}
-                </p>
-              ) : (
-                <AdminField className={styles.roleField}>
-                  <select
-                    aria-label={`Change ${member.name || member.email} role`}
-                    defaultValue=""
-                    disabled={pendingAction !== undefined}
-                    onChange={(event) => {
-                      const role = event.target.value as "admin" | "member" | "volunteer";
-                      if (role) changeRole(member, role);
-                      event.target.value = "";
-                    }}
-                  >
-                    <option disabled value="">Change role…</option>
-                    {member.role !== "admin" ? <option value="admin">Admin</option> : null}
-                    {member.role !== "member" ? <option value="member">Member</option> : null}
-                    {member.role !== "volunteer" ? <option value="volunteer">Volunteer</option> : null}
-                  </select>
-                </AdminField>
-              )}
-              <AdminButton
-                className={styles.removeButton}
-                disabled={pendingAction !== undefined || isSelf || isProtectedOwner}
-                onClick={() => {
-                  setMemberToRemove(member);
-                  setRemoveDialogOpen(true);
-                }}
-                title={isSelf ? "You cannot remove yourself." : undefined}
-                tone="brick"
-              >
-                {pendingAction === "remove" ? "Working…" : "Remove"}
-              </AdminButton>
-            </div>
-          </MotionAdminSurface>
-        );
-      })}
+              <div className={styles.memberMeta}>
+                <AdminBadge tone={ROLE_TONES[member.role]}>{member.role}</AdminBadge>
+                <span>
+                  Joined {formatDate(member.joinedAt)}
+                </span>
+              </div>
+              <div className={styles.controls}>
+                {isProtectedOwner ? (
+                  <p className={styles.protectedNote}>
+                    {ownerCount <= 1 ? "Last owner" : "Only an owner can manage this person"}
+                  </p>
+                ) : (
+                  <AdminField className={styles.roleField}>
+                    <select
+                      aria-label={`Change ${member.name || member.email} role`}
+                      defaultValue=""
+                      disabled={pendingAction !== undefined}
+                      onChange={(event) => {
+                        const role = event.target.value as "admin" | "member" | "volunteer";
+                        if (role) changeRole(member, role);
+                        event.target.value = "";
+                      }}
+                    >
+                      <option disabled value="">Change role…</option>
+                      {member.role !== "admin" ? <option value="admin">Admin</option> : null}
+                      {member.role !== "member" ? <option value="member">Member</option> : null}
+                      {member.role !== "volunteer" ? <option value="volunteer">Volunteer</option> : null}
+                    </select>
+                  </AdminField>
+                )}
+                <AdminButton
+                  className={styles.removeButton}
+                  disabled={pendingAction !== undefined || isSelf || isProtectedOwner}
+                  onClick={() => {
+                    setMemberToRemove(member);
+                    setRemoveDialogOpen(true);
+                  }}
+                  title={isSelf ? "You cannot remove yourself." : undefined}
+                  tone="brick"
+                >
+                  {pendingAction === "remove" ? "Working…" : "Remove"}
+                </AdminButton>
+              </div>
+            </MotionAdminSurface>
+          );
+        })}
       </AnimatePresence>
       <AlertDialog.Root
         onOpenChange={setRemoveDialogOpen}

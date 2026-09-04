@@ -12,8 +12,8 @@ import {
   AdminPage,
   AdminSurface,
 } from "@/components/admin-ui";
-import { SignOutButton } from "@/components/sign-out-button";
 import { MotionReveal } from "@/components/motion-primitives";
+import { SignOutButton } from "@/components/sign-out-button";
 import { getEmailConnectorStatus } from "@/lib/email-connectors";
 import { getOrganizationAccessBySlug } from "@/lib/organization-access";
 import { prisma } from "@/lib/prisma";

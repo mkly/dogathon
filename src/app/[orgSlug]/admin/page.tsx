@@ -15,8 +15,8 @@ import {
   AdminSurface,
 } from "@/components/admin-ui";
 import { PhotoPatch } from "@/components/felt";
-import { SignOutButton } from "@/components/sign-out-button";
 import { MotionReveal } from "@/components/motion-primitives";
+import { SignOutButton } from "@/components/sign-out-button";
 import { getEmailConnectorStatus } from "@/lib/email-connectors";
 import { formatDateTime } from "@/lib/format";
 import { getOrganizationAccessBySlug } from "@/lib/organization-access";

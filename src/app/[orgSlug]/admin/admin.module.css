@@ -214,8 +214,7 @@
 .connectorHeader h2 { margin: 0; font-size: 1.65rem; }
 .connectorHeader p:last-child { max-width: 620px; margin: 8px 0 0; font-size: 0.85rem; font-weight: 700; }
 .connectorStatus { display: flex; align-items: center; gap: 10px; }
-.oauthChoices { display: flex; flex-wrap: wrap; gap: 12px; }
-.oauthChoices { overflow: hidden; }
+.oauthChoices { display: flex; flex-wrap: wrap; gap: 12px; overflow: hidden; }
 .disconnectButton { min-width: 7.75rem; }
 .gmailButton { min-width: 8.5rem; }
 .microsoftButton { min-width: 11rem; }
@@ -239,8 +238,7 @@
 .saveSourceButton { min-width: 7rem; }
 .syncButton { min-width: 6.25rem; }
 .postscriptButton { min-width: 7rem; }
-.inlineReveal, .noticeReveal, .stripeBlockers { overflow: hidden; }
-.statusReveal { overflow: hidden; }
+.inlineReveal, .noticeReveal, .statusReveal, .stripeBlockers { overflow: hidden; }
 .unsavedSource { margin: 0; font-size: 0.78rem; font-weight: 800; line-height: 1.4; }
 
 .saveRow { display: flex; align-items: center; justify-content: flex-end; gap: 14px; margin-top: 8px; }

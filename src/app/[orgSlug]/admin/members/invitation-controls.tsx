@@ -232,75 +232,75 @@ export function InvitationManager({
               There are no pending invitations.
             </motion.p>
           ) : optimisticInvitations.map((invitation) => (
-          <MotionAdminSurface
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            className={styles.invitationRow}
-            exit={{ opacity: 0, scale: 0.98, y: -8 }}
-            initial={{ opacity: 0, scale: 0.98, y: 8 }}
-            key={invitation.id}
-            layout
-            tone="oatmeal"
-            transition={motionTransition}
-          >
-            <div className={styles.identity}>
-              <h3>{invitation.email}</h3>
-              <p>Invited by {invitation.inviter}</p>
-            </div>
-            <div className={styles.memberMeta}>
-              <AdminBadge tone={ROLE_TONES[invitation.role]}>{invitation.role}</AdminBadge>
-              <span>
-                {invitation.pending
-                  ? "Sending…"
-                  : `Expires ${formatDateTime(invitation.expiresAt)} UTC`}
-              </span>
-            </div>
-            <div className={styles.invitationActions}>
-              {!invitation.pending ? <div className={styles.invitationControls}>
-                <AdminButton
-                  className={styles.copyButton}
-                  disabled={copyingInvitationId === invitation.id}
-                  onClick={() => copyInviteLink(invitation)}
-                  tone="denim"
+            <MotionAdminSurface
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              className={styles.invitationRow}
+              exit={{ opacity: 0, scale: 0.98, y: -8 }}
+              initial={{ opacity: 0, scale: 0.98, y: 8 }}
+              key={invitation.id}
+              layout
+              tone="oatmeal"
+              transition={motionTransition}
+            >
+              <div className={styles.identity}>
+                <h3>{invitation.email}</h3>
+                <p>Invited by {invitation.inviter}</p>
+              </div>
+              <div className={styles.memberMeta}>
+                <AdminBadge tone={ROLE_TONES[invitation.role]}>{invitation.role}</AdminBadge>
+                <span>
+                  {invitation.pending
+                    ? "Sending…"
+                    : `Expires ${formatDateTime(invitation.expiresAt)} UTC`}
+                </span>
+              </div>
+              <div className={styles.invitationActions}>
+                {!invitation.pending ? <div className={styles.invitationControls}>
+                  <AdminButton
+                    className={styles.copyButton}
+                    disabled={copyingInvitationId === invitation.id}
+                    onClick={() => copyInviteLink(invitation)}
+                    tone="denim"
+                  >
+                    {copyingInvitationId === invitation.id ? "Copying…" : "Copy invite link"}
+                  </AdminButton>
+                  <AdminButton
+                    className={styles.resendButton}
+                    disabled={pendingInvitationActions[invitation.id] !== undefined}
+                    onClick={() => resend(invitation)}
+                    tone="moss"
+                  >
+                    {pendingInvitationActions[invitation.id] === "resend"
+                      ? "Resending…"
+                      : "Resend"}
+                  </AdminButton>
+                  <AdminButton
+                    className={styles.cancelButton}
+                    disabled={pendingInvitationActions[invitation.id] !== undefined}
+                    onClick={() => cancel(invitation)}
+                    tone="brick"
+                  >
+                    {pendingInvitationActions[invitation.id] === "cancel"
+                      ? "Cancelling…"
+                      : "Cancel"}
+                  </AdminButton>
+                </div> : null}
+                <MotionReveal
+                  className={styles.inviteLinkReveal}
+                  show={visibleInviteUrlId === invitation.id}
                 >
-                  {copyingInvitationId === invitation.id ? "Copying…" : "Copy invite link"}
-                </AdminButton>
-                <AdminButton
-                  className={styles.resendButton}
-                  disabled={pendingInvitationActions[invitation.id] !== undefined}
-                  onClick={() => resend(invitation)}
-                  tone="moss"
-                >
-                  {pendingInvitationActions[invitation.id] === "resend"
-                    ? "Resending…"
-                    : "Resend"}
-                </AdminButton>
-                <AdminButton
-                  className={styles.cancelButton}
-                  disabled={pendingInvitationActions[invitation.id] !== undefined}
-                  onClick={() => cancel(invitation)}
-                  tone="brick"
-                >
-                  {pendingInvitationActions[invitation.id] === "cancel"
-                    ? "Cancelling…"
-                    : "Cancel"}
-                </AdminButton>
-              </div> : null}
-              <MotionReveal
-                className={styles.inviteLinkReveal}
-                show={visibleInviteUrlId === invitation.id}
-              >
-                <AdminField>
-                  <input
-                    aria-label={`Invite link for ${invitation.email}`}
-                    onFocus={(event) => event.currentTarget.select()}
-                    readOnly
-                    value={invitation.inviteUrl}
-                  />
-                </AdminField>
-              </MotionReveal>
-            </div>
-          </MotionAdminSurface>
-        ))}
+                  <AdminField>
+                    <input
+                      aria-label={`Invite link for ${invitation.email}`}
+                      onFocus={(event) => event.currentTarget.select()}
+                      readOnly
+                      value={invitation.inviteUrl}
+                    />
+                  </AdminField>
+                </MotionReveal>
+              </div>
+            </MotionAdminSurface>
+          ))}
         </AnimatePresence>
       </div>
     </div>
