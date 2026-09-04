@@ -2,6 +2,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { FeltLink, FeltPanel } from "@/components/felt";
+import { PageViewTransition } from "@/components/page-view-transition";
 import { PendingFeltSubmitButton } from "@/components/pending-submit-button";
 import { auth } from "@/lib/auth";
 import { getSession } from "@/lib/auth-session";
@@ -41,39 +42,41 @@ export default async function OrganizationsPage({ searchParams }: OrganizationsP
   ]);
 
   return (
-    <main className="felt-page">
-      <FeltPanel tone="denim">
-        <h1>Your rescue organizations</h1>
-        {organizations.map((organization) => (
-          <form action={setActiveOrganization} key={organization.id}>
-            <input name="organizationId" type="hidden" value={organization.id} />
-            <PendingFeltSubmitButton pendingLabel="Opening…" tone="mustard" type="submit">
-              Open {organization.name} ({organization.slug})
-            </PendingFeltSubmitButton>
-          </form>
-        ))}
-      </FeltPanel>
+    <PageViewTransition>
+      <main className="felt-page">
+        <FeltPanel tone="denim">
+          <h1>Your rescue organizations</h1>
+          {organizations.map((organization) => (
+            <form action={setActiveOrganization} key={organization.id}>
+              <input name="organizationId" type="hidden" value={organization.id} />
+              <PendingFeltSubmitButton pendingLabel="Opening…" tone="mustard" type="submit">
+                Open {organization.name} ({organization.slug})
+              </PendingFeltSubmitButton>
+            </form>
+          ))}
+        </FeltPanel>
 
-      {pendingInvitations.map((pendingInvitation) => {
-        const role = describeInvitationRole(pendingInvitation.role);
+        {pendingInvitations.map((pendingInvitation) => {
+          const role = describeInvitationRole(pendingInvitation.role);
 
-        return (
-          <FeltPanel key={pendingInvitation.id} tone="mustard">
-            <h2>Invitation to {pendingInvitation.organization.name}</h2>
-            <p>
-              You were invited as a <strong>{role.label}</strong>.
-            </p>
-            <FeltLink href={`/staff/invitations/${pendingInvitation.id}`} tone="moss">
-              View invitation
-            </FeltLink>
-          </FeltPanel>
-        );
-      })}
+          return (
+            <FeltPanel key={pendingInvitation.id} tone="mustard">
+              <h2>Invitation to {pendingInvitation.organization.name}</h2>
+              <p>
+                You were invited as a <strong>{role.label}</strong>.
+              </p>
+              <FeltLink href={`/staff/invitations/${pendingInvitation.id}`} tone="moss">
+                View invitation
+              </FeltLink>
+            </FeltPanel>
+          );
+        })}
 
-      <FeltPanel tone="oatmeal">
-        <h2>Create an organization</h2>
-        <CreateOrganizationForm />
-      </FeltPanel>
-    </main>
+        <FeltPanel tone="oatmeal">
+          <h2>Create an organization</h2>
+          <CreateOrganizationForm />
+        </FeltPanel>
+      </main>
+    </PageViewTransition>
   );
 }

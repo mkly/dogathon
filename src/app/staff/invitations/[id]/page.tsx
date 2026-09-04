@@ -2,6 +2,7 @@ import { headers } from "next/headers";
 
 import { AuthForm } from "@/components/auth-form";
 import { FeltPanel, StitchBadge } from "@/components/felt";
+import { PageViewTransition } from "@/components/page-view-transition";
 import { SignOutButton } from "@/components/sign-out-button";
 import { PendingFeltSubmitButton } from "@/components/pending-submit-button";
 import { getSession } from "@/lib/auth-session";
@@ -63,7 +64,7 @@ export default async function InvitationPage({ params }: InvitationPageProps) {
   const { id } = await params;
   const parsedId = uuidSchema.safeParse(id);
   if (!parsedId.success) {
-    return <main className={styles.page}><ClosedInvitation state="unknown" /></main>;
+    return <PageViewTransition><main className={styles.page}><ClosedInvitation state="unknown" /></main></PageViewTransition>;
   }
 
   const [invitation, session] = await Promise.all([
@@ -78,10 +79,10 @@ export default async function InvitationPage({ params }: InvitationPageProps) {
   ]);
   const state = invitationState(invitation);
   if (!invitation) {
-    return <main className={styles.page}><ClosedInvitation state="unknown" /></main>;
+    return <PageViewTransition><main className={styles.page}><ClosedInvitation state="unknown" /></main></PageViewTransition>;
   }
   if (state !== "pending") {
-    return <main className={styles.page}><ClosedInvitation state={state} /></main>;
+    return <PageViewTransition><main className={styles.page}><ClosedInvitation state={state} /></main></PageViewTransition>;
   }
 
   const role = describeInvitationRole(invitation.role);
@@ -111,62 +112,64 @@ export default async function InvitationPage({ params }: InvitationPageProps) {
   const acceptThisInvitation = acceptInvitation.bind(null, invitation.id);
 
   return (
-    <main className={styles.page}>
-      <FeltPanel className={styles.card} tone="denim">
-        <StitchBadge tone="mustard">Rescue invitation</StitchBadge>
-        <h1>Join {invitation.organization.name}</h1>
-        <p className={styles.lede}>
-          {invitation.inviter.name || invitation.inviter.email} invited you to help this rescue.
-        </p>
+    <PageViewTransition>
+      <main className={styles.page}>
+        <FeltPanel className={styles.card} tone="denim">
+          <StitchBadge tone="mustard">Rescue invitation</StitchBadge>
+          <h1>Join {invitation.organization.name}</h1>
+          <p className={styles.lede}>
+            {invitation.inviter.name || invitation.inviter.email} invited you to help this rescue.
+          </p>
 
-        <dl className={styles.details}>
-          <div>
-            <dt>Role</dt>
-            <dd><strong>{role.label}</strong><span>{role.description}</span></dd>
-          </div>
-          <div>
-            <dt>Invited email</dt>
-            <dd>{invitation.email}</dd>
-          </div>
-          <div>
-            <dt>Expires</dt>
-            <dd><time dateTime={invitation.expiresAt.toISOString()}>{expiry}</time></dd>
-          </div>
-        </dl>
-
-        {!session ? (
-          <div className={styles.actionArea}>
+          <dl className={styles.details}>
             <div>
-              <h2>{invitedAccountExists ? "Sign in" : "Create your account"}</h2>
-              <p>
-                You will land in the {invitation.organization.name} staff room as {role.article}{" "}
-                {role.label.toLowerCase()}.
-              </p>
+              <dt>Role</dt>
+              <dd><strong>{role.label}</strong><span>{role.description}</span></dd>
             </div>
-            <AuthForm
-              fixedEmail={invitation.email}
-              hiddenTabs
-              initialMode={invitedAccountExists ? "sign-in" : "sign-up"}
-              onAuthenticated={acceptThisInvitation}
-            />
-          </div>
-        ) : matchingAccount ? (
-          <form action={acceptThisInvitation} className={styles.actionArea}>
-            <PendingFeltSubmitButton pendingLabel="Joining…" tone="mustard" type="submit">
-              Join {invitation.organization.name}
-            </PendingFeltSubmitButton>
-          </form>
-        ) : (
-          <div className={styles.actionArea}>
-            <p>
-              This invitation was sent to <strong>{invitation.email}</strong>, but you are signed
-              in as <strong>{session.user.email}</strong>.
-            </p>
-            <p>Sign out, then return here with the invited account.</p>
-            <SignOutButton redirectTo={returnPath} />
-          </div>
-        )}
-      </FeltPanel>
-    </main>
+            <div>
+              <dt>Invited email</dt>
+              <dd>{invitation.email}</dd>
+            </div>
+            <div>
+              <dt>Expires</dt>
+              <dd><time dateTime={invitation.expiresAt.toISOString()}>{expiry}</time></dd>
+            </div>
+          </dl>
+
+          {!session ? (
+            <div className={styles.actionArea}>
+              <div>
+                <h2>{invitedAccountExists ? "Sign in" : "Create your account"}</h2>
+                <p>
+                  You will land in the {invitation.organization.name} staff room as {role.article}{" "}
+                  {role.label.toLowerCase()}.
+                </p>
+              </div>
+              <AuthForm
+                fixedEmail={invitation.email}
+                hiddenTabs
+                initialMode={invitedAccountExists ? "sign-in" : "sign-up"}
+                onAuthenticated={acceptThisInvitation}
+              />
+            </div>
+          ) : matchingAccount ? (
+            <form action={acceptThisInvitation} className={styles.actionArea}>
+              <PendingFeltSubmitButton pendingLabel="Joining…" tone="mustard" type="submit">
+                Join {invitation.organization.name}
+              </PendingFeltSubmitButton>
+            </form>
+          ) : (
+            <div className={styles.actionArea}>
+              <p>
+                This invitation was sent to <strong>{invitation.email}</strong>, but you are signed
+                in as <strong>{session.user.email}</strong>.
+              </p>
+              <p>Sign out, then return here with the invited account.</p>
+              <SignOutButton redirectTo={returnPath} />
+            </div>
+          )}
+        </FeltPanel>
+      </main>
+    </PageViewTransition>
   );
 }

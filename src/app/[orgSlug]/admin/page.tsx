@@ -17,6 +17,11 @@ import {
 } from "@/components/admin-ui";
 import { PhotoPatch } from "@/components/felt";
 import { MotionReveal } from "@/components/motion-primitives";
+import {
+  PageViewTransition,
+  SuspenseFallback,
+  SuspenseReveal,
+} from "@/components/page-view-transition";
 import { SignOutButton } from "@/components/sign-out-button";
 import { getEmailConnectorStatus } from "@/lib/email-connectors";
 import { formatDateTime } from "@/lib/format";
@@ -57,6 +62,7 @@ async function DashboardStats({ orgId, orgSlug }: { orgId: string; orgSlug: stri
         aria-label={`View active sponsors (${activeSponsorCount} active)`}
         className={styles.statLink}
         href={`/${orgSlug}/admin/sponsors`}
+        transitionTypes={["nav-forward"]}
       >
         <AdminSurface className={styles.stat} tone="moss">
           <strong>{activeSponsorCount}</strong>
@@ -68,6 +74,7 @@ async function DashboardStats({ orgId, orgSlug }: { orgId: string; orgSlug: stri
         aria-label={`View companions covered (${sponsoredCompanionCount} with active sponsors)`}
         className={styles.statLink}
         href={`/${orgSlug}/admin/companions-covered`}
+        transitionTypes={["nav-forward"]}
       >
         <AdminSurface className={styles.stat} tone="denim">
           <strong>{sponsoredCompanionCount}</strong>
@@ -220,7 +227,10 @@ async function ApprovalQueue({
           <span>
             {emailConnectorBlockedReason()} Approving is on hold until then.{" "}
             {canManageStaffArea && (
-              <Link href={`/${orgSlug}/admin/settings#${EMAIL_CONNECTOR_NOTICE_ID}`}>
+              <Link
+                href={`/${orgSlug}/admin/settings#${EMAIL_CONNECTOR_NOTICE_ID}`}
+                transitionTypes={["nav-forward"]}
+              >
                 Open email settings.
               </Link>
             )}
@@ -291,7 +301,10 @@ async function StripeNotice({ orgId, orgSlug }: { orgId: string; orgSlug: string
       <span aria-hidden="true">⚠️</span>
       <span>
         {stripeNotReady} Sponsors cannot check out until Stripe enables card payments.{" "}
-        <Link href={`/${orgSlug}/admin/settings#${STRIPE_CONNECT_NOTICE_ID}`}>
+        <Link
+          href={`/${orgSlug}/admin/settings#${STRIPE_CONNECT_NOTICE_ID}`}
+          transitionTypes={["nav-forward"]}
+        >
           Open Stripe settings.
         </Link>
       </span>
@@ -314,50 +327,52 @@ export default async function AdminPage({ params }: AdminPageProps) {
   const canManageStaffArea = context.role === "owner" || context.role === "admin";
 
   return (
-    <AdminPageShell>
-      <AdminHeader
-        actions={
-          <>
-            {canManageStaffArea && (
-              <>
-                <AdminLink href={`/${orgSlug}/admin/members`} tone="oatmeal">
-                  Members
-                </AdminLink>
-                <AdminLink href={`/${orgSlug}/admin/settings`} tone="oatmeal">
-                  Settings
-                </AdminLink>
-              </>
-            )}
-            <SignOutButton />
-          </>
-        }
-        brand={<Link href={`/${orgSlug}`}>
-          <Image alt="Pawcast" preload src={pawcastWordmark} />
-        </Link>}
-        title="Staff room"
-      />
+    <PageViewTransition>
+      <AdminPageShell>
+        <AdminHeader
+          actions={
+            <>
+              {canManageStaffArea && (
+                <>
+                  <AdminLink href={`/${orgSlug}/admin/members`} tone="oatmeal">
+                    Members
+                  </AdminLink>
+                  <AdminLink href={`/${orgSlug}/admin/settings`} tone="oatmeal">
+                    Settings
+                  </AdminLink>
+                </>
+              )}
+              <SignOutButton />
+            </>
+          }
+          brand={<Link href={`/${orgSlug}`} transitionTypes={["nav-back"]}>
+            <Image alt="Pawcast" preload src={pawcastWordmark} />
+          </Link>}
+          title="Staff room"
+        />
 
-      {canManageStaffArea && (
-        <Suspense fallback={null}>
-          <StripeNotice orgId={context.orgId} orgSlug={orgSlug} />
+        {canManageStaffArea && (
+          <Suspense fallback={null}>
+            <StripeNotice orgId={context.orgId} orgSlug={orgSlug} />
+          </Suspense>
+        )}
+
+        {canManageStaffArea && (
+          <Suspense fallback={<SuspenseFallback><DashboardStatsLoading /></SuspenseFallback>}>
+            <SuspenseReveal><DashboardStats orgId={context.orgId} orgSlug={orgSlug} /></SuspenseReveal>
+          </Suspense>
+        )}
+
+        <Suspense fallback={<SuspenseFallback><ComposeSectionLoading /></SuspenseFallback>}>
+          <SuspenseReveal><ComposeSection orgId={context.orgId} orgSlug={orgSlug} /></SuspenseReveal>
         </Suspense>
-      )}
 
-      {canManageStaffArea && (
-        <Suspense fallback={<DashboardStatsLoading />}>
-          <DashboardStats orgId={context.orgId} orgSlug={orgSlug} />
+        <Suspense fallback={<SuspenseFallback><ApprovalQueueLoading /></SuspenseFallback>}>
+          <SuspenseReveal><ApprovalQueue canManageStaffArea={canManageStaffArea} orgId={context.orgId} orgSlug={orgSlug} /></SuspenseReveal>
         </Suspense>
-      )}
 
-      <Suspense fallback={<ComposeSectionLoading />}>
-        <ComposeSection orgId={context.orgId} orgSlug={orgSlug} />
-      </Suspense>
-
-      <Suspense fallback={<ApprovalQueueLoading />}>
-        <ApprovalQueue canManageStaffArea={canManageStaffArea} orgId={context.orgId} orgSlug={orgSlug} />
-      </Suspense>
-
-      <AdminFooter>the staff room · nobody wrote a single email today</AdminFooter>
-    </AdminPageShell>
+        <AdminFooter>the staff room · nobody wrote a single email today</AdminFooter>
+      </AdminPageShell>
+    </PageViewTransition>
   );
 }

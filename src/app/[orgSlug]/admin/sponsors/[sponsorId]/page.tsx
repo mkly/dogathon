@@ -13,6 +13,7 @@ import {
   AdminTable,
 } from "@/components/admin-ui";
 import { formatDate } from "@/lib/format";
+import { PageViewTransition } from "@/components/page-view-transition";
 import { getOrganizationAccessBySlug } from "@/lib/organization-access";
 import { prisma } from "@/lib/prisma";
 import { uuidSchema } from "@/lib/uuid";
@@ -55,62 +56,64 @@ export default async function SponsorDetailPage({ params }: SponsorDetailPagePro
   if (!sponsor) notFound();
 
   return (
-    <AdminPage variant="directory">
-      <AdminHeader
-        actions={<AdminLink className={styles.backLink} href={`/${orgSlug}/admin/sponsors`}>
-          Back to sponsors
-        </AdminLink>}
-        eyebrow="Sponsor record"
-        lede="Full contact details and sponsorship history."
-        title={sponsor.name}
-        variant="directory"
-      />
+    <PageViewTransition>
+      <AdminPage variant="directory">
+        <AdminHeader
+          actions={<AdminLink className={styles.backLink} href={`/${orgSlug}/admin/sponsors`} transitionTypes={["nav-back"]}>
+            Back to sponsors
+          </AdminLink>}
+          eyebrow="Sponsor record"
+          lede="Full contact details and sponsorship history."
+          title={sponsor.name}
+          variant="directory"
+        />
 
-      <AdminSurface className={styles.profile} tone="denim">
-        <div className={styles.profileItem}>
-          <small>Email</small>
-          <a href={`mailto:${sponsor.email}`}>{sponsor.email}</a>
-        </div>
-        <div className={styles.profileItem}>
-          <small>Phone</small>
-          {sponsor.phone ? <a href={`tel:${sponsor.phone}`}>{sponsor.phone}</a> : <strong>Not provided</strong>}
-        </div>
-        <div className={styles.profileItem}>
-          <small>Preferred updates</small>
-          <strong>{sponsor.channel}</strong>
-        </div>
-      </AdminSurface>
-
-      <section aria-labelledby="history-heading">
-        <div className={styles.historyTitle}>
-          <h2 id="history-heading">Sponsorship history</h2>
-          <AdminBadge tone="mustard">{sponsor.sponsorships.length} {pluralize("companion", sponsor.sponsorships.length)}</AdminBadge>
-        </div>
-        <AdminSurface className={styles.historyPanel} tone="oatmeal">
-          <AdminTable>
-            <thead>
-              <tr>
-                <th scope="col">Companion</th>
-                <th scope="col">Status</th>
-                <th scope="col">Started</th>
-                <th scope="col">Ended</th>
-                <th scope="col">Reason</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sponsor.sponsorships.map((sponsorship) => (
-                <tr key={sponsorship.id}>
-                  <td>{sponsorship.resident.name}</td>
-                  <td><AdminStatus>{sponsorship.status}</AdminStatus></td>
-                  <td>{formatDate(sponsorship.createdAt)}</td>
-                  <td>{sponsorship.status === "ended" ? formatDate(sponsorship.updatedAt) : "Ongoing"}</td>
-                  <td className={styles.reason}>{sponsorship.endedReason ?? "—"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </AdminTable>
+        <AdminSurface className={styles.profile} tone="denim">
+          <div className={styles.profileItem}>
+            <small>Email</small>
+            <a href={`mailto:${sponsor.email}`}>{sponsor.email}</a>
+          </div>
+          <div className={styles.profileItem}>
+            <small>Phone</small>
+            {sponsor.phone ? <a href={`tel:${sponsor.phone}`}>{sponsor.phone}</a> : <strong>Not provided</strong>}
+          </div>
+          <div className={styles.profileItem}>
+            <small>Preferred updates</small>
+            <strong>{sponsor.channel}</strong>
+          </div>
         </AdminSurface>
-      </section>
-    </AdminPage>
+
+        <section aria-labelledby="history-heading">
+          <div className={styles.historyTitle}>
+            <h2 id="history-heading">Sponsorship history</h2>
+            <AdminBadge tone="mustard">{sponsor.sponsorships.length} {pluralize("companion", sponsor.sponsorships.length)}</AdminBadge>
+          </div>
+          <AdminSurface className={styles.historyPanel} tone="oatmeal">
+            <AdminTable>
+              <thead>
+                <tr>
+                  <th scope="col">Companion</th>
+                  <th scope="col">Status</th>
+                  <th scope="col">Started</th>
+                  <th scope="col">Ended</th>
+                  <th scope="col">Reason</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sponsor.sponsorships.map((sponsorship) => (
+                  <tr key={sponsorship.id}>
+                    <td>{sponsorship.resident.name}</td>
+                    <td><AdminStatus>{sponsorship.status}</AdminStatus></td>
+                    <td>{formatDate(sponsorship.createdAt)}</td>
+                    <td>{sponsorship.status === "ended" ? formatDate(sponsorship.updatedAt) : "Ongoing"}</td>
+                    <td className={styles.reason}>{sponsorship.endedReason ?? "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </AdminTable>
+          </AdminSurface>
+        </section>
+      </AdminPage>
+    </PageViewTransition>
   );
 }

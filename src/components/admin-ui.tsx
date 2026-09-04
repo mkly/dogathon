@@ -63,11 +63,13 @@ export function AdminHeader({
   title,
   titleId,
   variant = "brand",
+  style,
   ...props
 }: AdminHeaderProps) {
   return (
     <header
       className={clsx(styles.header, styles[`header-${variant}`], className)}
+      style={{ ...style, viewTransitionName: "admin-header" }}
       {...props}
     >
       {brand ? <div className={styles.brand}>{brand}</div> : null}
@@ -206,7 +208,11 @@ export type AdminLinkProps = ComponentProps<typeof Link> & ToneProps;
 
 export function AdminLink({ children, className, tone = "denim", ...props }: AdminLinkProps) {
   return (
-    <Link className={clsx(styles.button, styles[tone], className)} {...props}>
+    <Link
+      className={clsx(styles.button, styles[tone], className)}
+      transitionTypes={["nav-forward"]}
+      {...props}
+    >
       <span>{children}</span>
       <AdminLinkStatus />
     </Link>
