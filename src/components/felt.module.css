@@ -192,6 +192,7 @@ svg.stitch.fine rect.thread { stroke-width: 1.4; }
   width: min(100%, 22rem);
   margin: 0;
   border-radius: 10px;
+  background-color: #cfc8ba;
 }
 
 .photo-patch img,
@@ -210,6 +211,10 @@ svg.stitch.fine rect.thread { stroke-width: 1.4; }
 
 .photo-patch-image.loaded {
   opacity: 1;
+}
+
+@media (scripting: none) {
+  .photo-patch-image { opacity: 1; }
 }
 
 .photo-patch::after {
