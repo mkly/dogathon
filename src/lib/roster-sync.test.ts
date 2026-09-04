@@ -1288,3 +1288,86 @@ test("the agent clicks through a listing with no data endpoint before gathering 
   assert.deepEqual(calls[1]?.input.loadMore, { selector: ".js-userContent__loadMore", maxClicks: 2 });
   assert.equal((await parseCompanionRoster(result, { deterministic: true })).length, 3);
 });
+
+test("a companion page scraped on its own is parsed alongside the batch, and the listing page is not", async () => {
+  const sourceUrl = "https://rescue.example/adoptions/";
+  const batchUrls = ["biscuit", "tulip"].map((name) => `${sourceUrl}${name}/`);
+  const strayUrl = `${sourceUrl}walnut/`;
+  let step = 0;
+  const call = (id: string, name: string, args: Record<string, unknown>) => ({
+    id,
+    type: "function" as const,
+    function: { name, arguments: JSON.stringify(args) },
+  });
+  const companionMarkdown = (name: string, url: string) =>
+    `# Meet ${name}\n\n![${name}](${url}photo.jpg)\n\n**Breed:** Mixed`;
+
+  const result = await discoverRoster(sourceUrl, {
+    log: () => {},
+    saveNotes: async () => {},
+    model: scriptedModel(async () => {
+      step += 1;
+      if (step === 1) return { role: "assistant", content: null, tool_calls: [call("listing", "firecrawl_scrape", { url: sourceUrl })] };
+      if (step === 2) return { role: "assistant", content: null, tool_calls: [call("details", "firecrawl_batch_scrape", { urls: batchUrls })] };
+      if (step === 3) return { role: "assistant", content: null, tool_calls: [call("stray", "firecrawl_scrape", { url: strayUrl })] };
+      return { role: "assistant", content: "Roster gathered." };
+    }),
+    firecrawl: async (name, input) => {
+      if (name === "firecrawl_batch_scrape") {
+        const urls = input.urls as string[];
+        return {
+          status: "completed",
+          total: urls.length,
+          completed: urls.length,
+          data: urls.map((url, index) => ({ markdown: companionMarkdown(`Dog ${index + 1}`, url) })),
+          completeness: { complete: true, timedOut: false, status: "completed", total: urls.length, completed: urls.length },
+        };
+      }
+      if (input.url === sourceUrl) {
+        return {
+          success: true,
+          data: { markdown: "# Adoptable dogs\n\nShow More", links: [...batchUrls, strayUrl] },
+        };
+      }
+      return { success: true, data: { markdown: companionMarkdown("Walnut", strayUrl) } };
+    },
+  });
+
+  assert.match(result, /Meet Walnut/);
+  assert.doesNotMatch(result, /Adoptable dogs/);
+  assert.equal((await parseCompanionRoster(result, { deterministic: true })).length, 3);
+});
+
+test("a JSON endpoint that replies with a bare array reports its length instead of echoing it", async () => {
+  const toolReplies: string[] = [];
+  let step = 0;
+  const call = (id: string, url: string) => ({
+    id,
+    type: "function" as const,
+    function: { name: "firecrawl_scrape", arguments: JSON.stringify({ url }) },
+  });
+
+  await discoverRoster("https://rescue.example/adoptions/", {
+    log: () => {},
+    model: scriptedModel(async (messages) => {
+      const last = messages.at(-1);
+      if (last?.role === "tool" && typeof last.content === "string") toolReplies.push(last.content);
+      step += 1;
+      if (step === 1) return { role: "assistant", content: null, tool_calls: [call("endpoint", "https://rescue.example/wp-json/rescue/v1/adoptions?per_page=200")] };
+      return { role: "assistant", content: "Done." };
+    }),
+    firecrawl: async () => ({
+      success: true,
+      data: {
+        rawHtml: JSON.stringify([
+          { title: "Biscuit", permalink: "https://rescue.example/rescue-adoption/biscuit/" },
+          { title: "Tulip", permalink: "https://rescue.example/rescue-adoption/tulip/" },
+        ]),
+      },
+    }),
+  });
+
+  const endpoint = JSON.parse(toolReplies[0] ?? "{}") as { contentType: string; jsonSummary: unknown };
+  assert.equal(endpoint.contentType, "json");
+  assert.deepEqual(endpoint.jsonSummary, { items: 2 });
+});

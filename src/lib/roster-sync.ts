@@ -391,6 +391,7 @@ export async function discoverRosterWithCompleteness(
   const firecrawl = options.firecrawl
     ?? ((name, input) => requestFirecrawl(name, input, { sourceUrl, signal: options.signal }));
   const documents: string[] = [];
+  const listingDocuments: string[] = [];
   const bulkDocuments: string[] = [];
   const crawlCompleteness: RosterCompleteness[] = [];
   const log = options.log ?? ((message: string) => console.info(`[roster-sync] ${message}`));
@@ -426,7 +427,9 @@ export async function discoverRosterWithCompleteness(
       options.signal?.throwIfAborted();
       if (FETCHING_TOOLS.has(name)) {
         const scraped = extractScrapedTexts(result);
-        (BULK_TOOLS.has(name) ? bulkDocuments : documents).push(...scraped);
+        if (BULK_TOOLS.has(name)) bulkDocuments.push(...scraped);
+        else if (isListingFetch(sourceUrl, input)) listingDocuments.push(...scraped);
+        else documents.push(...scraped);
       }
       if (BULK_TOOLS.has(name)) {
         const completeness = readCrawlCompleteness(result);
@@ -532,7 +535,10 @@ export async function discoverRosterWithCompleteness(
     },
   });
   options.signal?.throwIfAborted();
-  const rosterDocuments = bulkDocuments.length > 0 ? bulkDocuments : documents;
+  // Listing and data-endpoint replies describe the roster rather than a
+  // companion, so they are parsed only when nothing else was fetched.
+  const companionDocuments = [...bulkDocuments, ...documents];
+  const rosterDocuments = companionDocuments.length > 0 ? companionDocuments : listingDocuments;
   log(`discovery finished after ${steps.length} model steps, ${toolCalls} tool calls, ${rosterDocuments.length} roster documents in ${elapsedSeconds(discoveryStartedAt)}s`);
 
   if (rosterDocuments.length === 0) {
@@ -1006,8 +1012,9 @@ function summarizeScrapeToolResult(value: unknown, sourceUrl: string): string {
   }, MAX_SCRAPE_MARKDOWN_CHARS + 30_000);
 }
 
-function summarizeScrapedJson(value: unknown): unknown {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return value;
+function summarizeScrapedJson(value: unknown): Record<string, unknown> {
+  if (Array.isArray(value)) return { items: value.length };
+  if (!value || typeof value !== "object") return {};
   const record = value as Record<string, unknown>;
   const pagination = record.pagination;
   return {
@@ -1066,6 +1073,20 @@ function dataEndpointsFromHtml(html: string, sourceUrl: string): string[] {
   const scriptContents = [...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/giu)].map((match) => match[1] ?? "");
   const quotedValues = scriptContents.flatMap((script) => [...script.matchAll(/(["'])(.*?)\1/gu)].map((match) => match[2]?.replaceAll("\\/", "/") ?? ""));
   return sameSiteUrls(quotedValues, sourceUrl).filter((value) => isDataEndpoint(new URL(value)));
+}
+
+// A scrape of the listing page itself, or of the data endpoint behind it, lists
+// companions instead of describing one, so it is not companion content.
+function isListingFetch(sourceUrl: string, input: Record<string, unknown>): boolean {
+  const url = typeof input.url === "string" ? input.url : null;
+  if (url === null) return true;
+  const withoutTrailingSlash = (value: string) => value.replace(/\/+$/u, "");
+  if (withoutTrailingSlash(url) === withoutTrailingSlash(sourceUrl)) return true;
+  try {
+    return isDataEndpoint(new URL(url));
+  } catch {
+    return true;
+  }
 }
 
 function isDataEndpoint(url: URL): boolean {
