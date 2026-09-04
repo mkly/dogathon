@@ -18,6 +18,7 @@ export type InvitationView = {
   email: string;
   expiresAt: string;
   id: string;
+  inviteUrl: string;
   inviter: string;
   role: "admin" | "member" | "volunteer";
 };
@@ -39,6 +40,8 @@ export function InvitationManager({
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<InvitationView["role"]>("member");
   const [message, setMessage] = useState("");
+  const [copyingInvitationId, setCopyingInvitationId] = useState<string | null>(null);
+  const [visibleInviteUrlId, setVisibleInviteUrlId] = useState<string | null>(null);
   const [pendingInvitationId, setPendingInvitationId] = useState<string | null>(null);
   const [pendingInvitationAction, setPendingInvitationAction] = useState<"cancel" | "resend" | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -111,6 +114,28 @@ export function InvitationManager({
     });
   }
 
+  async function copyInviteLink(invitation: InvitationView) {
+    setCopyingInvitationId(invitation.id);
+
+    if (typeof navigator.clipboard?.writeText !== "function") {
+      setVisibleInviteUrlId(invitation.id);
+      pushToast("error", "Copying is unavailable. Use the invite link shown below.");
+      setCopyingInvitationId(null);
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(invitation.inviteUrl);
+      setVisibleInviteUrlId(null);
+      pushToast("success", "Invite link copied.");
+    } catch {
+      setVisibleInviteUrlId(invitation.id);
+      pushToast("error", "The invite link could not be copied. Use the link shown below.");
+    } finally {
+      setCopyingInvitationId(null);
+    }
+  }
+
   return (
     <div className={styles.invitationManager}>
       <AdminSurface className={styles.invitationFormSurface} tone="mustard">
@@ -156,25 +181,44 @@ export function InvitationManager({
               <AdminBadge tone={ROLE_TONES[invitation.role]}>{invitation.role}</AdminBadge>
               <span>Expires {formatDateTime(invitation.expiresAt)} UTC</span>
             </div>
-            <div className={styles.invitationControls}>
-              <AdminButton
-                disabled={isPending}
-                onClick={() => resend(invitation)}
-                tone="moss"
-              >
-                {pendingInvitationId === invitation.id && pendingInvitationAction === "resend"
-                  ? "Resending…"
-                  : "Resend"}
-              </AdminButton>
-              <AdminButton
-                disabled={isPending}
-                onClick={() => cancel(invitation)}
-                tone="brick"
-              >
-                {pendingInvitationId === invitation.id && pendingInvitationAction === "cancel"
-                  ? "Cancelling…"
-                  : "Cancel"}
-              </AdminButton>
+            <div className={styles.invitationActions}>
+              <div className={styles.invitationControls}>
+                <AdminButton
+                  disabled={copyingInvitationId === invitation.id}
+                  onClick={() => copyInviteLink(invitation)}
+                  tone="denim"
+                >
+                  {copyingInvitationId === invitation.id ? "Copying…" : "Copy invite link"}
+                </AdminButton>
+                <AdminButton
+                  disabled={isPending}
+                  onClick={() => resend(invitation)}
+                  tone="moss"
+                >
+                  {pendingInvitationId === invitation.id && pendingInvitationAction === "resend"
+                    ? "Resending…"
+                    : "Resend"}
+                </AdminButton>
+                <AdminButton
+                  disabled={isPending}
+                  onClick={() => cancel(invitation)}
+                  tone="brick"
+                >
+                  {pendingInvitationId === invitation.id && pendingInvitationAction === "cancel"
+                    ? "Cancelling…"
+                    : "Cancel"}
+                </AdminButton>
+              </div>
+              {visibleInviteUrlId === invitation.id ? (
+                <AdminField>
+                  <input
+                    aria-label={`Invite link for ${invitation.email}`}
+                    onFocus={(event) => event.currentTarget.select()}
+                    readOnly
+                    value={invitation.inviteUrl}
+                  />
+                </AdminField>
+              ) : null}
             </div>
           </AdminSurface>
         ))}
