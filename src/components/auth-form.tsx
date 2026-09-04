@@ -10,9 +10,23 @@ import styles from "./auth-form.module.css";
 
 type Mode = "sign-in" | "sign-up";
 
-export function AuthForm({ redirectTo = "/staff/organizations" }: { redirectTo?: string }) {
+type AuthFormProps = {
+  fixedEmail?: string;
+  hiddenTabs?: boolean;
+  initialMode?: Mode;
+  onAuthenticated?: () => Promise<void> | void;
+  redirectTo?: string;
+};
+
+export function AuthForm({
+  fixedEmail,
+  hiddenTabs = false,
+  initialMode = "sign-in",
+  onAuthenticated,
+  redirectTo = "/staff/organizations",
+}: AuthFormProps) {
   const router = useRouter();
-  const [mode, setMode] = useState<Mode>("sign-in");
+  const [mode, setMode] = useState<Mode>(initialMode);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
@@ -35,10 +49,14 @@ export function AuthForm({ redirectTo = "/staff/organizations" }: { redirectTo?:
           })
         : await authClient.signIn.email({ email, password });
 
-    setPending(false);
-
     if (result.error) {
+      setPending(false);
       setError(result.error.message ?? "Something went wrong.");
+      return;
+    }
+
+    if (onAuthenticated) {
+      await onAuthenticated();
       return;
     }
 
@@ -48,26 +66,28 @@ export function AuthForm({ redirectTo = "/staff/organizations" }: { redirectTo?:
 
   return (
     <>
-      <div aria-label="Authentication mode" className={styles.tabs}>
-        <FeltButton
-          onClick={() => {
-            setMode("sign-in");
-            setError(null);
-          }}
-          tone={mode === "sign-in" ? "mustard" : "denim-lt"}
-        >
-          Sign in
-        </FeltButton>
-        <FeltButton
-          onClick={() => {
-            setMode("sign-up");
-            setError(null);
-          }}
-          tone={mode === "sign-up" ? "mustard" : "denim-lt"}
-        >
-          Sign up
-        </FeltButton>
-      </div>
+      {!hiddenTabs && (
+        <div aria-label="Authentication mode" className={styles.tabs}>
+          <FeltButton
+            onClick={() => {
+              setMode("sign-in");
+              setError(null);
+            }}
+            tone={mode === "sign-in" ? "mustard" : "denim-lt"}
+          >
+            Sign in
+          </FeltButton>
+          <FeltButton
+            onClick={() => {
+              setMode("sign-up");
+              setError(null);
+            }}
+            tone={mode === "sign-up" ? "mustard" : "denim-lt"}
+          >
+            Sign up
+          </FeltButton>
+        </div>
+      )}
 
       <form className={styles.form} onSubmit={handleSubmit}>
         {mode === "sign-up" && (
@@ -83,8 +103,10 @@ export function AuthForm({ redirectTo = "/staff/organizations" }: { redirectTo?:
         <FeltField>
           <input
             autoComplete="email"
+            defaultValue={fixedEmail}
             id="email"
             name="email"
+            readOnly={fixedEmail !== undefined}
             required
             type="email"
           />
@@ -110,7 +132,11 @@ export function AuthForm({ redirectTo = "/staff/organizations" }: { redirectTo?:
           tone="brick"
           type="submit"
         >
-          {pending ? "Please wait…" : mode === "sign-up" ? "Create account" : "Sign in"}
+          {pending
+            ? "Please wait…"
+            : mode === "sign-up"
+              ? hiddenTabs ? "Create your account" : "Create account"
+              : "Sign in"}
         </FeltButton>
       </form>
     </>

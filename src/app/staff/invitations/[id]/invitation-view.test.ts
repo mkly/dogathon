@@ -26,4 +26,6 @@ test("assignable invitation roles explain their access in plain words", () => {
     assert.ok(detail.label.length > 0);
     assert.match(detail.description, /\.$/);
   }
+  assert.equal(describeInvitationRole("admin").article, "an");
+  assert.equal(describeInvitationRole("volunteer").article, "a");
 });

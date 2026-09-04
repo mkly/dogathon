@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 
-import { FeltButton, FeltLink, FeltPanel, StitchBadge } from "@/components/felt";
+import { AuthForm } from "@/components/auth-form";
+import { FeltButton, FeltPanel, StitchBadge } from "@/components/felt";
 import { SignOutButton } from "@/components/sign-out-button";
 import { getSession } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
@@ -95,6 +96,18 @@ export default async function InvitationPage({ params }: InvitationPageProps) {
     timeZoneName: "short",
     year: "numeric",
   }).format(invitation.expiresAt);
+  const invitedAccountExists = session
+    ? false
+    : Boolean(await prisma.user.findFirst({
+        where: {
+          email: {
+            equals: invitation.email,
+            mode: "insensitive",
+          },
+        },
+        select: { id: true },
+      }));
+  const acceptThisInvitation = acceptInvitation.bind(null, invitation.id);
 
   return (
     <main className={styles.page}>
@@ -122,17 +135,22 @@ export default async function InvitationPage({ params }: InvitationPageProps) {
 
         {!session ? (
           <div className={styles.actionArea}>
-            <p>Sign in with <strong>{invitation.email}</strong> to accept this invitation.</p>
-            <FeltLink
-              href={`/staff/sign-in?next=${encodeURIComponent(returnPath)}`}
-              tone="mustard"
-            >
-              Sign in to continue
-            </FeltLink>
+            <div>
+              <h2>{invitedAccountExists ? "Sign in" : "Create your account"}</h2>
+              <p>
+                You will land in the {invitation.organization.name} staff room as {role.article}{" "}
+                {role.label.toLowerCase()}.
+              </p>
+            </div>
+            <AuthForm
+              fixedEmail={invitation.email}
+              hiddenTabs
+              initialMode={invitedAccountExists ? "sign-in" : "sign-up"}
+              onAuthenticated={acceptThisInvitation}
+            />
           </div>
         ) : matchingAccount ? (
-          <form action={acceptInvitation} className={styles.actionArea}>
-            <input name="invitationId" type="hidden" value={invitation.id} />
+          <form action={acceptThisInvitation} className={styles.actionArea}>
             <FeltButton tone="mustard" type="submit">
               Join {invitation.organization.name}
             </FeltButton>
