@@ -226,6 +226,9 @@ test("a crawl contributes every document to roster parsing while returning a bou
       assert.match(systemPrompt, /individual companion pages and to further pages of the same listing/);
       assert.match(systemPrompt, /Never fetch pages that are not part of the roster/);
       assert.match(systemPrompt, /only fall back to crawl when the listing exposes no usable links/);
+      assert.match(systemPrompt, /Use loadMore only when the scrape reply listed no usable data endpoint/);
+      assert.match(systemPrompt, /stop once it stops growing/);
+      assert.match(systemPrompt, /Record the loadMore selector in save_sync_notes/);
       assert.deepEqual(tools.map((tool) => tool.function.name), [
         "firecrawl_map",
         "firecrawl_scrape",
@@ -370,6 +373,111 @@ test("calls the direct Firecrawl v2 endpoints with bearer authentication", async
     formats: ["markdown", "links", "rawHtml"],
     onlyMainContent: true,
   });
+});
+
+test("a scrape translates bounded loadMore clicks into Firecrawl actions", async () => {
+  const bodies: Record<string, unknown>[] = [];
+  const fetcher: typeof fetch = async (_input, init) => {
+    bodies.push(JSON.parse(String(init?.body)) as Record<string, unknown>);
+    return Response.json({ success: true, data: { markdown: "# Roster", links: [] } });
+  };
+  const options = { apiKey: "fc-test", baseUrl: "https://firecrawl.example/v2", fetch: fetcher };
+
+  const expanded = await requestFirecrawl("firecrawl_scrape", {
+    url: "https://rescue.example/companions",
+    loadMore: { selector: ".show-more", maxClicks: 2 },
+  }, options) as { data: { markdown: string; links: string[] } };
+  await requestFirecrawl("firecrawl_scrape", {
+    url: "https://rescue.example/companions",
+    loadMore: { selector: ".show-more", maxClicks: 50 },
+  }, options);
+  await requestFirecrawl("firecrawl_scrape", {
+    url: "https://rescue.example/companions",
+  }, options);
+
+  assert.deepEqual(bodies[0]?.actions, [
+    { type: "click", selector: ".show-more" },
+    { type: "wait", milliseconds: 500 },
+    { type: "click", selector: ".show-more" },
+    { type: "wait", milliseconds: 500 },
+  ]);
+  assert.equal((bodies[1]?.actions as unknown[]).length, 20);
+  assert.equal("loadMore" in bodies[0], false);
+  assert.equal("actions" in bodies[2], false);
+  assert.deepEqual(expanded.data, { markdown: "# Roster", links: [] });
+});
+
+test("a loadMore scrape is one tool call and logs its selector and click count", async () => {
+  const logs: string[] = [];
+  let firecrawlCalls = 0;
+  let step = 0;
+
+  await discoverRoster("https://rescue.example/companions", {
+    log: (message) => logs.push(message),
+    model: scriptedModel(async () => {
+      step += 1;
+      if (step > 1) return { role: "assistant", content: "Done." };
+      return {
+        role: "assistant",
+        content: null,
+        tool_calls: [{
+          id: "load-more",
+          type: "function",
+          function: {
+            name: "firecrawl_scrape",
+            arguments: JSON.stringify({
+              url: "https://rescue.example/companions",
+              loadMore: { selector: ".show-more", maxClicks: 3 },
+            }),
+          },
+        }],
+      };
+    }),
+    firecrawl: async () => {
+      firecrawlCalls += 1;
+      return { success: true, data: { markdown: "# Roster", links: [] } };
+    },
+  });
+
+  assert.equal(firecrawlCalls, 1);
+  assert.ok(logs.some((line) => line.includes('loadMore selector=".show-more" clicks=3 started')));
+});
+
+test("an unusable loadMore selector fails its tool call instead of the whole sync", async () => {
+  const logs: string[] = [];
+  let step = 0;
+
+  const text = await discoverRoster("https://rescue.example/companions", {
+    log: (message) => logs.push(message),
+    model: scriptedModel(async () => {
+      step += 1;
+      if (step > 2) return { role: "assistant", content: "Done." };
+      return {
+        role: "assistant",
+        content: null,
+        tool_calls: [{
+          id: `scrape-${step}`,
+          type: "function",
+          function: {
+            name: "firecrawl_scrape",
+            arguments: JSON.stringify({
+              url: "https://rescue.example/companions",
+              ...(step === 1 ? { loadMore: { selector: "   " } } : {}),
+            }),
+          },
+        }],
+      };
+    }),
+    firecrawl: async (name, input) => requestFirecrawl(name, input, {
+      apiKey: "fc-test",
+      baseUrl: "https://firecrawl.example/v2",
+      fetch: async () => Response.json({ success: true, data: { markdown: "# Roster", links: [] } }),
+    }),
+  });
+
+  assert.match(text, /# Roster/);
+  assert.ok(logs.some((line) => line.includes('loadMore={"selector":"   "}')));
+  assert.ok(logs.some((line) => line.includes("failed") && line.includes("must not be empty")));
 });
 
 test("submits a Firecrawl v2 crawl job and polls it to completion", async () => {
