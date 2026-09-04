@@ -9,6 +9,7 @@ import type {
 } from "react";
 import { clsx } from "clsx";
 
+import { AdminLinkStatus } from "./admin-link-status";
 import styles from "./admin-ui.module.css";
 
 type AdminTone = "oatmeal" | "mustard" | "brick" | "moss" | "denim" | "cream";
@@ -203,8 +204,13 @@ export function AdminButton({
 
 export type AdminLinkProps = ComponentProps<typeof Link> & ToneProps;
 
-export function AdminLink({ className, tone = "denim", ...props }: AdminLinkProps) {
-  return <Link className={clsx(styles.button, styles[tone], className)} {...props} />;
+export function AdminLink({ children, className, tone = "denim", ...props }: AdminLinkProps) {
+  return (
+    <Link className={clsx(styles.button, styles[tone], className)} {...props}>
+      <span>{children}</span>
+      <AdminLinkStatus />
+    </Link>
+  );
 }
 
 export type AdminFieldProps = HTMLAttributes<HTMLDivElement>;

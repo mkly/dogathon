@@ -52,6 +52,26 @@
 .dialogDescription { margin: 10px 0 22px; font-size: 0.82rem; font-weight: 700; line-height: 1.5; opacity: 0.78; }
 .dialogActions { display: flex; justify-content: flex-end; gap: 10px; }
 .invitationsSection { margin-top: 46px; }
+.sectionSkeleton,
+.rowSkeleton {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgb(61 51 43 / 14%);
+  border-radius: 8px;
+  background: rgb(248 242 231 / 74%);
+}
+.sectionSkeleton { width: min(360px, 72%); height: 54px; margin-bottom: 20px; }
+.rowSkeleton { min-height: 92px; }
+.sectionSkeleton::after,
+.rowSkeleton::after {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 20%, rgb(255 255 255 / 55%) 50%, transparent 80%);
+  content: "";
+  transform: translateX(-100%);
+  animation: skeletonShimmer 1.4s ease-in-out infinite;
+}
+@keyframes skeletonShimmer { to { transform: translateX(100%); } }
 .invitationManager { display: grid; gap: 16px; }
 .invitationFormSurface { padding: 16px; }
 .invitationForm { display: grid; grid-template-columns: minmax(220px, 1fr) minmax(150px, 0.4fr) auto; gap: 10px; }
@@ -78,4 +98,9 @@
   .dialogActions { align-items: stretch; flex-direction: column-reverse; }
   .invitationForm, .invitationRow { grid-template-columns: 1fr; }
   .invitationForm > :last-child, .invitationRow > :last-child { grid-column: auto; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sectionSkeleton::after,
+  .rowSkeleton::after { animation: none; }
 }

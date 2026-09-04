@@ -3,6 +3,7 @@ import Link from "next/link";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import pluralize from "pluralize";
+import { Suspense } from "react";
 
 import {
   AdminBadge,
@@ -31,6 +32,103 @@ export const dynamic = "force-dynamic";
 
 type MembersPageProps = { params: Promise<{ orgSlug: string }> };
 
+function loadMembers(requestHeaders: Headers, orgId: string) {
+  return auth.api.listMembers({
+    headers: requestHeaders,
+    query: { limit: 1000, organizationId: orgId, sortBy: "createdAt", sortDirection: "asc" },
+  });
+}
+
+function memberViews(result: Awaited<ReturnType<typeof loadMembers>>) {
+  return result.members.flatMap<MemberView>((member) => {
+    if (!ORGANIZATION_ROLES.includes(member.role as OrganizationRole)) return [];
+    return [{
+      email: member.user.email,
+      id: member.id,
+      joinedAt: member.createdAt.toISOString(),
+      name: member.user.name,
+      role: member.role as OrganizationRole,
+      userId: member.userId,
+    }];
+  });
+}
+
+async function MembersSection({
+  actorRole,
+  actorUserId,
+  membersPromise,
+  orgSlug,
+}: {
+  actorRole: "owner" | "admin";
+  actorUserId: string;
+  membersPromise: ReturnType<typeof loadMembers>;
+  orgSlug: string;
+}) {
+  const members = memberViews(await membersPromise);
+
+  return (
+    <section aria-labelledby="member-list-title">
+      <AdminSectionHeader
+        actions={<AdminBadge tone="denim">{members.length} {pluralize("person", members.length)}</AdminBadge>}
+        eyebrow="People with access"
+        title="Members"
+        titleId="member-list-title"
+      />
+      <MemberList actorRole={actorRole} actorUserId={actorUserId} members={members} orgSlug={orgSlug} />
+    </section>
+  );
+}
+
+async function InvitationsSection({
+  invitationsPromise,
+  membersPromise,
+  orgSlug,
+}: {
+  invitationsPromise: ReturnType<typeof auth.api.listInvitations>;
+  membersPromise: ReturnType<typeof loadMembers>;
+  orgSlug: string;
+}) {
+  const [invitationResult, memberResult] = await Promise.all([invitationsPromise, membersPromise]);
+  const invitations = invitationResult.flatMap<InvitationView>((invitation) => {
+    if (invitation.status !== "pending") return [];
+    if (invitation.role !== "admin" && invitation.role !== "member" && invitation.role !== "volunteer") return [];
+    const inviter = memberResult.members.find((member) => member.userId === invitation.inviterId);
+    return [{
+      email: invitation.email,
+      expiresAt: invitation.expiresAt.toISOString(),
+      id: invitation.id,
+      inviteUrl: new URL(`/staff/invitations/${invitation.id}`, env.BETTER_AUTH_URL).toString(),
+      inviter: inviter?.user.name || inviter?.user.email || "a former member",
+      role: invitation.role,
+    }];
+  });
+
+  return (
+    <section aria-labelledby="invitation-list-title" className={styles.invitationsSection}>
+      <AdminSectionHeader
+        actions={<AdminBadge tone="mustard">{invitations.length} pending</AdminBadge>}
+        eyebrow="Bring someone into the room"
+        title="Invitations"
+        titleId="invitation-list-title"
+      />
+      <InvitationManager invitations={invitations} orgSlug={orgSlug} />
+    </section>
+  );
+}
+
+function MemberSectionLoading({ invitation = false }: { invitation?: boolean }) {
+  return (
+    <section aria-label={invitation ? "Loading invitations" : "Loading members"} className={invitation ? styles.invitationsSection : undefined}>
+      <div className={styles.sectionSkeleton} />
+      <div className={styles.memberList}>
+        {Array.from({ length: invitation ? 2 : 3 }, (_, index) => (
+          <div className={styles.rowSkeleton} key={index} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
 export default async function MembersPage({ params }: MembersPageProps) {
   const { orgSlug } = await params;
   const requestHeaders = await headers();
@@ -44,41 +142,10 @@ export default async function MembersPage({ params }: MembersPageProps) {
     redirect(access.authenticated ? "/staff/organizations" : `/staff/sign-in?next=${next}`);
   }
 
-  const [firstPage, invitationResult] = await Promise.all([
-    auth.api.listMembers({
-      headers: requestHeaders,
-      query: { limit: 1000, organizationId: access.context.orgId, sortBy: "createdAt", sortDirection: "asc" },
-    }),
-    auth.api.listInvitations({
-      headers: requestHeaders,
-      query: { organizationId: access.context.orgId },
-    }),
-  ]);
-  const members = firstPage.members.flatMap<MemberView>((member) => {
-    if (!ORGANIZATION_ROLES.includes(member.role as OrganizationRole)) return [];
-    return [{
-      email: member.user.email,
-      id: member.id,
-      joinedAt: member.createdAt.toISOString(),
-      name: member.user.name,
-      role: member.role as OrganizationRole,
-      userId: member.userId,
-    }];
-  });
-  const invitations = invitationResult.flatMap<InvitationView>((invitation) => {
-    if (invitation.status !== "pending") return [];
-    if (invitation.role !== "admin" && invitation.role !== "member" && invitation.role !== "volunteer") {
-      return [];
-    }
-    const inviter = firstPage.members.find((member) => member.userId === invitation.inviterId);
-    return [{
-      email: invitation.email,
-      expiresAt: invitation.expiresAt.toISOString(),
-      id: invitation.id,
-      inviteUrl: new URL(`/staff/invitations/${invitation.id}`, env.BETTER_AUTH_URL).toString(),
-      inviter: inviter?.user.name || inviter?.user.email || "a former member",
-      role: invitation.role,
-    }];
+  const membersPromise = loadMembers(requestHeaders, access.context.orgId);
+  const invitationsPromise = auth.api.listInvitations({
+    headers: requestHeaders,
+    query: { organizationId: access.context.orgId },
   });
 
   return (
@@ -100,32 +167,22 @@ export default async function MembersPage({ params }: MembersPageProps) {
         title="Organization members"
       />
 
-      <section aria-labelledby="member-list-title">
-        <AdminSectionHeader
-          actions={<AdminBadge tone="denim">{members.length} {pluralize("person", members.length)}</AdminBadge>}
-          eyebrow="People with access"
-          title="Members"
-          titleId="member-list-title"
-        />
-        <MemberList
+      <Suspense fallback={<MemberSectionLoading />}>
+        <MembersSection
           actorRole={access.context.role as "owner" | "admin"}
           actorUserId={access.context.userId}
-          members={members}
+          membersPromise={membersPromise}
           orgSlug={orgSlug}
         />
-      </section>
+      </Suspense>
 
-      <section aria-labelledby="invitation-list-title" className={styles.invitationsSection}>
-        <AdminSectionHeader
-          actions={<AdminBadge tone="mustard">
-            {invitations.length} pending
-          </AdminBadge>}
-          eyebrow="Bring someone into the room"
-          title="Invitations"
-          titleId="invitation-list-title"
+      <Suspense fallback={<MemberSectionLoading invitation />}>
+        <InvitationsSection
+          invitationsPromise={invitationsPromise}
+          membersPromise={membersPromise}
+          orgSlug={orgSlug}
         />
-        <InvitationManager invitations={invitations} orgSlug={orgSlug} />
-      </section>
+      </Suspense>
 
       <AdminFooter>organization members · keep the right people in the room</AdminFooter>
     </AdminPage>

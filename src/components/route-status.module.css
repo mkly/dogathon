@@ -1,0 +1,130 @@
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgb(61 51 43 / 14%);
+  border-radius: 8px;
+  background: rgb(248 242 231 / 72%);
+}
+
+.skeleton::after {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 20%, rgb(255 255 255 / 52%) 50%, transparent 80%);
+  content: "";
+  transform: translateX(-100%);
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
+.page {
+  width: min(100%, 1120px);
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 30px 0 40px;
+}
+
+.directory {
+  width: min(100%, 1040px);
+  padding-top: 24px;
+}
+
+.header {
+  height: 94px;
+  margin-bottom: 24px;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 52px;
+}
+
+.stat { height: 105px; }
+.sectionTitle { width: min(360px, 72%); height: 54px; margin-bottom: 20px; }
+.grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 52px; }
+.card { min-height: 132px; }
+.queue { display: grid; gap: 22px; }
+.queueCard { min-height: 226px; }
+.stack { display: grid; gap: 24px; }
+.settingsCard { min-height: 190px; }
+.row { min-height: 92px; }
+
+.volunteer {
+  width: min(100%, 46rem);
+  min-height: 100svh;
+  margin: 0 auto;
+  padding: max(1rem, env(safe-area-inset-top)) max(0.75rem, env(safe-area-inset-right)) max(2rem, env(safe-area-inset-bottom)) max(0.75rem, env(safe-area-inset-left));
+}
+
+.volunteerHeader { height: 116px; margin-bottom: 20px; }
+.companions { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 20px; }
+.companion { aspect-ratio: 0.78; }
+.note { height: 264px; margin-bottom: 20px; }
+.submit { height: 64px; }
+
+.account {
+  width: min(100%, 1040px);
+  min-height: 100svh;
+  margin: 0 auto;
+  padding: 32px 20px 56px;
+}
+
+.accountLayout { display: grid; grid-template-columns: minmax(240px, 0.72fr) minmax(0, 1.4fr); gap: 20px; }
+.accountCard { min-height: 430px; }
+
+.organizations {
+  display: grid;
+  width: min(100%, 760px);
+  min-height: 100svh;
+  margin: 0 auto;
+  align-content: start;
+  gap: 24px;
+  padding: 32px 20px 56px;
+}
+
+.organizationCard { min-height: 150px; }
+
+.errorPage {
+  display: grid;
+  width: min(100% - 32px, 680px);
+  min-height: 70vh;
+  margin: 0 auto;
+  place-items: center;
+}
+
+.errorPanel {
+  width: 100%;
+  padding: 32px;
+  border: 1px solid rgb(61 51 43 / 20%);
+  border-top: 4px solid var(--felt-brick);
+  border-radius: 8px;
+  background: rgb(248 242 231 / 96%);
+  text-align: center;
+}
+
+.errorPanel h1 { margin: 0; font-size: clamp(1.8rem, 5vw, 2.5rem); }
+.errorPanel p { margin: 10px auto 22px; max-width: 48ch; font-weight: 700; line-height: 1.5; }
+.errorPanel button { min-width: 9rem; }
+
+@keyframes shimmer {
+  to { transform: translateX(100%); }
+}
+
+@media (max-width: 900px) {
+  .page { padding-inline: 14px; }
+  .stats { grid-template-columns: repeat(2, 1fr); }
+  .companions { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 760px) {
+  .accountLayout { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 620px) {
+  .grid { grid-template-columns: 1fr; }
+  .queueCard { min-height: 380px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton::after { animation: none; }
+}

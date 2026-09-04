@@ -39,6 +39,28 @@
 .queueSection { margin-bottom: 52px; }
 .composeSection { margin-bottom: 52px; }
 
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  color: transparent;
+}
+
+.skeleton::after {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 20%, rgb(255 255 255 / 55%) 50%, transparent 80%);
+  content: "";
+  transform: translateX(-100%);
+  animation: skeletonShimmer 1.4s ease-in-out infinite;
+}
+
+.sectionSkeleton { width: min(360px, 72%); height: 54px; margin-bottom: 20px; border-radius: 8px; background: rgb(248 242 231 / 74%); }
+.queueSkeleton { min-height: 226px; }
+
+@keyframes skeletonShimmer {
+  to { transform: translateX(100%); }
+}
+
 .settings h2 { font-size: clamp(1.6rem, 4vw, 2.1rem); }
 .queue { display: grid; gap: 22px; }
 
@@ -178,6 +200,21 @@
 
 .settingsStack { display: grid; gap: 24px; }
 
+.settingsSkeleton {
+  position: relative;
+  min-height: 190px;
+  overflow: hidden;
+}
+
+.settingsSkeleton::after {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 20%, rgb(255 255 255 / 55%) 50%, transparent 80%);
+  content: "";
+  transform: translateX(-100%);
+  animation: skeletonShimmer 1.4s ease-in-out infinite;
+}
+
 /* Stripe's card is intro-only: one column, with the action under the copy. */
 .stripeConnect {
   grid-template-columns: minmax(0, 1fr);
@@ -263,4 +300,8 @@
   .smtpForm { grid-template-columns: 1fr; }
   .smtpForm > *, .smtpForm .modalActions, .smtpSecure { grid-column: 1; }
   .saveRow { align-items: stretch; flex-direction: column; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton::after { animation: none; }
 }
