@@ -18,7 +18,6 @@ const createOrganizationSchema = z.object({
   slug: z.string().trim().transform(organizationSlug).pipe(z.string().min(1)),
 });
 const organizationSelectionSchema = z.object({ organizationId: uuidSchema });
-const invitationSelectionSchema = z.object({ invitationId: uuidSchema });
 
 export type CreateOrganizationState = { error: string };
 
@@ -66,25 +65,6 @@ export async function setActiveOrganization(formData: FormData) {
   await auth.api.setActiveOrganization({ body: { organizationId }, headers: requestHeaders });
   const organization = await prisma.organization.findUnique({
     where: { id: organizationId },
-    select: { slug: true },
-  });
-  if (!organization) redirect("/staff/organizations?error=invalid-organization");
-  redirect(`/${organization.slug}/admin`);
-}
-
-export async function acceptOrganizationInvitation(formData: FormData) {
-  const requestHeaders = await headers();
-  const input = invitationSelectionSchema.safeParse(Object.fromEntries(formData));
-  if (!input.success) redirect("/staff/organizations?error=invalid-invitation");
-  const { invitationId } = input.data;
-
-  const accepted = await auth.api.acceptInvitation({ body: { invitationId }, headers: requestHeaders });
-  await auth.api.setActiveOrganization({
-    body: { organizationId: accepted.member.organizationId },
-    headers: requestHeaders,
-  });
-  const organization = await prisma.organization.findUnique({
-    where: { id: accepted.member.organizationId },
     select: { slug: true },
   });
   if (!organization) redirect("/staff/organizations?error=invalid-organization");
