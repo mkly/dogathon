@@ -110,13 +110,15 @@ export async function getOrganizationContext(
   const orgId = session?.session.activeOrganizationId;
   if (!session || !orgId) return null;
 
-  const membership = await prisma.member.findUnique({
-    where: {
-      organizationId_userId: { organizationId: orgId, userId: session.user.id },
-    },
-    select: { id: true, organizationId: true, role: true, userId: true },
-  });
-  const permitted = await checkOrganizationPermission(requestHeaders, orgId, permission);
+  const [membership, permitted] = await Promise.all([
+    prisma.member.findUnique({
+      where: {
+        organizationId_userId: { organizationId: orgId, userId: session.user.id },
+      },
+      select: { id: true, organizationId: true, role: true, userId: true },
+    }),
+    checkOrganizationPermission(requestHeaders, orgId, permission),
+  ]);
 
   return permitted ? organizationContext(session.user.id, membership, orgId) : null;
 }
