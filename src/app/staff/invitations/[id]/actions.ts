@@ -2,21 +2,16 @@
 
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { z } from "zod";
-
 import { auth } from "@/lib/auth";
 import { getSession } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
 import { uuidSchema } from "@/lib/uuid";
 
-const invitationSelectionSchema = z.object({ invitationId: uuidSchema });
+export async function acceptInvitation(invitationIdInput: string) {
+  const invitationId = uuidSchema.safeParse(invitationIdInput);
+  if (!invitationId.success) redirect("/staff/invitations/invalid");
 
-export async function acceptInvitation(formData: FormData) {
-  const input = invitationSelectionSchema.safeParse(Object.fromEntries(formData));
-  if (!input.success) redirect("/staff/invitations/invalid");
-
-  const { invitationId } = input.data;
-  const returnPath = `/staff/invitations/${invitationId}`;
+  const returnPath = `/staff/invitations/${invitationId.data}`;
   const requestHeaders = await headers();
   const session = await getSession(requestHeaders);
   if (!session) {
@@ -24,7 +19,7 @@ export async function acceptInvitation(formData: FormData) {
   }
 
   const invitation = await prisma.invitation.findUnique({
-    where: { id: invitationId },
+    where: { id: invitationId.data },
     select: {
       email: true,
       expiresAt: true,
@@ -43,7 +38,10 @@ export async function acceptInvitation(formData: FormData) {
 
   let accepted = false;
   try {
-    await auth.api.acceptInvitation({ body: { invitationId }, headers: requestHeaders });
+    await auth.api.acceptInvitation({
+      body: { invitationId: invitationId.data },
+      headers: requestHeaders,
+    });
     accepted = true;
   } catch {
     // A concurrent accept, cancellation, or expiry is reflected by the landing page.

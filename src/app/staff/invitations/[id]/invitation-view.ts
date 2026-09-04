@@ -21,16 +21,19 @@ export function invitationState(
   return "pending";
 }
 
-const roleDetails: Record<string, { description: string; label: string }> = {
+const roleDetails: Record<string, { article: "a" | "an"; description: string; label: string }> = {
   admin: {
+    article: "an",
     description: "Manage staff, rescue settings, and day-to-day rescue work.",
     label: "Admin",
   },
   member: {
+    article: "a",
     description: "Contribute companion notes and help keep rescue records current.",
     label: "Member",
   },
   volunteer: {
+    article: "a",
     description: "Share companion care notes and help with the rescue roster.",
     label: "Volunteer",
   },
@@ -38,6 +41,7 @@ const roleDetails: Record<string, { description: string; label: string }> = {
 
 export function describeInvitationRole(role: string) {
   return roleDetails[role] ?? {
+    article: "a",
     description: "Help with the rescue work available to this role.",
     label: role,
   };

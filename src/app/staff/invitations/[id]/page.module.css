@@ -95,6 +95,15 @@
   line-height: 1.5;
 }
 
+.actionArea > div h2 {
+  margin: 0 0 0.45rem;
+  font-size: 1.35rem;
+}
+
+.actionArea > form {
+  width: 100%;
+}
+
 .actionArea a {
   display: inline-flex;
   align-items: center;

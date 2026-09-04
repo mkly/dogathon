@@ -85,9 +85,9 @@ test("owner manages pending invitations and a volunteer member end to end", asyn
   const created = await createdResponse.json() as { id: string; members: Array<{ role: string }> };
   assert.equal(created.members[0]?.role, "owner");
 
-  async function activeOrganizationId() {
+  async function activeOrganizationId(sessionCookie = ownerCookie) {
     const response = await auth.handler(new Request(`${origin}/api/auth/get-session`, {
-      headers: { cookie: ownerCookie },
+      headers: { cookie: sessionCookie },
     }));
     assert.equal(response.status, 200);
     const session = await response.json() as { session: { activeOrganizationId: string | null } };
@@ -171,11 +171,12 @@ test("owner manages pending invitations and a volunteer member end to end", asyn
     password: "volunteer-password",
   });
   assert.equal(volunteerSignUp.status, 200);
+  const volunteerCookie = cookie(volunteerSignUp);
 
   const acceptedResponse = await call(
     "/organization/accept-invitation",
     { invitationId: acceptedInvitation.id },
-    cookie(volunteerSignUp),
+    volunteerCookie,
   );
   assert.equal(acceptedResponse.status, 200);
   const accepted = await acceptedResponse.json() as {
@@ -185,6 +186,13 @@ test("owner manages pending invitations and a volunteer member end to end", asyn
   assert.equal(accepted.invitation.status, "accepted");
   assert.equal(accepted.member.organizationId, created.id);
   assert.equal(accepted.member.role, "volunteer");
+  const volunteerSetActive = await call(
+    "/organization/set-active",
+    { organizationId: created.id },
+    volunteerCookie,
+  );
+  assert.equal(volunteerSetActive.status, 200);
+  assert.equal(await activeOrganizationId(volunteerCookie), created.id);
 
   const memberListResponse = await get(
     `/organization/list-members?organizationId=${created.id}&limit=100`,
@@ -236,4 +244,49 @@ test("owner manages pending invitations and a volunteer member end to end", asyn
     finalMembers.members.some((member) => member.user.email === "accepted-volunteer@example.com"),
     false,
   );
+
+  const existingInviteeSignUp = await call("/sign-up/email", {
+    email: "existing-volunteer@example.com",
+    name: "Existing Volunteer",
+    password: "existing-volunteer-password",
+  });
+  assert.equal(existingInviteeSignUp.status, 200);
+
+  const existingInviteeInvitationResponse = await call(
+    "/organization/invite-member",
+    { email: "existing-volunteer@example.com", role: "volunteer", organizationId: created.id },
+    ownerCookie,
+  );
+  assert.equal(existingInviteeInvitationResponse.status, 200);
+  const existingInviteeInvitation = await existingInviteeInvitationResponse.json() as {
+    id: string;
+  };
+
+  const existingInviteeSignIn = await call("/sign-in/email", {
+    email: "existing-volunteer@example.com",
+    password: "existing-volunteer-password",
+  });
+  assert.equal(existingInviteeSignIn.status, 200);
+
+  const existingInviteeAcceptedResponse = await call(
+    "/organization/accept-invitation",
+    { invitationId: existingInviteeInvitation.id },
+    cookie(existingInviteeSignIn),
+  );
+  assert.equal(existingInviteeAcceptedResponse.status, 200);
+  const existingInviteeAccepted = await existingInviteeAcceptedResponse.json() as {
+    invitation: { status: string };
+    member: { organizationId: string; role: string };
+  };
+  assert.equal(existingInviteeAccepted.invitation.status, "accepted");
+  assert.equal(existingInviteeAccepted.member.organizationId, created.id);
+  assert.equal(existingInviteeAccepted.member.role, "volunteer");
+  const existingInviteeCookie = cookie(existingInviteeSignIn);
+  const existingInviteeSetActive = await call(
+    "/organization/set-active",
+    { organizationId: created.id },
+    existingInviteeCookie,
+  );
+  assert.equal(existingInviteeSetActive.status, 200);
+  assert.equal(await activeOrganizationId(existingInviteeCookie), created.id);
 });
