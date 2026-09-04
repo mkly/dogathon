@@ -1,7 +1,8 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
-import { FeltButton, FeltLink, FeltPanel } from "@/components/felt";
+import { FeltLink, FeltPanel } from "@/components/felt";
+import { PendingFeltSubmitButton } from "@/components/pending-submit-button";
 import { auth } from "@/lib/auth";
 import { getSession } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
@@ -46,9 +47,9 @@ export default async function OrganizationsPage({ searchParams }: OrganizationsP
         {organizations.map((organization) => (
           <form action={setActiveOrganization} key={organization.id}>
             <input name="organizationId" type="hidden" value={organization.id} />
-            <FeltButton tone="mustard" type="submit">
+            <PendingFeltSubmitButton pendingLabel="Opening…" tone="mustard" type="submit">
               Open {organization.name} ({organization.slug})
-            </FeltButton>
+            </PendingFeltSubmitButton>
           </form>
         ))}
       </FeltPanel>

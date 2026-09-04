@@ -3,7 +3,8 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
 import { createSponsorship } from "@/app/actions";
-import { FeltButton, FeltField, FeltLink, FeltPanel, PhotoPatch, StitchBadge } from "@/components/felt";
+import { FeltField, FeltLink, FeltPanel, PhotoPatch, StitchBadge } from "@/components/felt";
+import { PendingFeltSubmitButton } from "@/components/pending-submit-button";
 import {
   getPublicCompanionParams,
   getPublicOrganization,
@@ -102,9 +103,9 @@ export default async function CompanionPage({ params }: CompanionPageProps) {
                 <input autoComplete="email" id="sponsorEmail" name="sponsorEmail" required type="email" />
               </FeltField>
 
-              <FeltButton className={styles.sponsorButton} tone="mustard" type="submit">
+              <PendingFeltSubmitButton className={styles.sponsorButton} pendingLabel="Opening checkout…" tone="mustard" type="submit">
                 Sponsor for $25/month until adopted
-              </FeltButton>
+              </PendingFeltSubmitButton>
             </form>
           </FeltPanel>
         </CompanionSponsorState>

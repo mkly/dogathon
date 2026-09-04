@@ -2,19 +2,14 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
-import {
-  AdminBadge,
-  AdminButton,
-  AdminField,
-  AdminSurface,
-} from "@/components/admin-ui";
+import { AdminBadge, AdminSurface } from "@/components/admin-ui";
 import { SignOutButton } from "@/components/sign-out-button";
 import { getSession } from "@/lib/auth-session";
 import { formatDate } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 import { getSponsorContext } from "@/lib/sponsor-access";
 
-import { openBillingPortal, updateSponsorProfile } from "./actions";
+import { BillingPortalForm, SponsorProfileForm } from "./account-forms";
 import styles from "./account.module.css";
 
 export const dynamic = "force-dynamic";
@@ -86,39 +81,7 @@ export default async function SponsorAccountPage() {
         <AdminSurface className={styles.profile} tone="mustard">
           <h2>Your profile</h2>
           <p className={styles.profileIntro}>These details are shared with your rescues.</p>
-          <form action={updateSponsorProfile} className={styles.form}>
-            <label>
-              Name
-              <AdminField>
-                <input defaultValue={sponsor.name} name="name" required />
-              </AdminField>
-            </label>
-            <label>
-              Phone
-              <AdminField>
-                <input
-                  defaultValue={sponsor.phone ?? ""}
-                  name="phone"
-                  placeholder="Optional"
-                  type="tel"
-                />
-              </AdminField>
-            </label>
-            <label>
-              Send updates by
-              <AdminField>
-                <select defaultValue={sponsor.channel} name="channel">
-                  <option value="email">Email</option>
-                  <option value="sms">SMS</option>
-                  <option value="both">Email and SMS</option>
-                </select>
-              </AdminField>
-            </label>
-            <p className={styles.email}>{sponsor.email}</p>
-            <div className={styles.profileActions}>
-              <AdminButton tone="denim" type="submit">Save profile</AdminButton>
-            </div>
-          </form>
+          <SponsorProfileForm channel={sponsor.channel} email={sponsor.email} name={sponsor.name} phone={sponsor.phone ?? ""} />
         </AdminSurface>
 
         <AdminSurface className={styles.sponsorships} tone="denim">
@@ -145,9 +108,7 @@ export default async function SponsorAccountPage() {
                     </div>
                   </div>
                   {record.status === "active" && record.stripeCustomerId ? (
-                    <form action={openBillingPortal.bind(null, record.id)}>
-                      <AdminButton tone="mustard" type="submit">Manage billing</AdminButton>
-                    </form>
+                    <BillingPortalForm sponsorshipId={record.id} />
                   ) : null}
                 </article>
               ))}

@@ -18,16 +18,21 @@ const sponsorProfileSchema = z.object({
   channel: z.enum(SPONSORSHIP_CHANNELS),
 });
 
-export async function updateSponsorProfile(formData: FormData) {
+export type AccountActionState = { error?: string; success?: boolean };
+
+export async function updateSponsorProfile(
+  _previousState: AccountActionState,
+  formData: FormData,
+): Promise<AccountActionState> {
   const sponsor = await getSponsorContext(await headers());
   if (!sponsor) redirect("/account/sign-in");
 
   const profile = sponsorProfileSchema.safeParse(Object.fromEntries(formData));
   if (!profile.success && profile.error.issues.some((issue) => issue.path[0] === "name")) {
-    throw new Error("Name is required");
+    return { error: "Name is required" };
   }
   if (!profile.success) {
-    throw new Error("Choose a valid update channel");
+    return { error: "Choose a valid update channel" };
   }
   const { name, phone, channel } = profile.data;
 
@@ -41,13 +46,17 @@ export async function updateSponsorProfile(formData: FormData) {
   });
 
   revalidatePath("/account");
+  return { success: true };
 }
 
-export async function openBillingPortal(sponsorshipId: string) {
+export async function openBillingPortal(
+  sponsorshipId: string,
+  _previousState: AccountActionState,
+): Promise<AccountActionState> {
   const sponsor = await getSponsorContext(await headers());
   if (!sponsor) redirect("/account/sign-in");
   if (!uuidSchema.safeParse(sponsorshipId).success) {
-    throw new Error("Billing management is unavailable for this sponsorship");
+    return { error: "Billing management is unavailable for this sponsorship" };
   }
 
   const sponsorship = await prisma.sponsorship.findFirst({
@@ -65,7 +74,7 @@ export async function openBillingPortal(sponsorshipId: string) {
   const customerId = sponsorship?.stripeCustomerId;
   const accountId = sponsorship?.organization.stripeAccountId;
   if (!customerId || !accountId) {
-    throw new Error("Billing management is unavailable for this sponsorship");
+    return { error: "Billing management is unavailable for this sponsorship" };
   }
 
   const portal = await createBillingPortalSession({

@@ -89,6 +89,12 @@
   margin-top: 5px;
 }
 
+.actionStatus {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
 .sectionHeading {
   display: flex;
   align-items: center;
