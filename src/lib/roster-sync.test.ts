@@ -133,6 +133,7 @@ test("a bounded model loop maps the rescue site and scrapes the selected roster"
       assert.deepEqual(tools.map((tool) => tool.function.name), [
         "firecrawl_map",
         "firecrawl_scrape",
+        "firecrawl_batch_scrape",
         "firecrawl_crawl",
         "save_sync_notes",
       ]);
@@ -222,12 +223,13 @@ test("a crawl contributes every document to roster parsing while returning a bou
     model: scriptedModel(async (messages, tools) => {
       const systemContent = messages.find((message) => message.role === "system")?.content;
       const systemPrompt = typeof systemContent === "string" ? systemContent : "";
-      assert.match(systemPrompt, /every pagination page/);
-      assert.match(systemPrompt, /every companion detail page/);
-      assert.match(systemPrompt, /rather than exploring the rest of the site/);
+      assert.match(systemPrompt, /individual companion pages and to further pages of the same listing/);
+      assert.match(systemPrompt, /Never fetch pages that are not part of the roster/);
+      assert.match(systemPrompt, /only fall back to crawl when the listing exposes no usable links/);
       assert.deepEqual(tools.map((tool) => tool.function.name), [
         "firecrawl_map",
         "firecrawl_scrape",
+        "firecrawl_batch_scrape",
         "firecrawl_crawl",
         "save_sync_notes",
       ]);
@@ -365,7 +367,7 @@ test("calls the direct Firecrawl v2 endpoints with bearer authentication", async
   assert.equal((requests[0]?.init?.headers as Record<string, string>).authorization, "Bearer fc-test");
   assert.deepEqual(JSON.parse(String(requests[0]?.init?.body)), {
     url: "https://rescue.example/companions",
-    formats: ["markdown"],
+    formats: ["markdown", "links"],
     onlyMainContent: true,
   });
 });
@@ -797,10 +799,9 @@ test("the agent reads the previous sync's notes and saves notes for the next one
           id: "call-crawl",
           type: "function",
           function: {
-            name: "firecrawl_crawl",
+            name: "firecrawl_batch_scrape",
             arguments: JSON.stringify({
-              url: "https://rescue.example/adoptions/dogs/",
-              includePaths: ["rescue-adoption/.*"],
+              urls: ["https://rescue.example/rescue-adoption/1/", "https://rescue.example/rescue-adoption/2/"],
             }),
           },
         },
@@ -810,7 +811,7 @@ test("the agent reads the previous sync's notes and saves notes for the next one
           function: {
             name: "save_sync_notes",
             arguments: JSON.stringify({
-              notes: "Crawl /adoptions/dogs/ with includePaths rescue-adoption/.*; 12 dogs listed.",
+              notes: "Scrape /adoptions/dogs/; companion links look like /rescue-adoption/<id>/; 12 dogs listed.",
             }),
           },
         },
@@ -838,77 +839,129 @@ test("the agent reads the previous sync's notes and saves notes for the next one
   });
 
   assert.match(prompts[0], /Detail pages live under \/rescue-adoption\//);
-  assert.deepEqual(calls.map((call) => call.name), ["firecrawl_crawl"]);
-  assert.deepEqual(calls[0].input.includePaths, ["rescue-adoption/.*"]);
-  assert.deepEqual(saved, ["Crawl /adoptions/dogs/ with includePaths rescue-adoption/.*; 12 dogs listed."]);
-  assert.equal(result.notes, saved[0]);
+  assert.deepEqual(calls.map((call) => call.name), ["firecrawl_batch_scrape"]);
+  assert.deepEqual(calls[0].input.urls, ["https://rescue.example/rescue-adoption/1/", "https://rescue.example/rescue-adoption/2/"]);
+  assert.match(prompts[0], /Begin with the crawl they describe/);
+  // The crawl itself leaves provisional notes as it is issued and as it finishes,
+  // so a sync that is cut off mid-crawl still hands the next one its paths.
+  // The scripted model saves its own notes in the same step as the crawl, so the
+  // agent's notes land before the crawl finishes and stop further provisional ones.
+  const agentNotes = "Scrape /adoptions/dogs/; companion links look like /rescue-adoption/<id>/; 12 dogs listed.";
+  assert.match(saved[0], /^Provisional notes .*batch-scrape 2 pages such as https:\/\/rescue\.example\/rescue-adoption\/1\/, https:\/\/rescue\.example\/rescue-adoption\/2\/; the fetch was issued/);
+  assert.deepEqual(saved.slice(1), [agentNotes]);
+  assert.equal(result.notes, agentNotes);
   assert.match(result.text, /Meet Biscuit/);
 });
 
-test("agent-supplied includePaths widen a crawl to a detail-page section without the whole site", async () => {
-  let submittedBody: Record<string, unknown> | undefined;
-  const fetcher: typeof fetch = async (_input, init) => {
-    if (init?.method === "POST") {
-      submittedBody = JSON.parse(String(init.body)) as Record<string, unknown>;
-      return Response.json({ success: true, id: "crawl-job-3" });
-    }
-    return Response.json({ status: "completed", total: 1, completed: 1, data: [{}] });
+test("a batch scrape submits exactly the chosen URLs and polls the job to completion", async () => {
+  const requests: Array<{ url: string; body?: Record<string, unknown> }> = [];
+  const responses = [
+    { success: true, id: "batch-1" },
+    { status: "scraping", total: 2, completed: 1, data: [{ markdown: "## Meet Biscuit" }] },
+    { status: "completed", total: 2, completed: 2, data: [{ markdown: "## Meet Biscuit" }, { markdown: "## Meet Tulip" }] },
+  ];
+  const fetcher: typeof fetch = async (input, init) => {
+    requests.push({ url: String(input), body: init?.body ? JSON.parse(String(init.body)) as Record<string, unknown> : undefined });
+    return Response.json(responses.shift());
   };
 
-  await requestFirecrawl(
-    "firecrawl_crawl",
+  const result = await requestFirecrawl(
+    "firecrawl_batch_scrape",
     {
-      url: "https://rescue.example/adoptions/dogs/",
-      includePaths: ["/rescue-adoption/.*"],
+      urls: [
+        "https://rescue.example/rescue-adoption/1/",
+        "https://www.rescue.example/rescue-adoption/2/",
+        "https://rescue.example/rescue-adoption/1/",
+      ],
     },
-    {
-      apiKey: "fc-test",
-      sourceUrl: "https://rescue.example/adoptions/dogs/",
-      fetch: fetcher,
-      pollIntervalMs: 0,
-    },
+    { apiKey: "fc-test", baseUrl: "https://firecrawl.example/v2", sourceUrl: "https://rescue.example/adoptions/dogs/", fetch: fetcher, pollIntervalMs: 0 },
   );
 
-  assert.deepEqual(submittedBody?.includePaths, ["adoptions/dogs(?:/.*)?", "rescue-adoption/.*"]);
-  assert.equal(submittedBody?.crawlEntireDomain, true);
-  assert.equal(submittedBody?.allowExternalLinks, false);
-  assert.equal(submittedBody?.allowSubdomains, false);
+  assert.equal(requests[0]?.url, "https://firecrawl.example/v2/batch/scrape");
+  assert.deepEqual(requests[0]?.body, {
+    urls: ["https://rescue.example/rescue-adoption/1/", "https://www.rescue.example/rescue-adoption/2/"],
+    formats: ["markdown"],
+    onlyMainContent: true,
+  });
+  assert.equal(requests[1]?.url, "https://firecrawl.example/v2/batch/scrape/batch-1");
+  assert.equal(result.completeness.complete, true);
+  assert.deepEqual(extractScrapedTexts(result), ["## Meet Biscuit", "## Meet Tulip"]);
 });
 
-test("refuses includePaths patterns that would crawl the whole site", async () => {
+test("a batch scrape refuses unrelated hosts and other protocols before fetching", async () => {
   let fetchCalls = 0;
   const fetcher: typeof fetch = async () => {
     fetchCalls += 1;
     return Response.json({ success: true, id: "never" });
   };
+  const options = { apiKey: "fc-test", sourceUrl: "https://rescue.example/adoptions/dogs/", fetch: fetcher, pollIntervalMs: 0 };
 
-  for (const pattern of [".*", "[^/]+", "(?:.*)", "wp-content/.*"]) {
-    await assert.rejects(
-      requestFirecrawl(
-        "firecrawl_crawl",
-        { url: "https://rescue.example/adoptions/dogs/", includePaths: [pattern] },
-        {
-          apiKey: "fc-test",
-          sourceUrl: "https://rescue.example/adoptions/dogs/",
-          fetch: fetcher,
-          pollIntervalMs: 0,
-        },
-      ),
-      /whole site/,
-    );
-  }
   await assert.rejects(
-    requestFirecrawl(
-      "firecrawl_crawl",
-      { url: "https://rescue.example/adoptions/dogs/", includePaths: ["rescue-adoption/("] },
-      {
-        apiKey: "fc-test",
-        sourceUrl: "https://rescue.example/adoptions/dogs/",
-        fetch: fetcher,
-        pollIntervalMs: 0,
-      },
-    ),
-    /not a valid regex/,
+    requestFirecrawl("firecrawl_batch_scrape", { urls: ["https://rescue.example/rescue-adoption/1/", "https://elsewhere.test/dog"] }, options),
+    /unrelated host: elsewhere\.test/,
   );
+  await assert.rejects(
+    requestFirecrawl("firecrawl_batch_scrape", { urls: ["file:///etc/passwd"] }, options),
+    /unsupported protocol: file:/,
+  );
+  await assert.rejects(requestFirecrawl("firecrawl_batch_scrape", { urls: [] }, options), /list of page URLs/);
   assert.equal(fetchCalls, 0);
+});
+
+test("a scrape reply gives the model the page's same-site links and a batch scrape refuses strays", async () => {
+  const toolReplies: string[] = [];
+  const calls: Array<{ name: string; input: Record<string, unknown> }> = [];
+  let step = 0;
+  const call = (id: string, name: string, args: Record<string, unknown>) => ({
+    id,
+    type: "function" as const,
+    function: { name, arguments: JSON.stringify(args) },
+  });
+
+  const text = await discoverRoster("https://rescue.example/adoptions/dogs/", {
+    log: () => {},
+    model: scriptedModel(async (messages) => {
+      const last = messages.at(-1);
+      if (last?.role === "tool" && typeof last.content === "string") toolReplies.push(last.content);
+      step += 1;
+      if (step === 1) return { role: "assistant", content: null, tool_calls: [call("scrape", "firecrawl_scrape", { url: "https://rescue.example/adoptions/dogs/" })] };
+      if (step === 2) {
+        return {
+          role: "assistant",
+          content: null,
+          tool_calls: [call("batch", "firecrawl_batch_scrape", { urls: ["https://rescue.example/rescue-adoption/1/", "https://elsewhere.test/dog"] })],
+        };
+      }
+      return { role: "assistant", content: "Done." };
+    }),
+    firecrawl: async (name, input) => {
+      calls.push({ name, input });
+      if (name === "firecrawl_scrape") {
+        return {
+          success: true,
+          data: {
+            markdown: "# Adoptable dogs\n\n[Biscuit](https://rescue.example/rescue-adoption/1/)",
+            links: [
+              "https://rescue.example/rescue-adoption/1/",
+              "https://rescue.example/rescue-adoption/1/#photos",
+              "https://www.rescue.example/adoptions/dogs/?page=2",
+              "https://facebook.com/rescue",
+              "mailto:adopt@rescue.example",
+            ],
+          },
+        };
+      }
+      return { status: "completed", total: 1, completed: 1, data: [{ markdown: "## Meet Biscuit" }], completeness: { complete: true } };
+    },
+  });
+
+  const reply = JSON.parse(toolReplies[0] ?? "{}") as { markdown: string; links: string[] };
+  assert.match(reply.markdown, /Adoptable dogs/);
+  assert.deepEqual(reply.links, [
+    "https://rescue.example/rescue-adoption/1/",
+    "https://www.rescue.example/adoptions/dogs/?page=2",
+  ]);
+  assert.match(toolReplies[1] ?? "", /refused unrelated host: elsewhere\.test/);
+  assert.deepEqual(calls.map((entry) => entry.name), ["firecrawl_scrape"]);
+  assert.match(text, /Adoptable dogs/);
 });

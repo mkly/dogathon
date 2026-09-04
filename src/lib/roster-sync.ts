@@ -45,8 +45,9 @@ const DOCUMENT_SEPARATOR = "\n\n---\n\n";
 
 const MAX_ROSTER_AGENT_STEPS = 10;
 const MAX_ROSTER_TOOL_CALLS = 12;
-const MAX_CRAWL_INCLUDE_PATHS = 5;
-const MAX_CRAWL_INCLUDE_PATH_CHARS = 200;
+const MAX_BATCH_SCRAPE_URLS = 100;
+const MAX_SCRAPE_LINKS = 300;
+const MAX_SCRAPE_MARKDOWN_CHARS = 20_000;
 export const MAX_SYNC_NOTE_CHARS = 4_000;
 const MAX_CRAWL_SUMMARY_CHARS = 4_000;
 // A live scrape should never make most of the current roster disappear at once.
@@ -329,7 +330,9 @@ export async function loadRosterSource(sourceUrl: string): Promise<string> {
   return (await loadRoster(sourceUrl)).text;
 }
 
-type RosterToolName = "firecrawl_map" | "firecrawl_scrape" | "firecrawl_crawl";
+type RosterToolName = "firecrawl_map" | "firecrawl_scrape" | "firecrawl_batch_scrape" | "firecrawl_crawl";
+const FETCHING_TOOLS = new Set<RosterToolName>(["firecrawl_scrape", "firecrawl_batch_scrape", "firecrawl_crawl"]);
+const BULK_TOOLS = new Set<RosterToolName>(["firecrawl_batch_scrape", "firecrawl_crawl"]);
 type FirecrawlCaller = (name: RosterToolName, input: Record<string, unknown>) => Promise<unknown>;
 
 export type RosterDiscoveryOptions = {
@@ -340,6 +343,8 @@ export type RosterDiscoveryOptions = {
   priorNotes?: string | null;
   /** Persists the note the agent leaves for the next sync of this source. */
   saveNotes?: (notes: string) => Promise<void>;
+  /** Receives one line per discovery event; defaults to the server console. */
+  log?: (message: string) => void;
 };
 
 export type FirecrawlCrawlResult = {
@@ -382,10 +387,24 @@ export async function discoverRosterWithCompleteness(
     ?? ((name, input) => requestFirecrawl(name, input, { sourceUrl, signal: options.signal }));
   const documents: string[] = [];
   const crawlCompleteness: RosterCompleteness[] = [];
+  const log = options.log ?? ((message: string) => console.info(`[roster-sync] ${message}`));
   let toolCalls = 0;
   let savedNotes: string | null = null;
+  // A bulk fetch leaves provisional notes as soon as it is issued, so a sync that
+  // is cut off mid-fetch still tells the next one which pages to get.
+  const saveProvisionalNotes = async (name: RosterToolName, input: Record<string, unknown>, outcome: string) => {
+    if (savedNotes !== null) return;
+    try {
+      await options.saveNotes?.(provisionalNotes(name, input, outcome));
+    } catch (error) {
+      log(`saving provisional notes failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  };
   const executeTool = async (name: RosterToolName, input: Record<string, unknown>) => {
     options.signal?.throwIfAborted();
+    const startedAt = Date.now();
+    const describe = `${name} ${describeToolInput(input)}`;
+    log(`${describe} started`);
     let attemptedName: RosterToolName | undefined;
     try {
       if (toolCalls >= MAX_ROSTER_TOOL_CALLS) {
@@ -393,20 +412,30 @@ export async function discoverRosterWithCompleteness(
       }
       toolCalls += 1;
       attemptedName = name;
-      assertRelatedUrl(sourceUrl, input.url);
+      for (const url of requestedUrls(input)) assertRelatedUrl(sourceUrl, url);
+      if (BULK_TOOLS.has(name)) {
+        await saveProvisionalNotes(name, input, "the fetch was issued but that sync did not record its result");
+      }
       const result = await firecrawl(name, input);
       options.signal?.throwIfAborted();
-      if (name === "firecrawl_scrape" || name === "firecrawl_crawl") {
+      if (FETCHING_TOOLS.has(name)) {
         documents.push(...extractScrapedTexts(result));
       }
-      if (name === "firecrawl_crawl") {
-        crawlCompleteness.push(readCrawlCompleteness(result));
+      if (BULK_TOOLS.has(name)) {
+        const completeness = readCrawlCompleteness(result);
+        crawlCompleteness.push(completeness);
+        log(`${describe} ${completeness.status}: ${completeness.completed}/${completeness.total} pages in ${elapsedSeconds(startedAt)}s`);
+        await saveProvisionalNotes(name, input, `the fetch finished with status ${completeness.status}, ${completeness.completed} of ${completeness.total} pages`);
+      } else {
+        log(`${describe} finished in ${elapsedSeconds(startedAt)}s`);
       }
-      return name === "firecrawl_crawl"
-        ? summarizeCrawlToolResult(result)
-        : truncateToolResult(result);
+      if (BULK_TOOLS.has(name)) return summarizeCrawlToolResult(result);
+      if (name === "firecrawl_scrape") return summarizeScrapeToolResult(result, sourceUrl);
+      return truncateToolResult(result);
     } catch (error) {
-      if (attemptedName === "firecrawl_crawl") {
+      const message = error instanceof Error ? error.message : String(error);
+      log(`${describe} failed after ${elapsedSeconds(startedAt)}s: ${message}`);
+      if (attemptedName !== undefined && BULK_TOOLS.has(attemptedName)) {
         crawlCompleteness.push({
           complete: false,
           timedOut: false,
@@ -416,7 +445,7 @@ export async function discoverRosterWithCompleteness(
         });
       }
       // Return failures to the model so another in-scope page can be tried.
-      return `Tool call failed: ${error instanceof Error ? error.message : String(error)}`;
+      return `Tool call failed: ${message}`;
     }
   };
   const tools = {
@@ -430,27 +459,31 @@ export async function discoverRosterWithCompleteness(
       execute: (input) => executeTool("firecrawl_map", input),
     }),
     firecrawl_scrape: tool({
-      description: "Fetch one page as clean markdown for roster parsing.",
+      description: "Fetch one page as clean markdown for roster parsing, together with the same-site links it contains so the companion pages and pagination pages can be chosen from it.",
       inputSchema: z.object({
         url: z.string().describe("The page URL to scrape."),
       }),
       execute: (input) => executeTool("firecrawl_scrape", input),
     }),
+    firecrawl_batch_scrape: tool({
+      description: "Fetch a chosen set of pages as markdown for roster parsing: the companion detail pages and further listing pages picked from a scraped listing's links. Only these exact URLs are fetched.",
+      inputSchema: z.object({
+        urls: z.array(z.string()).min(1).max(MAX_BATCH_SCRAPE_URLS)
+          .describe("The exact page URLs to fetch, chosen from the listing's links."),
+      }),
+      execute: (input) => executeTool("firecrawl_batch_scrape", input),
+    }),
     firecrawl_crawl: tool({
-      description: "Crawl the complete adoption listing, following pagination and companion detail links. The crawl stays within the configured listing path unless includePaths adds the path pattern of companion detail pages that live elsewhere on the same site.",
+      description: "Last resort when a listing's links cannot be read: crawl the listing path, following pagination and companion links found under it. The crawl never leaves the configured listing path.",
       inputSchema: z.object({
         url: z.string().describe("The adoption-listing URL to crawl."),
-        includePaths: z.array(z.string().max(MAX_CRAWL_INCLUDE_PATH_CHARS))
-          .max(MAX_CRAWL_INCLUDE_PATHS)
-          .optional()
-          .describe("Extra URL path regexes (without the leading slash, for example \"sfspca-adoption/.*\") for companion detail pages outside the listing path. Patterns must name a specific section; the whole site is never crawled."),
         limit: z.number().int().min(1).max(MAX_FIRECRAWL_CRAWL_PAGES).optional(),
         maxDiscoveryDepth: z.number().int().min(0).max(MAX_FIRECRAWL_DISCOVERY_DEPTH).optional(),
       }),
       execute: (input) => executeTool("firecrawl_crawl", input),
     }),
     save_sync_notes: tool({
-      description: "Save notes for the next sync of this source: the listing URL to crawl, which includePaths reach the companion detail pages, how many companions the listing showed, and any site quirks. Replace the previous notes entirely.",
+      description: "Save notes for the next sync of this source: the listing URL to scrape, how its companion detail links and pagination links look, how many companions the listing showed, and any site quirks. Replace the previous notes entirely.",
       inputSchema: z.object({
         notes: z.string().min(1).max(MAX_SYNC_NOTE_CHARS),
       }),
@@ -459,6 +492,7 @@ export async function discoverRosterWithCompleteness(
         try {
           await options.saveNotes?.(notes);
           savedNotes = notes;
+          log(`save_sync_notes stored ${notes.length} chars`);
           return "Notes saved for the next sync.";
         } catch (error) {
           return `Saving notes failed: ${error instanceof Error ? error.message : String(error)}`;
@@ -468,10 +502,12 @@ export async function discoverRosterWithCompleteness(
   };
 
   options.signal?.throwIfAborted();
-  await generateText({
+  const discoveryStartedAt = Date.now();
+  log(`discovery started for ${sourceUrl}${options.priorNotes?.trim() ? " with notes from the previous sync" : ""}`);
+  const { steps } = await generateText({
     model: options.model ?? createAiModel(),
     maxOutputTokens: 1_000,
-    instructions: "Find the rescue's complete current adoptable companion roster. Use map when the supplied page may not be the adoption listing. Crawl the listing so you cover every pagination page and every companion detail page linked from it; use scrape only for a specific page that the crawl did not capture. Stay within the adoption listing and its linked companion details rather than exploring the rest of the site: when the listing only links to companion detail pages that live under a different path on the same site, pass that path pattern as includePaths instead of widening the crawl. Follow the notes from the previous sync when they are given, and check that the crawl gathered at least as many companions as the listing shows. Before finishing, call save_sync_notes with concise guidance for the next sync: the listing URL to crawl, the includePaths that reach detail pages, the number of companions listed, and any site quirks. Then reply with a short completion message. Do not invent roster content.",
+    instructions: "Find the rescue's complete current adoptable companion roster. Use map only when the supplied page may not be the adoption listing. Scrape the listing page, read its links, and pick out exactly the links that lead to individual companion pages and to further pages of the same listing; then batch-scrape those chosen URLs. Never fetch pages that are not part of the roster, such as other sections of the site, and only fall back to crawl when the listing exposes no usable links. When notes from the previous sync are given, follow them on your first steps rather than exploring, and explore only if they fail or gather fewer companions than the notes expect. Check that you gathered at least as many companions as the listing shows. Call save_sync_notes as soon as you have fetched the companion pages, and again before finishing if you learned more, with concise guidance for the next sync: the listing URL, what its companion and pagination links look like, the number of companions listed, and any site quirks. Then reply with a short completion message. Do not invent roster content.",
     prompt: priorNotesPrompt(sourceUrl, options.priorNotes),
     tools,
     stopWhen: isStepCount(MAX_ROSTER_AGENT_STEPS),
@@ -479,6 +515,7 @@ export async function discoverRosterWithCompleteness(
     abortSignal: options.signal,
   });
   options.signal?.throwIfAborted();
+  log(`discovery finished after ${steps.length} model steps, ${toolCalls} tool calls, ${documents.length} documents in ${elapsedSeconds(discoveryStartedAt)}s`);
 
   if (documents.length === 0) {
     throw new Error("Roster discovery completed without scraping roster content");
@@ -494,7 +531,40 @@ function priorNotesPrompt(sourceUrl: string, priorNotes: string | null | undefin
   const task = `Find the current companion roster starting from ${sourceUrl}`;
   const notes = priorNotes?.trim();
   if (!notes) return task;
-  return `${task}\n\nNotes saved after the previous sync of this source (verify them against the live site rather than trusting them blindly):\n${notes.slice(0, MAX_SYNC_NOTE_CHARS)}`;
+  return `${task}\n\nNotes saved after the previous sync of this source. Begin with the crawl they describe, and verify the result against the live site rather than trusting the notes blindly:\n${notes.slice(0, MAX_SYNC_NOTE_CHARS)}`;
+}
+
+function provisionalNotes(name: RosterToolName, input: Record<string, unknown>, outcome: string): string {
+  const urls = requestedUrls(input);
+  const settings = name === "firecrawl_batch_scrape"
+    ? `batch-scrape ${urls.length} pages such as ${urls.slice(0, 3).join(", ")}`
+    : [
+      `crawl ${urls[0] ?? "the listing"}`,
+      input.limit === undefined ? null : `limit ${String(input.limit)}`,
+      input.maxDiscoveryDepth === undefined ? null : `maxDiscoveryDepth ${String(input.maxDiscoveryDepth)}`,
+    ].filter(Boolean).join(", ");
+  return `Provisional notes recorded automatically by the previous sync, which did not write its own: ${settings}; ${outcome}.`;
+}
+
+function requestedUrls(input: Record<string, unknown>): string[] {
+  const urls = [input.url, ...(Array.isArray(input.urls) ? input.urls : [])];
+  return urls.filter((url) => url !== undefined).map((url) => {
+    if (typeof url !== "string") throw new Error("Roster tool URL must be a string");
+    return url;
+  });
+}
+
+function describeToolInput(input: Record<string, unknown>): string {
+  const { url, urls, ...rest } = input;
+  const extras = Object.entries(rest)
+    .filter(([, value]) => value !== undefined)
+    .map(([key, value]) => `${key}=${JSON.stringify(value)}`);
+  const urlList = Array.isArray(urls) ? `${urls.length} urls (${urls.slice(0, 3).map(String).join(", ")}${urls.length > 3 ? ", ..." : ""})` : "";
+  return [typeof url === "string" ? url : "", urlList, ...extras].filter(Boolean).join(" ");
+}
+
+function elapsedSeconds(startedAt: number): string {
+  return ((Date.now() - startedAt) / 1000).toFixed(1);
 }
 
 function completeRoster(status: string): RosterCompleteness {
@@ -544,7 +614,7 @@ function combineCrawlCompleteness(crawls: RosterCompleteness[]): RosterCompleten
 }
 
 export function requestFirecrawl(
-  name: "firecrawl_crawl",
+  name: "firecrawl_crawl" | "firecrawl_batch_scrape",
   input: Record<string, unknown>,
   options: FirecrawlRequestOptions & { sourceUrl: string },
 ): Promise<FirecrawlCrawlResult>;
@@ -572,19 +642,14 @@ export async function requestFirecrawl(
     .replace(/\/+$/u, "");
   const fetcher = options.fetch ?? fetch;
 
-  if (name === "firecrawl_crawl") {
-    return requestFirecrawlCrawl(input, {
-      ...options,
-      apiKey,
-      baseUrl,
-      fetch: fetcher,
-    });
-  }
+  const jobOptions = { ...options, apiKey, baseUrl, fetch: fetcher };
+  if (name === "firecrawl_crawl") return requestFirecrawlCrawl(input, jobOptions);
+  if (name === "firecrawl_batch_scrape") return requestFirecrawlBatchScrape(input, jobOptions);
 
   const endpoint = name === "firecrawl_map" ? "map" : "scrape";
   const body = name === "firecrawl_map"
     ? { ...input, limit: input.limit ?? 25 }
-    : { ...input, formats: ["markdown"], onlyMainContent: true };
+    : { ...input, formats: ["markdown", "links"], onlyMainContent: true };
   const response = await fetcher(`${baseUrl}/${endpoint}`, {
     method: "POST",
     headers: { authorization: `Bearer ${apiKey}`, "content-type": "application/json" },
@@ -610,12 +675,11 @@ async function requestFirecrawlCrawl(
   assertRelatedUrl(sourceUrl, requestedUrl.toString());
   const source = requiredHttpUrl(sourceUrl, "Roster source URL");
   const includePath = pathScopePattern(source.pathname);
-  const extraIncludePaths = scopedIncludePaths(input.includePaths);
   const requestedStartsInScope = pathMatchesScope(requestedUrl.pathname, source.pathname);
   const body = {
     ...input,
     url: requestedStartsInScope ? requestedUrl.toString() : source.toString(),
-    includePaths: [includePath, ...extraIncludePaths],
+    includePaths: [includePath],
     regexOnFullURL: false,
     limit: clampedInteger(input.limit, 1, MAX_FIRECRAWL_CRAWL_PAGES),
     maxDiscoveryDepth: clampedInteger(
@@ -624,15 +688,49 @@ async function requestFirecrawlCrawl(
       MAX_FIRECRAWL_DISCOVERY_DEPTH,
     ),
     sitemap: "skip",
-    // Firecrawl only follows links below the start URL's path unless the whole
-    // domain is opened up; includePaths then narrows it back to the listing and
-    // the detail-page section, so the rest of the site is still never fetched.
-    crawlEntireDomain: extraIncludePaths.length > 0,
+    // Firecrawl only follows links below the start URL's path, so the rest of
+    // the site is never fetched; pages elsewhere are reached by batch scrape.
+    crawlEntireDomain: false,
     allowExternalLinks: false,
     allowSubdomains: false,
   };
+  return submitFirecrawlJob("crawl", body, options);
+}
 
-  const submitResponse = await options.fetch(`${options.baseUrl}/crawl`, {
+async function requestFirecrawlBatchScrape(
+  input: Record<string, unknown>,
+  options: Required<Pick<FirecrawlRequestOptions, "apiKey" | "baseUrl" | "fetch">>
+    & FirecrawlRequestOptions,
+): Promise<FirecrawlCrawlResult> {
+  const sourceUrl = options.sourceUrl;
+  if (!sourceUrl) throw new Error("A source URL is required to scope a Firecrawl batch scrape");
+  if (!Array.isArray(input.urls) || input.urls.length === 0) {
+    throw new Error("Roster batch scrape needs a list of page URLs");
+  }
+  if (input.urls.length > MAX_BATCH_SCRAPE_URLS) {
+    throw new Error(`Roster batch scrape accepts at most ${MAX_BATCH_SCRAPE_URLS} URLs`);
+  }
+  const urls = [...new Set(input.urls.map((url) => {
+    const parsed = requiredHttpUrl(url, "Roster batch scrape URL");
+    assertRelatedUrl(sourceUrl, parsed.toString());
+    return parsed.toString();
+  }))];
+  return submitFirecrawlJob("batch/scrape", {
+    urls,
+    formats: ["markdown"],
+    onlyMainContent: true,
+  }, options);
+}
+
+// Crawls and batch scrapes share Firecrawl's async job shape: submit, then poll
+// the job's status until it completes or the roster's time budget runs out.
+async function submitFirecrawlJob(
+  endpoint: "crawl" | "batch/scrape",
+  body: Record<string, unknown>,
+  options: Required<Pick<FirecrawlRequestOptions, "apiKey" | "baseUrl" | "fetch">>
+    & FirecrawlRequestOptions,
+): Promise<FirecrawlCrawlResult> {
+  const submitResponse = await options.fetch(`${options.baseUrl}/${endpoint}`, {
     method: "POST",
     headers: {
       authorization: `Bearer ${options.apiKey}`,
@@ -648,7 +746,7 @@ async function requestFirecrawlCrawl(
   };
   if (!submitResponse.ok || submit.success === false || !submit.id) {
     throw new Error(
-      submit.error ?? `Firecrawl crawl submission failed (${submitResponse.status})`,
+      submit.error ?? `Firecrawl ${endpoint} submission failed (${submitResponse.status})`,
     );
   }
 
@@ -673,7 +771,7 @@ async function requestFirecrawlCrawl(
     let response: Response;
     try {
       response = await options.fetch(
-        `${options.baseUrl}/crawl/${encodeURIComponent(submit.id)}`,
+        `${options.baseUrl}/${endpoint}/${encodeURIComponent(submit.id)}`,
         {
           method: "GET",
           headers: { authorization: `Bearer ${options.apiKey}` },
@@ -687,7 +785,7 @@ async function requestFirecrawlCrawl(
     }
     const payload = (await response.json()) as FirecrawlCrawlStatus;
     if (!response.ok || payload.success === false) {
-      throw new Error(payload.error ?? `Firecrawl crawl status failed (${response.status})`);
+      throw new Error(payload.error ?? `Firecrawl ${endpoint} status failed (${response.status})`);
     }
     latest = normalizeCrawlStatus(payload);
     if (latest.status === "completed" || latest.status === "failed") {
@@ -769,34 +867,6 @@ function pathScopePattern(pathname: string): string {
   return `${normalized.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&")}(?:/.*)?`;
 }
 
-// Probe paths that a detail-page pattern must not match: a pattern that
-// admits arbitrary top-level pages would crawl the whole site.
-const BROAD_PATTERN_PROBES = ["", "about-us", "news/2024/annual-report", "wp-content/uploads/photo.jpg"];
-
-function scopedIncludePaths(value: unknown): string[] {
-  if (value === undefined) return [];
-  if (!Array.isArray(value)) throw new Error("Roster crawl includePaths must be an array of path patterns");
-  if (value.length > MAX_CRAWL_INCLUDE_PATHS) {
-    throw new Error(`Roster crawl accepts at most ${MAX_CRAWL_INCLUDE_PATHS} includePaths`);
-  }
-  return value.map((entry) => {
-    if (typeof entry !== "string" || entry.length > MAX_CRAWL_INCLUDE_PATH_CHARS) {
-      throw new Error("Roster crawl includePaths must be short path patterns");
-    }
-    const pattern = entry.trim().replace(/^\/+/u, "");
-    let matcher: RegExp;
-    try {
-      matcher = new RegExp(`^(?:${pattern})$`, "u");
-    } catch {
-      throw new Error(`Roster crawl includePaths pattern is not a valid regex: ${entry}`);
-    }
-    if (BROAD_PATTERN_PROBES.some((probe) => matcher.test(probe))) {
-      throw new Error(`Roster crawl refused an includePaths pattern that would crawl the whole site: ${entry}`);
-    }
-    return pattern;
-  });
-}
-
 function pathMatchesScope(candidatePath: string, sourcePath: string): boolean {
   const normalized = sourcePath === "/" ? "/" : sourcePath.replace(/\/+$/u, "");
   return normalized === "/"
@@ -841,6 +911,41 @@ function isRelatedHost(sourceHost: string, requestedHost: string): boolean {
 function truncateToolResult(value: unknown, maxChars = 30_000): string {
   const serialized = JSON.stringify(value);
   return serialized.length <= maxChars ? serialized : `${serialized.slice(0, maxChars)}\n[truncated]`;
+}
+
+// The model reads the page text and its same-site links; the full markdown is
+// retained separately for roster parsing.
+function summarizeScrapeToolResult(value: unknown, sourceUrl: string): string {
+  const markdown = extractScrapedText(value) ?? "";
+  const record = value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
+  const data = record.data && typeof record.data === "object" && !Array.isArray(record.data)
+    ? (record.data as Record<string, unknown>)
+    : record;
+  const source = new URL(sourceUrl);
+  const links = [...new Set(
+    (Array.isArray(data.links) ? data.links : [])
+      .filter((link): link is string => typeof link === "string")
+      .flatMap((link) => {
+        try {
+          const parsed = new URL(link);
+          const related = (parsed.protocol === "http:" || parsed.protocol === "https:")
+            && isRelatedHost(source.hostname, parsed.hostname);
+          parsed.hash = "";
+          return related ? [parsed.toString()] : [];
+        } catch {
+          return [];
+        }
+      }),
+  )];
+  return truncateToolResult({
+    markdown: markdown.length <= MAX_SCRAPE_MARKDOWN_CHARS
+      ? markdown
+      : `${markdown.slice(0, MAX_SCRAPE_MARKDOWN_CHARS)}\n[truncated]`,
+    links: links.slice(0, MAX_SCRAPE_LINKS),
+    linksOmitted: Math.max(0, links.length - MAX_SCRAPE_LINKS),
+  }, MAX_SCRAPE_MARKDOWN_CHARS + 30_000);
 }
 
 function summarizeCrawlToolResult(value: unknown): string {
