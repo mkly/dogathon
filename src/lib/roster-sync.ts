@@ -391,6 +391,8 @@ export async function discoverRosterWithCompleteness(
   const firecrawl = options.firecrawl
     ?? ((name, input) => requestFirecrawl(name, input, { sourceUrl, signal: options.signal }));
   const documents: string[] = [];
+  const listingDocuments: string[] = [];
+  const bulkDocuments: string[] = [];
   const crawlCompleteness: RosterCompleteness[] = [];
   const log = options.log ?? ((message: string) => console.info(`[roster-sync] ${message}`));
   let toolCalls = 0;
@@ -424,7 +426,10 @@ export async function discoverRosterWithCompleteness(
       const result = await firecrawl(name, input);
       options.signal?.throwIfAborted();
       if (FETCHING_TOOLS.has(name)) {
-        documents.push(...extractScrapedTexts(result));
+        const scraped = extractScrapedTexts(result);
+        if (BULK_TOOLS.has(name)) bulkDocuments.push(...scraped);
+        else if (isListingFetch(sourceUrl, input)) listingDocuments.push(...scraped);
+        else documents.push(...scraped);
       }
       if (BULK_TOOLS.has(name)) {
         const completeness = readCrawlCompleteness(result);
@@ -517,7 +522,7 @@ export async function discoverRosterWithCompleteness(
   const { steps } = await generateText({
     model: options.model ?? createAiModel(),
     maxOutputTokens: MAX_ROSTER_OUTPUT_TOKENS,
-    instructions: "Find the rescue's complete current adoptable companion roster. Use map only when the supplied page may not be the adoption listing. Scrape the listing page, read its links, and pick out exactly the links that lead to individual companion pages and to further pages of the same listing; then batch-scrape those chosen URLs. A Show More, Load More, or infinite-scroll control usually has a JSON or AJAX endpoint in dataEndpoints: prefer scraping it with a large per-page value, or paging until the response reports its last page, instead of clicking. Use loadMore only when the scrape reply listed no usable data endpoint and the listing shows a Show More, Load More, or similar button. Compare the expanded reply's link count with the previous scrape and stop once it stops growing. Record the loadMore selector in save_sync_notes. Never fetch pages that are not part of the roster, such as other sections of the site, and only fall back to crawl when the listing exposes no usable links. When notes from the previous sync are given, follow them on your first steps rather than exploring, and explore only if they fail or gather fewer companions than the notes expect. Check that you gathered at least as many companions as the listing shows. Call save_sync_notes as soon as you have fetched the companion pages, and again before finishing if you learned more, with concise guidance for the next sync: the listing URL, what its companion and pagination links look like, the number of companions listed, data endpoints and their parameters, loadMore selectors, and any site quirks. Then reply with a short completion message. Do not invent roster content.",
+    instructions: "Find the rescue's complete current adoptable companion roster. Use map only when the supplied page may not be the adoption listing. Scrape the listing page, read its links, and pick out exactly the links that lead to individual companion pages and to further pages of the same listing; then batch-scrape those chosen URLs. A Show More, Load More, or infinite-scroll control usually has a JSON or AJAX endpoint in dataEndpoints: prefer scraping it with a large per-page value, or paging until the response reports its last page, instead of clicking. When an endpoint's jsonSummary reports a results total, fetch exactly that many distinct companion detail URLs before finishing. Use loadMore only when the scrape reply listed no usable data endpoint and the listing shows a Show More, Load More, or similar button. Compare the expanded reply's link count with the previous scrape and stop once it stops growing. Record the loadMore selector in save_sync_notes. Never fetch pages that are not part of the roster, such as other sections of the site, and only fall back to crawl when the listing exposes no usable links. When notes from the previous sync are given, follow them on your first steps rather than exploring, and explore only if they fail or gather fewer companions than the notes expect. Check that you gathered at least as many companions as the listing shows. Call save_sync_notes as soon as you have fetched the companion pages, and again before finishing if you learned more, with concise guidance for the next sync: the listing URL, what its companion and pagination links look like, the number of companions listed, data endpoints and their parameters, loadMore selectors, and any site quirks. Then reply with a short completion message. Do not invent roster content.",
     prompt: priorNotesPrompt(sourceUrl, options.priorNotes),
     tools,
     stopWhen: isStepCount(MAX_ROSTER_AGENT_STEPS),
@@ -530,13 +535,17 @@ export async function discoverRosterWithCompleteness(
     },
   });
   options.signal?.throwIfAborted();
-  log(`discovery finished after ${steps.length} model steps, ${toolCalls} tool calls, ${documents.length} documents in ${elapsedSeconds(discoveryStartedAt)}s`);
+  // Listing and data-endpoint replies describe the roster rather than a
+  // companion, so they are parsed only when nothing else was fetched.
+  const companionDocuments = [...bulkDocuments, ...documents];
+  const rosterDocuments = companionDocuments.length > 0 ? companionDocuments : listingDocuments;
+  log(`discovery finished after ${steps.length} model steps, ${toolCalls} tool calls, ${rosterDocuments.length} roster documents in ${elapsedSeconds(discoveryStartedAt)}s`);
 
-  if (documents.length === 0) {
+  if (rosterDocuments.length === 0) {
     throw new Error("Roster discovery completed without scraping roster content");
   }
   return {
-    text: documents.join(DOCUMENT_SEPARATOR),
+    text: rosterDocuments.join(DOCUMENT_SEPARATOR),
     rosterCompleteness: combineCrawlCompleteness(crawlCompleteness),
     notes: savedNotes,
   };
@@ -995,11 +1004,25 @@ function summarizeScrapeToolResult(value: unknown, sourceUrl: string): string {
       ? markdown
       : `${markdown.slice(0, MAX_SCRAPE_MARKDOWN_CHARS)}\n[truncated]`,
     contentType: json === null ? "markdown" : "json",
+    ...(json === null ? {} : { jsonSummary: summarizeScrapedJson(json) }),
     links: allLinks.slice(0, MAX_SCRAPE_LINKS),
     linksOmitted: Math.max(0, allLinks.length - MAX_SCRAPE_LINKS),
     dataEndpoints: dataEndpoints.slice(0, MAX_SCRAPE_DATA_ENDPOINTS),
     dataEndpointsOmitted: Math.max(0, dataEndpoints.length - MAX_SCRAPE_DATA_ENDPOINTS),
   }, MAX_SCRAPE_MARKDOWN_CHARS + 30_000);
+}
+
+function summarizeScrapedJson(value: unknown): Record<string, unknown> {
+  if (Array.isArray(value)) return { items: value.length };
+  if (!value || typeof value !== "object") return {};
+  const record = value as Record<string, unknown>;
+  const pagination = record.pagination;
+  return {
+    ...(pagination && typeof pagination === "object" && !Array.isArray(pagination)
+      ? { pagination }
+      : {}),
+    ...(Array.isArray(record.items) ? { items: record.items.length } : {}),
+  };
 }
 
 function sameSiteUrls(values: unknown[], sourceUrl: string): string[] {
@@ -1050,6 +1073,20 @@ function dataEndpointsFromHtml(html: string, sourceUrl: string): string[] {
   const scriptContents = [...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/giu)].map((match) => match[1] ?? "");
   const quotedValues = scriptContents.flatMap((script) => [...script.matchAll(/(["'])(.*?)\1/gu)].map((match) => match[2]?.replaceAll("\\/", "/") ?? ""));
   return sameSiteUrls(quotedValues, sourceUrl).filter((value) => isDataEndpoint(new URL(value)));
+}
+
+// A scrape of the listing page itself, or of the data endpoint behind it, lists
+// companions instead of describing one, so it is not companion content.
+function isListingFetch(sourceUrl: string, input: Record<string, unknown>): boolean {
+  const url = typeof input.url === "string" ? input.url : null;
+  if (url === null) return true;
+  const withoutTrailingSlash = (value: string) => value.replace(/\/+$/u, "");
+  if (withoutTrailingSlash(url) === withoutTrailingSlash(sourceUrl)) return true;
+  try {
+    return isDataEndpoint(new URL(url));
+  } catch {
+    return true;
+  }
 }
 
 function isDataEndpoint(url: URL): boolean {

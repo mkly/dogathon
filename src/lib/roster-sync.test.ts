@@ -1112,9 +1112,262 @@ test("a scrape reply surfaces script data endpoints and JSON companion links", a
   });
 
   const listing = JSON.parse(toolReplies[0] ?? "{}") as { dataEndpoints: string[] };
-  const endpoint = JSON.parse(toolReplies[1] ?? "{}") as { contentType: string; links: string[] };
+  const endpoint = JSON.parse(toolReplies[1] ?? "{}") as {
+    contentType: string;
+    jsonSummary: { items: number };
+    links: string[];
+  };
   assert.deepEqual(listing.dataEndpoints, ["https://rescue.example/wp-json/rescue/v1/adoptions?per_page=200"]);
   assert.equal(endpoint.contentType, "json");
+  assert.equal(endpoint.jsonSummary.items, 1);
   assert.deepEqual(endpoint.links, ["https://rescue.example/rescue-adoption/biscuit/"]);
   assert.match(text, /Adoptable dogs/);
+});
+
+test("the agent fetches every companion reported by the SF SPCA endpoint and saves its parameters", async () => {
+  const sourceUrl = "https://www.sfspca.org/adoptions/";
+  const species = ["dogs", "cats"] as const;
+  const detailUrls = species.flatMap((kind) => Array.from(
+    { length: 28 },
+    (_, index) => `https://www.sfspca.org/adoptions/${kind}/${kind}-${index + 1}/`,
+  ));
+  const calls: Array<{ name: string; input: Record<string, unknown> }> = [];
+  const replies: string[] = [];
+  const savedNotes: string[] = [];
+  let step = 0;
+  const call = (id: string, name: string, args: Record<string, unknown>) => ({
+    id,
+    type: "function" as const,
+    function: { name, arguments: JSON.stringify(args) },
+  });
+  const endpointUrl = (kind: typeof species[number]) => {
+    const url = new URL("https://www.sfspca.org/wp-json/sfspca/v1/adoption");
+    url.searchParams.set("per_page", "200");
+    url.searchParams.set("page", "1");
+    url.searchParams.set("ignored-terms[sfspca-adoption-species][]", kind);
+    return url.toString();
+  };
+
+  const result = await discoverRosterWithCompleteness(sourceUrl, {
+    log: () => {},
+    saveNotes: async (notes) => { savedNotes.push(notes); },
+    model: scriptedModel(async (messages) => {
+      const last = messages.at(-1);
+      if (last?.role === "tool" && typeof last.content === "string") replies.push(last.content);
+      step += 1;
+      if (step === 1) {
+        return { role: "assistant", content: null, tool_calls: [call("listing", "firecrawl_scrape", { url: sourceUrl })] };
+      }
+      if (step === 2) {
+        const listing = JSON.parse(replies.at(-1) ?? "{}") as { dataEndpoints: string[] };
+        assert.deepEqual(listing.dataEndpoints, ["https://www.sfspca.org/wp-json/sfspca/v1/adoption"]);
+        return {
+          role: "assistant",
+          content: null,
+          tool_calls: species.map((kind) => call(kind, "firecrawl_scrape", { url: endpointUrl(kind) })),
+        };
+      }
+      if (step === 3) {
+        const endpointReplies = replies.at(-1) ?? "";
+        assert.equal(endpointReplies.match(/"results":28/gu)?.length, 2);
+        assert.equal(endpointReplies.match(/"items":28/gu)?.length, 2);
+        assert.ok(detailUrls.every((url) => endpointReplies.includes(url)));
+        return { role: "assistant", content: null, tool_calls: [call("details", "firecrawl_batch_scrape", { urls: detailUrls })] };
+      }
+      if (step === 4) {
+        return {
+          role: "assistant",
+          content: null,
+          tool_calls: [call("notes", "save_sync_notes", {
+            notes: "SF SPCA roster: scrape https://www.sfspca.org/wp-json/sfspca/v1/adoption twice with per_page=200, page=1, and ignored-terms[sfspca-adoption-species][]=dogs or cats; each species reports 28 results.",
+          })],
+        };
+      }
+      return { role: "assistant", content: "Roster gathered." };
+    }),
+    firecrawl: async (name, input) => {
+      calls.push({ name, input });
+      if (name === "firecrawl_batch_scrape") {
+        const urls = input.urls as string[];
+        return {
+          status: "completed",
+          total: urls.length,
+          completed: urls.length,
+          data: urls.map((url, index) => ({
+            markdown: `# Meet Companion ${index + 1}\n\n![Companion ${index + 1}](${url}photo.jpg)\n\n**Breed:** Mixed`,
+          })),
+          completeness: { complete: true, timedOut: false, status: "completed", total: urls.length, completed: urls.length },
+        };
+      }
+      if (input.url === sourceUrl) {
+        return {
+          success: true,
+          data: {
+            markdown: "# Adoptable companions\n\n56 results\n\nShow More",
+            rawHtml: '<script>const restURL = "/wp-json/sfspca/v1/adoption";</script>',
+          },
+        };
+      }
+      const kind = String(input.url).includes("dogs") ? "dogs" : "cats";
+      const urls = detailUrls.filter((url) => url.includes(`/adoptions/${kind}/`));
+      return {
+        success: true,
+        data: {
+          rawHtml: JSON.stringify({
+            pagination: { currentPage: 1, maxPages: 1, results: urls.length },
+            items: urls.map((permalink, index) => ({ title: `${kind} ${index + 1}`, permalink })),
+          }),
+        },
+      };
+    },
+  });
+
+  const batch = calls.find((entry) => entry.name === "firecrawl_batch_scrape");
+  assert.equal((batch?.input.urls as string[]).length, 56);
+  assert.equal(result.rosterCompleteness.completed, 56);
+  assert.equal((await parseCompanionRoster(result.text, { deterministic: true })).length, 56);
+  assert.match(savedNotes.at(-1) ?? "", /wp-json\/sfspca\/v1\/adoption/);
+  assert.match(savedNotes.at(-1) ?? "", /per_page=200/);
+  assert.match(savedNotes.at(-1) ?? "", /species\]\[]=dogs or cats/);
+});
+
+test("the agent clicks through a listing with no data endpoint before gathering detail pages", async () => {
+  const sourceUrl = "https://rescue.example/adoptions/";
+  const calls: Array<{ name: string; input: Record<string, unknown> }> = [];
+  let step = 0;
+  const call = (id: string, name: string, args: Record<string, unknown>) => ({
+    id,
+    type: "function" as const,
+    function: { name, arguments: JSON.stringify(args) },
+  });
+  const detailUrls = ["biscuit", "tulip", "walnut"].map((name) => `${sourceUrl}${name}/`);
+
+  const result = await discoverRoster(sourceUrl, {
+    log: () => {},
+    model: scriptedModel(async () => {
+      step += 1;
+      if (step === 1) return { role: "assistant", content: null, tool_calls: [call("listing", "firecrawl_scrape", { url: sourceUrl })] };
+      if (step === 2) {
+        return { role: "assistant", content: null, tool_calls: [call("expanded", "firecrawl_scrape", { url: sourceUrl, loadMore: { selector: ".js-userContent__loadMore", maxClicks: 2 } })] };
+      }
+      if (step === 3) return { role: "assistant", content: null, tool_calls: [call("details", "firecrawl_batch_scrape", { urls: detailUrls })] };
+      if (step === 4) {
+        return { role: "assistant", content: null, tool_calls: [call("notes", "save_sync_notes", { notes: "No data endpoint; click .js-userContent__loadMore twice, then batch-scrape the expanded companion links." })] };
+      }
+      return { role: "assistant", content: "Roster gathered." };
+    }),
+    firecrawl: async (name, input) => {
+      calls.push({ name, input });
+      if (name === "firecrawl_batch_scrape") {
+        return {
+          status: "completed",
+          total: 3,
+          completed: 3,
+          data: detailUrls.map((url, index) => ({ markdown: `# Meet Dog ${index + 1}\n\n![Dog](${url}photo.jpg)\n\n**Breed:** Mixed` })),
+          completeness: { complete: true, timedOut: false, status: "completed", total: 3, completed: 3 },
+        };
+      }
+      const expanded = input.loadMore !== undefined;
+      return {
+        success: true,
+        data: {
+          markdown: `# Adoptable dogs\n\nShow More`,
+          links: expanded ? detailUrls : detailUrls.slice(0, 1),
+          rawHtml: '<button class="js-userContent__loadMore">Show More</button>',
+        },
+      };
+    },
+    saveNotes: async () => {},
+  });
+
+  assert.deepEqual(calls.map((entry) => entry.name), [
+    "firecrawl_scrape",
+    "firecrawl_scrape",
+    "firecrawl_batch_scrape",
+  ]);
+  assert.deepEqual(calls[1]?.input.loadMore, { selector: ".js-userContent__loadMore", maxClicks: 2 });
+  assert.equal((await parseCompanionRoster(result, { deterministic: true })).length, 3);
+});
+
+test("a companion page scraped on its own is parsed alongside the batch, and the listing page is not", async () => {
+  const sourceUrl = "https://rescue.example/adoptions/";
+  const batchUrls = ["biscuit", "tulip"].map((name) => `${sourceUrl}${name}/`);
+  const strayUrl = `${sourceUrl}walnut/`;
+  let step = 0;
+  const call = (id: string, name: string, args: Record<string, unknown>) => ({
+    id,
+    type: "function" as const,
+    function: { name, arguments: JSON.stringify(args) },
+  });
+  const companionMarkdown = (name: string, url: string) =>
+    `# Meet ${name}\n\n![${name}](${url}photo.jpg)\n\n**Breed:** Mixed`;
+
+  const result = await discoverRoster(sourceUrl, {
+    log: () => {},
+    saveNotes: async () => {},
+    model: scriptedModel(async () => {
+      step += 1;
+      if (step === 1) return { role: "assistant", content: null, tool_calls: [call("listing", "firecrawl_scrape", { url: sourceUrl })] };
+      if (step === 2) return { role: "assistant", content: null, tool_calls: [call("details", "firecrawl_batch_scrape", { urls: batchUrls })] };
+      if (step === 3) return { role: "assistant", content: null, tool_calls: [call("stray", "firecrawl_scrape", { url: strayUrl })] };
+      return { role: "assistant", content: "Roster gathered." };
+    }),
+    firecrawl: async (name, input) => {
+      if (name === "firecrawl_batch_scrape") {
+        const urls = input.urls as string[];
+        return {
+          status: "completed",
+          total: urls.length,
+          completed: urls.length,
+          data: urls.map((url, index) => ({ markdown: companionMarkdown(`Dog ${index + 1}`, url) })),
+          completeness: { complete: true, timedOut: false, status: "completed", total: urls.length, completed: urls.length },
+        };
+      }
+      if (input.url === sourceUrl) {
+        return {
+          success: true,
+          data: { markdown: "# Adoptable dogs\n\nShow More", links: [...batchUrls, strayUrl] },
+        };
+      }
+      return { success: true, data: { markdown: companionMarkdown("Walnut", strayUrl) } };
+    },
+  });
+
+  assert.match(result, /Meet Walnut/);
+  assert.doesNotMatch(result, /Adoptable dogs/);
+  assert.equal((await parseCompanionRoster(result, { deterministic: true })).length, 3);
+});
+
+test("a JSON endpoint that replies with a bare array reports its length instead of echoing it", async () => {
+  const toolReplies: string[] = [];
+  let step = 0;
+  const call = (id: string, url: string) => ({
+    id,
+    type: "function" as const,
+    function: { name: "firecrawl_scrape", arguments: JSON.stringify({ url }) },
+  });
+
+  await discoverRoster("https://rescue.example/adoptions/", {
+    log: () => {},
+    model: scriptedModel(async (messages) => {
+      const last = messages.at(-1);
+      if (last?.role === "tool" && typeof last.content === "string") toolReplies.push(last.content);
+      step += 1;
+      if (step === 1) return { role: "assistant", content: null, tool_calls: [call("endpoint", "https://rescue.example/wp-json/rescue/v1/adoptions?per_page=200")] };
+      return { role: "assistant", content: "Done." };
+    }),
+    firecrawl: async () => ({
+      success: true,
+      data: {
+        rawHtml: JSON.stringify([
+          { title: "Biscuit", permalink: "https://rescue.example/rescue-adoption/biscuit/" },
+          { title: "Tulip", permalink: "https://rescue.example/rescue-adoption/tulip/" },
+        ]),
+      },
+    }),
+  });
+
+  const endpoint = JSON.parse(toolReplies[0] ?? "{}") as { contentType: string; jsonSummary: unknown };
+  assert.equal(endpoint.contentType, "json");
+  assert.deepEqual(endpoint.jsonSummary, { items: 2 });
 });
