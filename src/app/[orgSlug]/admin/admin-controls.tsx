@@ -26,10 +26,17 @@ import {
 import { pushToast } from "@/lib/toast";
 
 import { saveSettings, type SettingsState } from "./actions";
-import { EMAIL_CONNECTOR_NOTICE_ID, emailConnectorBlockedReason } from "./gmail-notice";
+import {
+  EMAIL_CONNECTOR_NOTICE_ID,
+  emailConnectorBlockedReason,
+} from "./gmail-notice";
 import styles from "./admin.module.css";
 
-async function apiFetch(input: RequestInfo | URL, init: RequestInit, action: string) {
+async function apiFetch(
+  input: RequestInfo | URL,
+  init: RequestInit,
+  action: string,
+) {
   let response: Response;
   try {
     response = await fetch(input, init);
@@ -38,9 +45,13 @@ async function apiFetch(input: RequestInfo | URL, init: RequestInit, action: str
   }
   if (response.ok) return response;
 
-  const body = await response.json().catch(() => null) as { error?: unknown } | null;
-  if (typeof body?.error === "string" && body.error) throw new Error(body.error);
-  if (response.status === 404) throw new Error(`${action} is not wired up yet (404).`);
+  const body = (await response.json().catch(() => null)) as {
+    error?: unknown;
+  } | null;
+  if (typeof body?.error === "string" && body.error)
+    throw new Error(body.error);
+  if (response.status === 404)
+    throw new Error(`${action} is not wired up yet (404).`);
   throw new Error(`${action} failed (${response.status}). Try again.`);
 }
 
@@ -70,7 +81,9 @@ export function DraftEditor({
   const [smsText, setSmsText] = useState(initialSmsText);
   const [editorOpen, setEditorOpen] = useState(false);
   const [denyConfirmOpen, setDenyConfirmOpen] = useState(false);
-  const [pending, setPending] = useState<"save" | "approve" | "deny" | null>(null);
+  const [pending, setPending] = useState<"save" | "approve" | "deny" | null>(
+    null,
+  );
   const smsTooLong = smsText.length > MAX_SMS_LENGTH;
 
   function openEditor() {
@@ -89,19 +102,29 @@ export function DraftEditor({
 
   async function persistDraft(draft: typeof savedDraft) {
     if (draft.smsText.length > MAX_SMS_LENGTH) {
-      pushToast("error", `SMS text must be ${MAX_SMS_LENGTH} characters or fewer.`);
+      pushToast(
+        "error",
+        `SMS text must be ${MAX_SMS_LENGTH} characters or fewer.`,
+      );
       return false;
     }
 
-    await apiFetch(`/api/pupdates/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json", "X-Organization-Slug": orgSlug },
-      body: JSON.stringify({
-        subject: draft.subject,
-        emailBody: draft.bodyText,
-        smsBody: draft.smsText,
-      }),
-    }, "Save draft");
+    await apiFetch(
+      `/api/pupdates/${id}`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Organization-Slug": orgSlug,
+        },
+        body: JSON.stringify({
+          subject: draft.subject,
+          emailBody: draft.bodyText,
+          smsBody: draft.smsText,
+        }),
+      },
+      "Save draft",
+    );
     return true;
   }
 
@@ -116,7 +139,12 @@ export function DraftEditor({
         router.refresh();
       }
     } catch (error) {
-      pushToast("error", error instanceof Error ? error.message : "Save draft could not reach the server.");
+      pushToast(
+        "error",
+        error instanceof Error
+          ? error.message
+          : "Save draft could not reach the server.",
+      );
     } finally {
       setPending(null);
     }
@@ -128,14 +156,23 @@ export function DraftEditor({
     setPending("approve");
     try {
       if (!(await persistDraft(savedDraft))) return;
-      await apiFetch(`/api/pupdates/${id}/approve`, {
-        method: "POST",
-        headers: { "X-Organization-Slug": orgSlug },
-      }, "Approve and send");
+      await apiFetch(
+        `/api/pupdates/${id}/approve`,
+        {
+          method: "POST",
+          headers: { "X-Organization-Slug": orgSlug },
+        },
+        "Approve and send",
+      );
       pushToast("success", "Approved and sent.");
       router.refresh();
     } catch (error) {
-      pushToast("error", error instanceof Error ? error.message : "Approve and send could not reach the server.");
+      pushToast(
+        "error",
+        error instanceof Error
+          ? error.message
+          : "Approve and send could not reach the server.",
+      );
     } finally {
       setPending(null);
     }
@@ -144,14 +181,23 @@ export function DraftEditor({
   async function deny() {
     setPending("deny");
     try {
-      await apiFetch(`/api/pupdates/${id}`, {
-        method: "DELETE",
-        headers: { "X-Organization-Slug": orgSlug },
-      }, "Discard draft");
+      await apiFetch(
+        `/api/pupdates/${id}`,
+        {
+          method: "DELETE",
+          headers: { "X-Organization-Slug": orgSlug },
+        },
+        "Discard draft",
+      );
       pushToast("success", "Draft discarded.");
       router.refresh();
     } catch (error) {
-      pushToast("error", error instanceof Error ? error.message : "Discard draft could not reach the server.");
+      pushToast(
+        "error",
+        error instanceof Error
+          ? error.message
+          : "Discard draft could not reach the server.",
+      );
     } finally {
       setPending(null);
     }
@@ -165,11 +211,17 @@ export function DraftEditor({
         <small>SMS: {savedDraft.smsText}</small>
       </div>
       <div className={styles.draftActions}>
-        <AdminButton disabled={pending !== null} onClick={openEditor} tone="mustard">
+        <AdminButton
+          disabled={pending !== null}
+          onClick={openEditor}
+          tone="mustard"
+        >
           Edit
         </AdminButton>
         <AdminButton
-          aria-describedby={emailConnected ? undefined : EMAIL_CONNECTOR_NOTICE_ID}
+          aria-describedby={
+            emailConnected ? undefined : EMAIL_CONNECTOR_NOTICE_ID
+          }
           disabled={pending !== null || !emailConnected}
           onClick={approve}
           title={emailConnected ? undefined : emailConnectorBlockedReason()}
@@ -177,7 +229,11 @@ export function DraftEditor({
         >
           {pending === "approve" ? "Saving & sending…" : "Approve & send"}
         </AdminButton>
-        <AdminButton disabled={pending !== null} onClick={() => setDenyConfirmOpen(true)} tone="brick">
+        <AdminButton
+          disabled={pending !== null}
+          onClick={() => setDenyConfirmOpen(true)}
+          tone="brick"
+        >
           {pending === "deny" ? "Discarding…" : "Deny & discard"}
         </AdminButton>
         {/* the themed email as the sponsor will see it, not the plain draft text */}
@@ -208,7 +264,11 @@ export function DraftEditor({
                     <h2>Edit message</h2>
                   </Dialog.Title>
                 </div>
-                <AdminButton aria-label="Close editor" onClick={closeEditor} tone="oatmeal">
+                <AdminButton
+                  aria-label="Close editor"
+                  onClick={closeEditor}
+                  tone="oatmeal"
+                >
                   ✕
                 </AdminButton>
               </div>
@@ -244,7 +304,9 @@ export function DraftEditor({
                 </div>
                 <AdminField>
                   <textarea
-                    aria-describedby={smsTooLong ? `sms-error-${id}` : undefined}
+                    aria-describedby={
+                      smsTooLong ? `sms-error-${id}` : undefined
+                    }
                     aria-invalid={smsTooLong}
                     id={`sms-${id}`}
                     onChange={(event) => setSmsText(event.target.value)}
@@ -254,15 +316,28 @@ export function DraftEditor({
                   />
                 </AdminField>
                 {smsTooLong && (
-                  <p className={styles.smsError} id={`sms-error-${id}`} role="alert">
-                    Shorten the SMS by {smsText.length - MAX_SMS_LENGTH} characters before saving.
+                  <p
+                    className={styles.smsError}
+                    id={`sms-error-${id}`}
+                    role="alert"
+                  >
+                    Shorten the SMS by {smsText.length - MAX_SMS_LENGTH}{" "}
+                    characters before saving.
                   </p>
                 )}
                 <div className={styles.modalActions}>
-                  <AdminButton disabled={pending === "save"} onClick={closeEditor} tone="oatmeal">
+                  <AdminButton
+                    disabled={pending === "save"}
+                    onClick={closeEditor}
+                    tone="oatmeal"
+                  >
                     Cancel
                   </AdminButton>
-                  <AdminButton disabled={pending !== null || smsTooLong} onClick={save} tone="mustard">
+                  <AdminButton
+                    disabled={pending !== null || smsTooLong}
+                    onClick={save}
+                    tone="mustard"
+                  >
                     {pending === "save" ? "Saving…" : "Save changes"}
                   </AdminButton>
                 </div>
@@ -272,7 +347,10 @@ export function DraftEditor({
         </Dialog.Portal>
       </Dialog.Root>
 
-      <AlertDialog.Root onOpenChange={setDenyConfirmOpen} open={denyConfirmOpen}>
+      <AlertDialog.Root
+        onOpenChange={setDenyConfirmOpen}
+        open={denyConfirmOpen}
+      >
         <AlertDialog.Portal>
           <AlertDialog.Overlay className={styles.dialogOverlay} />
           <AlertDialog.Content className={styles.alertDialog}>
@@ -288,7 +366,9 @@ export function DraftEditor({
                   <AdminButton tone="oatmeal">Cancel</AdminButton>
                 </AlertDialog.Cancel>
                 <AlertDialog.Action asChild>
-                  <AdminButton onClick={deny} tone="brick">Discard draft</AdminButton>
+                  <AdminButton onClick={deny} tone="brick">
+                    Discard draft
+                  </AdminButton>
                 </AlertDialog.Action>
               </div>
             </AdminSurface>
@@ -314,15 +394,27 @@ export function ComposeButton({
   async function compose() {
     setPending(true);
     try {
-      await apiFetch("/api/pupdates/compose", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Organization-Slug": orgSlug },
-        body: JSON.stringify({ residentId }),
-      }, "Compose pupdate");
+      await apiFetch(
+        "/api/pupdates/compose",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Organization-Slug": orgSlug,
+          },
+          body: JSON.stringify({ residentId }),
+        },
+        "Compose pupdate",
+      );
       pushToast("success", `${residentName}'s draft is ready for review.`);
       router.refresh();
     } catch (error) {
-      pushToast("error", error instanceof Error ? error.message : "Compose pupdate could not reach the server.");
+      pushToast(
+        "error",
+        error instanceof Error
+          ? error.message
+          : "Compose pupdate could not reach the server.",
+      );
     } finally {
       setPending(false);
     }
@@ -345,7 +437,10 @@ export function RosterSyncSettings({
   orgSlug: string;
 }) {
   const queryClient = useQueryClient();
-  const [state, formAction, saving] = useActionState(saveSettings, initialSettingsState);
+  const [state, formAction, saving] = useActionState(
+    saveSettings,
+    initialSettingsState,
+  );
   const [sourceUrl, setSourceUrl] = useState(initialSourceUrl);
   const [jobId, setJobId] = useState<string | null>(null);
   const [pollDeadline, setPollDeadline] = useState<number | null>(null);
@@ -360,10 +455,14 @@ export function RosterSyncSettings({
 
   const syncMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiFetch("/api/sync", {
-        method: "POST",
-        headers: { "X-Organization-Slug": orgSlug },
-      }, "Roster sync");
+      const response = await apiFetch(
+        "/api/sync",
+        {
+          method: "POST",
+          headers: { "X-Organization-Slug": orgSlug },
+        },
+        "Roster sync",
+      );
       return (await response.json()) as RosterSyncJobView;
     },
     onError: (error) => {
@@ -384,9 +483,13 @@ export function RosterSyncSettings({
     queryKey: ["roster-sync", orgSlug, jobId],
     queryFn: async () => {
       if (!jobId) throw new Error("Roster sync status is missing a job ID.");
-      const response = await apiFetch(`/api/sync/${encodeURIComponent(jobId)}`, {
-        headers: { "X-Organization-Slug": orgSlug },
-      }, "Roster sync status");
+      const response = await apiFetch(
+        `/api/sync/${encodeURIComponent(jobId)}`,
+        {
+          headers: { "X-Organization-Slug": orgSlug },
+        },
+        "Roster sync status",
+      );
       return (await response.json()) as RosterSyncJobView;
     },
     enabled: jobId !== null,
@@ -401,18 +504,27 @@ export function RosterSyncSettings({
   });
 
   const job = jobQuery.data ?? syncMutation.data ?? null;
-  const jobInProgress = Boolean(job && !isTerminalRosterSyncStatus(job.status))
-    && !jobQuery.isError
-    && pollDeadline !== null;
+  const jobInProgress =
+    Boolean(job && !isTerminalRosterSyncStatus(job.status)) &&
+    !jobQuery.isError &&
+    pollDeadline !== null;
   const syncPending = syncMutation.isPending || jobInProgress;
 
   useEffect(() => {
     if (!jobQuery.error) return;
-    pushToast("error", jobQuery.error.message || "Roster sync could not reach the server.");
+    pushToast(
+      "error",
+      jobQuery.error.message || "Roster sync could not reach the server.",
+    );
   }, [jobQuery.error]);
 
   useEffect(() => {
-    if (!job || !isTerminalRosterSyncStatus(job.status) || notifiedJobId.current === job.id) return;
+    if (
+      !job ||
+      !isTerminalRosterSyncStatus(job.status) ||
+      notifiedJobId.current === job.id
+    )
+      return;
     notifiedJobId.current = job.id;
     setPollDeadline(null);
     const toast = rosterSyncResultToast(job);
@@ -424,22 +536,26 @@ export function RosterSyncSettings({
   // instead of asking the status route for it once a second forever.
   useEffect(() => {
     if (pollDeadline === null) return;
-    const timer = setTimeout(() => {
-      setPollDeadline(null);
-      pushToast(
-        "warning",
-        "Roster sync is still working in the background. Reload to see the result.",
-      );
-    }, Math.max(0, pollDeadline - Date.now()));
+    const timer = setTimeout(
+      () => {
+        setPollDeadline(null);
+        pushToast(
+          "warning",
+          "Roster sync is still working in the background. Reload to see the result.",
+        );
+      },
+      Math.max(0, pollDeadline - Date.now()),
+    );
     return () => clearTimeout(timer);
   }, [pollDeadline]);
 
   const label = job ? rosterSyncStatusLabel(job) : null;
-  const buttonLabel = jobInProgress && job?.status === "queued"
-    ? "Queued…"
-    : jobInProgress && job?.status === "running"
-      ? "Syncing…"
-      : "Sync now";
+  const buttonLabel =
+    jobInProgress && job?.status === "queued"
+      ? "Queued…"
+      : jobInProgress && job?.status === "running"
+        ? "Syncing…"
+        : "Sync now";
 
   return (
     <form action={formAction} className={styles.settingsForm}>
@@ -451,25 +567,35 @@ export function RosterSyncSettings({
           id="sourceUrl"
           name="sourceUrl"
           onChange={(event) => setSourceUrl(event.target.value)}
-          placeholder="https://… or seed/dogs-page-A.html"
+          placeholder="https://example.com/adoptions"
           required
           type="text"
           value={sourceUrl}
         />
       </AdminField>
       <div className={styles.rosterActions}>
-        <AdminButton disabled={saving || syncPending} tone="denim" type="submit">
+        <AdminButton
+          disabled={saving || syncPending}
+          tone="denim"
+          type="submit"
+        >
           {saving ? "Saving…" : "Save source"}
         </AdminButton>
         <AdminButton
           disabled={saving || syncPending || sourceDirty}
           onClick={() => syncMutation.mutate()}
-          title={sourceDirty ? "Save the source URL before syncing." : undefined}
+          title={
+            sourceDirty ? "Save the source URL before syncing." : undefined
+          }
           tone="mustard"
         >
           {buttonLabel}
         </AdminButton>
-        {label ? <span className={styles.syncStatus} role="status">{label}</span> : null}
+        {label ? (
+          <span className={styles.syncStatus} role="status">
+            {label}
+          </span>
+        ) : null}
       </div>
       {sourceDirty ? (
         <p className={styles.unsavedSource} role="status">
@@ -494,16 +620,22 @@ export function EmailConnectorSettings({
   orgSlug: string;
 }) {
   const [connector, setConnector] = useState(initialConnector);
-  const [pending, setPending] = useState<"gmail" | "microsoft" | "smtp" | "disconnect" | null>(null);
+  const [pending, setPending] = useState<
+    "gmail" | "microsoft" | "smtp" | "disconnect" | null
+  >(null);
   const [smtpOpen, setSmtpOpen] = useState(false);
 
   async function connectOAuth(provider: "gmail" | "microsoft") {
     setPending(provider);
     try {
-      const response = await apiFetch(`/api/email-connectors/${provider}/authorize`, {
-        method: "POST",
-        headers: { "X-Organization-Slug": orgSlug },
-      }, `Connect ${provider}`);
+      const response = await apiFetch(
+        `/api/email-connectors/${provider}/authorize`,
+        {
+          method: "POST",
+          headers: { "X-Organization-Slug": orgSlug },
+        },
+        `Connect ${provider}`,
+      );
       const body = (await response.json()) as { url?: string };
       if (!body.url) {
         pushToast("error", "The email provider returned no authorization URL.");
@@ -511,7 +643,12 @@ export function EmailConnectorSettings({
       }
       window.location.assign(body.url);
     } catch (error) {
-      pushToast("error", error instanceof Error ? error.message : `Could not start the ${provider} connection.`);
+      pushToast(
+        "error",
+        error instanceof Error
+          ? error.message
+          : `Could not start the ${provider} connection.`,
+      );
     } finally {
       setPending(null);
     }
@@ -523,25 +660,37 @@ export function EmailConnectorSettings({
     setPending("smtp");
     try {
       const form = new FormData(formElement);
-      const response = await apiFetch("/api/email-connectors/smtp", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Organization-Slug": orgSlug },
-        body: JSON.stringify({
-          host: form.get("smtpHost"),
-          port: form.get("smtpPort"),
-          secure: form.get("smtpSecure") === "on",
-          user: form.get("smtpUser"),
-          password: form.get("smtpPassword"),
-          fromEmail: form.get("smtpFromEmail"),
-        }),
-      }, "Verify SMTP");
+      const response = await apiFetch(
+        "/api/email-connectors/smtp",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Organization-Slug": orgSlug,
+          },
+          body: JSON.stringify({
+            host: form.get("smtpHost"),
+            port: form.get("smtpPort"),
+            secure: form.get("smtpSecure") === "on",
+            user: form.get("smtpUser"),
+            password: form.get("smtpPassword"),
+            fromEmail: form.get("smtpFromEmail"),
+          }),
+        },
+        "Verify SMTP",
+      );
       const status = (await response.json()) as ConnectorStatus;
       setConnector(status);
       formElement.reset();
       setSmtpOpen(false);
       pushToast("success", "SMTP verified and saved for this organization.");
     } catch (error) {
-      pushToast("error", error instanceof Error ? error.message : "SMTP verification could not reach the server.");
+      pushToast(
+        "error",
+        error instanceof Error
+          ? error.message
+          : "SMTP verification could not reach the server.",
+      );
     } finally {
       setPending(null);
     }
@@ -550,24 +699,34 @@ export function EmailConnectorSettings({
   async function disconnect() {
     setPending("disconnect");
     try {
-      await apiFetch("/api/email-connectors", {
-        method: "DELETE",
-        headers: { "X-Organization-Slug": orgSlug },
-      }, "Disconnect email");
+      await apiFetch(
+        "/api/email-connectors",
+        {
+          method: "DELETE",
+          headers: { "X-Organization-Slug": orgSlug },
+        },
+        "Disconnect email",
+      );
       setConnector({ connected: false, type: null, fromEmail: null });
       pushToast("success", "Organization email disconnected.");
     } catch (error) {
-      pushToast("error", error instanceof Error ? error.message : "Email disconnect could not reach the server.");
+      pushToast(
+        "error",
+        error instanceof Error
+          ? error.message
+          : "Email disconnect could not reach the server.",
+      );
     } finally {
       setPending(null);
     }
   }
 
-  const providerLabel = connector.type === "microsoft"
-    ? "Microsoft 365"
-    : connector.type === "gmail"
-      ? "Gmail"
-      : "SMTP";
+  const providerLabel =
+    connector.type === "microsoft"
+      ? "Microsoft 365"
+      : connector.type === "gmail"
+        ? "Gmail"
+        : "SMTP";
 
   return (
     <AdminSurface className={styles.connectorSettings} tone="oatmeal">
@@ -575,7 +734,10 @@ export function EmailConnectorSettings({
         <div>
           <AdminEyebrow>Organization email</AdminEyebrow>
           <h2>Choose one sending connection</h2>
-          <p>Connecting a provider replaces this organization&apos;s previous email connection.</p>
+          <p>
+            Connecting a provider replaces this organization&apos;s previous
+            email connection.
+          </p>
         </div>
         <div className={styles.connectorStatus}>
           <AdminBadge tone={connector.connected ? "moss" : "brick"}>
@@ -584,7 +746,11 @@ export function EmailConnectorSettings({
               : "No verified connector"}
           </AdminBadge>
           {connector.connected && (
-            <AdminButton disabled={pending !== null} onClick={disconnect} tone="brick">
+            <AdminButton
+              disabled={pending !== null}
+              onClick={disconnect}
+              tone="brick"
+            >
               {pending === "disconnect" ? "Disconnecting…" : "Disconnect"}
             </AdminButton>
           )}
@@ -592,13 +758,27 @@ export function EmailConnectorSettings({
       </div>
       {!connector.connected && (
         <div className={styles.oauthChoices}>
-          <AdminButton disabled={pending !== null} onClick={() => connectOAuth("gmail")} tone="denim">
+          <AdminButton
+            disabled={pending !== null}
+            onClick={() => connectOAuth("gmail")}
+            tone="denim"
+          >
             {pending === "gmail" ? "Opening Gmail…" : "Connect Gmail"}
           </AdminButton>
-          <AdminButton disabled={pending !== null} onClick={() => connectOAuth("microsoft")} tone="denim">
-            {pending === "microsoft" ? "Opening Microsoft…" : "Connect Microsoft 365"}
+          <AdminButton
+            disabled={pending !== null}
+            onClick={() => connectOAuth("microsoft")}
+            tone="denim"
+          >
+            {pending === "microsoft"
+              ? "Opening Microsoft…"
+              : "Connect Microsoft 365"}
           </AdminButton>
-          <AdminButton disabled={pending !== null} onClick={() => setSmtpOpen(true)} tone="denim">
+          <AdminButton
+            disabled={pending !== null}
+            onClick={() => setSmtpOpen(true)}
+            tone="denim"
+          >
             Connect SMTP with password
           </AdminButton>
         </div>
@@ -615,7 +795,11 @@ export function EmailConnectorSettings({
                     <h2>Connect SMTP with password</h2>
                   </Dialog.Title>
                 </div>
-                <AdminButton aria-label="Close SMTP connection form" onClick={() => setSmtpOpen(false)} tone="oatmeal">
+                <AdminButton
+                  aria-label="Close SMTP connection form"
+                  onClick={() => setSmtpOpen(false)}
+                  tone="oatmeal"
+                >
                   ✕
                 </AdminButton>
               </div>
@@ -624,23 +808,67 @@ export function EmailConnectorSettings({
               </Dialog.Description>
               <form className={styles.smtpForm} onSubmit={saveSmtp}>
                 <label htmlFor="smtpHost">Host</label>
-                <AdminField><input autoFocus id="smtpHost" name="smtpHost" required /></AdminField>
+                <AdminField>
+                  <input autoFocus id="smtpHost" name="smtpHost" required />
+                </AdminField>
                 <label htmlFor="smtpPort">Port</label>
-                <AdminField><input defaultValue="587" id="smtpPort" max="65535" min="1" name="smtpPort" required type="number" /></AdminField>
+                <AdminField>
+                  <input
+                    defaultValue="587"
+                    id="smtpPort"
+                    max="65535"
+                    min="1"
+                    name="smtpPort"
+                    required
+                    type="number"
+                  />
+                </AdminField>
                 <label htmlFor="smtpUser">Username</label>
-                <AdminField><input autoComplete="username" id="smtpUser" name="smtpUser" required /></AdminField>
+                <AdminField>
+                  <input
+                    autoComplete="username"
+                    id="smtpUser"
+                    name="smtpUser"
+                    required
+                  />
+                </AdminField>
                 <label htmlFor="smtpPassword">Password</label>
-                <AdminField><input autoComplete="new-password" id="smtpPassword" name="smtpPassword" required type="password" /></AdminField>
+                <AdminField>
+                  <input
+                    autoComplete="new-password"
+                    id="smtpPassword"
+                    name="smtpPassword"
+                    required
+                    type="password"
+                  />
+                </AdminField>
                 <label htmlFor="smtpFromEmail">From email</label>
-                <AdminField><input id="smtpFromEmail" name="smtpFromEmail" required type="email" /></AdminField>
+                <AdminField>
+                  <input
+                    id="smtpFromEmail"
+                    name="smtpFromEmail"
+                    required
+                    type="email"
+                  />
+                </AdminField>
                 <label className={styles.smtpSecure} htmlFor="smtpSecure">
-                  <input id="smtpSecure" name="smtpSecure" type="checkbox" /> TLS from connection start (usually port 465)
+                  <input id="smtpSecure" name="smtpSecure" type="checkbox" />{" "}
+                  TLS from connection start (usually port 465)
                 </label>
                 <div className={styles.modalActions}>
-                  <AdminButton disabled={pending === "smtp"} onClick={() => setSmtpOpen(false)} tone="oatmeal" type="button">
+                  <AdminButton
+                    disabled={pending === "smtp"}
+                    onClick={() => setSmtpOpen(false)}
+                    tone="oatmeal"
+                    type="button"
+                  >
                     Cancel
                   </AdminButton>
-                  <AdminButton disabled={pending !== null} tone="mustard" type="submit">
+                  <AdminButton
+                    disabled={pending !== null}
+                    tone="mustard"
+                    type="submit"
+                  >
                     {pending === "smtp" ? "Verifying…" : "Verify & use SMTP"}
                   </AdminButton>
                 </div>
@@ -662,7 +890,10 @@ export function PostscriptSettingsForm({
   orgSlug: string;
   pinnedPostscript: string;
 }) {
-  const [state, formAction, pending] = useActionState(saveSettings, initialSettingsState);
+  const [state, formAction, pending] = useActionState(
+    saveSettings,
+    initialSettingsState,
+  );
 
   // The server action reports through the same corner stack as everything else.
   useEffect(() => {

@@ -178,8 +178,16 @@
 
 .settingsStack { display: grid; gap: 24px; }
 
+/* Stripe's card is intro-only: one column, with the action under the copy. */
+.stripeConnect {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 20px;
+}
+
+.stripeConnect .settingsIntro { max-width: 52ch; }
+
 .stripeConnectForm {
-  place-self: center start;
+  justify-self: start;
 }
 
 .stripeConnectForm > button {

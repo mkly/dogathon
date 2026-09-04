@@ -80,7 +80,7 @@ export default async function AdminSettingsPage({ params }: AdminSettingsPagePro
       />
 
       <div className={styles.settingsStack}>
-        <AdminSurface className={styles.settings} tone="mustard">
+        <AdminSurface className={`${styles.settings} ${styles.stripeConnect}`} tone="mustard">
           <div className={styles.settingsIntro}>
             <AdminEyebrow>Stripe Connect</AdminEyebrow>
             <h2>Monthly sponsorship payments</h2>
