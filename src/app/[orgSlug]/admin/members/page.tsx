@@ -14,6 +14,7 @@ import {
 } from "@/components/admin-ui";
 import { SignOutButton } from "@/components/sign-out-button";
 import { auth } from "@/lib/auth";
+import { env } from "@/lib/env";
 import {
   getOrganizationAccessBySlug,
   ORGANIZATION_ROLES,
@@ -85,6 +86,7 @@ export default async function MembersPage({ params }: MembersPageProps) {
       email: invitation.email,
       expiresAt: invitation.expiresAt.toISOString(),
       id: invitation.id,
+      inviteUrl: new URL(`/staff/invitations/${invitation.id}`, env.BETTER_AUTH_URL).toString(),
       inviter: inviter?.user.name || inviter?.user.email || "a former member",
       role: invitation.role,
     }];
