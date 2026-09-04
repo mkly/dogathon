@@ -187,6 +187,10 @@ Shepherd
 
 [how to adopt me](https://rescue.example/adoption-process/)
 
+---
+
+[Back to All Dogs](https://rescue.example/adoptions/dogs/)
+
 ![Tulip - Photo 1](https://rescue.example/uploads/tulip-1.jpg)
 
 ## Meet Tulip

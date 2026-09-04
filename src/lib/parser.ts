@@ -163,31 +163,33 @@ function splitHtmlSections(source: string): RosterSection[] {
 
 function markdownSections(source: string): RosterSection[] {
   const { preamble, sections } = splitMarkdownSections(source);
-  const regions = sections.map(({ heading, body }) => {
+  const regions = sections.map(({ heading, body, tail }) => {
     // Bold field labels (**Age:**) read like plain labels once the emphasis goes.
     const text = stripEmphasis(body);
+    const tailPhotoUrls = extractMarkdownPhotoUrls(tail);
     return {
       heading,
       text,
       careNotes: extractMarkdownCareNotes(body),
       photoUrls: extractMarkdownPhotoUrls(text),
-      trailingPhotoUrls: trailingMarkdownPhotoUrls(text),
+      tailPhotoUrls,
       hasFields: FIELD_LABEL_PATTERN.test(text),
     };
   });
-  // Detail pages put the photo gallery above the "Meet ..." heading, so the photos
-  // that trail the previous region's fields belong to a heading that has fields
-  // but no photos of its own before them.
+  // Crawled detail pages arrive joined by thematic breaks, and each page puts its
+  // photo gallery above the "Meet ..." heading. So the photos after the last break
+  // of a region belong to the next heading when that heading has fields but no
+  // photos of its own.
   const inherits = (index: number) => {
     const region = regions[index];
     if (region === undefined || !region.hasFields) return false;
-    return region.photoUrls.length === region.trailingPhotoUrls.length;
+    return region.photoUrls.length === region.tailPhotoUrls.length;
   };
   return regions.map((region, index) => {
     const inherited = inherits(index)
-      ? index === 0 ? extractMarkdownPhotoUrls(preamble) : regions[index - 1].trailingPhotoUrls
+      ? index === 0 ? extractMarkdownPhotoUrls(preamble) : regions[index - 1].tailPhotoUrls
       : [];
-    const donated = new Set(inherits(index + 1) ? region.trailingPhotoUrls : []);
+    const donated = new Set(inherits(index + 1) ? region.tailPhotoUrls : []);
     return {
       heading: region.heading,
       text: region.text,
@@ -202,39 +204,37 @@ function markdownSections(source: string): RosterSection[] {
 
 const FIELD_LABEL_PATTERN = new RegExp(`\\b(?:${FIELD_NAMES.join("|")})\\s*:`, "iu");
 
-function trailingMarkdownPhotoUrls(text: string): string[] {
-  const labels = [...text.matchAll(new RegExp(FIELD_LABEL_PATTERN.source, "giu"))];
-  const lastLabel = labels.at(-1);
-  const start = lastLabel ? (lastLabel.index ?? 0) + lastLabel[0].length : 0;
-  return extractMarkdownPhotoUrls(text.slice(start));
-}
-
 function stripEmphasis(markdown: string): string {
   return markdown.replace(/\*\*/gu, "");
 }
 
 function splitMarkdownSections(
   source: string,
-): { preamble: string; sections: Array<{ heading: string; body: string }> } {
+): { preamble: string; sections: Array<{ heading: string; body: string; tail: string }> } {
   const tree = remark().parse(source);
-  const headings = tree.children.flatMap((node) => {
+  const headings: Array<{ heading: string; start: number; end: number }> = [];
+  const breaks: number[] = [];
+  for (const node of tree.children) {
     const start = node.position?.start.offset;
     const end = node.position?.end.offset;
-
-    return node.type === "heading" && start !== undefined && end !== undefined
-      ? [{ heading: toString(node), start, end }]
-      : [];
-  });
+    if (start === undefined || end === undefined) continue;
+    if (node.type === "heading") headings.push({ heading: toString(node), start, end });
+    if (node.type === "thematicBreak") breaks.push(end);
+  }
 
   return {
     preamble: source.slice(0, headings[0]?.start ?? source.length),
-    sections: headings.map((heading, index) => ({
-      heading: heading.heading,
-      body: source.slice(
-        heading.end,
-        headings[index + 1]?.start ?? source.length,
-      ),
-    })),
+    sections: headings.map((heading, index) => {
+      const end = headings[index + 1]?.start ?? source.length;
+      // The tail is whatever follows the last thematic break inside the section:
+      // the start of the next crawled document.
+      const lastBreak = breaks.filter((offset) => offset > heading.end && offset <= end).at(-1);
+      return {
+        heading: heading.heading,
+        body: source.slice(heading.end, end),
+        tail: lastBreak === undefined ? "" : source.slice(lastBreak, end),
+      };
+    }),
   };
 }
 

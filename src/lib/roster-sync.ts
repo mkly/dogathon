@@ -39,6 +39,10 @@ const MAX_FIRECRAWL_DISCOVERY_DEPTH = 3;
 // each sync 240s and a discovery rarely runs more than two crawls.
 const FIRECRAWL_CRAWL_TIMEOUT_MS = 90_000;
 const FIRECRAWL_POLL_INTERVAL_MS = 1_000;
+// A thematic break between crawled documents lets the parser tell where one
+// page's trailing photos end and the next page's gallery begins.
+const DOCUMENT_SEPARATOR = "\n\n---\n\n";
+
 const MAX_ROSTER_AGENT_STEPS = 10;
 const MAX_ROSTER_TOOL_CALLS = 12;
 const MAX_CRAWL_INCLUDE_PATHS = 5;
@@ -480,7 +484,7 @@ export async function discoverRosterWithCompleteness(
     throw new Error("Roster discovery completed without scraping roster content");
   }
   return {
-    text: documents.join("\n\n"),
+    text: documents.join(DOCUMENT_SEPARATOR),
     rosterCompleteness: combineCrawlCompleteness(crawlCompleteness),
     notes: savedNotes,
   };
