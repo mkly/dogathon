@@ -46,10 +46,7 @@ test("the schedule route requires the same bearer secret as the drain route", as
 test("eligible organizations are staggered and existing work is skipped", async () => {
   const inputs: Array<{ orgId: string; trigger: "scheduled"; startAfter: Date }> = [];
   const handler = createRosterSyncScheduleHandler({
-    env: schedulerEnvironment({
-      CRON_SECRET: "scheduler-secret",
-      ROSTER_SYNC_SCHEDULE_STAGGER_MS: "60000",
-    }),
+    env: schedulerEnvironment({ CRON_SECRET: "scheduler-secret" }),
     now: () => new Date("2026-09-02T08:00:00.000Z"),
     listOrganizations: async () => [
       { orgId: "org-1" },
@@ -74,8 +71,8 @@ test("eligible organizations are staggered and existing work is skipped", async 
     })),
     [
       { orgId: "org-1", trigger: "scheduled", startAfter: "2026-09-02T08:00:00.000Z" },
-      { orgId: "org-2", trigger: "scheduled", startAfter: "2026-09-02T08:01:00.000Z" },
-      { orgId: "org-3", trigger: "scheduled", startAfter: "2026-09-02T08:02:00.000Z" },
+      { orgId: "org-2", trigger: "scheduled", startAfter: "2026-09-02T08:05:00.000Z" },
+      { orgId: "org-3", trigger: "scheduled", startAfter: "2026-09-02T08:10:00.000Z" },
     ],
   );
 });

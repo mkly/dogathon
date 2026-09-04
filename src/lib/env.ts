@@ -17,13 +17,6 @@ function urlWithDefault(fallback: string) {
   ).transform((value) => value.replace(/\/+$/u, ""));
 }
 
-function positiveMillisecondsWithDefault(fallback: number) {
-  return z.preprocess(
-    (value) => typeof value === "string" && value.trim() === "" ? undefined : value,
-    z.coerce.number().positive().default(fallback),
-  );
-}
-
 const core = {
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   DATABASE_URL: z.url({ error: "is required and must be a valid URL" }),
@@ -57,8 +50,6 @@ const firecrawl = {
 // Without the secret, scheduled roster routes reject every request.
 const scheduler = {
   CRON_SECRET: optionalTrimmedString,
-  ROSTER_SYNC_DRAIN_BUDGET_MS: positiveMillisecondsWithDefault(4 * 60 * 1000),
-  ROSTER_SYNC_SCHEDULE_STAGGER_MS: positiveMillisecondsWithDefault(5 * 60 * 1000),
 };
 
 // Without the platform secret, billing calls remain on their described dry-run path.

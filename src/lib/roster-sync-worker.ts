@@ -79,20 +79,13 @@ export function createRosterSyncDrainHandler(dependencies: DrainRouteDependencie
 
     try {
       return Response.json(await drain({
-        budgetMs: configuredBudget(environment.ROSTER_SYNC_DRAIN_BUDGET_MS),
+        budgetMs: DEFAULT_ROSTER_SYNC_DRAIN_BUDGET_MS,
       }));
     } catch (error) {
       console.error("Roster sync drain failed", error);
       return Response.json({ error: "Roster sync drain failed" }, { status: 500 });
     }
   };
-}
-
-function configuredBudget(value: string | number | undefined): number {
-  if (value === undefined || (typeof value === "string" && !value.trim())) {
-    return DEFAULT_ROSTER_SYNC_DRAIN_BUDGET_MS;
-  }
-  return positiveDuration(Number(value), "ROSTER_SYNC_DRAIN_BUDGET_MS");
 }
 
 function positiveDuration(value: number, name: string): number {

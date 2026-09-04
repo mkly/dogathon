@@ -34,7 +34,6 @@ export function createRosterSyncScheduleHandler(dependencies: ScheduleDependenci
     }
 
     try {
-      const staggerMs = configuredStagger(environment.ROSTER_SYNC_SCHEDULE_STAGGER_MS);
       const startedAt = now();
       const organizations = await listOrganizations();
       let enqueued = 0;
@@ -46,7 +45,9 @@ export function createRosterSyncScheduleHandler(dependencies: ScheduleDependenci
           const result = await enqueue({
             orgId: organization.orgId,
             trigger: "scheduled",
-            startAfter: new Date(startedAt.getTime() + index * staggerMs),
+            startAfter: new Date(
+              startedAt.getTime() + index * DEFAULT_ROSTER_SYNC_STAGGER_MS,
+            ),
           });
           if (result.enqueued) enqueued += 1;
           else skipped += 1;
@@ -70,15 +71,4 @@ async function defaultOrganizations(): Promise<ScheduledOrganization[]> {
     orderBy: { orgId: "asc" },
     select: { orgId: true },
   });
-}
-
-function configuredStagger(value: string | number | undefined): number {
-  if (value === undefined || (typeof value === "string" && !value.trim())) {
-    return DEFAULT_ROSTER_SYNC_STAGGER_MS;
-  }
-  const milliseconds = Number(value);
-  if (!Number.isFinite(milliseconds) || milliseconds <= 0) {
-    throw new RangeError("ROSTER_SYNC_SCHEDULE_STAGGER_MS must be a positive number of milliseconds");
-  }
-  return milliseconds;
 }

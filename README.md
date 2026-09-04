@@ -96,12 +96,10 @@ uses that server's clock, so set the entry accordingly if 08:00 UTC is required
 and the server is not configured for UTC.
 
 The nightly route enqueues every organization with a saved adoption-page source
-URL. Jobs become eligible one at a time, spaced by
-`ROSTER_SYNC_SCHEDULE_STAGGER_MS` (five minutes by default), and pg-boss's
-exclusive queue policy skips an organization with a queued or running job.
-Each drain invocation fetches and settles at most one eligible job and uses
-`ROSTER_SYNC_DRAIN_BUDGET_MS` (240 seconds by default) within the route's
-300-second maximum duration.
+URL. Jobs become eligible one at a time, spaced by a fixed five minutes, and
+pg-boss's exclusive queue policy skips an organization with a queued or running
+job. Each drain invocation fetches and settles at most one eligible job and
+uses a fixed 240-second budget within the route's 300-second maximum duration.
 
 Register these exact OAuth redirect URLs with the enabled providers, replacing
 the origin with the deployed app URL:

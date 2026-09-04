@@ -5,8 +5,6 @@ import type { AppEnvironment } from "./env.ts";
 export type SchedulerEnvironment = Pick<
   AppEnvironment,
   | "CRON_SECRET"
-  | "ROSTER_SYNC_DRAIN_BUDGET_MS"
-  | "ROSTER_SYNC_SCHEDULE_STAGGER_MS"
   | "features"
 >;
 

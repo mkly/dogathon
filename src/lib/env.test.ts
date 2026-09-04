@@ -9,7 +9,6 @@ test("parses typed environment values and applies normalized defaults", () => {
     BETTER_AUTH_URL: "https://dogathon.example///",
     APP_SMTP_PORT: "2525",
     APP_SMTP_SECURE: "yes",
-    ROSTER_SYNC_DRAIN_BUDGET_MS: "120000",
   });
 
   assert.equal(parsed.BETTER_AUTH_URL, "https://dogathon.example");
@@ -19,8 +18,6 @@ test("parses typed environment values and applies normalized defaults", () => {
   assert.equal(parsed.MICROSOFT_TENANT_ID, "common");
   assert.equal(parsed.APP_SMTP_PORT, 2525);
   assert.equal(parsed.APP_SMTP_SECURE, true);
-  assert.equal(parsed.ROSTER_SYNC_DRAIN_BUDGET_MS, 120_000);
-  assert.equal(parsed.ROSTER_SYNC_SCHEDULE_STAGGER_MS, 300_000);
   assert.ok(Object.isFrozen(parsed.features));
 });
 
