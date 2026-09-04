@@ -58,6 +58,7 @@
 .invitationMessage { min-height: 1.2em; margin: 8px 2px 0; font-size: 0.74rem; font-weight: 750; }
 .invitationList { display: grid; gap: 10px; }
 .invitationRow { display: grid; grid-template-columns: minmax(210px, 1.2fr) minmax(190px, 0.8fr) auto; align-items: center; gap: 18px; padding: 16px 20px; }
+.invitationControls { display: flex; gap: 9px; }
 .emptyInvitations { margin: 0; padding: 18px 20px; border: 1px dashed rgb(61 51 43 / 35%); border-radius: 8px; text-align: center; font-size: 0.82rem; font-weight: 750; opacity: 0.68; }
 @media (max-width: 900px) {
   .memberRow { grid-template-columns: minmax(180px, 1fr) minmax(150px, 0.75fr); }

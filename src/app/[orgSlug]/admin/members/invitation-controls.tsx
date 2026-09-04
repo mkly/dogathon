@@ -7,7 +7,11 @@ import { AdminBadge, AdminButton, AdminField, AdminSurface } from "@/components/
 import { formatDateTime } from "@/lib/format";
 import { pushToast } from "@/lib/toast";
 
-import { cancelOrganizationInvitation, inviteOrganizationMember } from "./actions";
+import {
+  cancelOrganizationInvitation,
+  inviteOrganizationMember,
+  resendOrganizationInvitation,
+} from "./actions";
 import styles from "./members.module.css";
 
 export type InvitationView = {
@@ -36,6 +40,7 @@ export function InvitationManager({
   const [role, setRole] = useState<InvitationView["role"]>("member");
   const [message, setMessage] = useState("");
   const [pendingInvitationId, setPendingInvitationId] = useState<string | null>(null);
+  const [pendingInvitationAction, setPendingInvitationAction] = useState<"cancel" | "resend" | null>(null);
   const [isPending, startTransition] = useTransition();
 
   function invite(event: FormEvent<HTMLFormElement>) {
@@ -61,6 +66,7 @@ export function InvitationManager({
   function cancel(invitation: InvitationView) {
     setMessage("");
     setPendingInvitationId(invitation.id);
+    setPendingInvitationAction("cancel");
     startTransition(async () => {
       try {
         const result = await cancelOrganizationInvitation({
@@ -76,6 +82,31 @@ export function InvitationManager({
         pushToast("error", failure);
       } finally {
         setPendingInvitationId(null);
+        setPendingInvitationAction(null);
+      }
+    });
+  }
+
+  function resend(invitation: InvitationView) {
+    setMessage("");
+    setPendingInvitationId(invitation.id);
+    setPendingInvitationAction("resend");
+    startTransition(async () => {
+      try {
+        const result = await resendOrganizationInvitation({
+          invitationId: invitation.id,
+          orgSlug,
+        });
+        setMessage(result.message);
+        pushToast(result.ok ? "success" : "error", result.message);
+        if (result.ok) router.refresh();
+      } catch {
+        const failure = "The invitation could not reach the server. Try again.";
+        setMessage(failure);
+        pushToast("error", failure);
+      } finally {
+        setPendingInvitationId(null);
+        setPendingInvitationAction(null);
       }
     });
   }
@@ -125,13 +156,26 @@ export function InvitationManager({
               <AdminBadge tone={ROLE_TONES[invitation.role]}>{invitation.role}</AdminBadge>
               <span>Expires {formatDateTime(invitation.expiresAt)} UTC</span>
             </div>
-            <AdminButton
-              disabled={isPending}
-              onClick={() => cancel(invitation)}
-              tone="brick"
-            >
-              {pendingInvitationId === invitation.id ? "Cancelling…" : "Cancel"}
-            </AdminButton>
+            <div className={styles.invitationControls}>
+              <AdminButton
+                disabled={isPending}
+                onClick={() => resend(invitation)}
+                tone="moss"
+              >
+                {pendingInvitationId === invitation.id && pendingInvitationAction === "resend"
+                  ? "Resending…"
+                  : "Resend"}
+              </AdminButton>
+              <AdminButton
+                disabled={isPending}
+                onClick={() => cancel(invitation)}
+                tone="brick"
+              >
+                {pendingInvitationId === invitation.id && pendingInvitationAction === "cancel"
+                  ? "Cancelling…"
+                  : "Cancel"}
+              </AdminButton>
+            </div>
           </AdminSurface>
         ))}
       </div>

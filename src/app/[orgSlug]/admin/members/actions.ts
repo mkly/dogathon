@@ -135,6 +135,47 @@ export async function cancelOrganizationInvitation(input: {
   return { ok: true, message: "Invitation cancelled." };
 }
 
+export async function resendOrganizationInvitation(input: {
+  invitationId: string;
+  orgSlug: string;
+}): Promise<InvitationActionResult> {
+  const context = await invitationContext(input.orgSlug);
+  if (!context) {
+    return { ok: false, message: "You no longer have permission to manage invitations here." };
+  }
+
+  try {
+    const invitations = await auth.api.listInvitations({
+      headers: context.headers,
+      query: { organizationId: context.organizationId },
+    });
+    const invitation = invitations.find((item) => (
+      item.id === input.invitationId && item.status === "pending"
+    ));
+    if (!invitation) {
+      return { ok: false, message: "That invitation is no longer pending." };
+    }
+
+    await auth.api.createInvitation({
+      body: {
+        email: invitation.email,
+        organizationId: context.organizationId,
+        resend: true,
+        role: invitation.role,
+      },
+      headers: context.headers,
+    });
+  } catch (error) {
+    return {
+      ok: false,
+      message: invitationApiErrorMessage(error, "The invitation could not be resent. Try again."),
+    };
+  }
+
+  revalidatePath(`/${input.orgSlug}/admin/members`);
+  return { ok: true, message: "Invitation resent." };
+}
+
 async function mutationContext(orgSlug: string) {
   const requestHeaders = await headers();
   const access = await getOrganizationAccessBySlug(requestHeaders, orgSlug, {
