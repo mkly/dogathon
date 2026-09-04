@@ -590,17 +590,19 @@ export function EmailConnectorSettings({
           )}
         </div>
       </div>
-      <div className={styles.oauthChoices}>
-        <AdminButton disabled={pending !== null} onClick={() => connectOAuth("gmail")} tone="denim">
-          {pending === "gmail" ? "Opening Gmail…" : "Connect Gmail"}
-        </AdminButton>
-        <AdminButton disabled={pending !== null} onClick={() => connectOAuth("microsoft")} tone="denim">
-          {pending === "microsoft" ? "Opening Microsoft…" : "Connect Microsoft 365"}
-        </AdminButton>
-        <AdminButton disabled={pending !== null} onClick={() => setSmtpOpen(true)} tone="denim">
-          Connect SMTP with password
-        </AdminButton>
-      </div>
+      {!connector.connected && (
+        <div className={styles.oauthChoices}>
+          <AdminButton disabled={pending !== null} onClick={() => connectOAuth("gmail")} tone="denim">
+            {pending === "gmail" ? "Opening Gmail…" : "Connect Gmail"}
+          </AdminButton>
+          <AdminButton disabled={pending !== null} onClick={() => connectOAuth("microsoft")} tone="denim">
+            {pending === "microsoft" ? "Opening Microsoft…" : "Connect Microsoft 365"}
+          </AdminButton>
+          <AdminButton disabled={pending !== null} onClick={() => setSmtpOpen(true)} tone="denim">
+            Connect SMTP with password
+          </AdminButton>
+        </div>
+      )}
       <Dialog.Root onOpenChange={setSmtpOpen} open={smtpOpen}>
         <Dialog.Portal>
           <Dialog.Overlay className={styles.dialogOverlay} />
