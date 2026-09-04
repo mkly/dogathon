@@ -72,26 +72,26 @@ export async function getOrganizationAccessBySlug(
   slug: string,
   permission: OrganizationPermission,
 ): Promise<OrganizationSlugAccess | null> {
-  const organization = await prisma.organization.findUnique({
-    where: { slug },
-    select: { id: true, name: true, slug: true },
-  });
+  const [organization, session] = await Promise.all([
+    prisma.organization.findUnique({
+      where: { slug },
+      select: { id: true, name: true, slug: true },
+    }),
+    getSession(requestHeaders),
+  ]);
   if (!organization) return null;
 
-  const session = await getSession(requestHeaders);
   if (!session) return { authenticated: false, context: null, organization };
 
-  const membership = await prisma.member.findUnique({
-    where: {
-      organizationId_userId: { organizationId: organization.id, userId: session.user.id },
-    },
-    select: { id: true, organizationId: true, role: true, userId: true },
-  });
-  const permitted = await checkOrganizationPermission(
-    requestHeaders,
-    organization.id,
-    permission,
-  );
+  const [membership, permitted] = await Promise.all([
+    prisma.member.findUnique({
+      where: {
+        organizationId_userId: { organizationId: organization.id, userId: session.user.id },
+      },
+      select: { id: true, organizationId: true, role: true, userId: true },
+    }),
+    checkOrganizationPermission(requestHeaders, organization.id, permission),
+  ]);
 
   return {
     authenticated: true,
@@ -110,13 +110,15 @@ export async function getOrganizationContext(
   const orgId = session?.session.activeOrganizationId;
   if (!session || !orgId) return null;
 
-  const membership = await prisma.member.findUnique({
-    where: {
-      organizationId_userId: { organizationId: orgId, userId: session.user.id },
-    },
-    select: { id: true, organizationId: true, role: true, userId: true },
-  });
-  const permitted = await checkOrganizationPermission(requestHeaders, orgId, permission);
+  const [membership, permitted] = await Promise.all([
+    prisma.member.findUnique({
+      where: {
+        organizationId_userId: { organizationId: orgId, userId: session.user.id },
+      },
+      select: { id: true, organizationId: true, role: true, userId: true },
+    }),
+    checkOrganizationPermission(requestHeaders, orgId, permission),
+  ]);
 
   return permitted ? organizationContext(session.user.id, membership, orgId) : null;
 }
