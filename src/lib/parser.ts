@@ -28,7 +28,19 @@ export type ParseCompanionRosterOptions = {
   baseUrl?: string;
 };
 
-const FIELD_NAMES = ["Personality", "Breed", "Age", "Weight", "Sex", "Gender"];
+// The structured labels rescue sites attach to a companion's stats. Everything
+// else a section says about the companion is its description.
+const FIELD_NAMES = ["Breed", "Age", "Weight", "Sex", "Gender"];
+// A model batch that fails is retried this many times before the sync fails;
+// the offline parser never stands in for the model on a live roster.
+const MODEL_BATCH_RETRIES = 1;
+/** Separates the pages a roster sync gathered when it joins them into one source. */
+export const DOCUMENT_SEPARATOR = "\n\n---\n\n";
+// The model extracts one batch of gathered pages per call; a whole roster of
+// detail pages with their descriptions would overflow a single response.
+const MAX_MODEL_BATCH_DOCUMENTS = 6;
+const MAX_MODEL_BATCH_CHARS = 40_000;
+const MODEL_BATCH_CONCURRENCY = 4;
 // Listing status labels rescue sites attach to a companion; they are kept as
 // care notes because a companion in foster care or in a bonded pair is still
 // adoptable, not adopted.
@@ -48,6 +60,11 @@ type RosterSection = {
 const trimmedString = z.string().catch("").transform((value) => value.trim());
 const trimmedStrings = z.array(z.string()).catch([])
   .transform((values) => values.map((value) => value.trim()).filter(Boolean));
+// The model copies the page's line breaks (sometimes as a literal "\n") into prose
+// fields; the roster stores each as one flowing paragraph, like the offline parser.
+const proseString = z.string().catch("").transform((value) =>
+  value.replace(/\\n|\r?\n/g, " ").replace(/[ \t]{2,}/g, " ").trim(),
+);
 const companionRecordSchema = z.object({
   name: trimmedString,
   breed: trimmedString,
@@ -55,7 +72,7 @@ const companionRecordSchema = z.object({
   ageText: trimmedString,
   sex: trimmedString,
   weightText: trimmedString,
-  personality: trimmedString,
+  personality: proseString,
   careNotes: trimmedStrings,
   photoUrls: trimmedStrings,
   adopted: z.boolean().catch(false),
@@ -69,15 +86,52 @@ export async function parseCompanionRoster(
   source: string,
   options: ParseCompanionRosterOptions = {},
 ): Promise<CompanionRecord[]> {
-  if (hasAiCredentials(options.apiKey) && !options.deterministic) {
-    try {
-      return await parseWithModel(source, options);
-    } catch (error) {
-      console.warn("Model roster parsing failed; using deterministic parser.", error);
-    }
+  if (!hasAiCredentials(options.apiKey) || options.deterministic) {
+    return parseCompanionRosterDeterministic(source);
   }
 
-  return parseCompanionRosterDeterministic(source);
+  const batches = documentBatches(source);
+  const results: CompanionRecord[][] = new Array(batches.length);
+  let next = 0;
+  const worker = async () => {
+    while (next < batches.length) {
+      const index = next++;
+      results[index] = await parseBatch(batches[index], options);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(MODEL_BATCH_CONCURRENCY, batches.length) }, worker));
+  return results.flat();
+}
+
+async function parseBatch(batch: string, options: ParseCompanionRosterOptions): Promise<CompanionRecord[]> {
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      return await parseWithModel(batch, options);
+    } catch (error) {
+      if (attempt >= MODEL_BATCH_RETRIES) throw error;
+      console.warn(`Model roster parsing failed; retrying the batch (attempt ${attempt + 1}).`, error);
+    }
+  }
+}
+
+function documentBatches(source: string): string[] {
+  const documents = source.split(DOCUMENT_SEPARATOR);
+  const batches: string[][] = [];
+  let current: string[] = [];
+  let currentChars = 0;
+  for (const document of documents) {
+    const tooMany = current.length >= MAX_MODEL_BATCH_DOCUMENTS;
+    const tooLong = current.length > 0 && currentChars + document.length > MAX_MODEL_BATCH_CHARS;
+    if (tooMany || tooLong) {
+      batches.push(current);
+      current = [];
+      currentChars = 0;
+    }
+    current.push(document);
+    currentChars += document.length;
+  }
+  if (current.length) batches.push(current);
+  return batches.map((batch) => batch.join(DOCUMENT_SEPARATOR));
 }
 
 export function parseCompanionRosterDeterministic(source: string): CompanionRecord[] {
@@ -92,7 +146,7 @@ export function parseCompanionRosterDeterministic(source: string): CompanionReco
     const ageText = extractField(text, "Age");
     const sex = extractField(text, "Sex") || extractField(text, "Gender");
     const weightText = extractField(text, "Weight");
-    const personality = extractField(text, "Personality");
+    const personality = extractDescription(text, { heading, careNotes });
     const statusNotes = extractStatusNotes(text).filter((note) => !careNotes.includes(note));
 
     // Navigation and footer headings are not roster entries.
@@ -123,15 +177,12 @@ async function parseWithModel(
     model: createAiModel(options),
     maxOutputTokens: 12_000,
     output: Output.array({ element: companionRecordSchema }),
-    prompt: `Extract the rescue companions from the page below. Each item must have exactly these fields: name, breed, dobText, ageText, sex, weightText, personality, careNotes (string array), photoUrls (string array), and adopted (boolean). Preserve the page's wording. A heading such as "Meet Stripe" names the companion Stripe. Labels such as Gender count as sex. A heading containing an Adopted marker means adopted is true; a companion described as in a foster home, a bonded pair, or adoption pending is still adoptable, so record that status in careNotes rather than marking it adopted. Photos appear as [photo: URL] markers; put the markers nearest a companion's heading, including the ones directly before it on a detail page, in that companion's photoUrls. Do not include navigation, footer, or courtesy-listing headings.\n\n${semanticPageText(source)}`,
+    prompt: `Extract the rescue companions from the page below. Each item must have exactly these fields: name, breed, dobText, ageText, sex, weightText, personality, careNotes (string array), photoUrls (string array), and adopted (boolean). Preserve the page's wording; personality is everything the page says about the companion beyond those stats, however the site labels or lays it out. A heading such as "Meet Stripe" names the companion Stripe. Labels such as Gender count as sex. A heading containing an Adopted marker means adopted is true; a companion described as in a foster home, a bonded pair, or adoption pending is still adoptable, so record that status in careNotes rather than marking it adopted. Photos appear as [photo: URL] markers; put the markers nearest a companion's heading, including the ones directly before it on a detail page, in that companion's photoUrls. Do not include navigation, footer, or courtesy-listing headings.\n\n${semanticPageText(source)}`,
   });
 
-  const companions = output.filter((companion) => companion.name && companion.photoUrls.length);
-  // An empty roster reads downstream as "every companion was adopted", so treat it as
-  // a failed parse and let the deterministic path answer instead.
-  if (!companions.length) throw new Error("Model response contained no usable companion records");
-
-  return companions;
+  // A batch of listing or navigation pages legitimately holds no companions; the
+  // sync refuses an empty roster as a whole once every batch is in.
+  return output.filter((companion) => companion.name && companion.photoUrls.length);
 }
 
 function splitHtmlSections(source: string): RosterSection[] {
@@ -203,6 +254,12 @@ function markdownSections(source: string): RosterSection[] {
 }
 
 const FIELD_LABEL_PATTERN = new RegExp(`\\b(?:${FIELD_NAMES.join("|")})\\s*:`, "iu");
+const BARE_FIELD_LABEL_PATTERN = new RegExp(`^(?:${FIELD_NAMES.join("|")})\\s*:$`, "iu");
+// A labeled stat and its value, up to the next labeled stat on the same line.
+const STRUCTURED_FIELD_PATTERN = new RegExp(
+  `\\b(?:${FIELD_NAMES.join("|")})\\s*:\\s*.*?(?=\\s*\\b(?:${FIELD_NAMES.join("|")})\\s*:|$)`,
+  "giu",
+);
 
 function stripEmphasis(markdown: string): string {
   return markdown.replace(/\*\*/gu, "");
@@ -245,6 +302,41 @@ function extractField(text: string, field: string): string {
     "i",
   );
   return cleanText(text.match(pattern)?.[1] ?? "");
+}
+
+// Whatever a section says about the companion beyond its labeled stats, photos,
+// links, list items, and status badges is its description; a labeled descriptor
+// line keeps its value ("Temperament: calm" reads as "calm"). Judging which
+// phrases are worth keeping is the model's job; this offline parser keeps all.
+function extractDescription(
+  text: string,
+  { heading, careNotes }: { heading: string; careNotes: string[] },
+): string {
+  const paragraphs: string[] = [];
+  // A card section's text repeats its heading and list items; neither describes the companion.
+  const notes = new Set([heading, ...careNotes]);
+  let valueOfBareLabel = false;
+  for (const line of text.split("\n")) {
+    const raw = cleanText(line);
+    if (!raw) continue;
+    // A stat label on its own line ("Age:") takes the following line as its value.
+    if (valueOfBareLabel) {
+      valueOfBareLabel = false;
+      continue;
+    }
+    if (BARE_FIELD_LABEL_PATTERN.test(raw)) {
+      valueOfBareLabel = true;
+      continue;
+    }
+    const trimmed = cleanText(raw.replace(STRUCTURED_FIELD_PATTERN, " "));
+    if (!trimmed || notes.has(trimmed)) continue;
+    const isMarkup = /^[-*]\s|^#|^!\[|^\[[^\]]*\]\([^)]*\)$|^\[photo:|^https?:\/\//iu.test(trimmed);
+    const isStatus = STATUS_LABELS.some(([, pattern]) => pattern.test(trimmed) && trimmed.length < 40);
+    if (isMarkup || isStatus) continue;
+    const labeled = trimmed.match(/^[A-Za-z][A-Za-z ]{0,30}:\s*(.+)$/u);
+    paragraphs.push(labeled ? labeled[1].trim() : trimmed);
+  }
+  return paragraphs.join(" ");
 }
 
 function extractDob(ageText: string): string | null {

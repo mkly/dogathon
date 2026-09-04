@@ -8,7 +8,7 @@ import { z } from "zod";
 import { createAiModel } from "./ai-model.ts";
 import { env } from "./env.ts";
 import type { CompanionRecord } from "./parser.ts";
-import { parseCompanionRoster } from "./parser.ts";
+import { DOCUMENT_SEPARATOR, parseCompanionRoster } from "./parser.ts";
 import { prisma } from "./prisma.ts";
 
 export type SyncSummary = {
@@ -39,12 +39,11 @@ const MAX_FIRECRAWL_DISCOVERY_DEPTH = 3;
 // each sync 240s and a discovery rarely runs more than two crawls.
 const FIRECRAWL_CRAWL_TIMEOUT_MS = 90_000;
 const FIRECRAWL_POLL_INTERVAL_MS = 1_000;
-// A thematic break between crawled documents lets the parser tell where one
-// page's trailing photos end and the next page's gallery begins.
-const DOCUMENT_SEPARATOR = "\n\n---\n\n";
-
 const MAX_ROSTER_AGENT_STEPS = 10;
 const MAX_ROSTER_TOOL_CALLS = 12;
+// A batch scrape names up to MAX_BATCH_SCRAPE_URLS full URLs in one tool call,
+// so the model needs room for several thousand output tokens in a step.
+const MAX_ROSTER_OUTPUT_TOKENS = 8_000;
 const MAX_BATCH_SCRAPE_URLS = 100;
 const MAX_SCRAPE_LINKS = 300;
 const MAX_SCRAPE_MARKDOWN_CHARS = 20_000;
@@ -506,13 +505,18 @@ export async function discoverRosterWithCompleteness(
   log(`discovery started for ${sourceUrl}${options.priorNotes?.trim() ? " with notes from the previous sync" : ""}`);
   const { steps } = await generateText({
     model: options.model ?? createAiModel(),
-    maxOutputTokens: 1_000,
+    maxOutputTokens: MAX_ROSTER_OUTPUT_TOKENS,
     instructions: "Find the rescue's complete current adoptable companion roster. Use map only when the supplied page may not be the adoption listing. Scrape the listing page, read its links, and pick out exactly the links that lead to individual companion pages and to further pages of the same listing; then batch-scrape those chosen URLs. Never fetch pages that are not part of the roster, such as other sections of the site, and only fall back to crawl when the listing exposes no usable links. When notes from the previous sync are given, follow them on your first steps rather than exploring, and explore only if they fail or gather fewer companions than the notes expect. Check that you gathered at least as many companions as the listing shows. Call save_sync_notes as soon as you have fetched the companion pages, and again before finishing if you learned more, with concise guidance for the next sync: the listing URL, what its companion and pagination links look like, the number of companions listed, and any site quirks. Then reply with a short completion message. Do not invent roster content.",
     prompt: priorNotesPrompt(sourceUrl, options.priorNotes),
     tools,
     stopWhen: isStepCount(MAX_ROSTER_AGENT_STEPS),
     prepareStep: () => toolCalls >= MAX_ROSTER_TOOL_CALLS ? { activeTools: [] } : undefined,
     abortSignal: options.signal,
+    onStepFinish: (step) => {
+      const requested = step.toolCalls.map((call) => call.toolName).join(", ") || "no tools";
+      const reply = step.text.trim() ? `; reply: ${step.text.trim().slice(0, 300)}` : "";
+      log(`model step finished (${step.finishReason}): requested ${requested}${reply}`);
+    },
   });
   options.signal?.throwIfAborted();
   log(`discovery finished after ${steps.length} model steps, ${toolCalls} tool calls, ${documents.length} documents in ${elapsedSeconds(discoveryStartedAt)}s`);

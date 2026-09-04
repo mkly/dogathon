@@ -25,6 +25,7 @@ import pawcastWordmark from "../../../../public/brand/pawcast-wordmark.png";
 
 import { ComposeButton, DraftEditor } from "./admin-controls";
 import { EMAIL_CONNECTOR_NOTICE_ID, emailConnectorBlockedReason } from "./gmail-notice";
+import { STRIPE_CONNECT_NOTICE_ID, stripeNotReadyReason } from "./stripe-notice";
 import styles from "./admin.module.css";
 
 export const dynamic = "force-dynamic";
@@ -51,6 +52,7 @@ export default async function AdminPage({ params }: AdminPageProps) {
     activeSponsorCount,
     sponsoredCompanionCount,
     emailConnector,
+    stripeConnection,
   ] =
     await Promise.all([
       prisma.pupdate.findMany({
@@ -101,8 +103,19 @@ export default async function AdminPage({ params }: AdminPageProps) {
           })
         : Promise.resolve(0),
       getEmailConnectorStatus(context.orgId),
+      canManageStaffArea
+        ? prisma.organization.findUnique({
+            where: { id: context.orgId },
+            select: {
+              stripeAccountId: true,
+              stripeDetailsSubmitted: true,
+              stripeChargesEnabled: true,
+            },
+          })
+        : Promise.resolve(null),
     ]);
 
+  const stripeNotReady = canManageStaffArea ? stripeNotReadyReason(stripeConnection) : null;
   const monthlyRecurring = activeSponsorCount * 25;
 
   return (
@@ -128,6 +141,18 @@ export default async function AdminPage({ params }: AdminPageProps) {
         </Link>}
         title="Staff room"
       />
+
+      {stripeNotReady && (
+        <p className={styles.queueNotice} role="status">
+          <span aria-hidden="true">⚠️</span>
+          <span>
+            {stripeNotReady} Sponsors cannot check out until Stripe enables card payments.{" "}
+            <Link href={`/${orgSlug}/admin/settings#${STRIPE_CONNECT_NOTICE_ID}`}>
+              Open Stripe settings.
+            </Link>
+          </span>
+        </p>
+      )}
 
       {canManageStaffArea && (
         <section aria-label="Program statistics" className={styles.stats}>

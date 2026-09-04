@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 
 import {
+  AdminBadge,
   AdminButton,
   AdminEyebrow,
   AdminFooter,
@@ -16,6 +17,7 @@ import { SignOutButton } from "@/components/sign-out-button";
 import { getEmailConnectorStatus } from "@/lib/email-connectors";
 import { getOrganizationAccessBySlug } from "@/lib/organization-access";
 import { prisma } from "@/lib/prisma";
+import { refreshConnectStatus } from "@/lib/stripe-billing";
 
 import pawcastWordmark from "../../../../../public/brand/pawcast-wordmark.png";
 
@@ -26,11 +28,38 @@ import {
   RosterSyncSettings,
 } from "../admin-controls";
 import { EMAIL_CONNECTOR_NOTICE_ID } from "../gmail-notice";
+import { STRIPE_CONNECT_NOTICE_ID, stripeNotReadyReason } from "../stripe-notice";
 import styles from "../admin.module.css";
 
 export const dynamic = "force-dynamic";
 
 type AdminSettingsPageProps = { params: Promise<{ orgSlug: string }> };
+
+// Stripe owns the truth about whether an account can take card payments, so ask it
+// on each visit rather than trusting the stored flags; fall back to them if Stripe
+// is unreachable.
+async function loadStripeConnection(orgId: string) {
+  const stored = await prisma.organization.findUnique({
+    where: { id: orgId },
+    select: { stripeAccountId: true, stripeDetailsSubmitted: true, stripeChargesEnabled: true },
+  });
+  if (!stored?.stripeAccountId) {
+    return stored && { ...stored, verifying: false, blockers: [] as string[] };
+  }
+  try {
+    const live = await refreshConnectStatus(orgId);
+    return {
+      stripeAccountId: live.id,
+      stripeDetailsSubmitted: live.detailsSubmitted,
+      stripeChargesEnabled: live.chargesEnabled,
+      verifying: live.verifying,
+      blockers: live.blockers,
+    };
+  } catch (error) {
+    console.warn("Could not refresh the Stripe Connect status; showing the stored one.", error);
+    return { ...stored, verifying: false, blockers: [] };
+  }
+}
 
 export default async function AdminSettingsPage({ params }: AdminSettingsPageProps) {
   const { orgSlug } = await params;
@@ -48,15 +77,14 @@ export default async function AdminSettingsPage({ params }: AdminSettingsPagePro
   const [storedSettings, emailConnector, organization] = await Promise.all([
     prisma.rescueSettings.findUnique({ where: { orgId: context.orgId } }),
     getEmailConnectorStatus(context.orgId),
-    prisma.organization.findUnique({
-      where: { id: context.orgId },
-      select: {
-        stripeAccountId: true,
-        stripeDetailsSubmitted: true,
-        stripeChargesEnabled: true,
-      },
-    }),
+    loadStripeConnection(context.orgId),
   ]);
+  const stripeNotReady = stripeNotReadyReason(organization);
+  const stripeBadge = organization?.verifying
+    ? { tone: "mustard" as const, label: "Verifying" }
+    : stripeNotReady
+      ? { tone: "brick" as const, label: "Not ready for payments" }
+      : { tone: "moss" as const, label: "Ready for payments" };
   const settings = storedSettings ?? {
     pinnedPostscript: "",
     sourceUrl: "",
@@ -80,25 +108,41 @@ export default async function AdminSettingsPage({ params }: AdminSettingsPagePro
       />
 
       <div className={styles.settingsStack}>
-        <AdminSurface className={`${styles.settings} ${styles.stripeConnect}`} tone="mustard">
-          <div className={styles.settingsIntro}>
-            <AdminEyebrow>Stripe Connect</AdminEyebrow>
-            <h2>Monthly sponsorship payments</h2>
-            <p>
-              {organization?.stripeChargesEnabled
-                ? "Connected and ready to accept $25 monthly sponsorships."
-                : organization?.stripeDetailsSubmitted
-                  ? "Stripe has your details and is still enabling payments."
-                  : organization?.stripeAccountId
-                    ? "Finish the Stripe onboarding form to accept sponsorships."
-                    : "Connect this rescue to Stripe before sponsors can check out."}
-            </p>
+        <AdminSurface
+          className={`${styles.settings} ${styles.stripeConnect}`}
+          id={STRIPE_CONNECT_NOTICE_ID}
+          tone="mustard"
+        >
+          <div className={styles.connectorHeader}>
+            <div className={styles.settingsIntro}>
+              <AdminEyebrow>Stripe Connect</AdminEyebrow>
+              <h2>Monthly sponsorship payments</h2>
+              <p>
+                {stripeNotReady
+                  ? `${stripeNotReady} Sponsors cannot check out until Stripe enables card payments.`
+                  : "Connected and ready to accept $25 monthly sponsorships."}
+              </p>
+              {organization && organization.blockers.length > 0 && (
+                <ul className={styles.stripeBlockers}>
+                  {organization.blockers.map((blocker) => (
+                    <li key={blocker}>{blocker}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
+            <div className={styles.connectorStatus}>
+              <AdminBadge tone={stripeBadge.tone}>{stripeBadge.label}</AdminBadge>
+            </div>
           </div>
-          {!organization?.stripeChargesEnabled && context.role === "owner" && (
+          {stripeNotReady && context.role === "owner" && (
             <form action={beginStripeOnboarding} className={styles.stripeConnectForm}>
               <input name="orgSlug" type="hidden" value={orgSlug} />
               <AdminButton tone="brick" type="submit">
-                {organization?.stripeAccountId ? "Continue Stripe onboarding" : "Connect Stripe"}
+                {organization?.stripeDetailsSubmitted
+                  ? "Update Stripe details"
+                  : organization?.stripeAccountId
+                    ? "Continue Stripe onboarding"
+                    : "Connect Stripe"}
               </AdminButton>
             </form>
           )}

@@ -130,7 +130,7 @@ test("the model prompt carries the photo URLs the records need", async () => {
   assert.match(prompts[0], /\[photo: https:\/\/\S+\.jpg\]/);
 });
 
-test("a model parse with no usable records falls back to the offline parser", async () => {
+test("a model parse with no usable records yields an empty roster rather than an offline guess", async () => {
   const { fetcher } = stubFetch([{ name: "Ghost", photoUrls: [] }]);
 
   const companions = await parseCompanionRoster(await pageA, {
@@ -140,8 +140,23 @@ test("a model parse with no usable records falls back to the offline parser", as
     fetch: fetcher,
   });
 
-  assert.ok(companions.length >= 30);
-  assert.equal(companions.find((companion) => companion.name === "Ghost"), undefined);
+  assert.deepEqual(companions, []);
+});
+
+test("a model batch that keeps failing fails the parse after one retry", async () => {
+  let calls = 0;
+  const fetcher = (async () => {
+    calls += 1;
+    return Response.json({ choices: [{ message: { content: "not json" } }] });
+  }) as unknown as typeof fetch;
+
+  await assert.rejects(parseCompanionRoster(await pageA, {
+    apiKey: "test-key",
+    baseUrl: "https://model.example/v1",
+    model: "roster-parser",
+    fetch: fetcher,
+  }));
+  assert.equal(calls, 2);
 });
 
 test("a successful model parse is returned as-is", async () => {
@@ -262,4 +277,102 @@ test("the model prompt turns markdown images into photo markers", async () => {
   assert.match(prompts[0], /\[photo: https:\/\/rescue\.example\/uploads\/stripe-1\.jpg\]/);
   assert.doesNotMatch(prompts[0], /!\[Stripe\]/);
   assert.match(prompts[0], /Meet Stripe/);
+});
+
+test("a labeled descriptor line keeps its value as the description offline", async () => {
+  const companions = await parseCompanionRoster(`
+Maple
+-----
+
+Temperament: calm and cuddly
+Breed: beagle mix
+Age: 3 years
+
+![Maple](https://example.test/maple.jpg)
+  `, { deterministic: true });
+
+  assert.equal(companions[0]?.personality, "calm and cuddly");
+});
+
+test("a scraped detail page's prose becomes the personality offline", async () => {
+  const companions = await parseCompanionRoster(`
+[Back to All Dogs](https://sfspca.org/adoptions/dogs/)
+
+![Robin - Photo 1](https://example.test/robin-1.jpg)
+
+## Meet Robin
+
+This dog's adoption fee has been generously sponsored!
+
+Robin is a 1-year-old Hound mix who made the long journey to find his perfect home.
+
+Come meet Robin today; he'll be robbin' your heart soon!
+
+**Age:**
+1 y, 8 m
+
+**Gender:**
+Male
+
+[how to adopt me](https://example.test/adoption-process/)
+
+Not ready to adopt?
+  `, { deterministic: true });
+
+  assert.equal(companions.length, 1);
+  assert.equal(
+    companions[0].personality,
+    "This dog's adoption fee has been generously sponsored! Robin is a 1-year-old Hound mix who made the long journey to find his perfect home. Come meet Robin today; he'll be robbin' your heart soon! Not ready to adopt?",
+  );
+  assert.equal(companions[0].ageText, "1 y, 8 m");
+});
+
+test("model parsing sends gathered pages in batches and keeps every batch's records", async () => {
+  const { fetcher, prompts } = stubFetch([
+    { name: "Batch", breed: "mix", photoUrls: ["https://example.test/batch.jpg"] },
+  ]);
+  const page = (name: string) => `![${name}](https://example.test/${name}.jpg)\n\n## Meet ${name}\n\n**Age:**\n2 y`;
+  const source = Array.from({ length: 8 }, (_unused, index) => page(`Dog${index}`)).join("\n\n---\n\n");
+
+  const companions = await parseCompanionRoster(source, {
+    apiKey: "test-key",
+    baseUrl: "https://model.example/v1",
+    model: "roster-parser",
+    fetch: fetcher,
+  });
+
+  assert.equal(prompts.length, 2);
+  assert.match(prompts[0], /Meet Dog0/);
+  assert.match(prompts[0], /Meet Dog5/);
+  assert.doesNotMatch(prompts[0], /Meet Dog6/);
+  assert.match(prompts[1], /Meet Dog6/);
+  assert.deepEqual(companions.map((companion) => companion.name), ["Batch", "Batch"]);
+});
+
+test("model prose keeps one flowing paragraph even when the page's line breaks come back", async () => {
+  const records = [
+    {
+      name: "Robin",
+      breed: "Mix",
+      dobText: "",
+      ageText: "1 y",
+      sex: "Male",
+      weightText: "",
+      personality: "Looking forward to his debut.\nHe jumps for joy.\\nNow he sits  for joy.",
+      careNotes: [],
+      photoUrls: ["https://example.test/robin.jpg"],
+      adopted: false,
+    },
+  ];
+  const { fetcher } = stubFetch(records);
+  const [robin] = await parseCompanionRoster("## Meet Robin\n\nprose", {
+    apiKey: "test-key",
+    baseUrl: "https://model.example/v1",
+    model: "roster-parser",
+    fetch: fetcher,
+  });
+  assert.equal(
+    robin.personality,
+    "Looking forward to his debut. He jumps for joy. Now he sits for joy.",
+  );
 });

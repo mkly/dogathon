@@ -10,6 +10,7 @@ import {
   ResidentUnavailableError,
   constructStripeEvent,
   createBillingPortalSession,
+  connectAccountStatus,
   createConnectOnboardingLink,
   createStripeCheckout,
   processStripeEvent,
@@ -32,6 +33,15 @@ const server = setupServer(
     assert.equal(body.get("type"), "express");
     assert.equal(body.get("business_profile[name]"), "Fixture Rescue");
     assert.equal(body.get("metadata[orgId]"), "org_rescue");
+    assert.equal(body.get("capabilities[card_payments][requested]"), "true");
+    assert.equal(body.get("capabilities[transfers][requested]"), "true");
+    return HttpResponse.json({ id: "acct_fixture_rescue", object: "account" });
+  }),
+  http.post(`${stripeApi}/v1/accounts/:accountId`, async ({ params, request }) => {
+    const body = await formData(request);
+    assert.equal(params.accountId, "acct_fixture_rescue");
+    assert.equal(body.get("capabilities[card_payments][requested]"), "true");
+    assert.equal(body.get("capabilities[transfers][requested]"), "true");
     return HttpResponse.json({ id: "acct_fixture_rescue", object: "account" });
   }),
   http.post(`${stripeApi}/v1/account_links`, async ({ request }) => {
@@ -50,6 +60,7 @@ const server = setupServer(
       object: "account",
       details_submitted: true,
       charges_enabled: true,
+      capabilities: { card_payments: "active", transfers: "active" },
     });
   }),
   http.post(`${stripeApi}/v1/checkout/sessions`, () => HttpResponse.json({
@@ -225,6 +236,58 @@ test("Stripe SDK billing portal uses the sponsorship customer on the connected a
   });
 
   assert.equal(portal.url, "https://billing.stripe.test/session_fixture");
+});
+
+test("resuming onboarding re-requests card payments on an existing connected account", async () => {
+  const store = new MemoryBillingStore();
+  store.organization.stripeAccountId = "acct_fixture_rescue";
+
+  const onboarding = await createConnectOnboardingLink(
+    "org_rescue",
+    { refreshUrl: "https://app.test/connect/refresh", returnUrl: "https://app.test/connect/return" },
+    store,
+  );
+  assert.equal(onboarding.url, "https://connect.stripe.test/onboard/acct_fixture_rescue");
+});
+
+test("an account is only chargeable once Stripe activates card payments on it", () => {
+  const account = {
+    details_submitted: true,
+    charges_enabled: true,
+    capabilities: { transfers: "active" },
+  } as unknown as Stripe.Account;
+  assert.deepEqual(connectAccountStatus(account), {
+    detailsSubmitted: true,
+    chargesEnabled: false,
+    verifying: false,
+    blockers: [],
+  });
+});
+
+test("Stripe's outstanding requirements are surfaced as readable blockers", () => {
+  const account = {
+    details_submitted: true,
+    charges_enabled: false,
+    capabilities: { card_payments: "inactive", transfers: "active" },
+    requirements: {
+      errors: [
+        {
+          code: "verification_failed_keyed_identity",
+          reason: "The person's keyed-in identity information could not be verified.",
+          requirement: "individual.verification.document",
+        },
+      ],
+      past_due: ["individual.verification.document"],
+      currently_due: ["individual.verification.document", "business_profile.url"],
+      pending_verification: ["individual.id_number"],
+    },
+  } as unknown as Stripe.Account;
+  assert.equal(connectAccountStatus(account).verifying, true);
+  assert.deepEqual(connectAccountStatus(account).blockers, [
+    "The person's keyed-in identity information could not be verified.",
+    "Stripe still needs: business profile url.",
+    "Stripe is verifying details it already has; this can take a few minutes.",
+  ]);
 });
 
 test("Stripe Connect onboarding, checkout, and signed webhooks maintain sponsorship state", async () => {

@@ -172,6 +172,46 @@ export function constructStripeEvent(payload: string, signature: string, secret:
   return Stripe.webhooks.constructEvent(payload, signature, secret);
 }
 
+// Checkout runs as a direct charge on the rescue's account, which needs card_payments;
+// transfers keeps payouts available. Both must be requested, not assumed from the
+// platform's Connect defaults.
+const CONNECT_CAPABILITIES = {
+  card_payments: { requested: true },
+  transfers: { requested: true },
+} satisfies Stripe.AccountCreateParams.Capabilities;
+
+export function connectAccountStatus(account: Stripe.Account) {
+  return {
+    detailsSubmitted: account.details_submitted,
+    chargesEnabled: account.charges_enabled && account.capabilities?.card_payments === "active",
+    verifying: (account.requirements?.pending_verification?.length ?? 0) > 0,
+    blockers: connectBlockers(account),
+  };
+}
+
+/** What Stripe says still stands between this account and card payments, in its
+ *  own words where it gives them, so staff see the real hold-up rather than a
+ *  generic "still verifying". */
+function connectBlockers(account: Stripe.Account): string[] {
+  const requirements = account.requirements;
+  if (!requirements) return [];
+  const blockers = [...new Set(requirements.errors?.map((error) => error.reason) ?? [])];
+  const outstanding = [
+    ...new Set([...(requirements.past_due ?? []), ...(requirements.currently_due ?? [])]),
+  ].filter((field) => !requirements.errors?.some((error) => error.requirement === field));
+  if (outstanding.length > 0) {
+    blockers.push(`Stripe still needs: ${outstanding.map(describeRequirement).join(", ")}.`);
+  }
+  if (requirements.pending_verification?.length) {
+    blockers.push("Stripe is verifying details it already has; this can take a few minutes.");
+  }
+  return blockers;
+}
+
+function describeRequirement(field: string) {
+  return field.replace(/[._]/g, " ");
+}
+
 export async function createConnectOnboardingLink(
   orgId: string,
   urls: { refreshUrl: string; returnUrl: string },
@@ -181,10 +221,16 @@ export async function createConnectOnboardingLink(
   if (!organization) throw new Error("Organization not found");
 
   let accountId = organization.stripeAccountId;
-  if (!accountId) {
+  if (accountId) {
+    // Accounts created before capabilities were requested explicitly only carry the
+    // platform defaults; requesting again is idempotent and lets onboarding collect
+    // whatever card payments still need.
+    await stripe().accounts.update(accountId, { capabilities: CONNECT_CAPABILITIES });
+  } else {
     const account = await stripe().accounts.create({
       type: "express",
       business_profile: { name: organization.name },
+      capabilities: CONNECT_CAPABILITIES,
       metadata: { orgId },
     });
     accountId = account.id;
@@ -206,11 +252,7 @@ export async function refreshConnectStatus(
   const organization = await store.getOrganization(orgId);
   if (!organization?.stripeAccountId) throw new Error("Stripe onboarding has not started");
   const account = await stripe().accounts.retrieve(organization.stripeAccountId);
-  const status = {
-    id: account.id,
-    detailsSubmitted: account.details_submitted,
-    chargesEnabled: account.charges_enabled,
-  };
+  const status = { id: account.id, ...connectAccountStatus(account) };
   await store.saveStripeAccountStatus(orgId, status);
   return status;
 }
@@ -292,10 +334,7 @@ export async function processStripeEvent(
     if (!orgId || event.account !== account.id) return;
     const organization = await store.getOrganization(orgId);
     if (organization?.stripeAccountId !== account.id) return;
-    await store.saveStripeAccountStatus(orgId, {
-      detailsSubmitted: account.details_submitted,
-      chargesEnabled: account.charges_enabled,
-    });
+    await store.saveStripeAccountStatus(orgId, connectAccountStatus(account));
     return;
   }
 
