@@ -59,7 +59,7 @@ export default async function AdminSettingsPage({ params }: AdminSettingsPagePro
   ]);
   const settings = storedSettings ?? {
     pinnedPostscript: "",
-    sourceUrl: "https://www.coppersdream.org/dogs-and-more-back-up",
+    sourceUrl: "",
   };
 
   return (

@@ -68,6 +68,9 @@ export async function syncRoster(
     create: { orgId },
   });
   options.signal?.throwIfAborted();
+  if (!settings.sourceUrl) {
+    throw new Error("Roster sync needs an adoption-page source URL; save one in staff settings first");
+  }
   const {
     text,
     usedFallbackCapture,

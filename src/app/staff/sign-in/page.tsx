@@ -28,7 +28,7 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
   return (
     <main className={styles.page}>
       <FeltPanel className={styles.card} tone="denim">
-        <p className={styles.eyebrow}>Copper&apos;s Dream Rescue</p>
+        <p className={styles.eyebrow}>Rescue staff</p>
         <h1>Staff sign in</h1>
         <p className={styles.lede}>
           Sign in with your staff account to open the admin room.

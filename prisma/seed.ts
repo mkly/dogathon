@@ -1,7 +1,5 @@
 import "dotenv/config";
 
-import { readFile } from "node:fs/promises";
-
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client";
 
@@ -16,20 +14,16 @@ const prisma = new PrismaClient({
 });
 
 async function main() {
-  const photoUrls = JSON.parse(
-    await readFile(new URL("../seed/photo-urls.json", import.meta.url), "utf8"),
-  ) as string[];
-
-  if (!photoUrls[0]) {
-    throw new Error("seed/photo-urls.json must contain at least one photo URL");
-  }
+  // Seed residents share the bundled mascot so the demo never depends on a
+  // third-party photo host.
+  const photoUrls = ["/mascot/felt-pup-2.png"];
 
   const organization = await prisma.organization.upsert({
-    where: { slug: "coppers-dream" },
-    update: { name: "Copper's Dream Rescue" },
+    where: { slug: "maple-street" },
+    update: { name: "Maple Street Rescue" },
     create: {
-      name: "Copper's Dream Rescue",
-      slug: "coppers-dream",
+      name: "Maple Street Rescue",
+      slug: "maple-street",
       createdAt: new Date(),
     },
   });
@@ -142,11 +136,12 @@ async function main() {
   await prisma.rescueSettings.upsert({
     where: { orgId: organization.id },
     update: {
-      sourceUrl: "https://www.coppersdream.org/dogs-and-more-back-up",
+      sourceUrl: "seed/dogs-page-B.html",
       pinnedPostscript: "Come meet the companions at our next adoption fair!",
     },
     create: {
       orgId: organization.id,
+      sourceUrl: "seed/dogs-page-B.html",
       pinnedPostscript: "Come meet the companions at our next adoption fair!",
     },
   });

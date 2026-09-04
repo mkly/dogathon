@@ -12,7 +12,7 @@ import {
 } from "./organization-slug";
 
 test("organizationSlug normalizes punctuation and casing", () => {
-  assert.equal(organizationSlug("Coppers Dream Rescue!"), "coppers-dream-rescue");
+  assert.equal(organizationSlug("Maple Street Rescue!"), "maple-street-rescue");
 });
 
 test("organizationSlug applies slugify's strict character rules", () => {

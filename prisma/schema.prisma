@@ -289,7 +289,8 @@ model Pupdate {
 
 model RescueSettings {
   orgId            String       @id @db.Uuid
-  sourceUrl        String       @default("https://www.coppersdream.org/dogs-and-more-back-up")
+  /// Empty until staff save an adoption-page URL; the scheduler skips empty sources.
+  sourceUrl        String       @default("")
   pinnedPostscript String       @default("")
   organization     Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
 }
