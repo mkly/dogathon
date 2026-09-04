@@ -130,6 +130,10 @@
 .draftEditor .smsError { margin: 0; color: var(--felt-brick); font-size: 0.75rem; font-weight: 900; opacity: 1; }
 .draftActions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
 .draftActions > * { flex: 1 1 auto; white-space: nowrap; }
+.approveButton { min-width: 9.5rem; }
+.denyButton { min-width: 8rem; }
+.saveDraftButton { min-width: 7.25rem; }
+.composeButton { min-width: 9.5rem; }
 .previewLink {
   display: inline-flex;
   align-items: center;
@@ -255,7 +259,11 @@
 .connectorHeader h2 { margin: 0; font-size: 1.65rem; }
 .connectorHeader p:last-child { max-width: 620px; margin: 8px 0 0; font-size: 0.85rem; font-weight: 700; }
 .connectorStatus { display: flex; align-items: center; gap: 10px; }
-.oauthChoices { display: flex; flex-wrap: wrap; gap: 12px; }
+.oauthChoices { display: flex; flex-wrap: wrap; gap: 12px; overflow: hidden; }
+.disconnectButton { min-width: 7.75rem; }
+.gmailButton { min-width: 8.5rem; }
+.microsoftButton { min-width: 11rem; }
+.smtpButton { min-width: 10rem; }
 .smtpForm {
   display: grid;
   grid-template-columns: minmax(90px, 140px) minmax(0, 1fr);
@@ -272,6 +280,10 @@
 .settingsForm label { margin: 6px 0 0; font-size: 0.7rem; font-weight: 900; letter-spacing: 0.08em; text-transform: uppercase; }
 
 .rosterActions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.saveSourceButton { min-width: 7rem; }
+.syncButton { min-width: 6.25rem; }
+.postscriptButton { min-width: 7rem; }
+.inlineReveal, .noticeReveal, .statusReveal, .stripeConnectReveal { overflow: hidden; }
 .unsavedSource { margin: 0; font-size: 0.78rem; font-weight: 800; line-height: 1.4; }
 
 .saveRow { display: flex; align-items: center; justify-content: flex-end; gap: 14px; margin-top: 8px; }

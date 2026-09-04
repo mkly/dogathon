@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { refresh, revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
@@ -17,6 +17,10 @@ export type SettingsState = {
   status: "idle" | "error" | "success";
 };
 const organizationFormSchema = z.object({ orgSlug: z.string().trim().min(1) });
+
+export async function refreshAdminPage() {
+  refresh();
+}
 
 export async function beginStripeOnboarding(formData: FormData) {
   const input = organizationFormSchema.safeParse(Object.fromEntries(formData));

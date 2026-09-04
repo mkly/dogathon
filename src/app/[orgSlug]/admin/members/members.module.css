@@ -27,6 +27,7 @@
 .memberMeta > span:last-child { font-size: 0.72rem; font-weight: 750; opacity: 0.66; }
 .controls { display: grid; grid-template-columns: minmax(150px, 1fr) minmax(88px, auto); align-items: center; gap: 9px; }
 .roleField { min-width: 0; }
+.removeButton { min-width: 6.25rem; }
 .protectedNote { margin: 0; font-size: 0.7rem; font-weight: 800; line-height: 1.35; opacity: 0.66; }
 .dialogOverlay {
   position: fixed;
@@ -81,6 +82,11 @@
 .invitationActions { display: grid; gap: 9px; }
 .invitationControls { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 9px; }
 .invitationActions input { min-width: min(100%, 360px); }
+.inviteButton { min-width: 8.75rem; }
+.copyButton { min-width: 8.75rem; }
+.resendButton { min-width: 6.75rem; }
+.cancelButton { min-width: 7.25rem; }
+.inviteLinkReveal { overflow: hidden; }
 .emptyInvitations { margin: 0; padding: 18px 20px; border: 1px dashed rgb(61 51 43 / 35%); border-radius: 8px; text-align: center; font-size: 0.82rem; font-weight: 750; opacity: 0.68; }
 @media (max-width: 900px) {
   .memberRow { grid-template-columns: minmax(180px, 1fr) minmax(150px, 0.75fr); }

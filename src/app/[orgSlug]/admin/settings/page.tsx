@@ -13,6 +13,7 @@ import {
   AdminPage,
   AdminSurface,
 } from "@/components/admin-ui";
+import { MotionReveal } from "@/components/motion-primitives";
 import { SignOutButton } from "@/components/sign-out-button";
 import { PendingAdminSubmitButton } from "@/components/pending-submit-button";
 import { getEmailConnectorStatus } from "@/lib/email-connectors";
@@ -106,7 +107,11 @@ async function StripeConnection({
           <AdminBadge tone={stripeBadge.tone}>{stripeBadge.label}</AdminBadge>
         </div>
       </div>
-      {stripeNotReady && canOnboard && (
+      <MotionReveal
+        animateOnMount
+        className={styles.stripeConnectReveal}
+        show={Boolean(stripeNotReady) && canOnboard}
+      >
         <form action={beginStripeOnboarding} className={styles.stripeConnectForm}>
           <input name="orgSlug" type="hidden" value={orgSlug} />
           <PendingAdminSubmitButton pendingLabel="Opening Stripe…" tone="brick" type="submit">
@@ -117,7 +122,7 @@ async function StripeConnection({
                 : "Connect Stripe"}
           </PendingAdminSubmitButton>
         </form>
-      )}
+      </MotionReveal>
     </AdminSurface>
   );
 }

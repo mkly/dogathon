@@ -3,8 +3,15 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as AlertDialog from "@radix-ui/react-alert-dialog";
 import * as Dialog from "@radix-ui/react-dialog";
-import { useActionState, useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import {
+  type ReactNode,
+  useActionState,
+  useEffect,
+  useOptimistic,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 
 import {
   AdminBadge,
@@ -14,6 +21,12 @@ import {
   AdminLink,
   AdminSurface,
 } from "@/components/admin-ui";
+import {
+  AnimatePresence,
+  motion,
+  MotionReveal,
+  useMotionTiming,
+} from "@/components/motion-primitives";
 import { MAX_SMS_LENGTH } from "@/lib/pupdate-sms";
 import {
   isTerminalRosterSyncStatus,
@@ -25,12 +38,18 @@ import {
 } from "@/lib/roster-sync-client";
 import { pushToast } from "@/lib/toast";
 
-import { saveSettings, type SettingsState } from "./actions";
+import {
+  refreshAdminPage,
+  saveSettings,
+  type SettingsState,
+} from "./actions";
 import {
   EMAIL_CONNECTOR_NOTICE_ID,
   emailConnectorBlockedReason,
 } from "./gmail-notice";
 import styles from "./admin.module.css";
+
+const MotionAdminSurface = motion.create(AdminSurface);
 
 async function apiFetch(
   input: RequestInfo | URL,
@@ -57,6 +76,7 @@ async function apiFetch(
 
 export function DraftEditor({
   bodyText: initialBodyText,
+  children,
   emailConnected,
   id,
   orgSlug,
@@ -64,13 +84,15 @@ export function DraftEditor({
   subject: initialSubject,
 }: {
   bodyText: string;
+  children: ReactNode;
   emailConnected: boolean;
   id: string;
   orgSlug: string;
   smsText: string;
   subject: string;
 }) {
-  const router = useRouter();
+  const [visible, hideOptimistically] = useOptimistic(true);
+  const [, startTransition] = useTransition();
   const [savedDraft, setSavedDraft] = useState({
     subject: initialSubject,
     bodyText: initialBodyText,
@@ -85,6 +107,7 @@ export function DraftEditor({
     null,
   );
   const smsTooLong = smsText.length > MAX_SMS_LENGTH;
+  const motionTransition = useMotionTiming();
 
   function openEditor() {
     setSubject(savedDraft.subject);
@@ -136,7 +159,6 @@ export function DraftEditor({
         setSavedDraft(editedDraft);
         setEditorOpen(false);
         pushToast("success", "Draft changes saved.");
-        router.refresh();
       }
     } catch (error) {
       pushToast(
@@ -150,232 +172,308 @@ export function DraftEditor({
     }
   }
 
-  async function approve() {
+  function approve() {
     if (!emailConnected) return;
 
-    setPending("approve");
-    try {
-      if (!(await persistDraft(savedDraft))) return;
-      await apiFetch(
-        `/api/pupdates/${id}/approve`,
-        {
-          method: "POST",
-          headers: { "X-Organization-Slug": orgSlug },
-        },
-        "Approve and send",
-      );
-      pushToast("success", "Approved and sent.");
-      router.refresh();
-    } catch (error) {
-      pushToast(
-        "error",
-        error instanceof Error
-          ? error.message
-          : "Approve and send could not reach the server.",
-      );
-    } finally {
-      setPending(null);
-    }
+    startTransition(async () => {
+      hideOptimistically(false);
+      setPending("approve");
+      try {
+        if (!(await persistDraft(savedDraft))) return;
+        await apiFetch(
+          `/api/pupdates/${id}/approve`,
+          {
+            method: "POST",
+            headers: { "X-Organization-Slug": orgSlug },
+          },
+          "Approve and send",
+        );
+        await refreshAdminPage();
+        pushToast("success", "Approved and sent.");
+      } catch (error) {
+        pushToast(
+          "error",
+          error instanceof Error
+            ? error.message
+            : "Approve and send could not reach the server.",
+        );
+      } finally {
+        setPending(null);
+      }
+    });
   }
 
-  async function deny() {
-    setPending("deny");
-    try {
-      await apiFetch(
-        `/api/pupdates/${id}`,
-        {
-          method: "DELETE",
-          headers: { "X-Organization-Slug": orgSlug },
-        },
-        "Discard draft",
-      );
-      pushToast("success", "Draft discarded.");
-      router.refresh();
-    } catch (error) {
-      pushToast(
-        "error",
-        error instanceof Error
-          ? error.message
-          : "Discard draft could not reach the server.",
-      );
-    } finally {
-      setPending(null);
-    }
+  function deny() {
+    startTransition(async () => {
+      hideOptimistically(false);
+      setPending("deny");
+      try {
+        await apiFetch(
+          `/api/pupdates/${id}`,
+          {
+            method: "DELETE",
+            headers: { "X-Organization-Slug": orgSlug },
+          },
+          "Discard draft",
+        );
+        await refreshAdminPage();
+        pushToast("success", "Draft discarded.");
+      } catch (error) {
+        pushToast(
+          "error",
+          error instanceof Error
+            ? error.message
+            : "Discard draft could not reach the server.",
+        );
+      } finally {
+        setPending(null);
+      }
+    });
   }
 
   return (
-    <div className={styles.draftControls}>
-      <div className={styles.draftPreview}>
-        <p className={styles.draftSubject}>{savedDraft.subject}</p>
-        <p>{savedDraft.bodyText}</p>
-        <small>SMS: {savedDraft.smsText}</small>
-      </div>
-      <div className={styles.draftActions}>
-        <AdminButton
-          disabled={pending !== null}
-          onClick={openEditor}
-          tone="mustard"
+    <AnimatePresence initial={false} mode="popLayout">
+      {visible ? (
+        <MotionAdminSurface
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          className={styles.queueItem}
+          exit={{ opacity: 0, scale: 0.98, y: -8 }}
+          initial={{ opacity: 0, scale: 0.98, y: 8 }}
+          key={id}
+          layout
+          tone="oatmeal"
+          transition={motionTransition}
         >
-          Edit
-        </AdminButton>
-        <AdminButton
-          aria-describedby={
-            emailConnected ? undefined : EMAIL_CONNECTOR_NOTICE_ID
-          }
-          disabled={pending !== null || !emailConnected}
-          onClick={approve}
-          title={emailConnected ? undefined : emailConnectorBlockedReason()}
-          tone="moss"
-        >
-          {pending === "approve" ? "Saving & sending…" : "Approve & send"}
-        </AdminButton>
-        <AdminButton
-          disabled={pending !== null}
-          onClick={() => setDenyConfirmOpen(true)}
-          tone="brick"
-        >
-          {pending === "deny" ? "Discarding…" : "Deny & discard"}
-        </AdminButton>
-        {/* the themed email as the sponsor will see it, not the plain draft text */}
-        <AdminLink
-          className={styles.previewLink}
-          href={`/api/pupdates/${id}/preview?org=${encodeURIComponent(orgSlug)}`}
-          rel="noreferrer"
-          target="_blank"
-        >
-          Preview email
-        </AdminLink>
-      </div>
+          {children}
+          <div className={styles.draftControls}>
+            <div className={styles.draftPreview}>
+              <p className={styles.draftSubject}>{savedDraft.subject}</p>
+              <p>{savedDraft.bodyText}</p>
+              <small>SMS: {savedDraft.smsText}</small>
+            </div>
+            <div className={styles.draftActions}>
+              <AdminButton
+                disabled={pending !== null}
+                onClick={openEditor}
+                tone="mustard"
+              >
+                Edit
+              </AdminButton>
+              <AdminButton
+                aria-describedby={
+                  emailConnected ? undefined : EMAIL_CONNECTOR_NOTICE_ID
+                }
+                className={styles.approveButton}
+                disabled={pending !== null || !emailConnected}
+                onClick={approve}
+                title={emailConnected ? undefined : emailConnectorBlockedReason()}
+                tone="moss"
+              >
+                {pending === "approve" ? "Saving & sending…" : "Approve & send"}
+              </AdminButton>
+              <AdminButton
+                className={styles.denyButton}
+                disabled={pending !== null}
+                onClick={() => setDenyConfirmOpen(true)}
+                tone="brick"
+              >
+                {pending === "deny" ? "Discarding…" : "Deny & discard"}
+              </AdminButton>
+              {/* the themed email as the sponsor will see it, not the plain draft text */}
+              <AdminLink
+                className={styles.previewLink}
+                href={`/api/pupdates/${id}/preview?org=${encodeURIComponent(orgSlug)}`}
+                rel="noreferrer"
+                target="_blank"
+              >
+                Preview email
+              </AdminLink>
+            </div>
 
-      <Dialog.Root
-        onOpenChange={(open) => {
-          if (!open) closeEditor();
-        }}
-        open={editorOpen}
-      >
-        <Dialog.Portal>
-          <Dialog.Overlay className={styles.dialogOverlay} />
-          <Dialog.Content className={styles.draftDialog}>
-            <AdminSurface className={styles.dialogPanel} tone="oatmeal">
-              <div className={styles.dialogHeader}>
-                <div>
-                  <AdminEyebrow>Draft pupdate</AdminEyebrow>
-                  <Dialog.Title asChild>
-                    <h2>Edit message</h2>
-                  </Dialog.Title>
-                </div>
-                <AdminButton
-                  aria-label="Close editor"
-                  onClick={closeEditor}
-                  tone="oatmeal"
-                >
-                  ✕
-                </AdminButton>
-              </div>
-              <Dialog.Description className={styles.dialogDescription}>
-                Review the email and SMS copy before saving this draft.
-              </Dialog.Description>
-              <div className={styles.draftEditor}>
-                <label htmlFor={`subject-${id}`}>Subject</label>
-                <AdminField>
-                  <input
-                    autoFocus
-                    id={`subject-${id}`}
-                    onChange={(event) => setSubject(event.target.value)}
-                    required
-                    value={subject}
-                  />
-                </AdminField>
-                <label htmlFor={`email-${id}`}>Email body</label>
-                <AdminField>
-                  <textarea
-                    id={`email-${id}`}
-                    onChange={(event) => setBodyText(event.target.value)}
-                    required
-                    rows={7}
-                    value={bodyText}
-                  />
-                </AdminField>
-                <div className={styles.smsLabelRow}>
-                  <label htmlFor={`sms-${id}`}>SMS text</label>
-                  <span className={smsTooLong ? styles.smsError : undefined}>
-                    {smsText.length}/{MAX_SMS_LENGTH}
-                  </span>
-                </div>
-                <AdminField>
-                  <textarea
-                    aria-describedby={
-                      smsTooLong ? `sms-error-${id}` : undefined
-                    }
-                    aria-invalid={smsTooLong}
-                    id={`sms-${id}`}
-                    onChange={(event) => setSmsText(event.target.value)}
-                    required
-                    rows={4}
-                    value={smsText}
-                  />
-                </AdminField>
-                {smsTooLong && (
-                  <p
-                    className={styles.smsError}
-                    id={`sms-error-${id}`}
-                    role="alert"
-                  >
-                    Shorten the SMS by {smsText.length - MAX_SMS_LENGTH}{" "}
-                    characters before saving.
-                  </p>
-                )}
-                <div className={styles.modalActions}>
-                  <AdminButton
-                    disabled={pending === "save"}
-                    onClick={closeEditor}
-                    tone="oatmeal"
-                  >
-                    Cancel
-                  </AdminButton>
-                  <AdminButton
-                    disabled={pending !== null || smsTooLong}
-                    onClick={save}
-                    tone="mustard"
-                  >
-                    {pending === "save" ? "Saving…" : "Save changes"}
-                  </AdminButton>
-                </div>
-              </div>
-            </AdminSurface>
-          </Dialog.Content>
-        </Dialog.Portal>
-      </Dialog.Root>
+            <Dialog.Root
+              onOpenChange={(open) => {
+                if (!open) closeEditor();
+              }}
+              open={editorOpen}
+            >
+              <Dialog.Portal forceMount>
+                <AnimatePresence>
+                  {editorOpen ? (
+                    <Dialog.Overlay asChild forceMount>
+                      <motion.div
+                        animate={{ opacity: 1 }}
+                        className={styles.dialogOverlay}
+                        exit={{ opacity: 0 }}
+                        initial={{ opacity: 0 }}
+                        transition={motionTransition}
+                      />
+                    </Dialog.Overlay>
+                  ) : null}
+                </AnimatePresence>
+                <AnimatePresence>
+                  {editorOpen ? (
+                    <Dialog.Content asChild forceMount>
+                      <motion.div
+                        animate={{ opacity: 1, scale: 1, x: "-50%", y: "-50%" }}
+                        className={styles.draftDialog}
+                        exit={{ opacity: 0, scale: 0.97, x: "-50%", y: "-48%" }}
+                        initial={{ opacity: 0, scale: 0.97, x: "-50%", y: "-48%" }}
+                        transition={motionTransition}
+                      >
+                        <AdminSurface className={styles.dialogPanel} tone="oatmeal">
+                          <div className={styles.dialogHeader}>
+                            <div>
+                              <AdminEyebrow>Draft pupdate</AdminEyebrow>
+                              <Dialog.Title asChild>
+                                <h2>Edit message</h2>
+                              </Dialog.Title>
+                            </div>
+                            <AdminButton
+                              aria-label="Close editor"
+                              onClick={closeEditor}
+                              tone="oatmeal"
+                            >
+                              ✕
+                            </AdminButton>
+                          </div>
+                          <Dialog.Description className={styles.dialogDescription}>
+                            Review the email and SMS copy before saving this draft.
+                          </Dialog.Description>
+                          <div className={styles.draftEditor}>
+                            <label htmlFor={`subject-${id}`}>Subject</label>
+                            <AdminField>
+                              <input
+                                autoFocus
+                                id={`subject-${id}`}
+                                onChange={(event) => setSubject(event.target.value)}
+                                required
+                                value={subject}
+                              />
+                            </AdminField>
+                            <label htmlFor={`email-${id}`}>Email body</label>
+                            <AdminField>
+                              <textarea
+                                id={`email-${id}`}
+                                onChange={(event) => setBodyText(event.target.value)}
+                                required
+                                rows={7}
+                                value={bodyText}
+                              />
+                            </AdminField>
+                            <div className={styles.smsLabelRow}>
+                              <label htmlFor={`sms-${id}`}>SMS text</label>
+                              <span className={smsTooLong ? styles.smsError : undefined}>
+                                {smsText.length}/{MAX_SMS_LENGTH}
+                              </span>
+                            </div>
+                            <AdminField>
+                              <textarea
+                                aria-describedby={
+                                  smsTooLong ? `sms-error-${id}` : undefined
+                                }
+                                aria-invalid={smsTooLong}
+                                id={`sms-${id}`}
+                                onChange={(event) => setSmsText(event.target.value)}
+                                required
+                                rows={4}
+                                value={smsText}
+                              />
+                            </AdminField>
+                            <MotionReveal
+                              className={styles.inlineReveal}
+                              show={smsTooLong}
+                            >
+                              <p
+                                className={styles.smsError}
+                                id={`sms-error-${id}`}
+                                role="alert"
+                              >
+                                Shorten the SMS by {smsText.length - MAX_SMS_LENGTH}{" "}
+                                characters before saving.
+                              </p>
+                            </MotionReveal>
+                            <div className={styles.modalActions}>
+                              <AdminButton
+                                disabled={pending === "save"}
+                                onClick={closeEditor}
+                                tone="oatmeal"
+                              >
+                                Cancel
+                              </AdminButton>
+                              <AdminButton
+                                className={styles.saveDraftButton}
+                                disabled={pending !== null || smsTooLong}
+                                onClick={save}
+                                tone="mustard"
+                              >
+                                {pending === "save" ? "Saving…" : "Save changes"}
+                              </AdminButton>
+                            </div>
+                          </div>
+                        </AdminSurface>
+                      </motion.div>
+                    </Dialog.Content>
+                  ) : null}
+                </AnimatePresence>
+              </Dialog.Portal>
+            </Dialog.Root>
 
-      <AlertDialog.Root
-        onOpenChange={setDenyConfirmOpen}
-        open={denyConfirmOpen}
-      >
-        <AlertDialog.Portal>
-          <AlertDialog.Overlay className={styles.dialogOverlay} />
-          <AlertDialog.Content className={styles.alertDialog}>
-            <AdminSurface className={styles.dialogPanel} tone="oatmeal">
-              <AlertDialog.Title asChild>
-                <h2>Discard this draft?</h2>
-              </AlertDialog.Title>
-              <AlertDialog.Description className={styles.dialogDescription}>
-                This cannot be undone.
-              </AlertDialog.Description>
-              <div className={styles.modalActions}>
-                <AlertDialog.Cancel asChild>
-                  <AdminButton tone="oatmeal">Cancel</AdminButton>
-                </AlertDialog.Cancel>
-                <AlertDialog.Action asChild>
-                  <AdminButton onClick={deny} tone="brick">
-                    Discard draft
-                  </AdminButton>
-                </AlertDialog.Action>
-              </div>
-            </AdminSurface>
-          </AlertDialog.Content>
-        </AlertDialog.Portal>
-      </AlertDialog.Root>
-    </div>
+            <AlertDialog.Root
+              onOpenChange={setDenyConfirmOpen}
+              open={denyConfirmOpen}
+            >
+              <AlertDialog.Portal forceMount>
+                <AnimatePresence>
+                  {denyConfirmOpen ? (
+                    <AlertDialog.Overlay asChild forceMount>
+                      <motion.div
+                        animate={{ opacity: 1 }}
+                        className={styles.dialogOverlay}
+                        exit={{ opacity: 0 }}
+                        initial={{ opacity: 0 }}
+                        transition={motionTransition}
+                      />
+                    </AlertDialog.Overlay>
+                  ) : null}
+                </AnimatePresence>
+                <AnimatePresence>
+                  {denyConfirmOpen ? (
+                    <AlertDialog.Content asChild forceMount>
+                      <motion.div
+                        animate={{ opacity: 1, scale: 1, x: "-50%", y: "-50%" }}
+                        className={styles.alertDialog}
+                        exit={{ opacity: 0, scale: 0.96, x: "-50%", y: "-48%" }}
+                        initial={{ opacity: 0, scale: 0.96, x: "-50%", y: "-48%" }}
+                        transition={motionTransition}
+                      >
+                        <AdminSurface className={styles.dialogPanel} tone="oatmeal">
+                          <AlertDialog.Title asChild>
+                            <h2>Discard this draft?</h2>
+                          </AlertDialog.Title>
+                          <AlertDialog.Description className={styles.dialogDescription}>
+                            This cannot be undone.
+                          </AlertDialog.Description>
+                          <div className={styles.modalActions}>
+                            <AlertDialog.Cancel asChild>
+                              <AdminButton tone="oatmeal">Cancel</AdminButton>
+                            </AlertDialog.Cancel>
+                            <AlertDialog.Action asChild>
+                              <AdminButton onClick={deny} tone="brick">
+                                Discard draft
+                              </AdminButton>
+                            </AlertDialog.Action>
+                          </div>
+                        </AdminSurface>
+                      </motion.div>
+                    </AlertDialog.Content>
+                  ) : null}
+                </AnimatePresence>
+              </AlertDialog.Portal>
+            </AlertDialog.Root>
+          </div>
+        </MotionAdminSurface>
+      ) : null}
+    </AnimatePresence>
   );
 }
 
@@ -388,7 +486,6 @@ export function ComposeButton({
   residentId: string;
   residentName: string;
 }) {
-  const router = useRouter();
   const [pending, setPending] = useState(false);
 
   async function compose() {
@@ -406,8 +503,8 @@ export function ComposeButton({
         },
         "Compose pupdate",
       );
+      await refreshAdminPage();
       pushToast("success", `${residentName}'s draft is ready for review.`);
-      router.refresh();
     } catch (error) {
       pushToast(
         "error",
@@ -422,7 +519,12 @@ export function ComposeButton({
 
   return (
     <div className={styles.actionStack}>
-      <AdminButton disabled={pending} onClick={compose} tone="denim">
+      <AdminButton
+        className={styles.composeButton}
+        disabled={pending}
+        onClick={compose}
+        tone="denim"
+      >
         {pending ? "Composing…" : "Compose pupdate"}
       </AdminButton>
     </div>
@@ -575,6 +677,7 @@ export function RosterSyncSettings({
       </AdminField>
       <div className={styles.rosterActions}>
         <AdminButton
+          className={styles.saveSourceButton}
           disabled={saving || syncPending}
           tone="denim"
           type="submit"
@@ -582,6 +685,7 @@ export function RosterSyncSettings({
           {saving ? "Saving…" : "Save source"}
         </AdminButton>
         <AdminButton
+          className={styles.syncButton}
           disabled={saving || syncPending || sourceDirty}
           onClick={() => syncMutation.mutate()}
           title={
@@ -591,17 +695,17 @@ export function RosterSyncSettings({
         >
           {buttonLabel}
         </AdminButton>
-        {label ? (
+        <MotionReveal className={styles.statusReveal} show={label !== null}>
           <span className={styles.syncStatus} role="status">
             {label}
           </span>
-        ) : null}
+        </MotionReveal>
       </div>
-      {sourceDirty ? (
+      <MotionReveal className={styles.inlineReveal} show={sourceDirty}>
         <p className={styles.unsavedSource} role="status">
           Save the source URL before syncing so the roster uses this address.
         </p>
-      ) : null}
+      </MotionReveal>
     </form>
   );
 }
@@ -624,6 +728,7 @@ export function EmailConnectorSettings({
     "gmail" | "microsoft" | "smtp" | "disconnect" | null
   >(null);
   const [smtpOpen, setSmtpOpen] = useState(false);
+  const motionTransition = useMotionTiming();
 
   async function connectOAuth(provider: "gmail" | "microsoft") {
     setPending(provider);
@@ -745,136 +850,181 @@ export function EmailConnectorSettings({
               ? `${providerLabel}: ${connector.fromEmail}`
               : "No verified connector"}
           </AdminBadge>
-          {connector.connected && (
-            <AdminButton
-              disabled={pending !== null}
-              onClick={disconnect}
-              tone="brick"
-            >
-              {pending === "disconnect" ? "Disconnecting…" : "Disconnect"}
-            </AdminButton>
-          )}
+          <AnimatePresence initial={false}>
+            {connector.connected ? (
+              <motion.div
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.96 }}
+                initial={{ opacity: 0, scale: 0.96 }}
+                transition={motionTransition}
+              >
+                <AdminButton
+                  className={styles.disconnectButton}
+                  disabled={pending !== null}
+                  onClick={disconnect}
+                  tone="brick"
+                >
+                  {pending === "disconnect" ? "Disconnecting…" : "Disconnect"}
+                </AdminButton>
+              </motion.div>
+            ) : null}
+          </AnimatePresence>
         </div>
       </div>
-      {!connector.connected && (
-        <div className={styles.oauthChoices}>
-          <AdminButton
-            disabled={pending !== null}
-            onClick={() => connectOAuth("gmail")}
-            tone="denim"
+      <AnimatePresence initial={false}>
+        {!connector.connected ? (
+          <motion.div
+            animate={{ height: "auto", opacity: 1, y: 0 }}
+            className={styles.oauthChoices}
+            exit={{ height: 0, opacity: 0, y: -8 }}
+            initial={{ height: 0, opacity: 0, y: -8 }}
+            transition={motionTransition}
           >
-            {pending === "gmail" ? "Opening Gmail…" : "Connect Gmail"}
-          </AdminButton>
-          <AdminButton
-            disabled={pending !== null}
-            onClick={() => connectOAuth("microsoft")}
-            tone="denim"
-          >
-            {pending === "microsoft"
-              ? "Opening Microsoft…"
-              : "Connect Microsoft 365"}
-          </AdminButton>
-          <AdminButton
-            disabled={pending !== null}
-            onClick={() => setSmtpOpen(true)}
-            tone="denim"
-          >
-            Connect SMTP with password
-          </AdminButton>
-        </div>
-      )}
+            <AdminButton
+              className={styles.gmailButton}
+              disabled={pending !== null}
+              onClick={() => connectOAuth("gmail")}
+              tone="denim"
+            >
+              {pending === "gmail" ? "Opening Gmail…" : "Connect Gmail"}
+            </AdminButton>
+            <AdminButton
+              className={styles.microsoftButton}
+              disabled={pending !== null}
+              onClick={() => connectOAuth("microsoft")}
+              tone="denim"
+            >
+              {pending === "microsoft"
+                ? "Opening Microsoft…"
+                : "Connect Microsoft 365"}
+            </AdminButton>
+            <AdminButton
+              disabled={pending !== null}
+              onClick={() => setSmtpOpen(true)}
+              tone="denim"
+            >
+              Connect SMTP with password
+            </AdminButton>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
       <Dialog.Root onOpenChange={setSmtpOpen} open={smtpOpen}>
-        <Dialog.Portal>
-          <Dialog.Overlay className={styles.dialogOverlay} />
-          <Dialog.Content className={styles.connectorDialog}>
-            <AdminSurface className={styles.dialogPanel} tone="oatmeal">
-              <div className={styles.dialogHeader}>
-                <div>
-                  <AdminEyebrow>Organization email</AdminEyebrow>
-                  <Dialog.Title asChild>
-                    <h2>Connect SMTP with password</h2>
-                  </Dialog.Title>
-                </div>
-                <AdminButton
-                  aria-label="Close SMTP connection form"
-                  onClick={() => setSmtpOpen(false)}
-                  tone="oatmeal"
+        <Dialog.Portal forceMount>
+          <AnimatePresence>
+            {smtpOpen ? (
+              <Dialog.Overlay asChild forceMount>
+                <motion.div
+                  animate={{ opacity: 1 }}
+                  className={styles.dialogOverlay}
+                  exit={{ opacity: 0 }}
+                  initial={{ opacity: 0 }}
+                  transition={motionTransition}
+                />
+              </Dialog.Overlay>
+            ) : null}
+          </AnimatePresence>
+          <AnimatePresence>
+            {smtpOpen ? (
+              <Dialog.Content asChild forceMount>
+                <motion.div
+                  animate={{ opacity: 1, scale: 1, x: "-50%", y: "-50%" }}
+                  className={styles.connectorDialog}
+                  exit={{ opacity: 0, scale: 0.97, x: "-50%", y: "-48%" }}
+                  initial={{ opacity: 0, scale: 0.97, x: "-50%", y: "-48%" }}
+                  transition={motionTransition}
                 >
-                  ✕
-                </AdminButton>
-              </div>
-              <Dialog.Description className={styles.dialogDescription}>
-                Enter the credentials this organization will use to send email.
-              </Dialog.Description>
-              <form className={styles.smtpForm} onSubmit={saveSmtp}>
-                <label htmlFor="smtpHost">Host</label>
-                <AdminField>
-                  <input autoFocus id="smtpHost" name="smtpHost" required />
-                </AdminField>
-                <label htmlFor="smtpPort">Port</label>
-                <AdminField>
-                  <input
-                    defaultValue="587"
-                    id="smtpPort"
-                    max="65535"
-                    min="1"
-                    name="smtpPort"
-                    required
-                    type="number"
-                  />
-                </AdminField>
-                <label htmlFor="smtpUser">Username</label>
-                <AdminField>
-                  <input
-                    autoComplete="username"
-                    id="smtpUser"
-                    name="smtpUser"
-                    required
-                  />
-                </AdminField>
-                <label htmlFor="smtpPassword">Password</label>
-                <AdminField>
-                  <input
-                    autoComplete="new-password"
-                    id="smtpPassword"
-                    name="smtpPassword"
-                    required
-                    type="password"
-                  />
-                </AdminField>
-                <label htmlFor="smtpFromEmail">From email</label>
-                <AdminField>
-                  <input
-                    id="smtpFromEmail"
-                    name="smtpFromEmail"
-                    required
-                    type="email"
-                  />
-                </AdminField>
-                <label className={styles.smtpSecure} htmlFor="smtpSecure">
-                  <input id="smtpSecure" name="smtpSecure" type="checkbox" />{" "}
-                  TLS from connection start (usually port 465)
-                </label>
-                <div className={styles.modalActions}>
-                  <AdminButton
-                    disabled={pending === "smtp"}
-                    onClick={() => setSmtpOpen(false)}
-                    tone="oatmeal"
-                    type="button"
-                  >
-                    Cancel
-                  </AdminButton>
-                  <AdminButton
-                    disabled={pending !== null}
-                    tone="mustard"
-                    type="submit"
-                  >
-                    {pending === "smtp" ? "Verifying…" : "Verify & use SMTP"}
-                  </AdminButton>
-                </div>
-              </form>
-            </AdminSurface>
-          </Dialog.Content>
+                  <AdminSurface className={styles.dialogPanel} tone="oatmeal">
+                    <div className={styles.dialogHeader}>
+                      <div>
+                        <AdminEyebrow>Organization email</AdminEyebrow>
+                        <Dialog.Title asChild>
+                          <h2>Connect SMTP with password</h2>
+                        </Dialog.Title>
+                      </div>
+                      <AdminButton
+                        aria-label="Close SMTP connection form"
+                        onClick={() => setSmtpOpen(false)}
+                        tone="oatmeal"
+                      >
+                        ✕
+                      </AdminButton>
+                    </div>
+                    <Dialog.Description className={styles.dialogDescription}>
+                      Enter the credentials this organization will use to send email.
+                    </Dialog.Description>
+                    <form className={styles.smtpForm} onSubmit={saveSmtp}>
+                      <label htmlFor="smtpHost">Host</label>
+                      <AdminField>
+                        <input autoFocus id="smtpHost" name="smtpHost" required />
+                      </AdminField>
+                      <label htmlFor="smtpPort">Port</label>
+                      <AdminField>
+                        <input
+                          defaultValue="587"
+                          id="smtpPort"
+                          max="65535"
+                          min="1"
+                          name="smtpPort"
+                          required
+                          type="number"
+                        />
+                      </AdminField>
+                      <label htmlFor="smtpUser">Username</label>
+                      <AdminField>
+                        <input
+                          autoComplete="username"
+                          id="smtpUser"
+                          name="smtpUser"
+                          required
+                        />
+                      </AdminField>
+                      <label htmlFor="smtpPassword">Password</label>
+                      <AdminField>
+                        <input
+                          autoComplete="new-password"
+                          id="smtpPassword"
+                          name="smtpPassword"
+                          required
+                          type="password"
+                        />
+                      </AdminField>
+                      <label htmlFor="smtpFromEmail">From email</label>
+                      <AdminField>
+                        <input
+                          id="smtpFromEmail"
+                          name="smtpFromEmail"
+                          required
+                          type="email"
+                        />
+                      </AdminField>
+                      <label className={styles.smtpSecure} htmlFor="smtpSecure">
+                        <input id="smtpSecure" name="smtpSecure" type="checkbox" />{" "}
+                        TLS from connection start (usually port 465)
+                      </label>
+                      <div className={styles.modalActions}>
+                        <AdminButton
+                          disabled={pending === "smtp"}
+                          onClick={() => setSmtpOpen(false)}
+                          tone="oatmeal"
+                          type="button"
+                        >
+                          Cancel
+                        </AdminButton>
+                        <AdminButton
+                          className={styles.smtpButton}
+                          disabled={pending !== null}
+                          tone="mustard"
+                          type="submit"
+                        >
+                          {pending === "smtp" ? "Verifying…" : "Verify & use SMTP"}
+                        </AdminButton>
+                      </div>
+                    </form>
+                  </AdminSurface>
+                </motion.div>
+              </Dialog.Content>
+            ) : null}
+          </AnimatePresence>
         </Dialog.Portal>
       </Dialog.Root>
     </AdminSurface>
@@ -915,7 +1065,12 @@ export function PostscriptSettingsForm({
         />
       </AdminField>
       <div className={styles.saveRow}>
-        <AdminButton disabled={pending} tone="mustard" type="submit">
+        <AdminButton
+          className={styles.postscriptButton}
+          disabled={pending}
+          tone="mustard"
+          type="submit"
+        >
           {pending ? "Pinning…" : "Save & pin 📌"}
         </AdminButton>
       </div>
