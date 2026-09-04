@@ -43,6 +43,7 @@ export default async function AdminPage({ params }: AdminPageProps) {
     redirect(access.authenticated ? "/staff/organizations" : `/staff/sign-in?next=${next}`);
   }
   const { context } = access;
+  const canManageStaffArea = context.role === "owner" || context.role === "admin";
 
   const [
     drafts,
@@ -88,13 +89,17 @@ export default async function AdminPage({ params }: AdminPageProps) {
           _count: { select: { volunteerNotes: true } },
         },
       }),
-      prisma.sponsorship.count({ where: { orgId: context.orgId, status: "active" } }),
-      prisma.resident.count({
-        where: {
-          orgId: context.orgId,
-          sponsorships: { some: { orgId: context.orgId, status: "active" } },
-        },
-      }),
+      canManageStaffArea
+        ? prisma.sponsorship.count({ where: { orgId: context.orgId, status: "active" } })
+        : Promise.resolve(0),
+      canManageStaffArea
+        ? prisma.resident.count({
+            where: {
+              orgId: context.orgId,
+              sponsorships: { some: { orgId: context.orgId, status: "active" } },
+            },
+          })
+        : Promise.resolve(0),
       getEmailConnectorStatus(context.orgId),
     ]);
 
@@ -105,12 +110,16 @@ export default async function AdminPage({ params }: AdminPageProps) {
       <AdminHeader
         actions={
           <>
-            <AdminLink href={`/${orgSlug}/admin/members`} tone="oatmeal">
-              Members
-            </AdminLink>
-            <AdminLink href={`/${orgSlug}/admin/settings`} tone="oatmeal">
-              Settings
-            </AdminLink>
+            {canManageStaffArea && (
+              <>
+                <AdminLink href={`/${orgSlug}/admin/members`} tone="oatmeal">
+                  Members
+                </AdminLink>
+                <AdminLink href={`/${orgSlug}/admin/settings`} tone="oatmeal">
+                  Settings
+                </AdminLink>
+              </>
+            )}
             <SignOutButton />
           </>
         }
@@ -120,40 +129,42 @@ export default async function AdminPage({ params }: AdminPageProps) {
         title="Staff room"
       />
 
-      <section aria-label="Program statistics" className={styles.stats}>
-        <AdminSurface className={styles.stat} tone="mustard">
-          <strong>${monthlyRecurring.toLocaleString()}</strong>
-          <span>a month, recurring</span>
-          <small>active sponsorships × $25</small>
-        </AdminSurface>
-        <Link
-          aria-label={`View active sponsors (${activeSponsorCount} active)`}
-          className={styles.statLink}
-          href={`/${orgSlug}/admin/sponsors`}
-        >
-          <AdminSurface className={styles.stat} tone="moss">
-            <strong>{activeSponsorCount}</strong>
-            <span>active sponsors</span>
-            <small>ready for the next pupdate</small>
+      {canManageStaffArea && (
+        <section aria-label="Program statistics" className={styles.stats}>
+          <AdminSurface className={styles.stat} tone="mustard">
+            <strong>${monthlyRecurring.toLocaleString()}</strong>
+            <span>a month, recurring</span>
+            <small>active sponsorships × $25</small>
           </AdminSurface>
-        </Link>
-        <Link
-          aria-label={`View companions covered (${sponsoredCompanionCount} with active sponsors)`}
-          className={styles.statLink}
-          href={`/${orgSlug}/admin/companions-covered`}
-        >
-          <AdminSurface className={styles.stat} tone="denim">
-            <strong>{sponsoredCompanionCount}</strong>
-            <span>companions covered</span>
-            <small>with at least one active sponsor</small>
+          <Link
+            aria-label={`View active sponsors (${activeSponsorCount} active)`}
+            className={styles.statLink}
+            href={`/${orgSlug}/admin/sponsors`}
+          >
+            <AdminSurface className={styles.stat} tone="moss">
+              <strong>{activeSponsorCount}</strong>
+              <span>active sponsors</span>
+              <small>ready for the next pupdate</small>
+            </AdminSurface>
+          </Link>
+          <Link
+            aria-label={`View companions covered (${sponsoredCompanionCount} with active sponsors)`}
+            className={styles.statLink}
+            href={`/${orgSlug}/admin/companions-covered`}
+          >
+            <AdminSurface className={styles.stat} tone="denim">
+              <strong>{sponsoredCompanionCount}</strong>
+              <span>companions covered</span>
+              <small>with at least one active sponsor</small>
+            </AdminSurface>
+          </Link>
+          <AdminSurface className={styles.stat} tone="brick">
+            <strong>92%</strong>
+            <span>updates opened</span>
+            <small>people love hearing from their companions</small>
           </AdminSurface>
-        </Link>
-        <AdminSurface className={styles.stat} tone="brick">
-          <strong>92%</strong>
-          <span>updates opened</span>
-          <small>people love hearing from their companions</small>
-        </AdminSurface>
-      </section>
+        </section>
+      )}
 
       <section className={styles.composeSection}>
         <AdminSectionHeader
@@ -213,9 +224,11 @@ export default async function AdminPage({ params }: AdminPageProps) {
             <span aria-hidden="true">✉️</span>
             <span>
               {emailConnectorBlockedReason()} Approving is on hold until then.{" "}
-              <Link href={`/${orgSlug}/admin/settings#${EMAIL_CONNECTOR_NOTICE_ID}`}>
-                Open email settings.
-              </Link>
+              {canManageStaffArea && (
+                <Link href={`/${orgSlug}/admin/settings#${EMAIL_CONNECTOR_NOTICE_ID}`}>
+                  Open email settings.
+                </Link>
+              )}
             </span>
           </p>
         )}
