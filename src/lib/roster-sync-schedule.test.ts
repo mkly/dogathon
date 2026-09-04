@@ -3,10 +3,18 @@ import test from "node:test";
 
 import { createRosterSyncScheduleHandler } from "./roster-sync-schedule.ts";
 import type { RosterSyncJobView } from "./roster-sync-client.ts";
+import { parseEnvironment } from "./env.ts";
 
 const request = new Request("https://app.example/api/jobs/schedule-roster-sync", {
   headers: { authorization: "Bearer scheduler-secret" },
 });
+
+function schedulerEnvironment(overrides: Record<string, string | undefined> = {}) {
+  return parseEnvironment({
+    DATABASE_URL: "postgresql://dogathon:dogathon@localhost:5432/dogathon",
+    ...overrides,
+  });
+}
 
 function queuedJob(orgId: string): RosterSyncJobView {
   return {
@@ -22,7 +30,7 @@ function queuedJob(orgId: string): RosterSyncJobView {
 test("the schedule route requires the same bearer secret as the drain route", async () => {
   let listed = false;
   const handler = createRosterSyncScheduleHandler({
-    env: {},
+    env: schedulerEnvironment(),
     listOrganizations: async () => {
       listed = true;
       return [];
@@ -38,10 +46,10 @@ test("the schedule route requires the same bearer secret as the drain route", as
 test("eligible organizations are staggered and existing work is skipped", async () => {
   const inputs: Array<{ orgId: string; trigger: "scheduled"; startAfter: Date }> = [];
   const handler = createRosterSyncScheduleHandler({
-    env: {
+    env: schedulerEnvironment({
       CRON_SECRET: "scheduler-secret",
       ROSTER_SYNC_SCHEDULE_STAGGER_MS: "60000",
-    },
+    }),
     now: () => new Date("2026-09-02T08:00:00.000Z"),
     listOrganizations: async () => [
       { orgId: "org-1" },
@@ -75,7 +83,7 @@ test("eligible organizations are staggered and existing work is skipped", async 
 test("one enqueue failure does not prevent later organizations", async () => {
   const attempted: string[] = [];
   const handler = createRosterSyncScheduleHandler({
-    env: { ROSTER_SYNC_DRAIN_SECRET: "scheduler-secret" },
+    env: schedulerEnvironment({ ROSTER_SYNC_DRAIN_SECRET: "scheduler-secret" }),
     listOrganizations: async () => [
       { orgId: "org-1" },
       { orgId: "org-2" },

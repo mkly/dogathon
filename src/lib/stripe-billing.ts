@@ -156,8 +156,8 @@ const prismaBillingStore: BillingStore = {
 let stripeClient: Stripe | undefined;
 
 function stripe() {
-  const apiKey = env.STRIPE_SECRET_KEY?.trim();
-  if (!apiKey) throw new Error("STRIPE_SECRET_KEY is required for billing");
+  if (!env.features.stripe) throw new Error("STRIPE_SECRET_KEY is required for billing");
+  const apiKey = env.STRIPE_SECRET_KEY!;
   stripeClient ??= new Stripe(apiKey, { httpClient: Stripe.createFetchHttpClient() });
   return stripeClient;
 }

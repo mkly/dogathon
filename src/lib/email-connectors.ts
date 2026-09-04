@@ -49,8 +49,8 @@ export type SmtpConfiguration = {
   host: string;
   port: number;
   secure: boolean;
-  user: string;
-  password: string;
+  user?: string;
+  password?: string;
   fromEmail: string;
 };
 
@@ -76,7 +76,7 @@ export type TransportFactory = (options: {
   host: string;
   port: number;
   secure: boolean;
-  auth: { user: string; pass: string };
+  auth?: { user: string; pass: string };
 }) => MailTransport;
 
 const GMAIL_SCOPE = "openid email https://www.googleapis.com/auth/gmail.send";
@@ -88,6 +88,9 @@ const textEncoder = new TextEncoder();
 const textDecoder = new TextDecoder();
 
 function encryptionKey(): Uint8Array {
+  if (!env.features.connectorEncryption) {
+    throw new Error("EMAIL_CONNECTOR_ENCRYPTION_KEY is required");
+  }
   const encoded = env.EMAIL_CONNECTOR_ENCRYPTION_KEY;
   if (!encoded) throw new Error("EMAIL_CONNECTOR_ENCRYPTION_KEY is required");
 
@@ -96,11 +99,6 @@ function encryptionKey(): Uint8Array {
     throw new Error("EMAIL_CONNECTOR_ENCRYPTION_KEY must be 32 random bytes encoded as base64");
   }
   return key;
-}
-
-function hasEncryptionKey(): boolean {
-  const encoded = env.EMAIL_CONNECTOR_ENCRYPTION_KEY;
-  return Boolean(encoded) && Buffer.from(encoded!, "base64").length === 32;
 }
 
 export async function encryptEmailSecret(value: string): Promise<string> {
@@ -157,6 +155,9 @@ function microsoftTenant(): string {
 
 function oauthCredentials(provider: Exclude<EmailConnectorKind, "smtp">) {
   if (provider === "gmail") {
+    if (!env.features.googleOAuth) {
+      throw new Error("GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET are required");
+    }
     const clientId = env.GOOGLE_CLIENT_ID;
     const clientSecret = env.GOOGLE_CLIENT_SECRET;
     if (!clientId || !clientSecret) {
@@ -165,18 +166,15 @@ function oauthCredentials(provider: Exclude<EmailConnectorKind, "smtp">) {
     return { clientId, clientSecret };
   }
 
+  if (!env.features.microsoftOAuth) {
+    throw new Error("MICROSOFT_CLIENT_ID and MICROSOFT_CLIENT_SECRET are required");
+  }
   const clientId = env.MICROSOFT_CLIENT_ID;
   const clientSecret = env.MICROSOFT_CLIENT_SECRET;
   if (!clientId || !clientSecret) {
     throw new Error("MICROSOFT_CLIENT_ID and MICROSOFT_CLIENT_SECRET are required");
   }
   return { clientId, clientSecret };
-}
-
-function hasOAuthCredentials(provider: Exclude<EmailConnectorKind, "smtp">): boolean {
-  return provider === "gmail"
-    ? Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET)
-    : Boolean(env.MICROSOFT_CLIENT_ID && env.MICROSOFT_CLIENT_SECRET);
 }
 
 /**
@@ -433,7 +431,9 @@ function smtpTransport(config: SmtpConfiguration, factory: TransportFactory): Ma
     host: config.host,
     port: config.port,
     secure: config.secure,
-    auth: { user: config.user, pass: config.password },
+    ...(config.user && config.password
+      ? { auth: { user: config.user, pass: config.password } }
+      : {}),
   });
 }
 
@@ -474,7 +474,7 @@ export async function sendEmailWithConnector(
   validateEmailHeaders(input, connector.fromEmail);
 
   const fetcher = dependencies.fetch ?? fetch;
-  if (!hasEncryptionKey()) return describeSend(connector, input);
+  if (!env.features.connectorEncryption) return describeSend(connector, input);
 
   if (connector.type === "smtp") {
     if (!smtpCredentialsPresent(connector)) return describeSend(connector, input);
@@ -483,7 +483,10 @@ export async function sendEmailWithConnector(
     return null;
   }
 
-  if (!hasOAuthCredentials(connector.type) || !connector.refreshTokenEncrypted) {
+  const hasOAuthCredentials = connector.type === "gmail"
+    ? env.features.googleOAuth
+    : env.features.microsoftOAuth;
+  if (!hasOAuthCredentials || !connector.refreshTokenEncrypted) {
     return describeSend(connector, input);
   }
 

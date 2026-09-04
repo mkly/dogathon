@@ -18,6 +18,7 @@ import {
 import { env } from "./env.ts";
 
 env.STRIPE_SECRET_KEY = "sk_test_fixture";
+env.features = Object.freeze({ ...env.features, stripe: true });
 
 const stripeApi = "https://api.stripe.com";
 

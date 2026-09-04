@@ -5,6 +5,7 @@ import type { ClaimedRosterSyncJob } from "./roster-sync-queue.ts";
 import type { RosterSyncJobView } from "./roster-sync-client.ts";
 import type { SyncSummary } from "./roster-sync.ts";
 import { RosterSyncRefusal } from "./roster-sync.ts";
+import { parseEnvironment } from "./env.ts";
 import {
   createRosterSyncDrainHandler,
   createRosterSyncDrainer,
@@ -59,16 +60,23 @@ function dependencies(overrides: Partial<Parameters<typeof createRosterSyncDrain
   };
 }
 
+function schedulerEnvironment(overrides: Record<string, string | undefined> = {}) {
+  return parseEnvironment({
+    DATABASE_URL: "postgresql://dogathon:dogathon@localhost:5432/dogathon",
+    ...overrides,
+  });
+}
+
 test("the drain route refuses missing and incorrect secrets without fetching work", async () => {
   let calls = 0;
   const drain = async () => {
     calls += 1;
     return { drained: false as const };
   };
-  const missingSecret = createRosterSyncDrainHandler({ drain, env: {} });
+  const missingSecret = createRosterSyncDrainHandler({ drain, env: schedulerEnvironment() });
   const configured = createRosterSyncDrainHandler({
     drain,
-    env: { ROSTER_SYNC_DRAIN_SECRET: "scheduler-secret" },
+    env: schedulerEnvironment({ ROSTER_SYNC_DRAIN_SECRET: "scheduler-secret" }),
   });
 
   const missingResponse = await missingSecret(new Request("https://app.example/api/jobs/drain", {
@@ -96,7 +104,7 @@ test("a correct secret fetches and explicitly completes one job", async () => {
   }));
   const handler = createRosterSyncDrainHandler({
     drain,
-    env: { ROSTER_SYNC_DRAIN_SECRET: "scheduler-secret" },
+    env: schedulerEnvironment({ ROSTER_SYNC_DRAIN_SECRET: "scheduler-secret" }),
   });
 
   const response = await handler(new Request("https://app.example/api/jobs/drain", {

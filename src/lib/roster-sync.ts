@@ -504,8 +504,11 @@ export async function requestFirecrawl(
   input: Record<string, unknown>,
   options: FirecrawlRequestOptions = {},
 ): Promise<unknown> {
-  const apiKey = (options.apiKey ?? env.FIRECRAWL_API_KEY)?.trim();
-  if (!apiKey) throw new Error("FIRECRAWL_API_KEY is required to fetch a live roster");
+  const apiKey = options.apiKey?.trim() ?? env.FIRECRAWL_API_KEY;
+  const enabled = options.apiKey === undefined ? env.features.firecrawl : Boolean(apiKey);
+  if (!enabled || !apiKey) {
+    throw new Error("FIRECRAWL_API_KEY is required to fetch a live roster");
+  }
   const baseUrl = (options.baseUrl ?? env.FIRECRAWL_BASE_URL)
     .replace(/\/+$/u, "");
   const fetcher = options.fetch ?? fetch;

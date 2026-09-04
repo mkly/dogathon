@@ -6,6 +6,7 @@ import { betterAuth } from "better-auth/minimal";
 import { magicLink } from "better-auth/plugins";
 
 import type { MailTransport, TransportFactory } from "./email-connectors.ts";
+import { parseEnvironment } from "./env.ts";
 import { sendMagicLinkEmail } from "./magic-link-email.ts";
 
 test("magic-link sign-in sends the verification URL through sendAppEmail", async () => {
@@ -16,14 +17,15 @@ test("magic-link sign-in sends the verification URL through sendAppEmail", async
       sentMessage = input;
     },
   });
-  const env = {
+  const env = parseEnvironment({
+    DATABASE_URL: "postgresql://dogathon:dogathon@localhost:5432/dogathon",
     APP_SMTP_HOST: "smtp.example.com",
     APP_SMTP_PORT: "2525",
     APP_SMTP_SECURE: "false",
     APP_SMTP_USER: "platform-user",
     APP_SMTP_PASSWORD: "platform-password",
     APP_EMAIL_FROM: "Dogathon <hello@example.com>",
-  };
+  });
   const auth = betterAuth({
     baseURL: "http://localhost:3000",
     secret: "magic-link-test-secret-at-least-32-characters",

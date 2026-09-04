@@ -3,6 +3,7 @@ import test from "node:test";
 
 import { sendAppEmail } from "./app-mailer.ts";
 import type { MailTransport, TransportFactory } from "./email-connectors.ts";
+import { parseEnvironment } from "./env.ts";
 
 const message = {
   to: "sponsor@example.com",
@@ -11,27 +12,36 @@ const message = {
   contentType: "html" as const,
 };
 
-const configuredEnvironment = {
+const configuredEnvironment = parseEnvironment({
+  DATABASE_URL: "postgresql://dogathon:dogathon@localhost:5432/dogathon",
   APP_SMTP_HOST: "smtp.example.com",
   APP_SMTP_PORT: "2525",
   APP_SMTP_SECURE: "true",
   APP_SMTP_USER: "platform-user",
   APP_SMTP_PASSWORD: "platform-password",
   APP_EMAIL_FROM: "Dogathon <hello@example.com>",
-};
+});
 
-test("describes platform mail when any required SMTP credential is empty", async () => {
+test("describes platform mail when any required SMTP setting is absent", async () => {
   const refuseTransport = () => {
     throw new Error("the dry-run path must not create a transport");
   };
 
   for (const key of [
     "APP_SMTP_HOST",
-    "APP_SMTP_USER",
-    "APP_SMTP_PASSWORD",
+    "APP_SMTP_PORT",
     "APP_EMAIL_FROM",
   ] as const) {
-    const env = { ...configuredEnvironment, [key]: "" };
+    const env = parseEnvironment({
+      DATABASE_URL: configuredEnvironment.DATABASE_URL,
+      APP_SMTP_HOST: configuredEnvironment.APP_SMTP_HOST,
+      APP_SMTP_PORT: configuredEnvironment.APP_SMTP_PORT?.toString(),
+      APP_SMTP_SECURE: configuredEnvironment.APP_SMTP_SECURE?.toString(),
+      APP_SMTP_USER: configuredEnvironment.APP_SMTP_USER,
+      APP_SMTP_PASSWORD: configuredEnvironment.APP_SMTP_PASSWORD,
+      APP_EMAIL_FROM: configuredEnvironment.APP_EMAIL_FROM,
+      [key]: "",
+    });
     assert.deepEqual(
       await sendAppEmail(message, { env, transportFactory: refuseTransport }),
       {
@@ -78,7 +88,28 @@ test("sends platform mail through the shared SMTP transport path", async () => {
   });
 });
 
-test("coerces SMTP environment values and preserves validation messages", async () => {
+test("supports an unauthenticated platform SMTP relay", async () => {
+  let transportOptions: Parameters<TransportFactory>[0] | undefined;
+  const transportFactory: TransportFactory = (options) => {
+    transportOptions = options;
+    return { verify: async () => undefined, sendMail: async () => undefined };
+  };
+  const relayEnvironment = parseEnvironment({
+    DATABASE_URL: configuredEnvironment.DATABASE_URL,
+    APP_SMTP_HOST: configuredEnvironment.APP_SMTP_HOST,
+    APP_SMTP_PORT: configuredEnvironment.APP_SMTP_PORT?.toString(),
+    APP_EMAIL_FROM: configuredEnvironment.APP_EMAIL_FROM,
+  });
+
+  assert.equal(await sendAppEmail(message, { env: relayEnvironment, transportFactory }), null);
+  assert.deepEqual(transportOptions, {
+    host: "smtp.example.com",
+    port: 2525,
+    secure: false,
+  });
+});
+
+test("uses SMTP values already normalized by the environment registry", async () => {
   let transportOptions: Parameters<TransportFactory>[0] | undefined;
   const transportFactory: TransportFactory = (options) => {
     transportOptions = options;
@@ -86,26 +117,19 @@ test("coerces SMTP environment values and preserves validation messages", async 
   };
 
   await sendAppEmail(message, {
-    env: { ...configuredEnvironment, APP_SMTP_PORT: "", APP_SMTP_SECURE: " off " },
+    env: parseEnvironment({
+      DATABASE_URL: configuredEnvironment.DATABASE_URL,
+      APP_SMTP_HOST: configuredEnvironment.APP_SMTP_HOST,
+      APP_SMTP_PORT: "587",
+      APP_SMTP_SECURE: " off ",
+      APP_SMTP_USER: configuredEnvironment.APP_SMTP_USER,
+      APP_SMTP_PASSWORD: configuredEnvironment.APP_SMTP_PASSWORD,
+      APP_EMAIL_FROM: configuredEnvironment.APP_EMAIL_FROM,
+    }),
     transportFactory,
   });
   assert.equal(transportOptions?.port, 587);
   assert.equal(transportOptions?.secure, false);
-
-  await assert.rejects(
-    () => sendAppEmail(message, {
-      env: { ...configuredEnvironment, APP_SMTP_SECURE: "sometimes" },
-      transportFactory,
-    }),
-    /APP_SMTP_SECURE must be a boolean/u,
-  );
-  await assert.rejects(
-    () => sendAppEmail(message, {
-      env: { ...configuredEnvironment, APP_SMTP_PORT: "70000" },
-      transportFactory,
-    }),
-    /APP_SMTP_PORT must be an integer between 1 and 65535/u,
-  );
 });
 
 test("rejects header injection in recipients, From addresses, and subjects", async () => {
@@ -113,7 +137,10 @@ test("rejects header injection in recipients, From addresses, and subjects", asy
     env: configuredEnvironment,
   }));
   await assert.rejects(() => sendAppEmail(message, {
-    env: { ...configuredEnvironment, APP_EMAIL_FROM: "hello@example.com\nBcc: bad@example.com" },
+    env: {
+      ...configuredEnvironment,
+      APP_EMAIL_FROM: "hello@example.com\nBcc: bad@example.com",
+    },
   }));
   await assert.rejects(() => sendAppEmail({ ...message, subject: "Hello\nBcc: bad@example.com" }, {
     env: configuredEnvironment,

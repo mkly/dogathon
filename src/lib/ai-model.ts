@@ -10,7 +10,7 @@ export type AiModelOptions = {
 };
 
 export function hasAiCredentials(apiKey?: string): boolean {
-  return Boolean((apiKey ?? env.OPENAI_API_KEY)?.trim());
+  return apiKey === undefined ? env.features.ai : Boolean(apiKey.trim());
 }
 
 export function createAiModel(options: AiModelOptions = {}) {

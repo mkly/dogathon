@@ -8,17 +8,20 @@ const originalEnvironment = {
   OPENAI_API_KEY: env.OPENAI_API_KEY,
   OPENAI_BASE_URL: env.OPENAI_BASE_URL,
   OPENAI_MODEL: env.OPENAI_MODEL,
+  features: env.features,
 };
 const originalFetch = globalThis.fetch;
 
 before(() => {
   env.OPENAI_API_KEY = undefined;
+  env.features = Object.freeze({ ...env.features, ai: false });
 });
 
 afterEach(() => {
   env.OPENAI_API_KEY = undefined;
   env.OPENAI_BASE_URL = "https://api.openai.com/v1";
   env.OPENAI_MODEL = "gpt-4o-mini";
+  env.features = Object.freeze({ ...env.features, ai: false });
   globalThis.fetch = originalFetch;
 });
 
@@ -26,6 +29,7 @@ after(() => {
   env.OPENAI_API_KEY = originalEnvironment.OPENAI_API_KEY;
   env.OPENAI_BASE_URL = originalEnvironment.OPENAI_BASE_URL;
   env.OPENAI_MODEL = originalEnvironment.OPENAI_MODEL;
+  env.features = originalEnvironment.features;
   globalThis.fetch = originalFetch;
 });
 
@@ -49,6 +53,7 @@ test("uses the configured chat-completions endpoint and model", async () => {
   env.OPENAI_API_KEY = "test-key";
   env.OPENAI_BASE_URL = "https://model.example/v1";
   env.OPENAI_MODEL = "rescue-writer";
+  env.features = Object.freeze({ ...env.features, ai: true });
   let requestUrl = "";
   let requestHeaders: Headers | undefined;
   let requestBody: Record<string, unknown> | undefined;

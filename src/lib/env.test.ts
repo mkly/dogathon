@@ -21,6 +21,7 @@ test("parses typed environment values and applies normalized defaults", () => {
   assert.equal(parsed.APP_SMTP_SECURE, true);
   assert.equal(parsed.ROSTER_SYNC_DRAIN_BUDGET_MS, 120_000);
   assert.equal(parsed.ROSTER_SYNC_SCHEDULE_STAGGER_MS, 300_000);
+  assert.ok(Object.isFrozen(parsed.features));
 });
 
 test("reports missing and invalid environment variables by name", () => {
@@ -35,14 +36,76 @@ test("reports missing and invalid environment variables by name", () => {
   );
 });
 
-test("requires an authentication secret in production", () => {
+test("requires authentication and connector-encryption secrets in production", () => {
   assert.throws(
     () => parseEnvironment({
       NODE_ENV: "production",
       DATABASE_URL: "postgresql://dogathon:dogathon@localhost:5432/dogathon",
     }),
-    /BETTER_AUTH_SECRET: is required in production/u,
+    (error: unknown) => {
+      assert.ok(error instanceof Error);
+      assert.match(error.message, /BETTER_AUTH_SECRET: is required in production/u);
+      assert.match(
+        error.message,
+        /EMAIL_CONNECTOR_ENCRYPTION_KEY: is required in production/u,
+      );
+      return true;
+    },
   );
+});
+
+test("computes every capability flag once from parsed credentials", () => {
+  const encryptionKey = Buffer.alloc(32, 7).toString("base64");
+  const parsed = parseEnvironment({
+    DATABASE_URL: "postgresql://dogathon:dogathon@localhost:5432/dogathon",
+    OPENAI_API_KEY: "openai-key",
+    FIRECRAWL_API_KEY: "firecrawl-key",
+    STRIPE_SECRET_KEY: "stripe-key",
+    CRON_SECRET: "scheduler-key",
+    APP_SMTP_HOST: "smtp.example.com",
+    APP_SMTP_PORT: "2525",
+    APP_EMAIL_FROM: "hello@example.com",
+    GOOGLE_CLIENT_ID: "google-id",
+    GOOGLE_CLIENT_SECRET: "google-secret",
+    MICROSOFT_CLIENT_ID: "microsoft-id",
+    MICROSOFT_CLIENT_SECRET: "microsoft-secret",
+    EMAIL_CONNECTOR_ENCRYPTION_KEY: encryptionKey,
+  });
+
+  assert.deepEqual(parsed.features, {
+    ai: true,
+    firecrawl: true,
+    stripe: true,
+    scheduler: true,
+    platformSmtp: true,
+    googleOAuth: true,
+    microsoftOAuth: true,
+    connectorEncryption: true,
+  });
+
+  parsed.OPENAI_API_KEY = undefined;
+  assert.equal(parsed.features.ai, true);
+});
+
+test("keeps every capability false when its complete credential group is absent", () => {
+  const parsed = parseEnvironment({
+    DATABASE_URL: "postgresql://dogathon:dogathon@localhost:5432/dogathon",
+    APP_SMTP_HOST: "smtp.example.com",
+    APP_SMTP_PORT: "2525",
+    GOOGLE_CLIENT_ID: "incomplete-google-client",
+    MICROSOFT_CLIENT_SECRET: "incomplete-microsoft-client",
+  });
+
+  assert.deepEqual(parsed.features, {
+    ai: false,
+    firecrawl: false,
+    stripe: false,
+    scheduler: false,
+    platformSmtp: false,
+    googleOAuth: false,
+    microsoftOAuth: false,
+    connectorEncryption: false,
+  });
 });
 
 test("empty optional credentials remain absent for dry-run behavior", () => {

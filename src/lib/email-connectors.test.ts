@@ -25,6 +25,7 @@ const originalEnvironment = {
   microsoftId: env.MICROSOFT_CLIENT_ID,
   microsoftSecret: env.MICROSOFT_CLIENT_SECRET,
   microsoftTenant: env.MICROSOFT_TENANT_ID,
+  features: env.features,
 };
 
 before(async () => {
@@ -34,6 +35,12 @@ before(async () => {
   env.MICROSOFT_CLIENT_ID = "microsoft-client";
   env.MICROSOFT_CLIENT_SECRET = "microsoft-secret";
   env.MICROSOFT_TENANT_ID = "organizations";
+  env.features = Object.freeze({
+    ...env.features,
+    connectorEncryption: true,
+    googleOAuth: true,
+    microsoftOAuth: true,
+  });
   encryptedAccessToken = await encryptEmailSecret("access-token");
   encryptedRefreshToken = await encryptEmailSecret("refresh-token");
 });
@@ -45,6 +52,7 @@ after(() => {
   env.MICROSOFT_CLIENT_ID = originalEnvironment.microsoftId;
   env.MICROSOFT_CLIENT_SECRET = originalEnvironment.microsoftSecret;
   env.MICROSOFT_TENANT_ID = originalEnvironment.microsoftTenant;
+  env.features = originalEnvironment.features;
 });
 
 function connector(
@@ -238,6 +246,11 @@ test("describes the send for every connector type when its credentials are unset
   env.GOOGLE_CLIENT_SECRET = undefined;
   env.MICROSOFT_CLIENT_ID = undefined;
   env.MICROSOFT_CLIENT_SECRET = undefined;
+  env.features = Object.freeze({
+    ...env.features,
+    googleOAuth: false,
+    microsoftOAuth: false,
+  });
   try {
     for (const provider of ["gmail", "microsoft"] as const) {
       assert.deepEqual(
@@ -258,6 +271,11 @@ test("describes the send for every connector type when its credentials are unset
     env.GOOGLE_CLIENT_SECRET = "gmail-secret";
     env.MICROSOFT_CLIENT_ID = "microsoft-client";
     env.MICROSOFT_CLIENT_SECRET = "microsoft-secret";
+    env.features = Object.freeze({
+      ...env.features,
+      googleOAuth: true,
+      microsoftOAuth: true,
+    });
   }
 
   // SMTP carries no app-level env credentials, so an unconfigured org connector
@@ -279,6 +297,7 @@ test("describes the send for every connector type when its credentials are unset
   const withoutKey = { ...connector("smtp"), smtpHost: "smtp.example.com", smtpPort: 587, smtpSecure: false, smtpUser: "u", smtpPasswordEncrypted: await encryptEmailSecret("p") };
   const key = env.EMAIL_CONNECTOR_ENCRYPTION_KEY;
   env.EMAIL_CONNECTOR_ENCRYPTION_KEY = undefined;
+  env.features = Object.freeze({ ...env.features, connectorEncryption: false });
   try {
     assert.equal(
       (await sendEmailWithConnector(withoutKey, message, { fetch: refuse, transportFactory: refuseTransport }))?.dryRun,
@@ -286,6 +305,7 @@ test("describes the send for every connector type when its credentials are unset
     );
   } finally {
     env.EMAIL_CONNECTOR_ENCRYPTION_KEY = key;
+    env.features = Object.freeze({ ...env.features, connectorEncryption: true });
   }
 });
 
