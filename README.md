@@ -65,8 +65,7 @@ npx vercel env add CRON_SECRET production
 Configure an external server to call `POST /api/jobs/drain` every five minutes
 and `GET /api/jobs/schedule-roster-sync` daily at 08:00 UTC. Both routes require
 the same value in an `Authorization: Bearer <CRON_SECRET>` header and refuse
-calls when neither `CRON_SECRET` nor the legacy `ROSTER_SYNC_DRAIN_SECRET` is
-configured.
+calls when `CRON_SECRET` is not configured.
 
 On the external server, store the secret in a curl config readable only by the
 cron user. Replace the example origin and secret below:

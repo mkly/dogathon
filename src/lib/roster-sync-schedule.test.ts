@@ -83,7 +83,7 @@ test("eligible organizations are staggered and existing work is skipped", async 
 test("one enqueue failure does not prevent later organizations", async () => {
   const attempted: string[] = [];
   const handler = createRosterSyncScheduleHandler({
-    env: schedulerEnvironment({ ROSTER_SYNC_DRAIN_SECRET: "scheduler-secret" }),
+    env: schedulerEnvironment({ CRON_SECRET: "scheduler-secret" }),
     listOrganizations: async () => [
       { orgId: "org-1" },
       { orgId: "org-2" },

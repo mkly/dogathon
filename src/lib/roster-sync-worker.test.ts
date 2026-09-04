@@ -76,7 +76,7 @@ test("the drain route refuses missing and incorrect secrets without fetching wor
   const missingSecret = createRosterSyncDrainHandler({ drain, env: schedulerEnvironment() });
   const configured = createRosterSyncDrainHandler({
     drain,
-    env: schedulerEnvironment({ ROSTER_SYNC_DRAIN_SECRET: "scheduler-secret" }),
+    env: schedulerEnvironment({ CRON_SECRET: "scheduler-secret" }),
   });
 
   const missingResponse = await missingSecret(new Request("https://app.example/api/jobs/drain", {
@@ -104,7 +104,7 @@ test("a correct secret fetches and explicitly completes one job", async () => {
   }));
   const handler = createRosterSyncDrainHandler({
     drain,
-    env: schedulerEnvironment({ ROSTER_SYNC_DRAIN_SECRET: "scheduler-secret" }),
+    env: schedulerEnvironment({ CRON_SECRET: "scheduler-secret" }),
   });
 
   const response = await handler(new Request("https://app.example/api/jobs/drain", {

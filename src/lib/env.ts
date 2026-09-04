@@ -54,10 +54,9 @@ const firecrawl = {
   FIRECRAWL_BASE_URL: urlWithDefault("https://api.firecrawl.dev/v2"),
 };
 
-// Without either secret, scheduled roster routes reject every request.
+// Without the secret, scheduled roster routes reject every request.
 const scheduler = {
   CRON_SECRET: optionalTrimmedString,
-  ROSTER_SYNC_DRAIN_SECRET: optionalTrimmedString,
   ROSTER_SYNC_DRAIN_BUDGET_MS: positiveMillisecondsWithDefault(4 * 60 * 1000),
   ROSTER_SYNC_SCHEDULE_STAGGER_MS: positiveMillisecondsWithDefault(5 * 60 * 1000),
 };
@@ -133,7 +132,7 @@ const environmentSchema = z.object({
     ai: Boolean(environment.OPENAI_API_KEY),
     firecrawl: Boolean(environment.FIRECRAWL_API_KEY),
     stripe: Boolean(environment.STRIPE_SECRET_KEY),
-    scheduler: Boolean(environment.CRON_SECRET || environment.ROSTER_SYNC_DRAIN_SECRET),
+    scheduler: Boolean(environment.CRON_SECRET),
     platformSmtp: Boolean(
       environment.APP_SMTP_HOST
       && environment.APP_SMTP_PORT
