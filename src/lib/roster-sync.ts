@@ -10,6 +10,7 @@ import { env } from "./env.ts";
 import type { CompanionRecord } from "./parser.ts";
 import { DOCUMENT_SEPARATOR, parseCompanionRoster } from "./parser.ts";
 import { prisma } from "./prisma.ts";
+import { revalidatePublicRoster } from "./public-roster-cache.ts";
 
 export type SyncSummary = {
   created: number;
@@ -109,7 +110,7 @@ export async function syncRoster(
     throw new Error("Roster sync refused to adopt every resident after parsing an empty roster");
   }
 
-  return prisma.$transaction(async (tx) => {
+  const summary = await prisma.$transaction(async (tx) => {
     options.signal?.throwIfAborted();
     const before = await tx.resident.findMany({
       where: { orgId },
@@ -173,6 +174,8 @@ export async function syncRoster(
       source,
     };
   }, { maxWait: 10_000, timeout: 60_000 });
+  revalidatePublicRoster();
+  return summary;
 }
 
 type ResidentStatusSnapshot = {
