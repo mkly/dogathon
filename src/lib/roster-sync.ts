@@ -47,6 +47,7 @@ const MAX_ROSTER_TOOL_CALLS = 12;
 const MAX_ROSTER_OUTPUT_TOKENS = 8_000;
 const MAX_BATCH_SCRAPE_URLS = 100;
 const MAX_SCRAPE_LINKS = 300;
+const MAX_SCRAPE_DATA_ENDPOINTS = 300;
 const MAX_SCRAPE_MARKDOWN_CHARS = 20_000;
 export const MAX_SYNC_NOTE_CHARS = 4_000;
 const MAX_CRAWL_SUMMARY_CHARS = 4_000;
@@ -461,7 +462,7 @@ export async function discoverRosterWithCompleteness(
       execute: (input) => executeTool("firecrawl_map", input),
     }),
     firecrawl_scrape: tool({
-      description: "Fetch one page as clean markdown for roster parsing, together with the same-site links it contains so the companion pages and pagination pages can be chosen from it.",
+      description: "Fetch one page as clean markdown for roster parsing, together with its same-site links and data endpoints found in page scripts. A Show More, Load More, or infinite-scroll listing usually has a JSON or AJAX endpoint: scrape that endpoint with a large per-page value, or page until it reports its last page, instead of clicking. Record the endpoint and its parameters in save_sync_notes.",
       inputSchema: z.object({
         url: z.string().describe("The page URL to scrape."),
       }),
@@ -485,7 +486,7 @@ export async function discoverRosterWithCompleteness(
       execute: (input) => executeTool("firecrawl_crawl", input),
     }),
     save_sync_notes: tool({
-      description: "Save notes for the next sync of this source: the listing URL to scrape, how its companion detail links and pagination links look, how many companions the listing showed, and any site quirks. Replace the previous notes entirely.",
+      description: "Save notes for the next sync of this source: the listing URL to scrape, how its companion detail links and pagination links look, how many companions the listing showed, data endpoints and their parameters, and any site quirks. Replace the previous notes entirely.",
       inputSchema: z.object({
         notes: z.string().min(1).max(MAX_SYNC_NOTE_CHARS),
       }),
@@ -509,7 +510,7 @@ export async function discoverRosterWithCompleteness(
   const { steps } = await generateText({
     model: options.model ?? createAiModel(),
     maxOutputTokens: MAX_ROSTER_OUTPUT_TOKENS,
-    instructions: "Find the rescue's complete current adoptable companion roster. Use map only when the supplied page may not be the adoption listing. Scrape the listing page, read its links, and pick out exactly the links that lead to individual companion pages and to further pages of the same listing; then batch-scrape those chosen URLs. Never fetch pages that are not part of the roster, such as other sections of the site, and only fall back to crawl when the listing exposes no usable links. When notes from the previous sync are given, follow them on your first steps rather than exploring, and explore only if they fail or gather fewer companions than the notes expect. Check that you gathered at least as many companions as the listing shows. Call save_sync_notes as soon as you have fetched the companion pages, and again before finishing if you learned more, with concise guidance for the next sync: the listing URL, what its companion and pagination links look like, the number of companions listed, and any site quirks. Then reply with a short completion message. Do not invent roster content.",
+    instructions: "Find the rescue's complete current adoptable companion roster. Use map only when the supplied page may not be the adoption listing. Scrape the listing page, read its links, and pick out exactly the links that lead to individual companion pages and to further pages of the same listing; then batch-scrape those chosen URLs. A Show More, Load More, or infinite-scroll control usually has a JSON or AJAX endpoint in dataEndpoints: prefer scraping it with a large per-page value, or paging until the response reports its last page, instead of clicking. Never fetch pages that are not part of the roster, such as other sections of the site, and only fall back to crawl when the listing exposes no usable links. When notes from the previous sync are given, follow them on your first steps rather than exploring, and explore only if they fail or gather fewer companions than the notes expect. Check that you gathered at least as many companions as the listing shows. Call save_sync_notes as soon as you have fetched the companion pages, and again before finishing if you learned more, with concise guidance for the next sync: the listing URL, what its companion and pagination links look like, the number of companions listed, data endpoints and their parameters, and any site quirks. Then reply with a short completion message. Do not invent roster content.",
     prompt: priorNotesPrompt(sourceUrl, options.priorNotes),
     tools,
     stopWhen: isStepCount(MAX_ROSTER_AGENT_STEPS),
@@ -656,7 +657,7 @@ export async function requestFirecrawl(
   const endpoint = name === "firecrawl_map" ? "map" : "scrape";
   const body = name === "firecrawl_map"
     ? { ...input, limit: input.limit ?? 25 }
-    : { ...input, formats: ["markdown", "links"], onlyMainContent: true };
+    : { ...input, formats: ["markdown", "links", "rawHtml"], onlyMainContent: true };
   const response = await fetcher(`${baseUrl}/${endpoint}`, {
     method: "POST",
     headers: { authorization: `Bearer ${apiKey}`, "content-type": "application/json" },
@@ -930,29 +931,76 @@ function summarizeScrapeToolResult(value: unknown, sourceUrl: string): string {
   const data = record.data && typeof record.data === "object" && !Array.isArray(record.data)
     ? (record.data as Record<string, unknown>)
     : record;
-  const source = new URL(sourceUrl);
-  const links = [...new Set(
-    (Array.isArray(data.links) ? data.links : [])
-      .filter((link): link is string => typeof link === "string")
-      .flatMap((link) => {
-        try {
-          const parsed = new URL(link);
-          const related = (parsed.protocol === "http:" || parsed.protocol === "https:")
-            && isRelatedHost(source.hostname, parsed.hostname);
-          parsed.hash = "";
-          return related ? [parsed.toString()] : [];
-        } catch {
-          return [];
-        }
-      }),
-  )];
+  const links = sameSiteUrls(Array.isArray(data.links) ? data.links : [], sourceUrl);
+  const json = scrapedJson(data);
+  const jsonLinks = json === null ? [] : sameSiteUrls(stringValues(json), sourceUrl);
+  const dataEndpoints = dataEndpointsFromHtml(typeof data.rawHtml === "string" ? data.rawHtml : "", sourceUrl);
+  const allLinks = [...new Set([...links, ...jsonLinks])];
   return truncateToolResult({
     markdown: markdown.length <= MAX_SCRAPE_MARKDOWN_CHARS
       ? markdown
       : `${markdown.slice(0, MAX_SCRAPE_MARKDOWN_CHARS)}\n[truncated]`,
-    links: links.slice(0, MAX_SCRAPE_LINKS),
-    linksOmitted: Math.max(0, links.length - MAX_SCRAPE_LINKS),
+    contentType: json === null ? "markdown" : "json",
+    links: allLinks.slice(0, MAX_SCRAPE_LINKS),
+    linksOmitted: Math.max(0, allLinks.length - MAX_SCRAPE_LINKS),
+    dataEndpoints: dataEndpoints.slice(0, MAX_SCRAPE_DATA_ENDPOINTS),
+    dataEndpointsOmitted: Math.max(0, dataEndpoints.length - MAX_SCRAPE_DATA_ENDPOINTS),
   }, MAX_SCRAPE_MARKDOWN_CHARS + 30_000);
+}
+
+function sameSiteUrls(values: unknown[], sourceUrl: string): string[] {
+  const source = new URL(sourceUrl);
+  return [...new Set(values.flatMap((value) => {
+    if (typeof value !== "string" || !isUrlShaped(value)) return [];
+    try {
+      const parsed = new URL(value, source);
+      const related = (parsed.protocol === "http:" || parsed.protocol === "https:")
+        && isRelatedHost(source.hostname, parsed.hostname);
+      parsed.hash = "";
+      return related ? [parsed.toString()] : [];
+    } catch {
+      return [];
+    }
+  }))];
+}
+
+// A bare title or description resolves against the source as a relative URL,
+// so only strings written as a URL count; otherwise every string field of an
+// endpoint's JSON would land in `links` and be scraped.
+function isUrlShaped(value: string): boolean {
+  return /^https?:\/\//iu.test(value) || value.startsWith("/") || value.startsWith("./") || value.startsWith("../");
+}
+
+function scrapedJson(data: Record<string, unknown>): unknown | null {
+  if (data.json && typeof data.json === "object") return data.json;
+  for (const value of [data.json, data.rawHtml, data.html, data.markdown, data.content]) {
+    if (typeof value !== "string") continue;
+    try {
+      const parsed = JSON.parse(value) as unknown;
+      if (parsed && typeof parsed === "object") return parsed;
+    } catch {
+      continue;
+    }
+  }
+  return null;
+}
+
+function stringValues(value: unknown): string[] {
+  if (typeof value === "string") return [value];
+  if (Array.isArray(value)) return value.flatMap(stringValues);
+  if (!value || typeof value !== "object") return [];
+  return Object.values(value).flatMap(stringValues);
+}
+
+function dataEndpointsFromHtml(html: string, sourceUrl: string): string[] {
+  const scriptContents = [...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/giu)].map((match) => match[1] ?? "");
+  const quotedValues = scriptContents.flatMap((script) => [...script.matchAll(/(["'])(.*?)\1/gu)].map((match) => match[2]?.replaceAll("\\/", "/") ?? ""));
+  return sameSiteUrls(quotedValues, sourceUrl).filter((value) => isDataEndpoint(new URL(value)));
+}
+
+function isDataEndpoint(url: URL): boolean {
+  return /\/(?:wp-json|admin-ajax(?:\.php)?|api|graphql)(?:\/|$)/iu.test(url.pathname)
+    || url.searchParams.has("rest_route");
 }
 
 function summarizeCrawlToolResult(value: unknown): string {
@@ -979,7 +1027,7 @@ export function extractScrapedTexts(value: unknown): string[] {
   if ("dryRun" in value && value.dryRun === true) return [];
 
   const record = value as Record<string, unknown>;
-  for (const key of ["html", "rawHtml", "markdown", "content", "text", "value", "output", "data"]) {
+  for (const key of ["markdown", "html", "rawHtml", "content", "text", "value", "output", "data"]) {
     const candidate = record[key];
     const nested = extractScrapedTexts(candidate);
     if (nested.length > 0) return nested;

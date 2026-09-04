@@ -367,7 +367,7 @@ test("calls the direct Firecrawl v2 endpoints with bearer authentication", async
   assert.equal((requests[0]?.init?.headers as Record<string, string>).authorization, "Bearer fc-test");
   assert.deepEqual(JSON.parse(String(requests[0]?.init?.body)), {
     url: "https://rescue.example/companions",
-    formats: ["markdown", "links"],
+    formats: ["markdown", "links", "rawHtml"],
     onlyMainContent: true,
   });
 });
@@ -963,5 +963,50 @@ test("a scrape reply gives the model the page's same-site links and a batch scra
   ]);
   assert.match(toolReplies[1] ?? "", /refused unrelated host: elsewhere\.test/);
   assert.deepEqual(calls.map((entry) => entry.name), ["firecrawl_scrape"]);
+  assert.match(text, /Adoptable dogs/);
+});
+
+test("a scrape reply surfaces script data endpoints and JSON companion links", async () => {
+  const toolReplies: string[] = [];
+  let step = 0;
+  const call = (id: string, url: string) => ({
+    id,
+    type: "function" as const,
+    function: { name: "firecrawl_scrape", arguments: JSON.stringify({ url }) },
+  });
+
+  const text = await discoverRoster("https://rescue.example/adoptions/dogs/", {
+    log: () => {},
+    model: scriptedModel(async (messages) => {
+      const last = messages.at(-1);
+      if (last?.role === "tool" && typeof last.content === "string") toolReplies.push(last.content);
+      step += 1;
+      if (step === 1) return { role: "assistant", content: null, tool_calls: [call("listing", "https://rescue.example/adoptions/dogs/")] };
+      if (step === 2) return { role: "assistant", content: null, tool_calls: [call("endpoint", "https://rescue.example/wp-json/rescue/v1/adoptions?per_page=200")] };
+      return { role: "assistant", content: "Done." };
+    }),
+    firecrawl: async (_name, input) => input.url === "https://rescue.example/adoptions/dogs/"
+      ? {
+        success: true,
+        data: {
+          markdown: "# Adoptable dogs",
+          rawHtml: '<script>const restURL = "/wp-json/rescue/v1/adoptions?per_page=200";</script>',
+        },
+      }
+      : {
+        success: true,
+        data: {
+          rawHtml: JSON.stringify({
+            items: [{ title: "Biscuit", tags: ["Dog", "3 years old"], permalink: "https://rescue.example/rescue-adoption/biscuit/" }],
+          }),
+        },
+      },
+  });
+
+  const listing = JSON.parse(toolReplies[0] ?? "{}") as { dataEndpoints: string[] };
+  const endpoint = JSON.parse(toolReplies[1] ?? "{}") as { contentType: string; links: string[] };
+  assert.deepEqual(listing.dataEndpoints, ["https://rescue.example/wp-json/rescue/v1/adoptions?per_page=200"]);
+  assert.equal(endpoint.contentType, "json");
+  assert.deepEqual(endpoint.links, ["https://rescue.example/rescue-adoption/biscuit/"]);
   assert.match(text, /Adoptable dogs/);
 });
