@@ -184,11 +184,6 @@
   object-fit: cover;
 }
 
-.submit:focus-visible,
-.againLink:focus-visible {
-  box-shadow: 0 0 0 3px var(--felt-ground), 0 0 0 6px var(--felt-denim);
-}
-
 .error {
   margin: -0.25rem 0 0;
   padding: 0.8rem 1rem;

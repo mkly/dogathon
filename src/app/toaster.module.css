@@ -42,13 +42,6 @@
   background: rgb(255 255 255 / 30%);
 }
 
-/* toasts live in the root layout, outside the .admin-shell focus scope, but
-   only admin flows raise them -- keep the ring reachable for the keyboard */
-.closeButton:focus-visible {
-  outline: 3px solid var(--felt-mustard);
-  outline-offset: 3px;
-}
-
 @media (max-width: 620px) {
   .toast {
     width: calc(100vw - 28px);
