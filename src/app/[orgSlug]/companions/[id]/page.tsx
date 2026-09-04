@@ -76,39 +76,37 @@ export default async function CompanionPage({ params }: CompanionPageProps) {
       </section>
 
       {available ? (
-        <Suspense fallback={null}>
-          <CompanionSponsorState>
-            <FeltPanel className={styles.sponsorPanel} tone="oatmeal">
-              <div className={styles.sponsorPitch}>
-                <p className={styles.eyebrow}>A steady paw</p>
-                <h2>Sponsor {resident.name} for $25/month until adopted</h2>
-                <p>We&apos;ll send little email updates from the rescue as {resident.name} settles in.</p>
-              </div>
+        <CompanionSponsorState>
+          <FeltPanel className={styles.sponsorPanel} tone="oatmeal">
+            <div className={styles.sponsorPitch}>
+              <p className={styles.eyebrow}>A steady paw</p>
+              <h2>Sponsor {resident.name} for $25/month until adopted</h2>
+              <p>We&apos;ll send little email updates from the rescue as {resident.name} settles in.</p>
+            </div>
 
-              <Suspense fallback={null}><CompanionFormError name={resident.name} /></Suspense>
+            <Suspense fallback={null}><CompanionFormError name={resident.name} /></Suspense>
 
-              <form action={createSponsorship} className={styles.sponsorForm}>
-                <input name="orgSlug" type="hidden" value={orgSlug} />
-                <input name="residentId" type="hidden" value={resident.id} />
+            <form action={createSponsorship} className={styles.sponsorForm}>
+              <input name="orgSlug" type="hidden" value={orgSlug} />
+              <input name="residentId" type="hidden" value={resident.id} />
 
-                <label htmlFor="sponsorName">Your name</label>
-                <FeltField>
-                  <input autoComplete="name" id="sponsorName" name="sponsorName" required />
-                </FeltField>
+              <label htmlFor="sponsorName">Your name</label>
+              <FeltField>
+                <input autoComplete="name" id="sponsorName" name="sponsorName" required />
+              </FeltField>
 
-                <label htmlFor="sponsorEmail">Email</label>
-                <FeltField>
-                  <input autoComplete="email" id="sponsorEmail" name="sponsorEmail" required type="email" />
-                </FeltField>
+              <label htmlFor="sponsorEmail">Email</label>
+              <FeltField>
+                <input autoComplete="email" id="sponsorEmail" name="sponsorEmail" required type="email" />
+              </FeltField>
 
-                <FeltButton className={styles.sponsorButton} tone="mustard" type="submit">
-                  Sponsor for $25/month until adopted
-                </FeltButton>
-              </form>
-            </FeltPanel>
-          </CompanionSponsorState>
-        </Suspense>
-      ) : !available ? (
+              <FeltButton className={styles.sponsorButton} tone="mustard" type="submit">
+                Sponsor for $25/month until adopted
+              </FeltButton>
+            </form>
+          </FeltPanel>
+        </CompanionSponsorState>
+      ) : (
         <FeltPanel className={styles.confirmation} tone="brick">
           <h2>{resident.name} has been adopted!</h2>
           <p>Their sponsorship chapter is complete. Meet another resident who could use your help.</p>
@@ -116,7 +114,7 @@ export default async function CompanionPage({ params }: CompanionPageProps) {
             Meet the companions
           </FeltLink>
         </FeltPanel>
-      ) : null}
+      )}
     </main>
   );
 }

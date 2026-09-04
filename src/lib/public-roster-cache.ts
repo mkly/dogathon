@@ -3,6 +3,7 @@ import { revalidateTag, unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
 
 const PUBLIC_ROSTER_TAG = "public-roster";
+const PUBLIC_ROSTER_CACHE = { tags: [PUBLIC_ROSTER_TAG], revalidate: 86400 };
 
 export const getPublicOrganizations = unstable_cache(
   () => prisma.organization.findMany({
@@ -10,13 +11,13 @@ export const getPublicOrganizations = unstable_cache(
     select: { id: true, name: true, slug: true },
   }),
   ["public-organizations"],
-  { tags: [PUBLIC_ROSTER_TAG] },
+  PUBLIC_ROSTER_CACHE,
 );
 
 export const getPublicOrganization = unstable_cache(
   (slug: string) => prisma.organization.findUnique({ where: { slug } }),
   ["public-organization"],
-  { tags: [PUBLIC_ROSTER_TAG] },
+  PUBLIC_ROSTER_CACHE,
 );
 
 export const getPublicResidents = unstable_cache(
@@ -25,13 +26,13 @@ export const getPublicResidents = unstable_cache(
     orderBy: { name: "asc" },
   }),
   ["public-residents"],
-  { tags: [PUBLIC_ROSTER_TAG] },
+  PUBLIC_ROSTER_CACHE,
 );
 
 export const getPublicResident = unstable_cache(
   (orgId: string, id: string) => prisma.resident.findFirst({ where: { id, orgId } }),
   ["public-resident"],
-  { tags: [PUBLIC_ROSTER_TAG] },
+  PUBLIC_ROSTER_CACHE,
 );
 
 export const getPublicCompanionParams = unstable_cache(
@@ -39,7 +40,7 @@ export const getPublicCompanionParams = unstable_cache(
     select: { id: true, organization: { select: { slug: true } } },
   }),
   ["public-companion-params"],
-  { tags: [PUBLIC_ROSTER_TAG] },
+  PUBLIC_ROSTER_CACHE,
 );
 
 export function revalidatePublicRoster() {
