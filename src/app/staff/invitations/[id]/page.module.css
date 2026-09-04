@@ -1,0 +1,109 @@
+.page {
+  display: grid;
+  min-height: 100svh;
+  padding: 2rem 1rem 3rem;
+  place-items: center;
+}
+
+.card {
+  display: grid;
+  width: min(100%, 36rem);
+  gap: 1rem;
+  padding: clamp(1.75rem, 6vw, 2.75rem);
+  overflow: visible;
+}
+
+.card h1 {
+  margin: 0.2rem 0 0;
+  font-size: clamp(2rem, 8vw, 3rem);
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -0.045em;
+  text-wrap: balance;
+}
+
+.eyebrow {
+  margin: 0;
+  font-size: 0.7rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.lede {
+  margin: 0;
+  font-weight: 700;
+  line-height: 1.55;
+}
+
+.details {
+  display: grid;
+  gap: 0;
+  margin: 0.5rem 0 0;
+  overflow: hidden;
+  border-radius: 12px;
+  background: rgb(248 242 231 / 94%);
+  color: var(--felt-ink);
+  box-shadow: inset 0 2px 5px rgb(0 0 0 / 28%);
+}
+
+.details > div {
+  display: grid;
+  grid-template-columns: 8rem minmax(0, 1fr);
+  gap: 1rem;
+  padding: 0.9rem 1rem;
+}
+
+.details > div + div {
+  border-top: 1px dashed rgb(61 51 43 / 25%);
+}
+
+.details dt {
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.details dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-weight: 750;
+  line-height: 1.4;
+}
+
+.details dd span {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 0.78rem;
+  font-weight: 650;
+  opacity: 0.78;
+}
+
+.actionArea {
+  display: grid;
+  justify-items: start;
+  gap: 0.8rem;
+  margin-top: 0.4rem;
+  padding-top: 1.25rem;
+  border-top: 1px dashed rgb(248 242 231 / 42%);
+}
+
+.actionArea p {
+  margin: 0;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.actionArea a {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+@media (max-width: 520px) {
+  .details > div {
+    grid-template-columns: 1fr;
+    gap: 0.3rem;
+  }
+}
