@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
+import { Suspense } from "react";
 
 import {
   AdminButton,
@@ -32,6 +33,96 @@ export const dynamic = "force-dynamic";
 
 type AdminSettingsPageProps = { params: Promise<{ orgSlug: string }> };
 
+async function loadStripeConnection(orgId: string) {
+  return prisma.organization.findUnique({
+    where: { id: orgId },
+    select: {
+      stripeAccountId: true,
+      stripeDetailsSubmitted: true,
+      stripeChargesEnabled: true,
+    },
+  });
+}
+
+async function StripeConnection({
+  canOnboard,
+  orgId,
+  orgSlug,
+}: {
+  canOnboard: boolean;
+  orgId: string;
+  orgSlug: string;
+}) {
+  const organization = await loadStripeConnection(orgId);
+
+  return (
+    <AdminSurface className={`${styles.settings} ${styles.stripeConnect}`} tone="mustard">
+      <div className={styles.settingsIntro}>
+        <AdminEyebrow>Stripe Connect</AdminEyebrow>
+        <h2>Monthly sponsorship payments</h2>
+        <p>
+          {organization?.stripeChargesEnabled
+            ? "Connected and ready to accept $25 monthly sponsorships."
+            : organization?.stripeDetailsSubmitted
+              ? "Stripe has your details and is still enabling payments."
+              : organization?.stripeAccountId
+                ? "Finish the Stripe onboarding form to accept sponsorships."
+                : "Connect this rescue to Stripe before sponsors can check out."}
+        </p>
+      </div>
+      {!organization?.stripeChargesEnabled && canOnboard && (
+        <form action={beginStripeOnboarding} className={styles.stripeConnectForm}>
+          <input name="orgSlug" type="hidden" value={orgSlug} />
+          <AdminButton tone="brick" type="submit">
+            {organization?.stripeAccountId ? "Continue Stripe onboarding" : "Connect Stripe"}
+          </AdminButton>
+        </form>
+      )}
+    </AdminSurface>
+  );
+}
+
+async function EmailSettings({ orgId, orgSlug }: { orgId: string; orgSlug: string }) {
+  const emailConnector = await getEmailConnectorStatus(orgId);
+
+  return (
+    <section id={EMAIL_CONNECTOR_NOTICE_ID}>
+      <EmailConnectorSettings initialConnector={emailConnector} orgSlug={orgSlug} />
+    </section>
+  );
+}
+
+async function RescueSettings({ orgId, orgSlug }: { orgId: string; orgSlug: string }) {
+  const storedSettings = await prisma.rescueSettings.findUnique({ where: { orgId } });
+  const settings = storedSettings ?? { pinnedPostscript: "", sourceUrl: "" };
+
+  return (
+    <>
+      <AdminSurface className={styles.settings} tone="denim">
+        <div className={styles.settingsIntro}>
+          <AdminEyebrow tone="denim">Staff settings</AdminEyebrow>
+          <h2>Pinned to every email this month</h2>
+          <p>The postscript rides at the bottom of each pupdate.</p>
+        </div>
+        <PostscriptSettingsForm orgSlug={orgSlug} pinnedPostscript={settings.pinnedPostscript} />
+      </AdminSurface>
+
+      <AdminSurface className={styles.settings} tone="moss">
+        <div className={styles.settingsIntro}>
+          <AdminEyebrow>Roster sync</AdminEyebrow>
+          <h2>Keep the adoption roster current</h2>
+          <p>Save the adoption-page source, then sync its current companions into the staff roster.</p>
+        </div>
+        <RosterSyncSettings initialSourceUrl={settings.sourceUrl} orgSlug={orgSlug} />
+      </AdminSurface>
+    </>
+  );
+}
+
+function SettingsCardLoading({ tone }: { tone: "denim" | "moss" | "mustard" | "oatmeal" }) {
+  return <AdminSurface aria-label="Loading settings" className={`${styles.settings} ${styles.settingsSkeleton}`} tone={tone} />;
+}
+
 export default async function AdminSettingsPage({ params }: AdminSettingsPageProps) {
   const { orgSlug } = await params;
   const access = await getOrganizationAccessBySlug(await headers(), orgSlug, {
@@ -44,23 +135,6 @@ export default async function AdminSettingsPage({ params }: AdminSettingsPagePro
     redirect(access.authenticated ? "/staff/organizations" : `/staff/sign-in?next=${next}`);
   }
   const { context } = access;
-
-  const [storedSettings, emailConnector, organization] = await Promise.all([
-    prisma.rescueSettings.findUnique({ where: { orgId: context.orgId } }),
-    getEmailConnectorStatus(context.orgId),
-    prisma.organization.findUnique({
-      where: { id: context.orgId },
-      select: {
-        stripeAccountId: true,
-        stripeDetailsSubmitted: true,
-        stripeChargesEnabled: true,
-      },
-    }),
-  ]);
-  const settings = storedSettings ?? {
-    pinnedPostscript: "",
-    sourceUrl: "",
-  };
 
   return (
     <AdminPage>
@@ -80,53 +154,17 @@ export default async function AdminSettingsPage({ params }: AdminSettingsPagePro
       />
 
       <div className={styles.settingsStack}>
-        <AdminSurface className={`${styles.settings} ${styles.stripeConnect}`} tone="mustard">
-          <div className={styles.settingsIntro}>
-            <AdminEyebrow>Stripe Connect</AdminEyebrow>
-            <h2>Monthly sponsorship payments</h2>
-            <p>
-              {organization?.stripeChargesEnabled
-                ? "Connected and ready to accept $25 monthly sponsorships."
-                : organization?.stripeDetailsSubmitted
-                  ? "Stripe has your details and is still enabling payments."
-                  : organization?.stripeAccountId
-                    ? "Finish the Stripe onboarding form to accept sponsorships."
-                    : "Connect this rescue to Stripe before sponsors can check out."}
-            </p>
-          </div>
-          {!organization?.stripeChargesEnabled && context.role === "owner" && (
-            <form action={beginStripeOnboarding} className={styles.stripeConnectForm}>
-              <input name="orgSlug" type="hidden" value={orgSlug} />
-              <AdminButton tone="brick" type="submit">
-                {organization?.stripeAccountId ? "Continue Stripe onboarding" : "Connect Stripe"}
-              </AdminButton>
-            </form>
-          )}
-        </AdminSurface>
+        <Suspense fallback={<SettingsCardLoading tone="mustard" />}>
+          <StripeConnection canOnboard={context.role === "owner"} orgId={context.orgId} orgSlug={orgSlug} />
+        </Suspense>
 
-        <section id={EMAIL_CONNECTOR_NOTICE_ID}>
-          <EmailConnectorSettings initialConnector={emailConnector} orgSlug={orgSlug} />
-        </section>
+        <Suspense fallback={<SettingsCardLoading tone="oatmeal" />}>
+          <EmailSettings orgId={context.orgId} orgSlug={orgSlug} />
+        </Suspense>
 
-        <AdminSurface className={styles.settings} tone="denim">
-          <div className={styles.settingsIntro}>
-            <AdminEyebrow tone="denim">Staff settings</AdminEyebrow>
-            <h2>Pinned to every email this month</h2>
-            <p>The postscript rides at the bottom of each pupdate.</p>
-          </div>
-          <PostscriptSettingsForm orgSlug={orgSlug} pinnedPostscript={settings.pinnedPostscript} />
-        </AdminSurface>
-
-        <AdminSurface className={styles.settings} tone="moss">
-          <div className={styles.settingsIntro}>
-            <AdminEyebrow>Roster sync</AdminEyebrow>
-            <h2>Keep the adoption roster current</h2>
-            <p>
-              Save the adoption-page source, then sync its current companions into the staff roster.
-            </p>
-          </div>
-          <RosterSyncSettings initialSourceUrl={settings.sourceUrl} orgSlug={orgSlug} />
-        </AdminSurface>
+        <Suspense fallback={<><SettingsCardLoading tone="denim" /><SettingsCardLoading tone="moss" /></>}>
+          <RescueSettings orgId={context.orgId} orgSlug={orgSlug} />
+        </Suspense>
       </div>
 
       <AdminFooter>staff settings · everything in its place</AdminFooter>

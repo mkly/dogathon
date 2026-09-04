@@ -222,6 +222,31 @@
   opacity: 0.5;
 }
 
+.linkStatus {
+  width: 0.55rem;
+  height: 0.55rem;
+  margin-left: 0.4rem;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  opacity: 0;
+  visibility: hidden;
+}
+
+.linkStatus[data-pending] {
+  visibility: visible;
+  animation: linkPending 700ms linear infinite;
+}
+
+@keyframes linkPending {
+  from { opacity: 0.7; transform: rotate(0deg); }
+  to { opacity: 0.7; transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .linkStatus[data-pending] { animation: none; opacity: 0.7; }
+}
+
 .field {
   border: 1px solid rgb(61 51 43 / 34%);
   border-radius: 6px;
