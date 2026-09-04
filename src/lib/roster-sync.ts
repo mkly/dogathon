@@ -32,7 +32,7 @@ export type RosterCompleteness = {
 };
 
 const DEFAULT_CAPTURE = "dogs-page-A.html";
-const MAX_FIRECRAWL_CRAWL_PAGES = 10;
+const MAX_FIRECRAWL_CRAWL_PAGES = 100;
 const MAX_FIRECRAWL_DISCOVERY_DEPTH = 3;
 const FIRECRAWL_CRAWL_TIMEOUT_MS = 30_000;
 const FIRECRAWL_POLL_INTERVAL_MS = 1_000;

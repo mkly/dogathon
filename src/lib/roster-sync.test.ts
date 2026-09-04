@@ -546,7 +546,7 @@ test("clamps Firecrawl crawl page and discovery limits", async () => {
     },
   );
 
-  assert.equal(submittedBody?.limit, 10);
+  assert.equal(submittedBody?.limit, 100);
   assert.equal(submittedBody?.maxDiscoveryDepth, 3);
 });
 
