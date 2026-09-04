@@ -3,6 +3,7 @@ import {
   processStripeEvent,
   stripeWebhookSecret,
 } from "@/lib/stripe-billing";
+import { revalidatePublicRoster } from "@/lib/public-roster-cache";
 
 export async function POST(request: Request) {
   const signature = request.headers.get("stripe-signature");
@@ -18,6 +19,7 @@ export async function POST(request: Request) {
 
   try {
     await processStripeEvent(event);
+    revalidatePublicRoster();
     return Response.json({ received: true });
   } catch (error) {
     console.error("Stripe webhook processing failed", error);

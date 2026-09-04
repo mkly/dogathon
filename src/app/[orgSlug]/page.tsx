@@ -3,26 +3,31 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { FeltLink, FeltPanel, PhotoPatch } from "@/components/felt";
-import { prisma } from "@/lib/prisma";
-import { getPublicOrganization } from "@/lib/public-organization";
+import {
+  getPublicOrganization,
+  getPublicOrganizations,
+  getPublicResidents,
+} from "@/lib/public-roster-cache";
 
 import pawcastWordmark from "../../../public/brand/pawcast-wordmark.png";
 import feltPup from "../../../public/mascot/felt-pup-2.png";
 
 import styles from "../public.module.css";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 86400;
 
 type OrganizationHomeProps = { params: Promise<{ orgSlug: string }> };
+
+export async function generateStaticParams() {
+  const organizations = await getPublicOrganizations();
+  return organizations.map(({ slug }) => ({ orgSlug: slug }));
+}
 
 export default async function OrganizationHome({ params }: OrganizationHomeProps) {
   const { orgSlug } = await params;
   const organization = await getPublicOrganization(orgSlug);
   if (!organization) notFound();
-  const residents = await prisma.resident.findMany({
-    where: { orgId: organization.id, status: "available" },
-    orderBy: { name: "asc" },
-  });
+  const residents = await getPublicResidents(organization.id);
 
   return (
     <main className={styles.siteShell}>

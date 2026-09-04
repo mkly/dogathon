@@ -8,6 +8,7 @@ import { z } from "zod";
 
 import { getOrganizationAccessBySlug } from "@/lib/organization-access";
 import { prisma } from "@/lib/prisma";
+import { revalidatePublicRoster } from "@/lib/public-roster-cache";
 import { uuidSchema } from "@/lib/uuid";
 
 import type { VolunteerErrorCode } from "./errors";
@@ -105,6 +106,8 @@ export async function submitVolunteerNote(formData: FormData) {
       residentId,
     },
   });
+
+  revalidatePublicRoster();
 
   redirect(volunteerUrl(orgSlug, { companion: residentId, submitted: "1" }));
 }

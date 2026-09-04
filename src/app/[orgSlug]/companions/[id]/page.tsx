@@ -1,53 +1,45 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { z } from "zod";
+import { Suspense } from "react";
 
 import { createSponsorship } from "@/app/actions";
 import { FeltButton, FeltField, FeltLink, FeltPanel, PhotoPatch, StitchBadge } from "@/components/felt";
-import { prisma } from "@/lib/prisma";
-import { getPublicOrganization } from "@/lib/public-organization";
+import {
+  getPublicCompanionParams,
+  getPublicOrganization,
+  getPublicResident,
+} from "@/lib/public-roster-cache";
 import { uuidSchema } from "@/lib/uuid";
 
+import { CompanionBanner, CompanionFormError, CompanionSponsorState } from "./companion-banner";
 import styles from "../../../public.module.css";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 86400;
 
 type CompanionPageProps = {
   params: Promise<{ id: string; orgSlug: string }>;
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
-const companionQuerySchema = z.object({
-  error: z.string().optional().catch(undefined),
-  sponsored: z.literal("1").optional().catch(undefined),
-});
 
-export default async function CompanionPage({ params, searchParams }: CompanionPageProps) {
+export async function generateStaticParams() {
+  const companions = await getPublicCompanionParams();
+  return companions.map(({ id, organization }) => ({ id, orgSlug: organization.slug }));
+}
+
+export default async function CompanionPage({ params }: CompanionPageProps) {
   const { id, orgSlug } = await params;
-  const query = companionQuerySchema.parse(await searchParams);
   if (!uuidSchema.safeParse(id).success) notFound();
   const organization = await getPublicOrganization(orgSlug);
   if (!organization) notFound();
-  const resident = await prisma.resident.findFirst({ where: { id, orgId: organization.id } });
+  const resident = await getPublicResident(organization.id, id);
 
   if (!resident) notFound();
 
   const available = resident.status === "available";
-  const sponsored = query.sponsored === "1" && !query.error;
-
   return (
     <main className={`${styles.siteShell} ${styles.detailShell}`}>
       <Link className={styles.backLink} href={`/${orgSlug}`}>← All residents</Link>
 
-      {sponsored && (
-        <FeltPanel className={`${styles.confirmation} ${styles.confirmationTop}`} tone="moss">
-          <StitchBadge tone="cream">You&apos;re a hero!</StitchBadge>
-          <h2>Thank you for sponsoring {resident.name}!</h2>
-          <p>Your $25 monthly sponsorship is active until {resident.name} is adopted.</p>
-          <FeltLink className={styles.cardLink} href="/account/sign-in">
-            Create your sponsor account
-          </FeltLink>
-        </FeltPanel>
-      )}
+      <Suspense fallback={null}><CompanionBanner name={resident.name} /></Suspense>
 
       <section className={styles.profile}>
         <div className={styles.gallery}>
@@ -83,44 +75,38 @@ export default async function CompanionPage({ params, searchParams }: CompanionP
         </div>
       </section>
 
-      {available && !sponsored ? (
-        <FeltPanel className={styles.sponsorPanel} tone="oatmeal">
-          <div className={styles.sponsorPitch}>
-            <p className={styles.eyebrow}>A steady paw</p>
-            <h2>Sponsor {resident.name} for $25/month until adopted</h2>
-            <p>We&apos;ll send little email updates from the rescue as {resident.name} settles in.</p>
-          </div>
+      {available ? (
+        <CompanionSponsorState>
+          <FeltPanel className={styles.sponsorPanel} tone="oatmeal">
+            <div className={styles.sponsorPitch}>
+              <p className={styles.eyebrow}>A steady paw</p>
+              <h2>Sponsor {resident.name} for $25/month until adopted</h2>
+              <p>We&apos;ll send little email updates from the rescue as {resident.name} settles in.</p>
+            </div>
 
-          {query.error && (
-            <p className={styles.formError} role="alert">
-              {query.error === "unavailable"
-                ? `${resident.name} is no longer available to sponsor.`
-                : query.error === "billing"
-                  ? "Online sponsorship is not ready for this rescue yet. Please try again later."
-                  : "Please complete the required fields."}
-            </p>
-          )}
+            <Suspense fallback={null}><CompanionFormError name={resident.name} /></Suspense>
 
-          <form action={createSponsorship} className={styles.sponsorForm}>
-            <input name="orgSlug" type="hidden" value={orgSlug} />
-            <input name="residentId" type="hidden" value={resident.id} />
+            <form action={createSponsorship} className={styles.sponsorForm}>
+              <input name="orgSlug" type="hidden" value={orgSlug} />
+              <input name="residentId" type="hidden" value={resident.id} />
 
-            <label htmlFor="sponsorName">Your name</label>
-            <FeltField>
-              <input autoComplete="name" id="sponsorName" name="sponsorName" required />
-            </FeltField>
+              <label htmlFor="sponsorName">Your name</label>
+              <FeltField>
+                <input autoComplete="name" id="sponsorName" name="sponsorName" required />
+              </FeltField>
 
-            <label htmlFor="sponsorEmail">Email</label>
-            <FeltField>
-              <input autoComplete="email" id="sponsorEmail" name="sponsorEmail" required type="email" />
-            </FeltField>
+              <label htmlFor="sponsorEmail">Email</label>
+              <FeltField>
+                <input autoComplete="email" id="sponsorEmail" name="sponsorEmail" required type="email" />
+              </FeltField>
 
-            <FeltButton className={styles.sponsorButton} tone="mustard" type="submit">
-              Sponsor for $25/month until adopted
-            </FeltButton>
-          </form>
-        </FeltPanel>
-      ) : !available ? (
+              <FeltButton className={styles.sponsorButton} tone="mustard" type="submit">
+                Sponsor for $25/month until adopted
+              </FeltButton>
+            </form>
+          </FeltPanel>
+        </CompanionSponsorState>
+      ) : (
         <FeltPanel className={styles.confirmation} tone="brick">
           <h2>{resident.name} has been adopted!</h2>
           <p>Their sponsorship chapter is complete. Meet another resident who could use your help.</p>
@@ -128,7 +114,7 @@ export default async function CompanionPage({ params, searchParams }: CompanionP
             Meet the companions
           </FeltLink>
         </FeltPanel>
-      ) : null}
+      )}
     </main>
   );
 }

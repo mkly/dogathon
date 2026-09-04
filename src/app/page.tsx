@@ -1,15 +1,12 @@
 import Link from "next/link";
 
 import { FeltPanel } from "@/components/felt";
-import { prisma } from "@/lib/prisma";
+import { getPublicOrganizations } from "@/lib/public-roster-cache";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 86400;
 
 export default async function OrganizationIndexPage() {
-  const organizations = await prisma.organization.findMany({
-    orderBy: { name: "asc" },
-    select: { id: true, name: true, slug: true },
-  });
+  const organizations = await getPublicOrganizations();
 
   return (
     <main className="felt-page">

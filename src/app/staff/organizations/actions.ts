@@ -11,6 +11,7 @@ import {
   RESERVED_ORGANIZATION_SLUG_ERROR,
 } from "@/lib/organization-slug";
 import { prisma } from "@/lib/prisma";
+import { revalidatePublicRoster } from "@/lib/public-roster-cache";
 import { uuidSchema } from "@/lib/uuid";
 
 const createOrganizationSchema = z.object({
@@ -53,6 +54,7 @@ export async function createOrganization(
     return { error: "We could not create that organization. Check the details and try again." };
   }
 
+  revalidatePublicRoster();
   redirect(`/${organization.slug}/admin`);
 }
 
