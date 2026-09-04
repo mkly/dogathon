@@ -58,6 +58,8 @@ export async function getRosterSyncBoss(): Promise<PgBoss> {
   if (!globalForRosterSync.rosterSyncBossStart) {
     const boss = globalForRosterSync.rosterSyncBoss ?? new PgBoss({
       connectionString: env.DATABASE_URL,
+      supervise: false,
+      schedule: false,
     });
     boss.on("error", (error) => console.error("pg-boss error", error));
     globalForRosterSync.rosterSyncBoss = boss;
@@ -190,6 +192,10 @@ export async function getRosterSyncJob(orgId: string, jobId: string) {
 
 export async function fetchRosterSyncJob() {
   return (await defaultQueue()).fetch();
+}
+
+export async function superviseRosterSyncQueue() {
+  await (await getRosterSyncBoss()).supervise(ROSTER_SYNC_QUEUE);
 }
 
 export async function succeedRosterSyncJob(jobId: string, summary: SyncSummary) {

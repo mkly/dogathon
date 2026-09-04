@@ -51,6 +51,7 @@ function job(status: RosterSyncJobView["status"]): RosterSyncJobView {
 
 function dependencies(overrides: Partial<Parameters<typeof createRosterSyncDrainer>[0]> = {}) {
   return {
+    supervise: async () => undefined,
     fetch: async () => claim,
     syncRoster: async () => summary,
     succeed: async () => job("succeeded"),
@@ -115,6 +116,21 @@ test("a correct secret fetches and explicitly completes one job", async () => {
   assert.equal(response.status, 200);
   assert.equal(completed, claim.id);
   assert.deepEqual(await response.json(), { drained: true, job: job("succeeded") });
+});
+
+test("the drainer supervises the queue before fetching a job", async () => {
+  const calls: string[] = [];
+  const drain = createRosterSyncDrainer(dependencies({
+    supervise: async () => { calls.push("supervise"); },
+    fetch: async () => {
+      calls.push("fetch");
+      return null;
+    },
+  }));
+
+  await drain();
+
+  assert.deepEqual(calls, ["supervise", "fetch"]);
 });
 
 test("an empty queue is a successful no-op", async () => {

@@ -3,6 +3,7 @@ import {
   fetchRosterSyncJob,
   refuseRosterSyncJob,
   succeedRosterSyncJob,
+  superviseRosterSyncQueue,
   type ClaimedRosterSyncJob,
 } from "./roster-sync-queue.ts";
 import type { RosterSyncJobView } from "./roster-sync-client.ts";
@@ -14,6 +15,7 @@ import type { SchedulerEnvironment } from "./scheduler-auth.ts";
 export const DEFAULT_ROSTER_SYNC_DRAIN_BUDGET_MS = 4 * 60 * 1000;
 
 type DrainDependencies = {
+  supervise: () => Promise<void>;
   fetch: () => Promise<ClaimedRosterSyncJob | null>;
   succeed: (jobId: string, summary: SyncSummary) => Promise<RosterSyncJobView>;
   refuse: (jobId: string, reason: string) => Promise<RosterSyncJobView>;
@@ -28,6 +30,7 @@ export type RosterSyncDrainResult =
   | { drained: true; job: RosterSyncJobView };
 
 const defaultDependencies: DrainDependencies = {
+  supervise: superviseRosterSyncQueue,
   fetch: fetchRosterSyncJob,
   succeed: succeedRosterSyncJob,
   refuse: refuseRosterSyncJob,
@@ -41,6 +44,7 @@ export function createRosterSyncDrainer(dependencies: DrainDependencies = defaul
       options.budgetMs ?? DEFAULT_ROSTER_SYNC_DRAIN_BUDGET_MS,
       "budgetMs",
     );
+    await dependencies.supervise();
     const claimed = await dependencies.fetch();
     if (!claimed) return { drained: false };
 

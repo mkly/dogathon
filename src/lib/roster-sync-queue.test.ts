@@ -25,6 +25,7 @@ const sourceDatabaseUrl = env.DATABASE_URL;
 const databaseName = `dogathon_pgboss_${process.pid}_${randomUUID().replaceAll("-", "")}`;
 
 let admin: pg.Client;
+let database: pg.Client;
 let boss: PgBoss;
 
 before(async () => {
@@ -35,6 +36,8 @@ before(async () => {
   await admin.query(`CREATE DATABASE "${databaseName}"`);
   url.pathname = `/${databaseName}`;
   const databaseUrl = url.toString();
+  database = new pg.Client({ connectionString: databaseUrl });
+  await database.connect();
 
   await execFileAsync("./node_modules/.bin/prisma", ["migrate", "deploy"], {
     cwd: repoRoot,
@@ -51,6 +54,7 @@ before(async () => {
 
 after(async () => {
   await boss?.stop({ graceful: false });
+  await database?.end();
   if (!admin) return;
   await admin.query(
     "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = $1",
@@ -142,11 +146,28 @@ test("a failed fetch is returned to pg-boss for retry", async () => {
   assert.equal((await queue.fetch())?.id, claimed.id);
 });
 
+test("an expired active job is fetchable after supervision", async () => {
+  const queue = createRosterSyncQueue(boss);
+  const orgId = randomUUID();
+  await queue.enqueue({ orgId });
+  const claimed = await queue.fetch();
+  assert.ok(claimed);
+
+  await database.query("UPDATE pgboss.job_common SET started_on = now() - interval '301 seconds' WHERE id = $1", [
+    claimed.id,
+  ]);
+
+  assert.equal(await queue.fetch(), null);
+  await boss.supervise(ROSTER_SYNC_QUEUE);
+  assert.equal((await queue.fetch())?.id, claimed.id);
+});
+
 test("the HTTP-invocation drainer fetches and settles a real pg-boss job", async () => {
   const queue = createRosterSyncQueue(boss);
   const orgId = randomUUID();
   const queued = await queue.enqueue({ orgId });
   const drain = createRosterSyncDrainer({
+    supervise: () => boss.supervise(ROSTER_SYNC_QUEUE),
     fetch: queue.fetch,
     succeed: queue.succeed,
     refuse: queue.refuse,
