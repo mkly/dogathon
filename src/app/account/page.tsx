@@ -9,6 +9,7 @@ import {
   AdminSurface,
 } from "@/components/admin-ui";
 import { SignOutButton } from "@/components/sign-out-button";
+import { PageViewTransition } from "@/components/page-view-transition";
 import { getSession } from "@/lib/auth-session";
 import { formatDate } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
@@ -41,7 +42,8 @@ export default async function SponsorAccountPage() {
   const sponsor = await getSponsorContext(requestHeaders);
   if (!sponsor) {
     return (
-      <main className={styles.page}>
+      <PageViewTransition>
+        <main className={styles.page}>
         <AdminSurface className={styles.empty} tone="oatmeal">
           <p className={styles.eyebrow}>Sponsor account</p>
           <h1>No sponsorship profile yet</h1>
@@ -53,7 +55,8 @@ export default async function SponsorAccountPage() {
             <SignOutButton redirectTo="/account/sign-in" />
           </div>
         </AdminSurface>
-      </main>
+        </main>
+      </PageViewTransition>
     );
   }
 
@@ -72,7 +75,8 @@ export default async function SponsorAccountPage() {
   });
 
   return (
-    <main className={styles.page}>
+    <PageViewTransition>
+      <main className={styles.page}>
       <header className={styles.header}>
         <div>
           <p className={styles.eyebrow}>Sponsor account</p>
@@ -155,6 +159,7 @@ export default async function SponsorAccountPage() {
           )}
         </AdminSurface>
       </div>
-    </main>
+      </main>
+    </PageViewTransition>
   );
 }

@@ -2,6 +2,7 @@ import { headers } from "next/headers";
 
 import { AuthForm } from "@/components/auth-form";
 import { FeltButton, FeltPanel, StitchBadge } from "@/components/felt";
+import { PageViewTransition } from "@/components/page-view-transition";
 import { SignOutButton } from "@/components/sign-out-button";
 import { getSession } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
@@ -62,7 +63,7 @@ export default async function InvitationPage({ params }: InvitationPageProps) {
   const { id } = await params;
   const parsedId = uuidSchema.safeParse(id);
   if (!parsedId.success) {
-    return <main className={styles.page}><ClosedInvitation state="unknown" /></main>;
+    return <PageViewTransition><main className={styles.page}><ClosedInvitation state="unknown" /></main></PageViewTransition>;
   }
 
   const [invitation, session] = await Promise.all([
@@ -77,10 +78,10 @@ export default async function InvitationPage({ params }: InvitationPageProps) {
   ]);
   const state = invitationState(invitation);
   if (!invitation) {
-    return <main className={styles.page}><ClosedInvitation state="unknown" /></main>;
+    return <PageViewTransition><main className={styles.page}><ClosedInvitation state="unknown" /></main></PageViewTransition>;
   }
   if (state !== "pending") {
-    return <main className={styles.page}><ClosedInvitation state={state} /></main>;
+    return <PageViewTransition><main className={styles.page}><ClosedInvitation state={state} /></main></PageViewTransition>;
   }
 
   const role = describeInvitationRole(invitation.role);
@@ -110,7 +111,8 @@ export default async function InvitationPage({ params }: InvitationPageProps) {
   const acceptThisInvitation = acceptInvitation.bind(null, invitation.id);
 
   return (
-    <main className={styles.page}>
+    <PageViewTransition>
+      <main className={styles.page}>
       <FeltPanel className={styles.card} tone="denim">
         <StitchBadge tone="mustard">Rescue invitation</StitchBadge>
         <h1>Join {invitation.organization.name}</h1>
@@ -166,6 +168,7 @@ export default async function InvitationPage({ params }: InvitationPageProps) {
           </div>
         )}
       </FeltPanel>
-    </main>
+      </main>
+    </PageViewTransition>
   );
 }

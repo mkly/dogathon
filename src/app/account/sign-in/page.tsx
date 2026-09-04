@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 
 import { FeltPanel } from "@/components/felt";
 import { MagicLinkForm } from "@/components/magic-link-form";
+import { PageViewTransition } from "@/components/page-view-transition";
 import { getSession } from "@/lib/auth-session";
 
 import styles from "../../staff/sign-in/sign-in.module.css";
@@ -17,7 +18,8 @@ export default async function SponsorSignInPage() {
   }
 
   return (
-    <main className={styles.page}>
+    <PageViewTransition>
+      <main className={styles.page}>
       <FeltPanel className={styles.card} tone="denim">
         <p className={styles.eyebrow}>Sponsor account</p>
         <h1>Sign in by email</h1>
@@ -26,6 +28,7 @@ export default async function SponsorSignInPage() {
         </p>
         <MagicLinkForm />
       </FeltPanel>
-    </main>
+      </main>
+    </PageViewTransition>
   );
 }

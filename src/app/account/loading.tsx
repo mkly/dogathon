@@ -1,3 +1,6 @@
 import { AccountRouteLoading } from "@/components/route-status";
+import { SuspenseFallback } from "@/components/page-view-transition";
 
-export default AccountRouteLoading;
+export default function Loading() {
+  return <SuspenseFallback><AccountRouteLoading /></SuspenseFallback>;
+}

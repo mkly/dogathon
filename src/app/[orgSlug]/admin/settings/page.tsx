@@ -15,6 +15,11 @@ import {
   AdminSurface,
 } from "@/components/admin-ui";
 import { SignOutButton } from "@/components/sign-out-button";
+import {
+  PageViewTransition,
+  SuspenseFallback,
+  SuspenseReveal,
+} from "@/components/page-view-transition";
 import { getEmailConnectorStatus } from "@/lib/email-connectors";
 import { getOrganizationAccessBySlug } from "@/lib/organization-access";
 import { prisma } from "@/lib/prisma";
@@ -177,37 +182,39 @@ export default async function AdminSettingsPage({ params }: AdminSettingsPagePro
   const { context } = access;
 
   return (
-    <AdminPage>
+    <PageViewTransition>
+      <AdminPage>
       <AdminHeader
         actions={
           <>
-            <AdminLink href={`/${orgSlug}/admin`} tone="oatmeal">
+            <AdminLink href={`/${orgSlug}/admin`} tone="oatmeal" transitionTypes={["nav-back"]}>
               Back to staff room
             </AdminLink>
             <SignOutButton />
           </>
         }
-        brand={<Link href={`/${orgSlug}`}>
+        brand={<Link href={`/${orgSlug}`} transitionTypes={["nav-back"]}>
           <Image alt="Pawcast" priority src={pawcastWordmark} />
         </Link>}
         title="Staff settings"
       />
 
       <div className={styles.settingsStack}>
-        <Suspense fallback={<SettingsCardLoading tone="mustard" />}>
-          <StripeConnection canOnboard={context.role === "owner"} orgId={context.orgId} orgSlug={orgSlug} />
+        <Suspense fallback={<SuspenseFallback><SettingsCardLoading tone="mustard" /></SuspenseFallback>}>
+          <SuspenseReveal><StripeConnection canOnboard={context.role === "owner"} orgId={context.orgId} orgSlug={orgSlug} /></SuspenseReveal>
         </Suspense>
 
-        <Suspense fallback={<SettingsCardLoading tone="oatmeal" />}>
-          <EmailSettings orgId={context.orgId} orgSlug={orgSlug} />
+        <Suspense fallback={<SuspenseFallback><SettingsCardLoading tone="oatmeal" /></SuspenseFallback>}>
+          <SuspenseReveal><EmailSettings orgId={context.orgId} orgSlug={orgSlug} /></SuspenseReveal>
         </Suspense>
 
-        <Suspense fallback={<><SettingsCardLoading tone="denim" /><SettingsCardLoading tone="moss" /></>}>
-          <RescueSettings orgId={context.orgId} orgSlug={orgSlug} />
+        <Suspense fallback={<SuspenseFallback><><SettingsCardLoading tone="denim" /><SettingsCardLoading tone="moss" /></></SuspenseFallback>}>
+          <SuspenseReveal><RescueSettings orgId={context.orgId} orgSlug={orgSlug} /></SuspenseReveal>
         </Suspense>
       </div>
 
       <AdminFooter>staff settings · everything in its place</AdminFooter>
-    </AdminPage>
+      </AdminPage>
+    </PageViewTransition>
   );
 }

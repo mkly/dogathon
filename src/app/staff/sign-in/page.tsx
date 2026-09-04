@@ -4,6 +4,7 @@ import { z } from "zod";
 
 import { AuthForm } from "@/components/auth-form";
 import { FeltPanel } from "@/components/felt";
+import { PageViewTransition } from "@/components/page-view-transition";
 import { getSession } from "@/lib/auth-session";
 
 import styles from "./sign-in.module.css";
@@ -26,7 +27,8 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
   }
 
   return (
-    <main className={styles.page}>
+    <PageViewTransition>
+      <main className={styles.page}>
       <FeltPanel className={styles.card} tone="denim">
         <p className={styles.eyebrow}>Rescue staff</p>
         <h1>Staff sign in</h1>
@@ -35,6 +37,7 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
         </p>
         <AuthForm redirectTo={redirectTo} />
       </FeltPanel>
-    </main>
+      </main>
+    </PageViewTransition>
   );
 }

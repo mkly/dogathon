@@ -13,6 +13,7 @@ import {
   AdminTable,
 } from "@/components/admin-ui";
 import { formatDate } from "@/lib/format";
+import { PageViewTransition } from "@/components/page-view-transition";
 import { getOrganizationAccessBySlug } from "@/lib/organization-access";
 import { prisma } from "@/lib/prisma";
 import { uuidSchema } from "@/lib/uuid";
@@ -55,9 +56,10 @@ export default async function SponsorDetailPage({ params }: SponsorDetailPagePro
   if (!sponsor) notFound();
 
   return (
-    <AdminPage variant="directory">
+    <PageViewTransition>
+      <AdminPage variant="directory">
       <AdminHeader
-        actions={<AdminLink className={styles.backLink} href={`/${orgSlug}/admin/sponsors`}>
+        actions={<AdminLink className={styles.backLink} href={`/${orgSlug}/admin/sponsors`} transitionTypes={["nav-back"]}>
           Back to sponsors
         </AdminLink>}
         eyebrow="Sponsor record"
@@ -111,6 +113,7 @@ export default async function SponsorDetailPage({ params }: SponsorDetailPagePro
           </AdminTable>
         </AdminSurface>
       </section>
-    </AdminPage>
+      </AdminPage>
+    </PageViewTransition>
   );
 }

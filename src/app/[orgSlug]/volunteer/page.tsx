@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import { AdminEmptyState, AdminHeader, AdminPage } from "@/components/admin-ui";
 import { FeltButton, FeltField, FeltLink, FeltPanel, PhotoPatch, StitchBadge } from "@/components/felt";
+import { PageViewTransition } from "@/components/page-view-transition";
 import { prisma } from "@/lib/prisma";
 import { getOrganizationAccessBySlug } from "@/lib/organization-access";
 import { uuidSchema } from "@/lib/uuid";
@@ -60,7 +61,8 @@ export default async function VolunteerPage({ params, searchParams }: VolunteerP
 
   if (submitted === "1") {
     return (
-      <AdminPage variant="volunteer">
+      <PageViewTransition>
+        <AdminPage variant="volunteer">
         <FeltPanel className={styles.confirmation} tone="moss">
           <StitchBadge tone="cream">Note tucked in</StitchBadge>
           <div aria-hidden="true" className={styles.confirmationMark}>✓</div>
@@ -74,12 +76,14 @@ export default async function VolunteerPage({ params, searchParams }: VolunteerP
             Submit another
           </FeltLink>
         </FeltPanel>
-      </AdminPage>
+        </AdminPage>
+      </PageViewTransition>
     );
   }
 
   return (
-    <AdminPage variant="volunteer">
+    <PageViewTransition>
+      <AdminPage variant="volunteer">
       <section className={styles.shell}>
         <AdminHeader
           eyebrow={<StitchBadge tone="denim">Volunteer check-in</StitchBadge>}
@@ -163,6 +167,7 @@ export default async function VolunteerPage({ params, searchParams }: VolunteerP
           </FeltButton>
         </form>
       </section>
-    </AdminPage>
+      </AdminPage>
+    </PageViewTransition>
   );
 }

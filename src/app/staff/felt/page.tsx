@@ -4,12 +4,14 @@ import {
   PhotoPatch,
   StitchBadge,
 } from "@/components/felt";
+import { PageViewTransition } from "@/components/page-view-transition";
 
 import styles from "./styleguide.module.css";
 
 export default function FeltStyleguidePage() {
   return (
-    <main className={styles.page}>
+    <PageViewTransition>
+      <main className={styles.page}>
       <header className={styles.header}>
         <StitchBadge tone="brick">Sirius design system</StitchBadge>
         <h1>Cut from the same cloth</h1>
@@ -55,6 +57,7 @@ export default function FeltStyleguidePage() {
           </div>
         </FeltPanel>
       </section>
-    </main>
+      </main>
+    </PageViewTransition>
   );
 }

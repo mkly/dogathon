@@ -13,6 +13,7 @@ import {
   AdminTable,
 } from "@/components/admin-ui";
 import { PhotoPatch } from "@/components/felt";
+import { PageViewTransition } from "@/components/page-view-transition";
 import { formatDate } from "@/lib/format";
 import { getOrganizationAccessBySlug } from "@/lib/organization-access";
 import { prisma } from "@/lib/prisma";
@@ -61,9 +62,10 @@ export default async function CompanionsCoveredPage({ params }: CompanionsCovere
   ).length;
 
   return (
-    <AdminPage variant="directory">
+    <PageViewTransition>
+      <AdminPage variant="directory">
       <AdminHeader
-        actions={<AdminLink className={styles.backLink} href={`/${orgSlug}/admin`}>
+        actions={<AdminLink className={styles.backLink} href={`/${orgSlug}/admin`} transitionTypes={["nav-back"]}>
           Back to staff room
         </AdminLink>}
         eyebrow="Private staff directory"
@@ -162,6 +164,7 @@ export default async function CompanionsCoveredPage({ params }: CompanionsCovere
           })}
         </section>
       )}
-    </AdminPage>
+      </AdminPage>
+    </PageViewTransition>
   );
 }

@@ -92,6 +92,7 @@ export function FeltLink({
   return (
     <Link
       className={clsx(styles["felt-button"], `felt-${tone}`, className)}
+      transitionTypes={["nav-forward"]}
       {...props}
     />
   );

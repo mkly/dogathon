@@ -1,5 +1,6 @@
 import { AdminRouteLoading } from "@/components/route-status";
+import { SuspenseFallback } from "@/components/page-view-transition";
 
 export default function Loading() {
-  return <AdminRouteLoading variant="members" />;
+  return <SuspenseFallback><AdminRouteLoading variant="members" /></SuspenseFallback>;
 }

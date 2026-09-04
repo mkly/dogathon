@@ -3,6 +3,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { FeltLink, FeltPanel, PhotoPatch } from "@/components/felt";
+import { PageViewTransition } from "@/components/page-view-transition";
+import { ViewTransition } from "react";
 import {
   getPublicOrganization,
   getPublicOrganizations,
@@ -30,7 +32,8 @@ export default async function OrganizationHome({ params }: OrganizationHomeProps
   const residents = await getPublicResidents(organization.id);
 
   return (
-    <main className={styles.siteShell}>
+    <PageViewTransition>
+      <main className={styles.siteShell}>
       <Image alt="Pawcast" className={styles.wordmark} priority src={pawcastWordmark} />
 
       <p>{organization.name}</p>
@@ -56,11 +59,17 @@ export default async function OrganizationHome({ params }: OrganizationHomeProps
         <section aria-label="Companions available to sponsor" className={styles.companionGrid}>
           {residents.map((resident) => (
             <FeltPanel className={styles.companionCard} key={resident.id} tone="oatmeal">
-              <PhotoPatch
-                alt={`${resident.name}, ${resident.breed}`}
-                className={styles.gridPhoto}
-                src={resident.photoUrls[0]}
-              />
+              <ViewTransition
+                default="none"
+                name={`companion-${resident.id}`}
+                share="companion-photo"
+              >
+                <PhotoPatch
+                  alt={`${resident.name}, ${resident.breed}`}
+                  className={styles.gridPhoto}
+                  src={resident.photoUrls[0]}
+                />
+              </ViewTransition>
               <div className={styles.cardCopy}>
                 <span className={styles.cardStatus}>Available</span>
                 <h2>{resident.name}</h2>
@@ -84,8 +93,9 @@ export default async function OrganizationHome({ params }: OrganizationHomeProps
       )}
 
       <footer className={styles.footer}>
-        <Link href={`/${orgSlug}/admin`}>staff room</Link>
+        <Link href={`/${orgSlug}/admin`} transitionTypes={["nav-forward"]}>staff room</Link>
       </footer>
-    </main>
+      </main>
+    </PageViewTransition>
   );
 }

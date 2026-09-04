@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Suspense } from "react";
+import { Suspense, ViewTransition } from "react";
 
 import { createSponsorship } from "@/app/actions";
 import { FeltButton, FeltField, FeltLink, FeltPanel, PhotoPatch, StitchBadge } from "@/components/felt";
+import { PageViewTransition } from "@/components/page-view-transition";
 import {
   getPublicCompanionParams,
   getPublicOrganization,
@@ -36,21 +37,45 @@ export default async function CompanionPage({ params }: CompanionPageProps) {
 
   const available = resident.status === "available";
   return (
-    <main className={`${styles.siteShell} ${styles.detailShell}`}>
-      <Link className={styles.backLink} href={`/${orgSlug}`}>← All residents</Link>
+    <PageViewTransition>
+      <main className={`${styles.siteShell} ${styles.detailShell}`}>
+      <Link className={styles.backLink} href={`/${orgSlug}`} transitionTypes={["nav-back"]}>← All residents</Link>
 
       <Suspense fallback={null}><CompanionBanner name={resident.name} /></Suspense>
 
       <section className={styles.profile}>
         <div className={styles.gallery}>
           {resident.photoUrls.length ? resident.photoUrls.slice(0, 3).map((photo, index) => (
-            <PhotoPatch
-              alt={`${resident.name}${index ? `, photo ${index + 1}` : ""}`}
-              className={index === 0 ? styles.heroPhoto : styles.extraPhoto}
-              key={photo}
-              src={photo}
-            />
-          )) : <PhotoPatch alt={resident.name} className={styles.heroPhoto} />}
+            index === 0 ? (
+              <ViewTransition
+                default="none"
+                key={photo}
+                name={`companion-${resident.id}`}
+                share="companion-photo"
+              >
+                <PhotoPatch
+                  alt={resident.name}
+                  className={styles.heroPhoto}
+                  src={photo}
+                />
+              </ViewTransition>
+            ) : (
+              <PhotoPatch
+                alt={`${resident.name}, photo ${index + 1}`}
+                className={styles.extraPhoto}
+                key={photo}
+                src={photo}
+              />
+            )
+          )) : (
+            <ViewTransition
+              default="none"
+              name={`companion-${resident.id}`}
+              share="companion-photo"
+            >
+              <PhotoPatch alt={resident.name} className={styles.heroPhoto} />
+            </ViewTransition>
+          )}
         </div>
 
         <div className={styles.profileCopy}>
@@ -110,11 +135,17 @@ export default async function CompanionPage({ params }: CompanionPageProps) {
         <FeltPanel className={styles.confirmation} tone="brick">
           <h2>{resident.name} has been adopted!</h2>
           <p>Their sponsorship chapter is complete. Meet another resident who could use your help.</p>
-          <FeltLink className={styles.cardLink} href={`/${orgSlug}`} tone="cream">
+          <FeltLink
+            className={styles.cardLink}
+            href={`/${orgSlug}`}
+            tone="cream"
+            transitionTypes={["nav-back"]}
+          >
             Meet the companions
           </FeltLink>
         </FeltPanel>
       )}
-    </main>
+      </main>
+    </PageViewTransition>
   );
 }

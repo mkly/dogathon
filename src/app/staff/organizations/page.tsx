@@ -2,6 +2,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { FeltButton, FeltLink, FeltPanel } from "@/components/felt";
+import { PageViewTransition } from "@/components/page-view-transition";
 import { auth } from "@/lib/auth";
 import { getSession } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
@@ -40,7 +41,8 @@ export default async function OrganizationsPage({ searchParams }: OrganizationsP
   ]);
 
   return (
-    <main className="felt-page">
+    <PageViewTransition>
+      <main className="felt-page">
       <FeltPanel tone="denim">
         <h1>Your rescue organizations</h1>
         {organizations.map((organization) => (
@@ -73,6 +75,7 @@ export default async function OrganizationsPage({ searchParams }: OrganizationsP
         <h2>Create an organization</h2>
         <CreateOrganizationForm />
       </FeltPanel>
-    </main>
+      </main>
+    </PageViewTransition>
   );
 }

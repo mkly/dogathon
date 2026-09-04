@@ -1,5 +1,92 @@
 :root {
   color-scheme: light;
+  --view-duration-exit: 150ms;
+  --view-duration-enter: 210ms;
+  --view-duration-move: 400ms;
+}
+
+::view-transition {
+  pointer-events: none;
+}
+
+::view-transition-old(.nav-forward) {
+  --slide-offset: -60px;
+  animation:
+    var(--view-duration-exit) ease-in both view-fade reverse,
+    var(--view-duration-move) ease-in-out both view-slide reverse;
+}
+
+::view-transition-new(.nav-forward) {
+  --slide-offset: 60px;
+  animation:
+    var(--view-duration-enter) ease-out var(--view-duration-exit) both view-fade,
+    var(--view-duration-move) ease-in-out both view-slide;
+}
+
+::view-transition-old(.nav-back) {
+  --slide-offset: 60px;
+  animation:
+    var(--view-duration-exit) ease-in both view-fade reverse,
+    var(--view-duration-move) ease-in-out both view-slide reverse;
+}
+
+::view-transition-new(.nav-back) {
+  --slide-offset: -60px;
+  animation:
+    var(--view-duration-enter) ease-out var(--view-duration-exit) both view-fade,
+    var(--view-duration-move) ease-in-out both view-slide;
+}
+
+::view-transition-old(.content-fallback) {
+  animation: var(--view-duration-exit) ease-out both view-fade reverse;
+}
+
+::view-transition-new(.content-reveal) {
+  animation: var(--view-duration-enter) ease-in var(--view-duration-exit) both view-fade;
+}
+
+::view-transition-group(.companion-photo) {
+  animation-duration: var(--view-duration-move);
+}
+
+::view-transition-group(admin-header) {
+  z-index: 100;
+  animation: none;
+}
+
+::view-transition-old(admin-header) {
+  display: none;
+}
+
+::view-transition-new(admin-header) {
+  animation: none;
+}
+
+@keyframes view-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes view-slide {
+  from {
+    translate: var(--slide-offset);
+  }
+  to {
+    translate: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(*),
+  ::view-transition-new(*),
+  ::view-transition-group(*) {
+    animation-delay: 0s !important;
+    animation-duration: 0s !important;
+  }
 }
 
 * {
