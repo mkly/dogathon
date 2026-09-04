@@ -443,6 +443,43 @@ test("a loadMore scrape is one tool call and logs its selector and click count",
   assert.ok(logs.some((line) => line.includes('loadMore selector=".show-more" clicks=3 started')));
 });
 
+test("an unusable loadMore selector fails its tool call instead of the whole sync", async () => {
+  const logs: string[] = [];
+  let step = 0;
+
+  const text = await discoverRoster("https://rescue.example/companions", {
+    log: (message) => logs.push(message),
+    model: scriptedModel(async () => {
+      step += 1;
+      if (step > 2) return { role: "assistant", content: "Done." };
+      return {
+        role: "assistant",
+        content: null,
+        tool_calls: [{
+          id: `scrape-${step}`,
+          type: "function",
+          function: {
+            name: "firecrawl_scrape",
+            arguments: JSON.stringify({
+              url: "https://rescue.example/companions",
+              ...(step === 1 ? { loadMore: { selector: "   " } } : {}),
+            }),
+          },
+        }],
+      };
+    }),
+    firecrawl: async (name, input) => requestFirecrawl(name, input, {
+      apiKey: "fc-test",
+      baseUrl: "https://firecrawl.example/v2",
+      fetch: async () => Response.json({ success: true, data: { markdown: "# Roster", links: [] } }),
+    }),
+  });
+
+  assert.match(text, /# Roster/);
+  assert.ok(logs.some((line) => line.includes('loadMore={"selector":"   "}')));
+  assert.ok(logs.some((line) => line.includes("failed") && line.includes("must not be empty")));
+});
+
 test("submits a Firecrawl v2 crawl job and polls it to completion", async () => {
   const requests: Array<{ url: string; init?: RequestInit }> = [];
   const responses = [

@@ -574,11 +574,19 @@ function describeToolInput(input: Record<string, unknown>): string {
   const extras = Object.entries(rest)
     .filter(([, value]) => value !== undefined)
     .map(([key, value]) => `${key}=${JSON.stringify(value)}`);
-  const loadMoreDescription = loadMore === undefined
-    ? ""
-    : `loadMore selector=${JSON.stringify(loadMoreSelector(loadMore))} clicks=${loadMoreClickCount(loadMore)}`;
+  const loadMoreDescription = loadMore === undefined ? "" : describeLoadMore(loadMore);
   const urlList = Array.isArray(urls) ? `${urls.length} urls (${urls.slice(0, 3).map(String).join(", ")}${urls.length > 3 ? ", ..." : ""})` : "";
   return [typeof url === "string" ? url : "", urlList, loadMoreDescription, ...extras].filter(Boolean).join(" ");
+}
+
+// Logging runs before the request validates its input, so an unusable loadMore
+// must still describe itself rather than abort the tool call.
+function describeLoadMore(loadMore: unknown): string {
+  try {
+    return `loadMore selector=${JSON.stringify(loadMoreSelector(loadMore))} clicks=${loadMoreClickCount(loadMore)}`;
+  } catch {
+    return `loadMore=${JSON.stringify(loadMore)}`;
+  }
 }
 
 function elapsedSeconds(startedAt: number): string {
