@@ -948,7 +948,7 @@ function summarizeScrapeToolResult(value: unknown, sourceUrl: string): string {
 function sameSiteUrls(values: unknown[], sourceUrl: string): string[] {
   const source = new URL(sourceUrl);
   return [...new Set(values.flatMap((value) => {
-    if (typeof value !== "string") return [];
+    if (typeof value !== "string" || !isUrlShaped(value)) return [];
     try {
       const parsed = new URL(value, source);
       const related = (parsed.protocol === "http:" || parsed.protocol === "https:")
@@ -961,12 +961,20 @@ function sameSiteUrls(values: unknown[], sourceUrl: string): string[] {
   }))];
 }
 
+// A bare title or description resolves against the source as a relative URL,
+// so only strings written as a URL count; otherwise every string field of an
+// endpoint's JSON would land in `links` and be scraped.
+function isUrlShaped(value: string): boolean {
+  return /^https?:\/\//iu.test(value) || value.startsWith("/") || value.startsWith("./") || value.startsWith("../");
+}
+
 function scrapedJson(data: Record<string, unknown>): unknown | null {
   if (data.json && typeof data.json === "object") return data.json;
   for (const value of [data.json, data.rawHtml, data.html, data.markdown, data.content]) {
     if (typeof value !== "string") continue;
     try {
-      return JSON.parse(value) as unknown;
+      const parsed = JSON.parse(value) as unknown;
+      if (parsed && typeof parsed === "object") return parsed;
     } catch {
       continue;
     }

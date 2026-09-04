@@ -996,7 +996,9 @@ test("a scrape reply surfaces script data endpoints and JSON companion links", a
       : {
         success: true,
         data: {
-          rawHtml: JSON.stringify({ items: [{ permalink: "https://rescue.example/rescue-adoption/biscuit/" }] }),
+          rawHtml: JSON.stringify({
+            items: [{ title: "Biscuit", tags: ["Dog", "3 years old"], permalink: "https://rescue.example/rescue-adoption/biscuit/" }],
+          }),
         },
       },
   });
