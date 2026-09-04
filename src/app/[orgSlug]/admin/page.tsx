@@ -16,6 +16,7 @@ import {
 } from "@/components/admin-ui";
 import { PhotoPatch } from "@/components/felt";
 import { SignOutButton } from "@/components/sign-out-button";
+import { MotionReveal } from "@/components/motion-primitives";
 import { getEmailConnectorStatus } from "@/lib/email-connectors";
 import { formatDateTime } from "@/lib/format";
 import { getOrganizationAccessBySlug } from "@/lib/organization-access";
@@ -219,7 +220,11 @@ export default async function AdminPage({ params }: AdminPageProps) {
           title="Waiting for your OK"
         />
 
-        {!emailConnector.connected && drafts.length > 0 && (
+        <MotionReveal
+          animateOnMount
+          className={styles.noticeReveal}
+          show={!emailConnector.connected && drafts.length > 0}
+        >
           <p className={styles.queueNotice} id={EMAIL_CONNECTOR_NOTICE_ID}>
             <span aria-hidden="true">✉️</span>
             <span>
@@ -231,7 +236,7 @@ export default async function AdminPage({ params }: AdminPageProps) {
               )}
             </span>
           </p>
-        )}
+        </MotionReveal>
 
         <div className={styles.queue}>
           {drafts.length === 0 ? (
@@ -244,7 +249,15 @@ export default async function AdminPage({ params }: AdminPageProps) {
             </AdminSurface>
           ) : (
             drafts.map((draft) => (
-              <AdminSurface className={styles.queueItem} key={draft.id} tone="oatmeal">
+              <DraftEditor
+                bodyText={draft.bodyText}
+                emailConnected={emailConnector.connected}
+                id={draft.id}
+                key={draft.id}
+                orgSlug={orgSlug}
+                smsText={draft.smsText}
+                subject={draft.subject}
+              >
                 <PhotoPatch
                   alt={`${draft.resident.name} portrait`}
                   className={styles.photo}
@@ -258,15 +271,7 @@ export default async function AdminPage({ params }: AdminPageProps) {
                   <p>{draft.resident.personality}</p>
                   <small>goes to {draft.resident.sponsorships.length} sponsors</small>
                 </div>
-                <DraftEditor
-                  bodyText={draft.bodyText}
-                  emailConnected={emailConnector.connected}
-                  id={draft.id}
-                  orgSlug={orgSlug}
-                  smsText={draft.smsText}
-                  subject={draft.subject}
-                />
-              </AdminSurface>
+              </DraftEditor>
             ))
           )}
         </div>

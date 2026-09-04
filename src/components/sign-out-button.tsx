@@ -17,7 +17,12 @@ export function SignOutButton({ redirectTo = "/staff/sign-in" }: { redirectTo?: 
   }
 
   return (
-    <AdminButton disabled={pending} onClick={signOut} tone="oatmeal">
+    <AdminButton
+      disabled={pending}
+      onClick={signOut}
+      style={{ minWidth: "6.75rem" }}
+      tone="oatmeal"
+    >
       {pending ? "Signing out…" : "Sign out"}
     </AdminButton>
   );

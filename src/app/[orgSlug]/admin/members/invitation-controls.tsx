@@ -3,6 +3,12 @@
 import { FormEvent, useOptimistic, useState, useTransition } from "react";
 
 import { AdminBadge, AdminButton, AdminField, AdminSurface } from "@/components/admin-ui";
+import {
+  AnimatePresence,
+  motion,
+  MotionReveal,
+  useMotionTiming,
+} from "@/components/motion-primitives";
 import { formatDateTime } from "@/lib/format";
 import { pushToast } from "@/lib/toast";
 
@@ -34,6 +40,8 @@ const ROLE_TONES = {
   volunteer: "moss",
 } as const;
 
+const MotionAdminSurface = motion.create(AdminSurface);
+
 export function InvitationManager({
   invitations,
   orgSlug,
@@ -59,6 +67,7 @@ export function InvitationManager({
       : current.filter((invitation) => invitation.id !== update.id),
   );
   const [, startTransition] = useTransition();
+  const motionTransition = useMotionTiming();
 
   function setInvitationPending(
     invitationId: string,
@@ -196,7 +205,12 @@ export function InvitationManager({
               <option value="volunteer">Volunteer</option>
             </select>
           </AdminField>
-          <AdminButton disabled={invitePending} tone="moss" type="submit">
+          <AdminButton
+            className={styles.inviteButton}
+            disabled={invitePending}
+            tone="moss"
+            type="submit"
+          >
             {invitePending ? "Sending…" : "Send invitation"}
           </AdminButton>
         </form>
@@ -204,10 +218,30 @@ export function InvitationManager({
       </AdminSurface>
 
       <div className={styles.invitationList}>
-        {optimisticInvitations.length === 0 ? (
-          <p className={styles.emptyInvitations}>There are no pending invitations.</p>
-        ) : optimisticInvitations.map((invitation) => (
-          <AdminSurface className={styles.invitationRow} key={invitation.id} tone="oatmeal">
+        <AnimatePresence initial={false} mode="popLayout">
+          {optimisticInvitations.length === 0 ? (
+            <motion.p
+              animate={{ opacity: 1, y: 0 }}
+              className={styles.emptyInvitations}
+              exit={{ opacity: 0, y: -6 }}
+              initial={{ opacity: 0, y: 6 }}
+              key="empty"
+              layout
+              transition={motionTransition}
+            >
+              There are no pending invitations.
+            </motion.p>
+          ) : optimisticInvitations.map((invitation) => (
+          <MotionAdminSurface
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            className={styles.invitationRow}
+            exit={{ opacity: 0, scale: 0.98, y: -8 }}
+            initial={{ opacity: 0, scale: 0.98, y: 8 }}
+            key={invitation.id}
+            layout
+            tone="oatmeal"
+            transition={motionTransition}
+          >
             <div className={styles.identity}>
               <h3>{invitation.email}</h3>
               <p>Invited by {invitation.inviter}</p>
@@ -223,6 +257,7 @@ export function InvitationManager({
             <div className={styles.invitationActions}>
               {!invitation.pending ? <div className={styles.invitationControls}>
                 <AdminButton
+                  className={styles.copyButton}
                   disabled={copyingInvitationId === invitation.id}
                   onClick={() => copyInviteLink(invitation)}
                   tone="denim"
@@ -230,6 +265,7 @@ export function InvitationManager({
                   {copyingInvitationId === invitation.id ? "Copying…" : "Copy invite link"}
                 </AdminButton>
                 <AdminButton
+                  className={styles.resendButton}
                   disabled={pendingInvitationActions[invitation.id] !== undefined}
                   onClick={() => resend(invitation)}
                   tone="moss"
@@ -239,6 +275,7 @@ export function InvitationManager({
                     : "Resend"}
                 </AdminButton>
                 <AdminButton
+                  className={styles.cancelButton}
                   disabled={pendingInvitationActions[invitation.id] !== undefined}
                   onClick={() => cancel(invitation)}
                   tone="brick"
@@ -248,7 +285,10 @@ export function InvitationManager({
                     : "Cancel"}
                 </AdminButton>
               </div> : null}
-              {visibleInviteUrlId === invitation.id ? (
+              <MotionReveal
+                className={styles.inviteLinkReveal}
+                show={visibleInviteUrlId === invitation.id}
+              >
                 <AdminField>
                   <input
                     aria-label={`Invite link for ${invitation.email}`}
@@ -257,10 +297,11 @@ export function InvitationManager({
                     value={invitation.inviteUrl}
                   />
                 </AdminField>
-              ) : null}
+              </MotionReveal>
             </div>
-          </AdminSurface>
+          </MotionAdminSurface>
         ))}
+        </AnimatePresence>
       </div>
     </div>
   );

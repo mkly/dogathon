@@ -4,6 +4,13 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as AlertDialog from "@radix-ui/react-alert-dialog";
 import * as Dialog from "@radix-ui/react-dialog";
 import {
+  AnimatePresence,
+  motion,
+  MotionReveal,
+  useMotionTiming,
+} from "@/components/motion-primitives";
+import {
+  type ReactNode,
   useActionState,
   useEffect,
   useOptimistic,
@@ -42,6 +49,8 @@ import {
 } from "./gmail-notice";
 import styles from "./admin.module.css";
 
+const MotionAdminSurface = motion.create(AdminSurface);
+
 async function apiFetch(
   input: RequestInfo | URL,
   init: RequestInit,
@@ -67,6 +76,7 @@ async function apiFetch(
 
 export function DraftEditor({
   bodyText: initialBodyText,
+  children,
   emailConnected,
   id,
   orgSlug,
@@ -74,6 +84,7 @@ export function DraftEditor({
   subject: initialSubject,
 }: {
   bodyText: string;
+  children: ReactNode;
   emailConnected: boolean;
   id: string;
   orgSlug: string;
@@ -96,6 +107,7 @@ export function DraftEditor({
     null,
   );
   const smsTooLong = smsText.length > MAX_SMS_LENGTH;
+  const motionTransition = useMotionTiming();
 
   function openEditor() {
     setSubject(savedDraft.subject);
@@ -219,10 +231,21 @@ export function DraftEditor({
     });
   }
 
-  if (!visible) return null;
-
   return (
-    <div className={styles.draftControls}>
+    <AnimatePresence initial={false} mode="popLayout">
+      {visible ? (
+        <MotionAdminSurface
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          className={styles.queueItem}
+          exit={{ opacity: 0, scale: 0.98, y: -8 }}
+          initial={{ opacity: 0, scale: 0.98, y: 8 }}
+          key={id}
+          layout
+          tone="oatmeal"
+          transition={motionTransition}
+        >
+          {children}
+          <div className={styles.draftControls}>
       <div className={styles.draftPreview}>
         <p className={styles.draftSubject}>{savedDraft.subject}</p>
         <p>{savedDraft.bodyText}</p>
@@ -237,6 +260,7 @@ export function DraftEditor({
           Edit
         </AdminButton>
         <AdminButton
+          className={styles.approveButton}
           aria-describedby={
             emailConnected ? undefined : EMAIL_CONNECTOR_NOTICE_ID
           }
@@ -248,6 +272,7 @@ export function DraftEditor({
           {pending === "approve" ? "Saving & sending…" : "Approve & send"}
         </AdminButton>
         <AdminButton
+          className={styles.denyButton}
           disabled={pending !== null}
           onClick={() => setDenyConfirmOpen(true)}
           tone="brick"
@@ -271,9 +296,30 @@ export function DraftEditor({
         }}
         open={editorOpen}
       >
-        <Dialog.Portal>
-          <Dialog.Overlay className={styles.dialogOverlay} />
-          <Dialog.Content className={styles.draftDialog}>
+        <Dialog.Portal forceMount>
+          <AnimatePresence>
+            {editorOpen ? (
+              <Dialog.Overlay asChild forceMount>
+                <motion.div
+                  animate={{ opacity: 1 }}
+                  className={styles.dialogOverlay}
+                  exit={{ opacity: 0 }}
+                  initial={{ opacity: 0 }}
+                  transition={motionTransition}
+                />
+              </Dialog.Overlay>
+            ) : null}
+          </AnimatePresence>
+          <AnimatePresence>
+            {editorOpen ? (
+              <Dialog.Content asChild forceMount>
+                <motion.div
+                  animate={{ opacity: 1, scale: 1, x: "-50%", y: "-50%" }}
+                  className={styles.draftDialog}
+                  exit={{ opacity: 0, scale: 0.97, x: "-50%", y: "-48%" }}
+                  initial={{ opacity: 0, scale: 0.97, x: "-50%", y: "-48%" }}
+                  transition={motionTransition}
+                >
             <AdminSurface className={styles.dialogPanel} tone="oatmeal">
               <div className={styles.dialogHeader}>
                 <div>
@@ -333,7 +379,10 @@ export function DraftEditor({
                     value={smsText}
                   />
                 </AdminField>
-                {smsTooLong && (
+                <MotionReveal
+                  className={styles.inlineReveal}
+                  show={smsTooLong}
+                >
                   <p
                     className={styles.smsError}
                     id={`sms-error-${id}`}
@@ -342,7 +391,7 @@ export function DraftEditor({
                     Shorten the SMS by {smsText.length - MAX_SMS_LENGTH}{" "}
                     characters before saving.
                   </p>
-                )}
+                </MotionReveal>
                 <div className={styles.modalActions}>
                   <AdminButton
                     disabled={pending === "save"}
@@ -352,6 +401,7 @@ export function DraftEditor({
                     Cancel
                   </AdminButton>
                   <AdminButton
+                    className={styles.saveDraftButton}
                     disabled={pending !== null || smsTooLong}
                     onClick={save}
                     tone="mustard"
@@ -361,7 +411,10 @@ export function DraftEditor({
                 </div>
               </div>
             </AdminSurface>
-          </Dialog.Content>
+                </motion.div>
+              </Dialog.Content>
+            ) : null}
+          </AnimatePresence>
         </Dialog.Portal>
       </Dialog.Root>
 
@@ -369,9 +422,30 @@ export function DraftEditor({
         onOpenChange={setDenyConfirmOpen}
         open={denyConfirmOpen}
       >
-        <AlertDialog.Portal>
-          <AlertDialog.Overlay className={styles.dialogOverlay} />
-          <AlertDialog.Content className={styles.alertDialog}>
+        <AlertDialog.Portal forceMount>
+          <AnimatePresence>
+            {denyConfirmOpen ? (
+              <AlertDialog.Overlay asChild forceMount>
+                <motion.div
+                  animate={{ opacity: 1 }}
+                  className={styles.dialogOverlay}
+                  exit={{ opacity: 0 }}
+                  initial={{ opacity: 0 }}
+                  transition={motionTransition}
+                />
+              </AlertDialog.Overlay>
+            ) : null}
+          </AnimatePresence>
+          <AnimatePresence>
+            {denyConfirmOpen ? (
+              <AlertDialog.Content asChild forceMount>
+                <motion.div
+                  animate={{ opacity: 1, scale: 1, x: "-50%", y: "-50%" }}
+                  className={styles.alertDialog}
+                  exit={{ opacity: 0, scale: 0.96, x: "-50%", y: "-48%" }}
+                  initial={{ opacity: 0, scale: 0.96, x: "-50%", y: "-48%" }}
+                  transition={motionTransition}
+                >
             <AdminSurface className={styles.dialogPanel} tone="oatmeal">
               <AlertDialog.Title asChild>
                 <h2>Discard this draft?</h2>
@@ -390,10 +464,16 @@ export function DraftEditor({
                 </AlertDialog.Action>
               </div>
             </AdminSurface>
-          </AlertDialog.Content>
+                </motion.div>
+              </AlertDialog.Content>
+            ) : null}
+          </AnimatePresence>
         </AlertDialog.Portal>
       </AlertDialog.Root>
-    </div>
+          </div>
+        </MotionAdminSurface>
+      ) : null}
+    </AnimatePresence>
   );
 }
 
@@ -439,7 +519,12 @@ export function ComposeButton({
 
   return (
     <div className={styles.actionStack}>
-      <AdminButton disabled={pending} onClick={compose} tone="denim">
+      <AdminButton
+        className={styles.composeButton}
+        disabled={pending}
+        onClick={compose}
+        tone="denim"
+      >
         {pending ? "Composing…" : "Compose pupdate"}
       </AdminButton>
     </div>
@@ -592,6 +677,7 @@ export function RosterSyncSettings({
       </AdminField>
       <div className={styles.rosterActions}>
         <AdminButton
+          className={styles.saveSourceButton}
           disabled={saving || syncPending}
           tone="denim"
           type="submit"
@@ -599,6 +685,7 @@ export function RosterSyncSettings({
           {saving ? "Saving…" : "Save source"}
         </AdminButton>
         <AdminButton
+          className={styles.syncButton}
           disabled={saving || syncPending || sourceDirty}
           onClick={() => syncMutation.mutate()}
           title={
@@ -608,17 +695,17 @@ export function RosterSyncSettings({
         >
           {buttonLabel}
         </AdminButton>
-        {label ? (
+        <MotionReveal className={styles.statusReveal} show={label !== null}>
           <span className={styles.syncStatus} role="status">
             {label}
           </span>
-        ) : null}
+        </MotionReveal>
       </div>
-      {sourceDirty ? (
+      <MotionReveal className={styles.inlineReveal} show={sourceDirty}>
         <p className={styles.unsavedSource} role="status">
           Save the source URL before syncing so the roster uses this address.
         </p>
-      ) : null}
+      </MotionReveal>
     </form>
   );
 }
@@ -641,6 +728,7 @@ export function EmailConnectorSettings({
     "gmail" | "microsoft" | "smtp" | "disconnect" | null
   >(null);
   const [smtpOpen, setSmtpOpen] = useState(false);
+  const motionTransition = useMotionTiming();
 
   async function connectOAuth(provider: "gmail" | "microsoft") {
     setPending(provider);
@@ -762,20 +850,38 @@ export function EmailConnectorSettings({
               ? `${providerLabel}: ${connector.fromEmail}`
               : "No verified connector"}
           </AdminBadge>
-          {connector.connected && (
+          <AnimatePresence initial={false}>
+          {connector.connected ? (
+            <motion.div
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.96 }}
+              initial={{ opacity: 0, scale: 0.96 }}
+              transition={motionTransition}
+            >
             <AdminButton
+              className={styles.disconnectButton}
               disabled={pending !== null}
               onClick={disconnect}
               tone="brick"
             >
               {pending === "disconnect" ? "Disconnecting…" : "Disconnect"}
             </AdminButton>
-          )}
+            </motion.div>
+          ) : null}
+          </AnimatePresence>
         </div>
       </div>
-      {!connector.connected && (
-        <div className={styles.oauthChoices}>
+      <AnimatePresence initial={false}>
+      {!connector.connected ? (
+        <motion.div
+          animate={{ height: "auto", opacity: 1, y: 0 }}
+          className={styles.oauthChoices}
+          exit={{ height: 0, opacity: 0, y: -8 }}
+          initial={{ height: 0, opacity: 0, y: -8 }}
+          transition={motionTransition}
+        >
           <AdminButton
+            className={styles.gmailButton}
             disabled={pending !== null}
             onClick={() => connectOAuth("gmail")}
             tone="denim"
@@ -783,6 +889,7 @@ export function EmailConnectorSettings({
             {pending === "gmail" ? "Opening Gmail…" : "Connect Gmail"}
           </AdminButton>
           <AdminButton
+            className={styles.microsoftButton}
             disabled={pending !== null}
             onClick={() => connectOAuth("microsoft")}
             tone="denim"
@@ -798,12 +905,34 @@ export function EmailConnectorSettings({
           >
             Connect SMTP with password
           </AdminButton>
-        </div>
-      )}
+        </motion.div>
+      ) : null}
+      </AnimatePresence>
       <Dialog.Root onOpenChange={setSmtpOpen} open={smtpOpen}>
-        <Dialog.Portal>
-          <Dialog.Overlay className={styles.dialogOverlay} />
-          <Dialog.Content className={styles.connectorDialog}>
+        <Dialog.Portal forceMount>
+          <AnimatePresence>
+            {smtpOpen ? (
+              <Dialog.Overlay asChild forceMount>
+                <motion.div
+                  animate={{ opacity: 1 }}
+                  className={styles.dialogOverlay}
+                  exit={{ opacity: 0 }}
+                  initial={{ opacity: 0 }}
+                  transition={motionTransition}
+                />
+              </Dialog.Overlay>
+            ) : null}
+          </AnimatePresence>
+          <AnimatePresence>
+            {smtpOpen ? (
+              <Dialog.Content asChild forceMount>
+                <motion.div
+                  animate={{ opacity: 1, scale: 1, x: "-50%", y: "-50%" }}
+                  className={styles.connectorDialog}
+                  exit={{ opacity: 0, scale: 0.97, x: "-50%", y: "-48%" }}
+                  initial={{ opacity: 0, scale: 0.97, x: "-50%", y: "-48%" }}
+                  transition={motionTransition}
+                >
             <AdminSurface className={styles.dialogPanel} tone="oatmeal">
               <div className={styles.dialogHeader}>
                 <div>
@@ -882,6 +1011,7 @@ export function EmailConnectorSettings({
                     Cancel
                   </AdminButton>
                   <AdminButton
+                    className={styles.smtpButton}
                     disabled={pending !== null}
                     tone="mustard"
                     type="submit"
@@ -891,7 +1021,10 @@ export function EmailConnectorSettings({
                 </div>
               </form>
             </AdminSurface>
-          </Dialog.Content>
+                </motion.div>
+              </Dialog.Content>
+            ) : null}
+          </AnimatePresence>
         </Dialog.Portal>
       </Dialog.Root>
     </AdminSurface>
@@ -932,7 +1065,12 @@ export function PostscriptSettingsForm({
         />
       </AdminField>
       <div className={styles.saveRow}>
-        <AdminButton disabled={pending} tone="mustard" type="submit">
+        <AdminButton
+          className={styles.postscriptButton}
+          disabled={pending}
+          tone="mustard"
+          type="submit"
+        >
           {pending ? "Pinning…" : "Save & pin 📌"}
         </AdminButton>
       </div>

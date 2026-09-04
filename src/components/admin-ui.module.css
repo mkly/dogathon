@@ -188,6 +188,10 @@
   border-radius: 8px;
   background: rgb(248 242 231 / 94%);
   color: var(--felt-ink);
+  transition:
+    border-color var(--motion-duration-base) var(--motion-ease-standard),
+    background-color var(--motion-duration-base) var(--motion-ease-standard),
+    box-shadow var(--motion-duration-base) var(--motion-ease-standard);
 }
 
 .button {
@@ -207,6 +211,12 @@
   font-weight: 800;
   line-height: 1.2;
   text-decoration: none;
+  transition:
+    translate var(--motion-duration-fast) var(--motion-ease-standard),
+    background-color var(--motion-duration-fast) var(--motion-ease-standard),
+    border-color var(--motion-duration-fast) var(--motion-ease-standard),
+    box-shadow var(--motion-duration-fast) var(--motion-ease-standard),
+    opacity var(--motion-duration-fast) var(--motion-ease-standard);
 }
 
 .button:hover:not(:disabled) {
@@ -215,6 +225,7 @@
 
 .button:active:not(:disabled) {
   background: color-mix(in srgb, var(--admin-accent), black 8%);
+  translate: 0 1px;
 }
 
 .button:disabled {
@@ -226,6 +237,9 @@
   border: 1px solid rgb(61 51 43 / 34%);
   border-radius: 6px;
   background: white;
+  transition:
+    border-color var(--motion-duration-fast) var(--motion-ease-standard),
+    box-shadow var(--motion-duration-fast) var(--motion-ease-standard);
 }
 
 .field:focus-within {

@@ -4,6 +4,11 @@ import * as AlertDialog from "@radix-ui/react-alert-dialog";
 import { useOptimistic, useState, useTransition } from "react";
 
 import { AdminBadge, AdminButton, AdminField, AdminSurface } from "@/components/admin-ui";
+import {
+  AnimatePresence,
+  motion,
+  useMotionTiming,
+} from "@/components/motion-primitives";
 import { formatDate } from "@/lib/format";
 import { pushToast } from "@/lib/toast";
 import type { OrganizationRole } from "@/lib/organization-access";
@@ -31,6 +36,8 @@ const ROLE_TONES = {
   volunteer: "moss",
 } as const;
 
+const MotionAdminSurface = motion.create(AdminSurface);
+
 export function MemberList({
   actorRole,
   actorUserId,
@@ -43,6 +50,7 @@ export function MemberList({
   orgSlug: string;
 }) {
   const [memberToRemove, setMemberToRemove] = useState<MemberView | null>(null);
+  const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
   const [pendingMemberActions, setPendingMemberActions] = useState<
     Record<string, "remove" | "role">
   >({});
@@ -57,6 +65,7 @@ export function MemberList({
         ),
   );
   const [, startTransition] = useTransition();
+  const motionTransition = useMotionTiming();
   const ownerCount = optimisticMembers.filter((member) => member.role === "owner").length;
 
   function setMemberPending(memberId: string, action: "remove" | "role" | null) {
@@ -100,7 +109,8 @@ export function MemberList({
 
   return (
     <div className={styles.memberList}>
-      {optimisticMembers.map((member) => {
+      <AnimatePresence initial={false} mode="popLayout">
+        {optimisticMembers.map((member) => {
         const isSelf = member.userId === actorUserId;
         const isProtectedOwner = member.role === "owner" && (
           actorRole === "admin" || ownerCount <= 1
@@ -108,7 +118,16 @@ export function MemberList({
         const pendingAction = pendingMemberActions[member.id];
 
         return (
-          <AdminSurface className={styles.memberRow} key={member.id} tone="oatmeal">
+          <MotionAdminSurface
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            className={styles.memberRow}
+            exit={{ opacity: 0, scale: 0.98, y: -8 }}
+            initial={{ opacity: 0, scale: 0.98, y: 8 }}
+            key={member.id}
+            layout
+            tone="oatmeal"
+            transition={motionTransition}
+          >
             <div className={styles.identity}>
               <div className={styles.nameLine}>
                 <h2>{member.name || member.email}</h2>
@@ -147,50 +166,77 @@ export function MemberList({
                 </AdminField>
               )}
               <AdminButton
+                className={styles.removeButton}
                 disabled={pendingAction !== undefined || isSelf || isProtectedOwner}
-                onClick={() => setMemberToRemove(member)}
+                onClick={() => {
+                  setMemberToRemove(member);
+                  setRemoveDialogOpen(true);
+                }}
                 title={isSelf ? "You cannot remove yourself." : undefined}
                 tone="brick"
               >
                 {pendingAction === "remove" ? "Working…" : "Remove"}
               </AdminButton>
             </div>
-          </AdminSurface>
+          </MotionAdminSurface>
         );
       })}
+      </AnimatePresence>
       <AlertDialog.Root
-        onOpenChange={(open) => {
-          if (!open) setMemberToRemove(null);
-        }}
-        open={memberToRemove !== null}
+        onOpenChange={setRemoveDialogOpen}
+        open={removeDialogOpen}
       >
-        <AlertDialog.Portal>
-          <AlertDialog.Overlay className={styles.dialogOverlay} />
-          <AlertDialog.Content className={styles.alertDialog}>
-            <AdminSurface className={styles.dialogPanel} tone="oatmeal">
-              <AlertDialog.Title asChild>
-                <h2>Remove organization member?</h2>
-              </AlertDialog.Title>
-              <AlertDialog.Description className={styles.dialogDescription}>
-                Remove {memberToRemove?.name || memberToRemove?.email} from this organization?
-              </AlertDialog.Description>
-              <div className={styles.dialogActions}>
-                <AlertDialog.Cancel asChild>
-                  <AdminButton tone="oatmeal">Cancel</AdminButton>
-                </AlertDialog.Cancel>
-                <AlertDialog.Action asChild>
-                  <AdminButton
-                    onClick={() => {
-                      if (memberToRemove) remove(memberToRemove);
-                    }}
-                    tone="brick"
-                  >
-                    Remove member
-                  </AdminButton>
-                </AlertDialog.Action>
-              </div>
-            </AdminSurface>
-          </AlertDialog.Content>
+        <AlertDialog.Portal forceMount>
+          <AnimatePresence>
+            {removeDialogOpen ? (
+              <AlertDialog.Overlay asChild forceMount>
+                <motion.div
+                  animate={{ opacity: 1 }}
+                  className={styles.dialogOverlay}
+                  exit={{ opacity: 0 }}
+                  initial={{ opacity: 0 }}
+                  transition={motionTransition}
+                />
+              </AlertDialog.Overlay>
+            ) : null}
+          </AnimatePresence>
+          <AnimatePresence onExitComplete={() => setMemberToRemove(null)}>
+            {removeDialogOpen ? (
+              <AlertDialog.Content asChild forceMount>
+                <motion.div
+                  animate={{ opacity: 1, scale: 1, x: "-50%", y: "-50%" }}
+                  className={styles.alertDialog}
+                  exit={{ opacity: 0, scale: 0.96, x: "-50%", y: "-48%" }}
+                  initial={{ opacity: 0, scale: 0.96, x: "-50%", y: "-48%" }}
+                  transition={motionTransition}
+                >
+                  <AdminSurface className={styles.dialogPanel} tone="oatmeal">
+                    <AlertDialog.Title asChild>
+                      <h2>Remove organization member?</h2>
+                    </AlertDialog.Title>
+                    <AlertDialog.Description className={styles.dialogDescription}>
+                      Remove {memberToRemove?.name || memberToRemove?.email} from this organization?
+                    </AlertDialog.Description>
+                    <div className={styles.dialogActions}>
+                      <AlertDialog.Cancel asChild>
+                        <AdminButton tone="oatmeal">Cancel</AdminButton>
+                      </AlertDialog.Cancel>
+                      <AlertDialog.Action asChild>
+                        <AdminButton
+                          onClick={() => {
+                            if (memberToRemove) remove(memberToRemove);
+                          }}
+                          tone="brick"
+                        >
+                          Remove member
+                        </AdminButton>
+                      </AlertDialog.Action>
+                    </div>
+                  </AdminSurface>
+                </motion.div>
+              </AlertDialog.Content>
+            ) : null}
+          </AnimatePresence>
         </AlertDialog.Portal>
       </AlertDialog.Root>
     </div>

@@ -13,6 +13,7 @@ import {
   AdminSurface,
 } from "@/components/admin-ui";
 import { SignOutButton } from "@/components/sign-out-button";
+import { MotionReveal } from "@/components/motion-primitives";
 import { getEmailConnectorStatus } from "@/lib/email-connectors";
 import { getOrganizationAccessBySlug } from "@/lib/organization-access";
 import { prisma } from "@/lib/prisma";
@@ -94,14 +95,18 @@ export default async function AdminSettingsPage({ params }: AdminSettingsPagePro
                     : "Connect this rescue to Stripe before sponsors can check out."}
             </p>
           </div>
-          {!organization?.stripeChargesEnabled && context.role === "owner" && (
+          <MotionReveal
+            animateOnMount
+            className={styles.stripeBlockers}
+            show={!organization?.stripeChargesEnabled && context.role === "owner"}
+          >
             <form action={beginStripeOnboarding} className={styles.stripeConnectForm}>
               <input name="orgSlug" type="hidden" value={orgSlug} />
               <AdminButton tone="brick" type="submit">
                 {organization?.stripeAccountId ? "Continue Stripe onboarding" : "Connect Stripe"}
               </AdminButton>
             </form>
-          )}
+          </MotionReveal>
         </AdminSurface>
 
         <section id={EMAIL_CONNECTOR_NOTICE_ID}>
