@@ -160,3 +160,102 @@ test("a successful model parse is returned as-is", async () => {
   assert.equal(companions[0].adopted, true);
   assert.deepEqual(companions[0].careNotes, []);
 });
+
+test("a scraped detail page with a gallery above its Meet heading parses offline", async () => {
+  const companions = await parseCompanionRoster(`
+[Back to All Dogs](https://rescue.example/adoptions/dogs/)
+
+![Stripe - Photo 1](https://rescue.example/uploads/stripe-1.jpg)
+
+![Stripe - Photo 2](https://rescue.example/uploads/stripe-2.jpg)
+
+## Meet Stripe
+
+Stripe is currently in a foster home. Sign up to meet him!
+
+**Age:**
+1 y, 11 m
+
+**Weight:**
+50 lbs; 11 oz
+
+**Gender:**
+Male
+
+**Breed:**
+Shepherd
+
+[how to adopt me](https://rescue.example/adoption-process/)
+
+![Tulip - Photo 1](https://rescue.example/uploads/tulip-1.jpg)
+
+## Meet Tulip
+
+Tulip and Daisy are a bonded pair.
+
+**Age:**
+4 y
+
+**Gender:**
+Female
+
+**Breed:**
+Australian Cattle Dog
+  `, { deterministic: true });
+
+  assert.deepEqual(companions.map((companion) => ({
+    name: companion.name,
+    sex: companion.sex,
+    breed: companion.breed,
+    ageText: companion.ageText,
+    weightText: companion.weightText,
+    careNotes: companion.careNotes,
+    photoUrls: companion.photoUrls,
+    adopted: companion.adopted,
+  })), [
+    {
+      name: "Stripe",
+      sex: "Male",
+      breed: "Shepherd",
+      ageText: "1 y, 11 m",
+      weightText: "50 lbs; 11 oz",
+      careNotes: ["In a foster home"],
+      photoUrls: [
+        "https://rescue.example/uploads/stripe-1.jpg",
+        "https://rescue.example/uploads/stripe-2.jpg",
+      ],
+      adopted: false,
+    },
+    {
+      name: "Tulip",
+      sex: "Female",
+      breed: "Australian Cattle Dog",
+      ageText: "4 y",
+      weightText: "",
+      careNotes: ["Bonded pair"],
+      photoUrls: ["https://rescue.example/uploads/tulip-1.jpg"],
+      adopted: false,
+    },
+  ]);
+});
+
+test("the model prompt turns markdown images into photo markers", async () => {
+  const { fetcher, prompts } = stubFetch([
+    { name: "Stripe", photoUrls: ["https://rescue.example/uploads/stripe-1.jpg"] },
+  ]);
+
+  await parseCompanionRoster(
+    "![Stripe](https://rescue.example/uploads/stripe-1.jpg?w=800)\n\n## Meet Stripe\n\n**Breed:** Shepherd",
+    {
+      apiKey: "test-key",
+      baseUrl: "https://model.example/v1",
+      model: "roster-parser",
+      fetch: fetcher,
+    },
+  );
+
+  assert.equal(prompts.length, 1);
+  assert.match(prompts[0], /\[photo: https:\/\/rescue\.example\/uploads\/stripe-1\.jpg\]/);
+  assert.doesNotMatch(prompts[0], /!\[Stripe\]/);
+  assert.match(prompts[0], /Meet Stripe/);
+});

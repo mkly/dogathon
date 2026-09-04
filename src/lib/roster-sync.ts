@@ -34,10 +34,16 @@ export type RosterCompleteness = {
 const DEFAULT_CAPTURE = "dogs-page-A.html";
 const MAX_FIRECRAWL_CRAWL_PAGES = 100;
 const MAX_FIRECRAWL_DISCOVERY_DEPTH = 3;
-const FIRECRAWL_CRAWL_TIMEOUT_MS = 30_000;
+// Firecrawl queues pages behind a per-plan browser concurrency cap, so a
+// hundred-page crawl routinely needs more than a minute; the drain route grants
+// each sync 240s and a discovery rarely runs more than two crawls.
+const FIRECRAWL_CRAWL_TIMEOUT_MS = 90_000;
 const FIRECRAWL_POLL_INTERVAL_MS = 1_000;
-const MAX_ROSTER_AGENT_STEPS = 8;
+const MAX_ROSTER_AGENT_STEPS = 10;
 const MAX_ROSTER_TOOL_CALLS = 12;
+const MAX_CRAWL_INCLUDE_PATHS = 5;
+const MAX_CRAWL_INCLUDE_PATH_CHARS = 200;
+export const MAX_SYNC_NOTE_CHARS = 4_000;
 const MAX_CRAWL_SUMMARY_CHARS = 4_000;
 // A live scrape should never make most of the current roster disappear at once.
 // Require a human to investigate instead of treating that disappearance as adoption.
@@ -71,13 +77,26 @@ export async function syncRoster(
   if (!settings.sourceUrl) {
     throw new Error("Roster sync needs an adoption-page source URL; save one in staff settings first");
   }
+  const sourceUrl = settings.sourceUrl;
+  const priorNote = await prisma.rosterSyncNote.findFirst({
+    where: { orgId, sourceUrl },
+    orderBy: { createdAt: "desc" },
+    select: { notes: true },
+  });
+  options.signal?.throwIfAborted();
   const {
     text,
     usedFallbackCapture,
     rosterComplete,
     rosterCompleteness,
     source,
-  } = await loadRoster(settings.sourceUrl, options);
+  } = await loadRoster(sourceUrl, {
+    signal: options.signal,
+    priorNotes: priorNote?.notes ?? null,
+    saveNotes: async (notes) => {
+      await prisma.rosterSyncNote.create({ data: { orgId, sourceUrl, notes } });
+    },
+  });
   options.signal?.throwIfAborted();
   const companions = await parseCompanionRoster(text);
   options.signal?.throwIfAborted();
@@ -259,7 +278,7 @@ export type RosterSource = {
 
 export async function loadRoster(
   sourceUrl: string,
-  options: { signal?: AbortSignal } = {},
+  options: Omit<RosterDiscoveryOptions, "model" | "firecrawl"> = {},
 ): Promise<RosterSource> {
   options.signal?.throwIfAborted();
   const localPath = resolveLocalSource(sourceUrl);
@@ -313,6 +332,10 @@ export type RosterDiscoveryOptions = {
   model?: LanguageModel;
   firecrawl?: FirecrawlCaller;
   signal?: AbortSignal;
+  /** The note the agent left after the previous sync of this source, if any. */
+  priorNotes?: string | null;
+  /** Persists the note the agent leaves for the next sync of this source. */
+  saveNotes?: (notes: string) => Promise<void>;
 };
 
 export type FirecrawlCrawlResult = {
@@ -350,12 +373,13 @@ export async function discoverRoster(
 export async function discoverRosterWithCompleteness(
   sourceUrl: string,
   options: RosterDiscoveryOptions = {},
-): Promise<{ text: string; rosterCompleteness: RosterCompleteness }> {
+): Promise<{ text: string; rosterCompleteness: RosterCompleteness; notes: string | null }> {
   const firecrawl = options.firecrawl
     ?? ((name, input) => requestFirecrawl(name, input, { sourceUrl, signal: options.signal }));
   const documents: string[] = [];
   const crawlCompleteness: RosterCompleteness[] = [];
   let toolCalls = 0;
+  let savedNotes: string | null = null;
   const executeTool = async (name: RosterToolName, input: Record<string, unknown>) => {
     options.signal?.throwIfAborted();
     let attemptedName: RosterToolName | undefined;
@@ -409,13 +433,33 @@ export async function discoverRosterWithCompleteness(
       execute: (input) => executeTool("firecrawl_scrape", input),
     }),
     firecrawl_crawl: tool({
-      description: "Crawl the complete adoption listing, following pagination and companion detail links within the configured listing path.",
+      description: "Crawl the complete adoption listing, following pagination and companion detail links. The crawl stays within the configured listing path unless includePaths adds the path pattern of companion detail pages that live elsewhere on the same site.",
       inputSchema: z.object({
         url: z.string().describe("The adoption-listing URL to crawl."),
+        includePaths: z.array(z.string().max(MAX_CRAWL_INCLUDE_PATH_CHARS))
+          .max(MAX_CRAWL_INCLUDE_PATHS)
+          .optional()
+          .describe("Extra URL path regexes (without the leading slash, for example \"sfspca-adoption/.*\") for companion detail pages outside the listing path. Patterns must name a specific section; the whole site is never crawled."),
         limit: z.number().int().min(1).max(MAX_FIRECRAWL_CRAWL_PAGES).optional(),
         maxDiscoveryDepth: z.number().int().min(0).max(MAX_FIRECRAWL_DISCOVERY_DEPTH).optional(),
       }),
       execute: (input) => executeTool("firecrawl_crawl", input),
+    }),
+    save_sync_notes: tool({
+      description: "Save notes for the next sync of this source: the listing URL to crawl, which includePaths reach the companion detail pages, how many companions the listing showed, and any site quirks. Replace the previous notes entirely.",
+      inputSchema: z.object({
+        notes: z.string().min(1).max(MAX_SYNC_NOTE_CHARS),
+      }),
+      execute: async ({ notes }) => {
+        options.signal?.throwIfAborted();
+        try {
+          await options.saveNotes?.(notes);
+          savedNotes = notes;
+          return "Notes saved for the next sync.";
+        } catch (error) {
+          return `Saving notes failed: ${error instanceof Error ? error.message : String(error)}`;
+        }
+      },
     }),
   };
 
@@ -423,8 +467,8 @@ export async function discoverRosterWithCompleteness(
   await generateText({
     model: options.model ?? createAiModel(),
     maxOutputTokens: 1_000,
-    instructions: "Find the rescue's complete current adoptable companion roster. Use map when the supplied page may not be the adoption listing. Crawl the listing so you cover every pagination page and every companion detail page linked from it; use scrape only for a specific page that the crawl did not capture. Stay within the adoption listing and its linked companion details rather than exploring the rest of the site. When the gathered content is complete, reply with a short completion message. Do not invent roster content.",
-    prompt: `Find the current companion roster starting from ${sourceUrl}`,
+    instructions: "Find the rescue's complete current adoptable companion roster. Use map when the supplied page may not be the adoption listing. Crawl the listing so you cover every pagination page and every companion detail page linked from it; use scrape only for a specific page that the crawl did not capture. Stay within the adoption listing and its linked companion details rather than exploring the rest of the site: when the listing only links to companion detail pages that live under a different path on the same site, pass that path pattern as includePaths instead of widening the crawl. Follow the notes from the previous sync when they are given, and check that the crawl gathered at least as many companions as the listing shows. Before finishing, call save_sync_notes with concise guidance for the next sync: the listing URL to crawl, the includePaths that reach detail pages, the number of companions listed, and any site quirks. Then reply with a short completion message. Do not invent roster content.",
+    prompt: priorNotesPrompt(sourceUrl, options.priorNotes),
     tools,
     stopWhen: isStepCount(MAX_ROSTER_AGENT_STEPS),
     prepareStep: () => toolCalls >= MAX_ROSTER_TOOL_CALLS ? { activeTools: [] } : undefined,
@@ -438,7 +482,15 @@ export async function discoverRosterWithCompleteness(
   return {
     text: documents.join("\n\n"),
     rosterCompleteness: combineCrawlCompleteness(crawlCompleteness),
+    notes: savedNotes,
   };
+}
+
+function priorNotesPrompt(sourceUrl: string, priorNotes: string | null | undefined): string {
+  const task = `Find the current companion roster starting from ${sourceUrl}`;
+  const notes = priorNotes?.trim();
+  if (!notes) return task;
+  return `${task}\n\nNotes saved after the previous sync of this source (verify them against the live site rather than trusting them blindly):\n${notes.slice(0, MAX_SYNC_NOTE_CHARS)}`;
 }
 
 function completeRoster(status: string): RosterCompleteness {
@@ -554,11 +606,12 @@ async function requestFirecrawlCrawl(
   assertRelatedUrl(sourceUrl, requestedUrl.toString());
   const source = requiredHttpUrl(sourceUrl, "Roster source URL");
   const includePath = pathScopePattern(source.pathname);
+  const extraIncludePaths = scopedIncludePaths(input.includePaths);
   const requestedStartsInScope = pathMatchesScope(requestedUrl.pathname, source.pathname);
   const body = {
     ...input,
     url: requestedStartsInScope ? requestedUrl.toString() : source.toString(),
-    includePaths: [includePath],
+    includePaths: [includePath, ...extraIncludePaths],
     regexOnFullURL: false,
     limit: clampedInteger(input.limit, 1, MAX_FIRECRAWL_CRAWL_PAGES),
     maxDiscoveryDepth: clampedInteger(
@@ -567,7 +620,10 @@ async function requestFirecrawlCrawl(
       MAX_FIRECRAWL_DISCOVERY_DEPTH,
     ),
     sitemap: "skip",
-    crawlEntireDomain: false,
+    // Firecrawl only follows links below the start URL's path unless the whole
+    // domain is opened up; includePaths then narrows it back to the listing and
+    // the detail-page section, so the rest of the site is still never fetched.
+    crawlEntireDomain: extraIncludePaths.length > 0,
     allowExternalLinks: false,
     allowSubdomains: false,
   };
@@ -707,6 +763,34 @@ function pathScopePattern(pathname: string): string {
   const normalized = pathname.replace(/^\/+|\/+$/gu, "");
   if (!normalized) return ".*";
   return `${normalized.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&")}(?:/.*)?`;
+}
+
+// Probe paths that a detail-page pattern must not match: a pattern that
+// admits arbitrary top-level pages would crawl the whole site.
+const BROAD_PATTERN_PROBES = ["", "about-us", "news/2024/annual-report", "wp-content/uploads/photo.jpg"];
+
+function scopedIncludePaths(value: unknown): string[] {
+  if (value === undefined) return [];
+  if (!Array.isArray(value)) throw new Error("Roster crawl includePaths must be an array of path patterns");
+  if (value.length > MAX_CRAWL_INCLUDE_PATHS) {
+    throw new Error(`Roster crawl accepts at most ${MAX_CRAWL_INCLUDE_PATHS} includePaths`);
+  }
+  return value.map((entry) => {
+    if (typeof entry !== "string" || entry.length > MAX_CRAWL_INCLUDE_PATH_CHARS) {
+      throw new Error("Roster crawl includePaths must be short path patterns");
+    }
+    const pattern = entry.trim().replace(/^\/+/u, "");
+    let matcher: RegExp;
+    try {
+      matcher = new RegExp(`^(?:${pattern})$`, "u");
+    } catch {
+      throw new Error(`Roster crawl includePaths pattern is not a valid regex: ${entry}`);
+    }
+    if (BROAD_PATTERN_PROBES.some((probe) => matcher.test(probe))) {
+      throw new Error(`Roster crawl refused an includePaths pattern that would crawl the whole site: ${entry}`);
+    }
+    return pattern;
+  });
 }
 
 function pathMatchesScope(candidatePath: string, sourcePath: string): boolean {

@@ -134,6 +134,7 @@ test("a bounded model loop maps the rescue site and scrapes the selected roster"
         "firecrawl_map",
         "firecrawl_scrape",
         "firecrawl_crawl",
+        "save_sync_notes",
       ]);
       step += 1;
       if (step === 1) {
@@ -228,6 +229,7 @@ test("a crawl contributes every document to roster parsing while returning a bou
         "firecrawl_map",
         "firecrawl_scrape",
         "firecrawl_crawl",
+        "save_sync_notes",
       ]);
       const last = messages.at(-1);
       if (last?.role === "tool" && typeof last.content === "string") toolReplies.push(last.content);
@@ -433,7 +435,6 @@ test("narrows a broad crawl request to the configured listing path", async () =>
     "firecrawl_crawl",
     {
       url: "https://rescue.example/",
-      includePaths: [".*"],
       crawlEntireDomain: true,
       allowExternalLinks: true,
       sitemap: "include",
@@ -665,7 +666,7 @@ test("scrapes subdomains of the configured source but refuses other protocols", 
   assert.match(toolReplies[0] ?? "", /unsupported protocol: file:/);
 });
 
-test("stops roster discovery after eight model steps", async () => {
+test("stops roster discovery after ten model steps", async () => {
   let modelCalls = 0;
 
   await assert.rejects(
@@ -690,7 +691,7 @@ test("stops roster discovery after eight model steps", async () => {
     /without scraping roster content/,
   );
 
-  assert.equal(modelCalls, 8);
+  assert.equal(modelCalls, 10);
 });
 
 test("graduation drafts are queued and sponsor-specific", () => {
@@ -776,4 +777,138 @@ test("an unreachable remote source is flagged as a fallback capture", async () =
   assert.equal(roster.rosterComplete, false);
   assert.equal(roster.source, "seed/dogs-page-A.html");
   assert.match(roster.text, /Walnut/);
+});
+
+test("the agent reads the previous sync's notes and saves notes for the next one", async () => {
+  const saved: string[] = [];
+  const prompts: string[] = [];
+  const model = scriptedModel(async (messages, tools) => {
+    prompts.push(messages.map((message) => message.content ?? "").join("\n"));
+    const toolNames = tools.map((entry) => entry.function.name);
+    assert.ok(toolNames.includes("save_sync_notes"));
+    if (messages.some((message) => message.role === "tool")) {
+      return { role: "assistant", content: "Roster gathered." };
+    }
+    return {
+      role: "assistant",
+      content: null,
+      tool_calls: [
+        {
+          id: "call-crawl",
+          type: "function",
+          function: {
+            name: "firecrawl_crawl",
+            arguments: JSON.stringify({
+              url: "https://rescue.example/adoptions/dogs/",
+              includePaths: ["rescue-adoption/.*"],
+            }),
+          },
+        },
+        {
+          id: "call-notes",
+          type: "function",
+          function: {
+            name: "save_sync_notes",
+            arguments: JSON.stringify({
+              notes: "Crawl /adoptions/dogs/ with includePaths rescue-adoption/.*; 12 dogs listed.",
+            }),
+          },
+        },
+      ],
+    };
+  });
+  const calls: Array<{ name: string; input: Record<string, unknown> }> = [];
+
+  const result = await discoverRosterWithCompleteness("https://rescue.example/adoptions/dogs/", {
+    model,
+    priorNotes: "Detail pages live under /rescue-adoption/.",
+    saveNotes: async (notes) => {
+      saved.push(notes);
+    },
+    firecrawl: async (name, input) => {
+      calls.push({ name, input });
+      return {
+        status: "completed",
+        total: 1,
+        completed: 1,
+        data: [{ markdown: "## Meet Biscuit\n\n**Breed:** corgi" }],
+        completeness: { complete: true, timedOut: false, status: "completed", total: 1, completed: 1 },
+      };
+    },
+  });
+
+  assert.match(prompts[0], /Detail pages live under \/rescue-adoption\//);
+  assert.deepEqual(calls.map((call) => call.name), ["firecrawl_crawl"]);
+  assert.deepEqual(calls[0].input.includePaths, ["rescue-adoption/.*"]);
+  assert.deepEqual(saved, ["Crawl /adoptions/dogs/ with includePaths rescue-adoption/.*; 12 dogs listed."]);
+  assert.equal(result.notes, saved[0]);
+  assert.match(result.text, /Meet Biscuit/);
+});
+
+test("agent-supplied includePaths widen a crawl to a detail-page section without the whole site", async () => {
+  let submittedBody: Record<string, unknown> | undefined;
+  const fetcher: typeof fetch = async (_input, init) => {
+    if (init?.method === "POST") {
+      submittedBody = JSON.parse(String(init.body)) as Record<string, unknown>;
+      return Response.json({ success: true, id: "crawl-job-3" });
+    }
+    return Response.json({ status: "completed", total: 1, completed: 1, data: [{}] });
+  };
+
+  await requestFirecrawl(
+    "firecrawl_crawl",
+    {
+      url: "https://rescue.example/adoptions/dogs/",
+      includePaths: ["/rescue-adoption/.*"],
+    },
+    {
+      apiKey: "fc-test",
+      sourceUrl: "https://rescue.example/adoptions/dogs/",
+      fetch: fetcher,
+      pollIntervalMs: 0,
+    },
+  );
+
+  assert.deepEqual(submittedBody?.includePaths, ["adoptions/dogs(?:/.*)?", "rescue-adoption/.*"]);
+  assert.equal(submittedBody?.crawlEntireDomain, true);
+  assert.equal(submittedBody?.allowExternalLinks, false);
+  assert.equal(submittedBody?.allowSubdomains, false);
+});
+
+test("refuses includePaths patterns that would crawl the whole site", async () => {
+  let fetchCalls = 0;
+  const fetcher: typeof fetch = async () => {
+    fetchCalls += 1;
+    return Response.json({ success: true, id: "never" });
+  };
+
+  for (const pattern of [".*", "[^/]+", "(?:.*)", "wp-content/.*"]) {
+    await assert.rejects(
+      requestFirecrawl(
+        "firecrawl_crawl",
+        { url: "https://rescue.example/adoptions/dogs/", includePaths: [pattern] },
+        {
+          apiKey: "fc-test",
+          sourceUrl: "https://rescue.example/adoptions/dogs/",
+          fetch: fetcher,
+          pollIntervalMs: 0,
+        },
+      ),
+      /whole site/,
+    );
+  }
+  await assert.rejects(
+    requestFirecrawl(
+      "firecrawl_crawl",
+      { url: "https://rescue.example/adoptions/dogs/", includePaths: ["rescue-adoption/("] },
+      {
+        apiKey: "fc-test",
+        sourceUrl: "https://rescue.example/adoptions/dogs/",
+        fetch: fetcher,
+        pollIntervalMs: 0,
+      },
+    ),
+    /not a valid regex/,
+  );
+  assert.equal(fetchCalls, 0);
 });

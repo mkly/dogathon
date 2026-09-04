@@ -28,7 +28,15 @@ export type ParseCompanionRosterOptions = {
   baseUrl?: string;
 };
 
-const FIELD_NAMES = ["Personality", "Breed", "Age", "Weight", "Sex"];
+const FIELD_NAMES = ["Personality", "Breed", "Age", "Weight", "Sex", "Gender"];
+// Listing status labels rescue sites attach to a companion; they are kept as
+// care notes because a companion in foster care or in a bonded pair is still
+// adoptable, not adopted.
+const STATUS_LABELS = [
+  ["In a foster home", /\bin\s+(?:a\s+)?foster\s+(?:home|care)\b/iu],
+  ["Bonded pair", /\bbonded\s+pair\b/iu],
+  ["Adoption pending", /\badoption\s+pending\b/iu],
+] as const;
 
 type RosterSection = {
   heading: string;
@@ -75,21 +83,17 @@ export async function parseCompanionRoster(
 export function parseCompanionRosterDeterministic(source: string): CompanionRecord[] {
   const sections = source.includes("<h3")
     ? splitHtmlSections(source)
-    : splitMarkdownSections(source).map(({ heading, body }) => ({
-        heading,
-        text: body,
-        careNotes: extractMarkdownCareNotes(body),
-        photoUrls: extractMarkdownPhotoUrls(body),
-      }));
+    : markdownSections(source);
 
   return sections.flatMap(({ heading, text, careNotes, photoUrls }) => {
     const adopted = /\badopted\b/i.test(heading);
     const name = cleanHeading(heading);
     const breed = extractField(text, "Breed");
     const ageText = extractField(text, "Age");
-    const sex = extractField(text, "Sex");
+    const sex = extractField(text, "Sex") || extractField(text, "Gender");
     const weightText = extractField(text, "Weight");
     const personality = extractField(text, "Personality");
+    const statusNotes = extractStatusNotes(text).filter((note) => !careNotes.includes(note));
 
     // Navigation and footer headings are not roster entries.
     if (!name || !photoUrls.length || ![breed, ageText, sex, weightText, personality].some(Boolean)) {
@@ -104,7 +108,7 @@ export function parseCompanionRosterDeterministic(source: string): CompanionReco
       sex,
       weightText,
       personality,
-      careNotes,
+      careNotes: [...careNotes, ...statusNotes],
       photoUrls,
       adopted,
     }];
@@ -119,7 +123,7 @@ async function parseWithModel(
     model: createAiModel(options),
     maxOutputTokens: 12_000,
     output: Output.array({ element: companionRecordSchema }),
-    prompt: `Extract the rescue companions from the page below. Each item must have exactly these fields: name, breed, dobText, ageText, sex, weightText, personality, careNotes (string array), photoUrls (string array), and adopted (boolean). Preserve the page's wording. A heading containing an Adopted marker means adopted is true. Photos appear as [photo: URL] markers; put the markers that follow a companion's heading in that companion's photoUrls. Do not include navigation, footer, or courtesy-listing headings.\n\n${semanticPageText(source)}`,
+    prompt: `Extract the rescue companions from the page below. Each item must have exactly these fields: name, breed, dobText, ageText, sex, weightText, personality, careNotes (string array), photoUrls (string array), and adopted (boolean). Preserve the page's wording. A heading such as "Meet Stripe" names the companion Stripe. Labels such as Gender count as sex. A heading containing an Adopted marker means adopted is true; a companion described as in a foster home, a bonded pair, or adoption pending is still adoptable, so record that status in careNotes rather than marking it adopted. Photos appear as [photo: URL] markers; put the markers nearest a companion's heading, including the ones directly before it on a detail page, in that companion's photoUrls. Do not include navigation, footer, or courtesy-listing headings.\n\n${semanticPageText(source)}`,
   });
 
   const companions = output.filter((companion) => companion.name && companion.photoUrls.length);
@@ -157,7 +161,61 @@ function splitHtmlSections(source: string): RosterSection[] {
   });
 }
 
-function splitMarkdownSections(source: string): Array<{ heading: string; body: string }> {
+function markdownSections(source: string): RosterSection[] {
+  const { preamble, sections } = splitMarkdownSections(source);
+  const regions = sections.map(({ heading, body }) => {
+    // Bold field labels (**Age:**) read like plain labels once the emphasis goes.
+    const text = stripEmphasis(body);
+    return {
+      heading,
+      text,
+      careNotes: extractMarkdownCareNotes(body),
+      photoUrls: extractMarkdownPhotoUrls(text),
+      trailingPhotoUrls: trailingMarkdownPhotoUrls(text),
+      hasFields: FIELD_LABEL_PATTERN.test(text),
+    };
+  });
+  // Detail pages put the photo gallery above the "Meet ..." heading, so the photos
+  // that trail the previous region's fields belong to a heading that has fields
+  // but no photos of its own before them.
+  const inherits = (index: number) => {
+    const region = regions[index];
+    if (region === undefined || !region.hasFields) return false;
+    return region.photoUrls.length === region.trailingPhotoUrls.length;
+  };
+  return regions.map((region, index) => {
+    const inherited = inherits(index)
+      ? index === 0 ? extractMarkdownPhotoUrls(preamble) : regions[index - 1].trailingPhotoUrls
+      : [];
+    const donated = new Set(inherits(index + 1) ? region.trailingPhotoUrls : []);
+    return {
+      heading: region.heading,
+      text: region.text,
+      careNotes: region.careNotes,
+      photoUrls: uniquePhotoUrls([
+        ...inherited,
+        ...region.photoUrls.filter((url) => !donated.has(url)),
+      ]),
+    };
+  });
+}
+
+const FIELD_LABEL_PATTERN = new RegExp(`\\b(?:${FIELD_NAMES.join("|")})\\s*:`, "iu");
+
+function trailingMarkdownPhotoUrls(text: string): string[] {
+  const labels = [...text.matchAll(new RegExp(FIELD_LABEL_PATTERN.source, "giu"))];
+  const lastLabel = labels.at(-1);
+  const start = lastLabel ? (lastLabel.index ?? 0) + lastLabel[0].length : 0;
+  return extractMarkdownPhotoUrls(text.slice(start));
+}
+
+function stripEmphasis(markdown: string): string {
+  return markdown.replace(/\*\*/gu, "");
+}
+
+function splitMarkdownSections(
+  source: string,
+): { preamble: string; sections: Array<{ heading: string; body: string }> } {
   const tree = remark().parse(source);
   const headings = tree.children.flatMap((node) => {
     const start = node.position?.start.offset;
@@ -168,13 +226,16 @@ function splitMarkdownSections(source: string): Array<{ heading: string; body: s
       : [];
   });
 
-  return headings.map((heading, index) => ({
-    heading: heading.heading,
-    body: source.slice(
-      heading.end,
-      headings[index + 1]?.start ?? source.length,
-    ),
-  }));
+  return {
+    preamble: source.slice(0, headings[0]?.start ?? source.length),
+    sections: headings.map((heading, index) => ({
+      heading: heading.heading,
+      body: source.slice(
+        heading.end,
+        headings[index + 1]?.start ?? source.length,
+      ),
+    })),
+  };
 }
 
 function extractField(text: string, field: string): string {
@@ -207,12 +268,32 @@ function extractMarkdownPhotoUrls(body: string): string[] {
   return uniquePhotoUrls(urls);
 }
 
+function extractStatusNotes(text: string): string[] {
+  return STATUS_LABELS.flatMap(([label, pattern]) => pattern.test(text) ? [label] : []);
+}
+
 function cleanHeading(heading: string): string {
-  return cleanText(heading.replace(/\s*\*?\s*adopted\b.*$/i, ""));
+  return cleanText(
+    heading
+      .replace(/\s*\*?\s*adopted\b.*$/i, "")
+      .replace(/^\s*meet\s+/i, ""),
+  );
+}
+
+// Markdown images (Firecrawl's scrape output) become the same [photo: URL]
+// markers the model prompt describes for HTML <img> tags.
+function markdownImagesToMarkers(source: string): string {
+  return source.replace(
+    /!\[[^\]]*\]\(\s*<?(https?:\/\/[^\s)>]+)>?(?:\s+"[^"]*")?\s*\)/gu,
+    (match, url: string) => {
+      const src = normalizePhotoUrl(url);
+      return src ? `\n[photo: ${src}]\n` : match;
+    },
+  );
 }
 
 function semanticPageText(source: string): string {
-  const $ = cheerio.load(source);
+  const $ = cheerio.load(markdownImagesToMarkers(source));
   $("script, style, noscript").remove();
   $("img").each((_index, image) => {
     const src = normalizePhotoUrl($(image).attr("src"));
