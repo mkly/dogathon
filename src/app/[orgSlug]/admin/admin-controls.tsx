@@ -3,8 +3,14 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as AlertDialog from "@radix-ui/react-alert-dialog";
 import * as Dialog from "@radix-ui/react-dialog";
-import { useActionState, useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import {
+  useActionState,
+  useEffect,
+  useOptimistic,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 
 import {
   AdminBadge,
@@ -25,7 +31,11 @@ import {
 } from "@/lib/roster-sync-client";
 import { pushToast } from "@/lib/toast";
 
-import { saveSettings, type SettingsState } from "./actions";
+import {
+  refreshAdminPage,
+  saveSettings,
+  type SettingsState,
+} from "./actions";
 import {
   EMAIL_CONNECTOR_NOTICE_ID,
   emailConnectorBlockedReason,
@@ -70,7 +80,8 @@ export function DraftEditor({
   smsText: string;
   subject: string;
 }) {
-  const router = useRouter();
+  const [visible, hideOptimistically] = useOptimistic(true);
+  const [, startTransition] = useTransition();
   const [savedDraft, setSavedDraft] = useState({
     subject: initialSubject,
     bodyText: initialBodyText,
@@ -136,7 +147,6 @@ export function DraftEditor({
         setSavedDraft(editedDraft);
         setEditorOpen(false);
         pushToast("success", "Draft changes saved.");
-        router.refresh();
       }
     } catch (error) {
       pushToast(
@@ -150,58 +160,66 @@ export function DraftEditor({
     }
   }
 
-  async function approve() {
+  function approve() {
     if (!emailConnected) return;
 
-    setPending("approve");
-    try {
-      if (!(await persistDraft(savedDraft))) return;
-      await apiFetch(
-        `/api/pupdates/${id}/approve`,
-        {
-          method: "POST",
-          headers: { "X-Organization-Slug": orgSlug },
-        },
-        "Approve and send",
-      );
-      pushToast("success", "Approved and sent.");
-      router.refresh();
-    } catch (error) {
-      pushToast(
-        "error",
-        error instanceof Error
-          ? error.message
-          : "Approve and send could not reach the server.",
-      );
-    } finally {
-      setPending(null);
-    }
+    startTransition(async () => {
+      hideOptimistically(false);
+      setPending("approve");
+      try {
+        if (!(await persistDraft(savedDraft))) return;
+        await apiFetch(
+          `/api/pupdates/${id}/approve`,
+          {
+            method: "POST",
+            headers: { "X-Organization-Slug": orgSlug },
+          },
+          "Approve and send",
+        );
+        await refreshAdminPage();
+        pushToast("success", "Approved and sent.");
+      } catch (error) {
+        pushToast(
+          "error",
+          error instanceof Error
+            ? error.message
+            : "Approve and send could not reach the server.",
+        );
+      } finally {
+        setPending(null);
+      }
+    });
   }
 
-  async function deny() {
-    setPending("deny");
-    try {
-      await apiFetch(
-        `/api/pupdates/${id}`,
-        {
-          method: "DELETE",
-          headers: { "X-Organization-Slug": orgSlug },
-        },
-        "Discard draft",
-      );
-      pushToast("success", "Draft discarded.");
-      router.refresh();
-    } catch (error) {
-      pushToast(
-        "error",
-        error instanceof Error
-          ? error.message
-          : "Discard draft could not reach the server.",
-      );
-    } finally {
-      setPending(null);
-    }
+  function deny() {
+    startTransition(async () => {
+      hideOptimistically(false);
+      setPending("deny");
+      try {
+        await apiFetch(
+          `/api/pupdates/${id}`,
+          {
+            method: "DELETE",
+            headers: { "X-Organization-Slug": orgSlug },
+          },
+          "Discard draft",
+        );
+        await refreshAdminPage();
+        pushToast("success", "Draft discarded.");
+      } catch (error) {
+        pushToast(
+          "error",
+          error instanceof Error
+            ? error.message
+            : "Discard draft could not reach the server.",
+        );
+      } finally {
+        setPending(null);
+      }
+    });
   }
+
+  if (!visible) return null;
 
   return (
     <div className={styles.draftControls}>
@@ -388,7 +406,6 @@ export function ComposeButton({
   residentId: string;
   residentName: string;
 }) {
-  const router = useRouter();
   const [pending, setPending] = useState(false);
 
   async function compose() {
@@ -406,8 +423,8 @@ export function ComposeButton({
         },
         "Compose pupdate",
       );
+      await refreshAdminPage();
       pushToast("success", `${residentName}'s draft is ready for review.`);
-      router.refresh();
     } catch (error) {
       pushToast(
         "error",

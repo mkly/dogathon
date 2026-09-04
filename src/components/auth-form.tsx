@@ -61,7 +61,6 @@ export function AuthForm({
     }
 
     router.push(redirectTo);
-    router.refresh();
   }
 
   return (

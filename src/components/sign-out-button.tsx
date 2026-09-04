@@ -14,7 +14,6 @@ export function SignOutButton({ redirectTo = "/staff/sign-in" }: { redirectTo?: 
     setPending(true);
     await authClient.signOut();
     router.push(redirectTo);
-    router.refresh();
   }
 
   return (

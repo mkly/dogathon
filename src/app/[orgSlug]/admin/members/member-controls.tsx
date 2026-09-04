@@ -1,8 +1,7 @@
 "use client";
 
 import * as AlertDialog from "@radix-ui/react-alert-dialog";
-import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useOptimistic, useState, useTransition } from "react";
 
 import { AdminBadge, AdminButton, AdminField, AdminSurface } from "@/components/admin-ui";
 import { formatDate } from "@/lib/format";
@@ -20,6 +19,10 @@ export type MemberView = {
   role: OrganizationRole;
   userId: string;
 };
+
+type MemberUpdate =
+  | { id: string; role: "admin" | "member" | "volunteer"; type: "role" }
+  | { id: string; type: "remove" };
 
 const ROLE_TONES = {
   owner: "mustard",
@@ -39,50 +42,70 @@ export function MemberList({
   members: MemberView[];
   orgSlug: string;
 }) {
-  const router = useRouter();
   const [memberToRemove, setMemberToRemove] = useState<MemberView | null>(null);
-  const [pendingMemberId, setPendingMemberId] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
-  const ownerCount = members.filter((member) => member.role === "owner").length;
+  const [pendingMemberActions, setPendingMemberActions] = useState<
+    Record<string, "remove" | "role">
+  >({});
+  const [optimisticMembers, updateOptimisticMembers] = useOptimistic<
+    MemberView[],
+    MemberUpdate
+  >(members, (current, update) =>
+    update.type === "remove"
+      ? current.filter((member) => member.id !== update.id)
+      : current.map((member) =>
+          member.id === update.id ? { ...member, role: update.role } : member,
+        ),
+  );
+  const [, startTransition] = useTransition();
+  const ownerCount = optimisticMembers.filter((member) => member.role === "owner").length;
+
+  function setMemberPending(memberId: string, action: "remove" | "role" | null) {
+    setPendingMemberActions((current) => {
+      const next = { ...current };
+      if (action) next[memberId] = action;
+      else delete next[memberId];
+      return next;
+    });
+  }
 
   function changeRole(member: MemberView, role: "admin" | "member" | "volunteer") {
-    setPendingMemberId(member.id);
+    setMemberPending(member.id, "role");
     startTransition(async () => {
+      updateOptimisticMembers({ id: member.id, role, type: "role" });
       try {
         const result = await updateOrganizationMemberRole({ memberId: member.id, orgSlug, role });
         pushToast(result.ok ? "success" : "error", result.message);
-        if (result.ok) router.refresh();
       } catch {
         pushToast("error", "The role change could not reach the server. Try again.");
       } finally {
-        setPendingMemberId(null);
+        setMemberPending(member.id, null);
       }
     });
   }
 
   function remove(member: MemberView) {
-    setPendingMemberId(member.id);
+    setMemberPending(member.id, "remove");
     startTransition(async () => {
+      updateOptimisticMembers({ id: member.id, type: "remove" });
       try {
         const result = await removeOrganizationMember({ memberId: member.id, orgSlug });
         pushToast(result.ok ? "success" : "error", result.message);
-        if (result.ok) router.refresh();
       } catch {
         pushToast("error", "The removal could not reach the server. Try again.");
       } finally {
-        setPendingMemberId(null);
+        setMemberPending(member.id, null);
       }
     });
   }
 
   return (
     <div className={styles.memberList}>
-      {members.map((member) => {
+      {optimisticMembers.map((member) => {
         const isSelf = member.userId === actorUserId;
         const isProtectedOwner = member.role === "owner" && (
           actorRole === "admin" || ownerCount <= 1
         );
-        const changing = isPending && pendingMemberId === member.id;
+        const pendingAction = pendingMemberActions[member.id];
 
         return (
           <AdminSurface className={styles.memberRow} key={member.id} tone="oatmeal">
@@ -109,7 +132,7 @@ export function MemberList({
                   <select
                     aria-label={`Change ${member.name || member.email} role`}
                     defaultValue=""
-                    disabled={isPending}
+                    disabled={pendingAction !== undefined}
                     onChange={(event) => {
                       const role = event.target.value as "admin" | "member" | "volunteer";
                       if (role) changeRole(member, role);
@@ -124,12 +147,12 @@ export function MemberList({
                 </AdminField>
               )}
               <AdminButton
-                disabled={isPending || isSelf || isProtectedOwner}
+                disabled={pendingAction !== undefined || isSelf || isProtectedOwner}
                 onClick={() => setMemberToRemove(member)}
                 title={isSelf ? "You cannot remove yourself." : undefined}
                 tone="brick"
               >
-                {changing ? "Working…" : "Remove"}
+                {pendingAction === "remove" ? "Working…" : "Remove"}
               </AdminButton>
             </div>
           </AdminSurface>

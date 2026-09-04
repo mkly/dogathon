@@ -1,7 +1,6 @@
 "use client";
 
-import { FormEvent, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { FormEvent, useOptimistic, useState, useTransition } from "react";
 
 import { AdminBadge, AdminButton, AdminField, AdminSurface } from "@/components/admin-ui";
 import { formatDateTime } from "@/lib/format";
@@ -23,6 +22,12 @@ export type InvitationView = {
   role: "admin" | "member" | "volunteer";
 };
 
+type OptimisticInvitation = InvitationView & { pending?: boolean };
+
+type InvitationUpdate =
+  | { invitation: OptimisticInvitation; type: "add" }
+  | { id: string; type: "remove" };
+
 const ROLE_TONES = {
   admin: "brick",
   member: "denim",
@@ -36,41 +41,76 @@ export function InvitationManager({
   invitations: InvitationView[];
   orgSlug: string;
 }) {
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<InvitationView["role"]>("member");
   const [message, setMessage] = useState("");
   const [copyingInvitationId, setCopyingInvitationId] = useState<string | null>(null);
   const [visibleInviteUrlId, setVisibleInviteUrlId] = useState<string | null>(null);
-  const [pendingInvitationId, setPendingInvitationId] = useState<string | null>(null);
-  const [pendingInvitationAction, setPendingInvitationAction] = useState<"cancel" | "resend" | null>(null);
-  const [isPending, startTransition] = useTransition();
+  const [invitePending, setInvitePending] = useState(false);
+  const [pendingInvitationActions, setPendingInvitationActions] = useState<
+    Record<string, "cancel" | "resend">
+  >({});
+  const [optimisticInvitations, updateOptimisticInvitations] = useOptimistic<
+    OptimisticInvitation[],
+    InvitationUpdate
+  >(invitations, (current, update) =>
+    update.type === "add"
+      ? [update.invitation, ...current]
+      : current.filter((invitation) => invitation.id !== update.id),
+  );
+  const [, startTransition] = useTransition();
+
+  function setInvitationPending(
+    invitationId: string,
+    action: "cancel" | "resend" | null,
+  ) {
+    setPendingInvitationActions((current) => {
+      const next = { ...current };
+      if (action) next[invitationId] = action;
+      else delete next[invitationId];
+      return next;
+    });
+  }
 
   function invite(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setMessage("");
+    setInvitePending(true);
     startTransition(async () => {
+      updateOptimisticInvitations({
+        invitation: {
+          email: email.trim().toLowerCase(),
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+          id: `pending-${crypto.randomUUID()}`,
+          inviteUrl: "",
+          inviter: "You",
+          pending: true,
+          role,
+        },
+        type: "add",
+      });
       try {
         const result = await inviteOrganizationMember({ email, orgSlug, role });
         setMessage(result.message);
         pushToast(result.ok ? "success" : "error", result.message);
         if (result.ok) {
           setEmail("");
-          router.refresh();
         }
       } catch {
         const failure = "The invitation could not reach the server. Try again.";
         setMessage(failure);
         pushToast("error", failure);
+      } finally {
+        setInvitePending(false);
       }
     });
   }
 
   function cancel(invitation: InvitationView) {
     setMessage("");
-    setPendingInvitationId(invitation.id);
-    setPendingInvitationAction("cancel");
+    setInvitationPending(invitation.id, "cancel");
     startTransition(async () => {
+      updateOptimisticInvitations({ id: invitation.id, type: "remove" });
       try {
         const result = await cancelOrganizationInvitation({
           invitationId: invitation.id,
@@ -78,22 +118,19 @@ export function InvitationManager({
         });
         setMessage(result.message);
         pushToast(result.ok ? "success" : "error", result.message);
-        if (result.ok) router.refresh();
       } catch {
         const failure = "The cancellation could not reach the server. Try again.";
         setMessage(failure);
         pushToast("error", failure);
       } finally {
-        setPendingInvitationId(null);
-        setPendingInvitationAction(null);
+        setInvitationPending(invitation.id, null);
       }
     });
   }
 
   function resend(invitation: InvitationView) {
     setMessage("");
-    setPendingInvitationId(invitation.id);
-    setPendingInvitationAction("resend");
+    setInvitationPending(invitation.id, "resend");
     startTransition(async () => {
       try {
         const result = await resendOrganizationInvitation({
@@ -102,14 +139,12 @@ export function InvitationManager({
         });
         setMessage(result.message);
         pushToast(result.ok ? "success" : "error", result.message);
-        if (result.ok) router.refresh();
       } catch {
         const failure = "The invitation could not reach the server. Try again.";
         setMessage(failure);
         pushToast("error", failure);
       } finally {
-        setPendingInvitationId(null);
-        setPendingInvitationAction(null);
+        setInvitationPending(invitation.id, null);
       }
     });
   }
@@ -161,17 +196,17 @@ export function InvitationManager({
               <option value="volunteer">Volunteer</option>
             </select>
           </AdminField>
-          <AdminButton disabled={isPending} tone="moss" type="submit">
-            {isPending && !pendingInvitationId ? "Sending…" : "Send invitation"}
+          <AdminButton disabled={invitePending} tone="moss" type="submit">
+            {invitePending ? "Sending…" : "Send invitation"}
           </AdminButton>
         </form>
         <p aria-live="polite" className={styles.invitationMessage}>{message}</p>
       </AdminSurface>
 
       <div className={styles.invitationList}>
-        {invitations.length === 0 ? (
+        {optimisticInvitations.length === 0 ? (
           <p className={styles.emptyInvitations}>There are no pending invitations.</p>
-        ) : invitations.map((invitation) => (
+        ) : optimisticInvitations.map((invitation) => (
           <AdminSurface className={styles.invitationRow} key={invitation.id} tone="oatmeal">
             <div className={styles.identity}>
               <h3>{invitation.email}</h3>
@@ -179,10 +214,14 @@ export function InvitationManager({
             </div>
             <div className={styles.memberMeta}>
               <AdminBadge tone={ROLE_TONES[invitation.role]}>{invitation.role}</AdminBadge>
-              <span>Expires {formatDateTime(invitation.expiresAt)} UTC</span>
+              <span>
+                {invitation.pending
+                  ? "Sending…"
+                  : `Expires ${formatDateTime(invitation.expiresAt)} UTC`}
+              </span>
             </div>
             <div className={styles.invitationActions}>
-              <div className={styles.invitationControls}>
+              {!invitation.pending ? <div className={styles.invitationControls}>
                 <AdminButton
                   disabled={copyingInvitationId === invitation.id}
                   onClick={() => copyInviteLink(invitation)}
@@ -191,24 +230,24 @@ export function InvitationManager({
                   {copyingInvitationId === invitation.id ? "Copying…" : "Copy invite link"}
                 </AdminButton>
                 <AdminButton
-                  disabled={isPending}
+                  disabled={pendingInvitationActions[invitation.id] !== undefined}
                   onClick={() => resend(invitation)}
                   tone="moss"
                 >
-                  {pendingInvitationId === invitation.id && pendingInvitationAction === "resend"
+                  {pendingInvitationActions[invitation.id] === "resend"
                     ? "Resending…"
                     : "Resend"}
                 </AdminButton>
                 <AdminButton
-                  disabled={isPending}
+                  disabled={pendingInvitationActions[invitation.id] !== undefined}
                   onClick={() => cancel(invitation)}
                   tone="brick"
                 >
-                  {pendingInvitationId === invitation.id && pendingInvitationAction === "cancel"
+                  {pendingInvitationActions[invitation.id] === "cancel"
                     ? "Cancelling…"
                     : "Cancel"}
                 </AdminButton>
-              </div>
+              </div> : null}
               {visibleInviteUrlId === invitation.id ? (
                 <AdminField>
                   <input
