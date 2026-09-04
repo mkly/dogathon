@@ -57,7 +57,7 @@ export const organizationRoles = {
   }),
   member: organizationAccessControl.newRole({
     ...memberAc.statements,
-    pupdate: [],
+    pupdate: ["manage"],
     billing: [],
     settings: [],
     members: [],
