@@ -47,25 +47,14 @@ export default async function MembersPage({ params }: MembersPageProps) {
   const [firstPage, invitationResult] = await Promise.all([
     auth.api.listMembers({
       headers: requestHeaders,
-      query: { limit: 100, organizationId: access.context.orgId, sortBy: "createdAt", sortDirection: "asc" },
+      query: { limit: 1000, organizationId: access.context.orgId, sortBy: "createdAt", sortDirection: "asc" },
     }),
     auth.api.listInvitations({
       headers: requestHeaders,
       query: { organizationId: access.context.orgId },
     }),
   ]);
-  const result = firstPage.members.length < firstPage.total
-    ? await auth.api.listMembers({
-        headers: requestHeaders,
-        query: {
-          limit: firstPage.total,
-          organizationId: access.context.orgId,
-          sortBy: "createdAt",
-          sortDirection: "asc",
-        },
-      })
-    : firstPage;
-  const members = result.members.flatMap<MemberView>((member) => {
+  const members = firstPage.members.flatMap<MemberView>((member) => {
     if (!ORGANIZATION_ROLES.includes(member.role as OrganizationRole)) return [];
     return [{
       email: member.user.email,
@@ -81,7 +70,7 @@ export default async function MembersPage({ params }: MembersPageProps) {
     if (invitation.role !== "admin" && invitation.role !== "member" && invitation.role !== "volunteer") {
       return [];
     }
-    const inviter = result.members.find((member) => member.userId === invitation.inviterId);
+    const inviter = firstPage.members.find((member) => member.userId === invitation.inviterId);
     return [{
       email: invitation.email,
       expiresAt: invitation.expiresAt.toISOString(),
