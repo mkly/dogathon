@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 
-import { FeltButton, FeltField, FeltPanel } from "@/components/felt";
+import { FeltButton, FeltField } from "@/components/felt";
 
 import styles from "./volunteer.module.css";
 
@@ -15,11 +15,15 @@ export function VolunteerPhotoInput() {
   const inputRef = useRef<HTMLInputElement>(null);
 
   function onChange() {
-    const file = inputRef.current?.files?.[0];
-    if (!file) return;
+    const input = inputRef.current;
+    const file = input?.files?.[0];
+    if (!input || !file) return;
+    setPreview((current) => {
+      if (current) URL.revokeObjectURL(current);
+      return "";
+    });
     if (!file.type.startsWith("image/") || file.size > MAX_PHOTO_BYTES) {
-      inputRef.current.value = "";
-      setPreview("");
+      input.value = "";
       setError(!file.type.startsWith("image/") ? "Choose an image file." : "Choose a photo smaller than 8 MB.");
       return;
     }

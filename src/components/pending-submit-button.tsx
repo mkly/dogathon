@@ -1,11 +1,12 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { useFormStatus } from "react-dom";
 
 import { AdminButton, type AdminButtonProps } from "@/components/admin-ui";
 import { FeltButton, type FeltButtonProps } from "@/components/felt";
 
-type PendingLabels = { pendingLabel: string; children: string };
+type PendingLabels = { pendingLabel: string; children: ReactNode };
 
 export function PendingAdminSubmitButton({ children, pendingLabel, ...props }: AdminButtonProps & PendingLabels) {
   const { pending } = useFormStatus();
