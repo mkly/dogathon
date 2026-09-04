@@ -14,6 +14,10 @@ import { sendAppEmail } from "@/lib/app-mailer";
 import { env } from "@/lib/env";
 import { sendMagicLinkEmail } from "@/lib/magic-link-email";
 import {
+  organizationInvitationEmail,
+  organizationInvitationExpiresInSeconds,
+} from "@/lib/organization-invitation-email";
+import {
   isReservedOrganizationSlug,
   RESERVED_ORGANIZATION_SLUG_ERROR,
   reservedOrganizationSlugMessage,
@@ -116,6 +120,7 @@ export const auth = betterAuth({
     organization({
       ac: organizationAccessControl,
       creatorRole: "owner",
+      invitationExpiresIn: organizationInvitationExpiresInSeconds,
       organizationHooks: {
         beforeCreateOrganization: async ({ organization: candidate }) => {
           rejectReservedOrganizationSlug(candidate.slug);
@@ -127,22 +132,25 @@ export const auth = betterAuth({
       roles: {
         ...organizationRoles,
       },
-      sendInvitationEmail: async ({ email, id, organization: invitedOrganization, role }) => {
-        const invitationUrl = new URL("/staff/organizations", env.BETTER_AUTH_URL);
-        invitationUrl.searchParams.set("invitation", id);
-
-        const describedSend = await sendAppEmail({
-          to: email,
-          subject: `Join ${invitedOrganization.name} on Dogathon`,
-          body: [
-            `You've been invited to join ${invitedOrganization.name} on Dogathon as ${role}.`,
-            "",
-            `Accept the invitation: ${invitationUrl.toString()}`,
-          ].join("\n"),
+      sendInvitationEmail: async ({
+        email,
+        id,
+        inviter,
+        organization: invitedOrganization,
+        role,
+      }) => {
+        const message = organizationInvitationEmail({
+          baseUrl: env.BETTER_AUTH_URL,
+          email,
+          id,
+          inviterName: inviter.user.name || inviter.user.email,
+          organizationName: invitedOrganization.name,
+          role,
         });
+        const describedSend = await sendAppEmail(message);
 
         if (describedSend) {
-          console.info(`Dogathon invitation for ${email}: ${invitationUrl.toString()}`);
+          console.info(`Dogathon invitation for ${email}: ${message.invitationUrl}`);
         }
       },
     }),
