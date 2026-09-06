@@ -64,8 +64,12 @@ export function VolunteerRouteLoading() {
     <main aria-busy="true" aria-label="Loading volunteer check-in" className={styles.volunteer}>
       <Skeleton className={styles.volunteerHeader} />
       <div className={styles.companions}>{Array.from({ length: 4 }, (_, index) => <Skeleton className={styles.companion} key={index} />)}</div>
-      <Skeleton className={styles.note} />
-      <Skeleton className={styles.submit} />
+      <div className={styles.volunteerThread}>
+        <Skeleton className={styles.assistantMessage} />
+        <Skeleton className={styles.userMessage} />
+        <Skeleton className={styles.assistantMessage} />
+      </div>
+      <Skeleton className={styles.volunteerComposer} />
     </main>
   );
 }

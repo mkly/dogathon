@@ -7,10 +7,20 @@ const textPartSchema = z.object({
   text: z.string().min(1).max(2000),
 });
 
+/**
+ * Assistant messages from the AI SDK carry step boundary parts alongside their
+ * text, so parts are filtered down to the text the interview actually uses
+ * before the text limits are applied.
+ */
+const messagePartsSchema = z
+  .array(z.looseObject({ type: z.string() }))
+  .transform((parts) => parts.filter((part) => part.type === "text"))
+  .pipe(z.array(textPartSchema).min(1));
+
 const messageSchema = z.object({
   id: z.string().min(1).max(200),
   role: z.enum(["user", "assistant"]),
-  parts: z.array(textPartSchema).min(1),
+  parts: messagePartsSchema,
 });
 
 export const interviewRequestSchema = z.object({
