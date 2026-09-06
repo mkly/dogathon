@@ -1,11 +1,12 @@
 "use client";
 
 import { Link } from "@tiptap/extension-link";
+import { Placeholder } from "@tiptap/extensions";
 import { Markdown } from "@tiptap/markdown";
 import { EditorContent, useEditor, useEditorState } from "@tiptap/react";
 import { StarterKit } from "@tiptap/starter-kit";
 import type { Editor } from "@tiptap/core";
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 
 export type PostscriptEditorClassNames = {
   counter: string;
@@ -28,6 +29,7 @@ type PostscriptEditorProps = {
   maxLength: number;
   name: string;
   onValidityChange?: (overLimit: boolean) => void;
+  placeholder?: string;
 };
 
 const editorExtensions = [
@@ -51,8 +53,18 @@ export function PostscriptEditor({
   maxLength,
   name,
   onValidityChange,
+  placeholder,
 }: PostscriptEditorProps) {
   const previewId = useId();
+  // Keep the extension list identity stable: useEditor compares extensions
+  // element by element and re-applies every option when one differs.
+  const extensions = useMemo(
+    () => [
+      ...editorExtensions,
+      Placeholder.configure({ placeholder: placeholder ?? "Write an email postscript…" }),
+    ],
+    [placeholder],
+  );
   const [markdown, setMarkdown] = useState(defaultValue);
   const [plainText, setPlainText] = useState("");
 
@@ -79,7 +91,7 @@ export function PostscriptEditor({
         id,
       },
     },
-    extensions: editorExtensions,
+    extensions,
     immediatelyRender: false,
     onCreate: ({ editor: editorInstance }) => syncContent(editorInstance),
     onUpdate: ({ editor: editorInstance }) => syncContent(editorInstance),
