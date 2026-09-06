@@ -53,6 +53,7 @@ export async function openBillingPortal(
   sponsorshipId: string,
   _previousState: AccountActionState,
 ): Promise<AccountActionState> {
+  void _previousState;
   const sponsor = await getSponsorContext(await headers());
   if (!sponsor) redirect("/account/sign-in");
   if (!uuidSchema.safeParse(sponsorshipId).success) {
@@ -63,7 +64,6 @@ export async function openBillingPortal(
     where: {
       id: sponsorshipId,
       sponsorId: sponsor.id,
-      status: "active",
     },
     select: {
       stripeCustomerId: true,

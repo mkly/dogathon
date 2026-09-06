@@ -235,22 +235,23 @@ model Resident {
 }
 
 model Sponsorship {
-  id                      String            @id @default(uuid(4)) @db.Uuid
-  orgId                   String            @db.Uuid
-  residentId              String            @db.Uuid
-  sponsorId               String            @db.Uuid
-  monthlyUsd              Int               @default(25)
-  status                  SponsorshipStatus @default(active)
-  endedReason             String?
-  endedAt                 DateTime?
-  stripeCheckoutSessionId String?           @unique
-  stripeSubscriptionId    String?           @unique
-  stripeCustomerId        String?
-  createdAt               DateTime          @default(now())
-  updatedAt               DateTime          @updatedAt
-  organization            Organization      @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  resident                Resident          @relation(fields: [residentId, orgId], references: [id, orgId], onDelete: Cascade)
-  sponsor                 Sponsor           @relation(fields: [sponsorId], references: [id], onDelete: Restrict)
+  id                          String            @id @default(uuid(4)) @db.Uuid
+  orgId                       String            @db.Uuid
+  residentId                  String            @db.Uuid
+  sponsorId                   String            @db.Uuid
+  monthlyUsd                  Int               @default(25)
+  status                      SponsorshipStatus @default(active)
+  endedReason                 String?
+  endedAt                     DateTime?
+  stripeCancellationPendingAt DateTime?
+  stripeCheckoutSessionId     String?           @unique
+  stripeSubscriptionId        String?           @unique
+  stripeCustomerId            String?
+  createdAt                   DateTime          @default(now())
+  updatedAt                   DateTime          @updatedAt
+  organization                Organization      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  resident                    Resident          @relation(fields: [residentId, orgId], references: [id, orgId], onDelete: Cascade)
+  sponsor                     Sponsor           @relation(fields: [sponsorId], references: [id], onDelete: Restrict)
 
   @@unique([id, orgId])
   @@index([orgId, status])

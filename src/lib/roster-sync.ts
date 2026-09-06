@@ -11,6 +11,7 @@ import type { CompanionRecord } from "./parser.ts";
 import { DOCUMENT_SEPARATOR, parseCompanionRoster } from "./parser.ts";
 import { prisma } from "./prisma.ts";
 import { revalidatePublicRoster } from "./public-roster-cache.ts";
+import { cancelStripeSubscription } from "./stripe-billing.ts";
 
 export type SyncSummary = {
   created: number;
@@ -70,6 +71,14 @@ export class RosterSyncRefusal extends Error {
 type SyncRosterOptions = {
   signal?: AbortSignal;
 };
+
+type PendingStripeCancellation = {
+  id: string;
+  stripeSubscriptionId: string;
+  organization: { stripeAccountId: string | null };
+};
+
+type AdoptionResident = { id: string; name: string };
 
 export async function syncRoster(
   orgId: string,
@@ -139,31 +148,24 @@ export async function syncRoster(
 
     let sponsorshipsClosed = 0;
 
+    const adoptedAt = new Date();
     for (const resident of adoptionCandidates) {
       options.signal?.throwIfAborted();
-      await tx.resident.update({
-        where: { id_orgId: { id: resident.id, orgId } },
-        data: { status: "adopted", adoptedAt: new Date() },
-      });
-
-      const sponsorships = await tx.sponsorship.findMany({
-        where: { residentId: resident.id, orgId, status: "active" },
-        select: { id: true, sponsor: { select: { name: true } } },
-      });
-
-      for (const sponsorship of sponsorships) {
-        options.signal?.throwIfAborted();
-        await tx.sponsorship.update({
-          where: { id_orgId: { id: sponsorship.id, orgId } },
-          data: { status: "ended", endedReason: "adopted" },
-        });
-        await tx.sponsorUpdate.create({
-          data: { ...graduationDraft(resident.id, resident.name, sponsorship.sponsor.name), orgId },
-        });
-      }
-
-      sponsorshipsClosed += sponsorships.length;
+      sponsorshipsClosed += await closeAdoptedSponsorships(tx, orgId, resident, adoptedAt);
     }
+
+    const pendingStripeCancellations = await tx.sponsorship.findMany({
+      where: {
+        orgId,
+        stripeCancellationPendingAt: { not: null },
+        stripeSubscriptionId: { not: null },
+      },
+      select: {
+        id: true,
+        stripeSubscriptionId: true,
+        organization: { select: { stripeAccountId: true } },
+      },
+    }) as PendingStripeCancellation[];
 
     return {
       created: companions.filter((companion) => !existingNames.has(companion.name)).length,
@@ -175,10 +177,90 @@ export async function syncRoster(
       rosterComplete,
       rosterCompleteness,
       source,
+      pendingStripeCancellations,
     };
   }, { maxWait: 10_000, timeout: 60_000 });
+  const { pendingStripeCancellations, ...publicSummary } = summary;
+  await cancelPendingStripeSubscriptions(pendingStripeCancellations);
   revalidatePublicRoster();
-  return summary;
+  return publicSummary;
+}
+
+export async function closeAdoptedSponsorships(
+  tx: SyncTransaction,
+  orgId: string,
+  resident: AdoptionResident,
+  adoptedAt: Date,
+) {
+  await tx.resident.update({
+    where: { id_orgId: { id: resident.id, orgId } },
+    data: { status: "adopted", adoptedAt },
+  });
+
+  const sponsorships = await tx.sponsorship.findMany({
+    where: { residentId: resident.id, orgId, status: "active" },
+    select: {
+      id: true,
+      stripeSubscriptionId: true,
+      sponsor: { select: { name: true } },
+    },
+  });
+
+  for (const sponsorship of sponsorships) {
+    await tx.sponsorship.update({
+      where: { id_orgId: { id: sponsorship.id, orgId } },
+      data: {
+        status: "ended",
+        endedAt: adoptedAt,
+        endedReason: "adopted",
+        stripeCancellationPendingAt: sponsorship.stripeSubscriptionId ? adoptedAt : null,
+      },
+    });
+    await tx.sponsorUpdate.create({
+      data: { ...graduationDraft(resident.id, resident.name, sponsorship.sponsor.name), orgId },
+    });
+  }
+
+  return sponsorships.length;
+}
+
+export async function cancelPendingStripeSubscriptions(
+  sponsorships: PendingStripeCancellation[],
+  dependencies: {
+    cancel?: typeof cancelStripeSubscription;
+    markCancelled?: (id: string) => Promise<void>;
+    logError?: (message: string, error: unknown) => void;
+  } = {},
+) {
+  const cancel = dependencies.cancel ?? cancelStripeSubscription;
+  const markCancelled = dependencies.markCancelled ?? (async (id: string) => {
+    await prisma.sponsorship.update({
+      where: { id },
+      data: { stripeCancellationPendingAt: null },
+    });
+  });
+  const logError = dependencies.logError ?? console.error;
+
+  for (const sponsorship of sponsorships) {
+    const accountId = sponsorship.organization.stripeAccountId;
+    if (!accountId) {
+      logError(
+        `Could not cancel Stripe subscription for adopted sponsorship ${sponsorship.id}: connected account is missing`,
+        null,
+      );
+      continue;
+    }
+
+    try {
+      await cancel({ accountId, subscriptionId: sponsorship.stripeSubscriptionId });
+      await markCancelled(sponsorship.id);
+    } catch (error) {
+      logError(
+        `Could not cancel Stripe subscription for adopted sponsorship ${sponsorship.id}; it remains marked for retry`,
+        error,
+      );
+    }
+  }
 }
 
 type ResidentStatusSnapshot = {
@@ -234,7 +316,7 @@ export function assertPlausibleAdoptionCount(
   }
 }
 
-type SyncTransaction = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
+export type SyncTransaction = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 
 async function upsertCompanion(
   tx: SyncTransaction,

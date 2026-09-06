@@ -8,6 +8,7 @@ import { setupServer } from "msw/node";
 import {
   type BillingStore,
   ResidentUnavailableError,
+  cancelStripeSubscription,
   constructStripeEvent,
   createBillingPortalSession,
   connectAccountStatus,
@@ -242,6 +243,25 @@ test("Stripe SDK billing portal uses the sponsorship customer on the connected a
   assert.equal(portal.url, "https://billing.stripe.test/session_fixture");
 });
 
+test("Stripe SDK cancels a subscription on the rescue's connected account", async () => {
+  server.use(http.delete(`${stripeApi}/v1/subscriptions/:subscriptionId`, ({ params, request }) => {
+    assert.equal(params.subscriptionId, "sub_adopted");
+    assert.equal(request.headers.get("stripe-account"), "acct_fixture_rescue");
+    return HttpResponse.json({
+      id: "sub_adopted",
+      object: "subscription",
+      status: "canceled",
+    });
+  }));
+
+  const subscription = await cancelStripeSubscription({
+    accountId: "acct_fixture_rescue",
+    subscriptionId: "sub_adopted",
+  });
+
+  assert.equal(subscription.status, "canceled");
+});
+
 test("resuming onboarding re-requests card payments on an existing connected account", async () => {
   const store = new MemoryBillingStore();
   store.organization.stripeAccountId = "acct_fixture_rescue";
@@ -356,6 +376,13 @@ test("Stripe Connect onboarding, checkout, and signed webhooks maintain sponsors
     channel: "email",
     userId: null,
   });
+
+  await processStripeEvent(signedEvent({
+    id: "sub_fixture",
+    object: "subscription",
+    metadata: { orgId: "org_rescue", residentId: "companion_mabel" },
+  }, "customer.subscription.deleted"), store);
+  assert.equal(store.sponsorships.get("cs_fixture")?.status, "ended");
 
   await processStripeEvent(signedEvent({
     id: "sub_fixture",

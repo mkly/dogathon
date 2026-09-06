@@ -105,7 +105,7 @@ export default async function SponsorDetailPage({ params }: SponsorDetailPagePro
                     <td>{sponsorship.resident.name}</td>
                     <td><AdminStatus>{sponsorship.status}</AdminStatus></td>
                     <td>{formatDate(sponsorship.createdAt)}</td>
-                    <td>{sponsorship.status === "ended" ? formatDate(sponsorship.updatedAt) : "Ongoing"}</td>
+                    <td>{sponsorship.endedAt ? formatDate(sponsorship.endedAt) : "—"}</td>
                     <td className={styles.reason}>{sponsorship.endedReason ?? "—"}</td>
                   </tr>
                 ))}

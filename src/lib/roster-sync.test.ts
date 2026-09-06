@@ -5,6 +5,8 @@ import { MockLanguageModelV3 } from "ai/test";
 
 import {
   assertPlausibleAdoptionCount,
+  cancelPendingStripeSubscriptions,
+  closeAdoptedSponsorships,
   discoverRoster,
   discoverRosterWithCompleteness,
   extractScrapedText,
@@ -16,6 +18,7 @@ import {
   requestFirecrawl,
   RosterSyncRefusal,
 } from "./roster-sync.ts";
+import type { SyncTransaction } from "./roster-sync.ts";
 import { parseCompanionRoster } from "./parser.ts";
 
 type ScriptMessage = { role: string; content: string | null };
@@ -96,6 +99,107 @@ function rosterCompanion(name: string, adopted: boolean) {
     adopted,
   };
 }
+
+test("adoption ends sponsorships at the adoption time and marks Stripe cancellations pending", async () => {
+  const adoptedAt = new Date("2026-09-06T21:00:00.000Z");
+  const residentUpdates: unknown[] = [];
+  const sponsorshipUpdates: unknown[] = [];
+  const drafts: unknown[] = [];
+  const tx = {
+    resident: {
+      update: async (input: unknown) => {
+        residentUpdates.push(input);
+      },
+    },
+    sponsorship: {
+      findMany: async () => [
+        { id: "sponsorship-1", stripeSubscriptionId: "sub_adopted", sponsor: { name: "Sam" } },
+        { id: "sponsorship-2", stripeSubscriptionId: null, sponsor: { name: "Lee" } },
+      ],
+      update: async (input: unknown) => {
+        sponsorshipUpdates.push(input);
+      },
+    },
+    sponsorUpdate: {
+      create: async (input: unknown) => {
+        drafts.push(input);
+      },
+    },
+  } as unknown as SyncTransaction;
+
+  const closed = await closeAdoptedSponsorships(
+    tx,
+    "org-rescue",
+    { id: "resident-1", name: "Hattie" },
+    adoptedAt,
+  );
+
+  assert.equal(closed, 2);
+  assert.deepEqual(residentUpdates, [{
+    where: { id_orgId: { id: "resident-1", orgId: "org-rescue" } },
+    data: { status: "adopted", adoptedAt },
+  }]);
+  assert.deepEqual(sponsorshipUpdates, [
+    {
+      where: { id_orgId: { id: "sponsorship-1", orgId: "org-rescue" } },
+      data: {
+        status: "ended",
+        endedAt: adoptedAt,
+        endedReason: "adopted",
+        stripeCancellationPendingAt: adoptedAt,
+      },
+    },
+    {
+      where: { id_orgId: { id: "sponsorship-2", orgId: "org-rescue" } },
+      data: {
+        status: "ended",
+        endedAt: adoptedAt,
+        endedReason: "adopted",
+        stripeCancellationPendingAt: null,
+      },
+    },
+  ]);
+  assert.equal(drafts.length, 2);
+});
+
+test("pending adoption cancellations clear only after Stripe succeeds", async () => {
+  const cancellations: Array<{ accountId: string; subscriptionId: string }> = [];
+  const cleared: string[] = [];
+  const errors: string[] = [];
+
+  await cancelPendingStripeSubscriptions([
+    {
+      id: "sponsorship-success",
+      stripeSubscriptionId: "sub_success",
+      organization: { stripeAccountId: "acct_rescue" },
+    },
+    {
+      id: "sponsorship-retry",
+      stripeSubscriptionId: "sub_retry",
+      organization: { stripeAccountId: "acct_rescue" },
+    },
+  ], {
+    cancel: async (input) => {
+      cancellations.push(input);
+      if (input.subscriptionId === "sub_retry") throw new Error("Stripe unavailable");
+      return {} as never;
+    },
+    markCancelled: async (id) => {
+      cleared.push(id);
+    },
+    logError: (message) => {
+      errors.push(message);
+    },
+  });
+
+  assert.deepEqual(cancellations, [
+    { accountId: "acct_rescue", subscriptionId: "sub_success" },
+    { accountId: "acct_rescue", subscriptionId: "sub_retry" },
+  ]);
+  assert.deepEqual(cleared, ["sponsorship-success"]);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0] ?? "", /remains marked for retry/);
+});
 
 test("loads a checked-in roster path without requiring the network", async () => {
   const expected = await readFile(new URL("../../seed/dogs-page-A.html", import.meta.url), "utf8");

@@ -111,7 +111,7 @@ export default async function SponsorAccountPage() {
                         <span>{formatMonthlyAmount(record.monthlyUsd)}/month</span>
                       </div>
                     </div>
-                    {record.status === "active" && record.stripeCustomerId ? (
+                    {record.stripeCustomerId ? (
                       <BillingPortalForm sponsorshipId={record.id} />
                     ) : null}
                   </article>

@@ -319,6 +319,17 @@ export async function createBillingPortalSession(input: {
   );
 }
 
+export async function cancelStripeSubscription(input: {
+  accountId: string;
+  subscriptionId: string;
+}) {
+  return stripe().subscriptions.cancel(
+    input.subscriptionId,
+    {},
+    { stripeAccount: input.accountId },
+  );
+}
+
 function id(value: string | { id: string } | null): string | null {
   return typeof value === "string" ? value : value?.id ?? null;
 }
