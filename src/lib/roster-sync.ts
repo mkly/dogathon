@@ -1147,6 +1147,5 @@ export function graduationDraft(residentId: string, companionName: string, spons
     status: "draft" as const,
     subject: `${companionName} has been adopted!`,
     bodyText: `Great news, ${sponsorName} — ${companionName} has found a forever home. Your monthly sponsorship has ended automatically. Thank you for helping ${companionName} reach graduation day!`,
-    smsText: `${companionName} has been adopted! Your sponsorship has ended. Thank you for helping make this happy ending possible.`,
   };
 }

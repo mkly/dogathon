@@ -134,7 +134,6 @@ export default async function CompanionsCoveredPage({ params }: CompanionsCovere
                       <tr>
                         <th scope="col">Sponsor</th>
                         <th scope="col">Contact</th>
-                        <th scope="col">Channel</th>
                         <th scope="col">Status</th>
                         <th scope="col">Started</th>
                       </tr>
@@ -147,13 +146,7 @@ export default async function CompanionsCoveredPage({ params }: CompanionsCovere
                             <a href={`mailto:${sponsorship.sponsor.email}`}>
                               {sponsorship.sponsor.email}
                             </a>
-                            {sponsorship.sponsor.phone && (
-                              <a href={`tel:${sponsorship.sponsor.phone}`}>
-                                {sponsorship.sponsor.phone}
-                              </a>
-                            )}
                           </td>
-                          <td className={styles.capitalize}>{sponsorship.sponsor.channel}</td>
                           <td className={styles.capitalize}>{sponsorship.status}</td>
                           <td>{formatDate(sponsorship.createdAt)}</td>
                         </tr>

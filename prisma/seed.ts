@@ -61,16 +61,12 @@ async function main() {
       sponsor: {
         name: "Alex Rivera",
         email: "alex@example.com",
-        phone: null,
-        channel: "email" as const,
       },
     },
     {
       sponsor: {
         name: "Jordan Lee",
         email: "jordan@example.com",
-        phone: "+14155550123",
-        channel: "both" as const,
       },
     },
   ];
@@ -188,14 +184,10 @@ async function main() {
     where: { email: "sam@example.com" },
     update: {
       name: "Sam Chen",
-      phone: null,
-      channel: "email",
     },
     create: {
       name: "Sam Chen",
       email: "sam@example.com",
-      phone: null,
-      channel: "email",
     },
   });
 

@@ -13,8 +13,6 @@ function sponsor(overrides: Partial<Sponsor> = {}): Sponsor {
     id: "sponsor_fixture",
     email: "sponsor@example.com",
     name: "Avery Sponsor",
-    phone: null,
-    channel: "email",
     userId: "user_fixture",
     createdAt: new Date("2026-09-01T00:00:00Z"),
     updatedAt: new Date("2026-09-01T00:00:00Z"),
