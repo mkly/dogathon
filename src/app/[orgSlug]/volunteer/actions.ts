@@ -7,6 +7,7 @@ import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
 
 import { getOrganizationAccessBySlug } from "@/lib/organization-access";
+import { deletePhoto, photoKey, putPhoto } from "@/lib/photo-storage";
 import { prisma } from "@/lib/prisma";
 import { revalidatePublicRoster } from "@/lib/public-roster-cache";
 import { uuidSchema } from "@/lib/uuid";
@@ -55,7 +56,7 @@ export async function submitVolunteerNote(formData: FormData) {
     redirect(volunteerErrorUrl(orgSlug, "no-note"));
   }
 
-  if (note.length > 240) {
+  if (note.length > 2_000) {
     redirect(volunteerErrorUrl(orgSlug, "note-too-long"));
   }
 
@@ -73,10 +74,13 @@ export async function submitVolunteerNote(formData: FormData) {
     redirect(volunteerErrorUrl(orgSlug, "unavailable"));
   }
 
-  // Photos live in the database, not the filesystem — Vercel functions are
-  // read-only outside /tmp and anything under public/ is frozen at build time.
-  let photoData: Uint8Array<ArrayBuffer> | undefined;
-  let photoMime: string | undefined;
+  let storedPhoto: {
+    id: string;
+    key: string;
+    mime: string;
+    size: number;
+    url: string;
+  } | undefined;
 
   if (photo && photo.size > 0) {
     if (photo.size > MAX_PHOTO_BYTES) {
@@ -88,24 +92,49 @@ export async function submitVolunteerNote(formData: FormData) {
       redirect(volunteerErrorUrl(orgSlug, "photo-type"));
     }
 
-    photoData = processedPhoto.data;
-    photoMime = processedPhoto.mime;
+    const id = randomUUID();
+    const key = photoKey({ orgId: context.orgId, photoId: id, ext: "jpg" });
+    const { url } = await putPhoto({ key, data: processedPhoto.data, mime: processedPhoto.mime });
+    storedPhoto = {
+      id,
+      key,
+      mime: processedPhoto.mime,
+      size: processedPhoto.data.byteLength,
+      url,
+    };
   }
 
   const noteId = randomUUID();
-  await prisma.volunteerNote.create({
-    data: {
-      id: noteId,
-      orgId: context.orgId,
-      note,
-      photoUrl: photoData
-        ? `/api/volunteer-photos/${noteId}?org=${encodeURIComponent(context.orgId)}`
-        : undefined,
-      photoData,
-      photoMime,
-      residentId,
-    },
-  });
+  try {
+    await prisma.$transaction(async (tx) => {
+      await tx.volunteerNote.create({
+        data: {
+          id: noteId,
+          orgId: context.orgId,
+          note,
+          photoUrl: storedPhoto?.url,
+          residentId,
+        },
+      });
+      if (storedPhoto) {
+        await tx.volunteerPhoto.create({
+          data: {
+            id: storedPhoto.id,
+            orgId: context.orgId,
+            residentId,
+            noteId,
+            storageKey: storedPhoto.key,
+            url: storedPhoto.url,
+            mime: storedPhoto.mime,
+            byteSize: storedPhoto.size,
+          },
+        });
+      }
+    });
+  } catch (error) {
+    if (storedPhoto) await deletePhoto(storedPhoto.key).catch(() => undefined);
+    throw error;
+  }
 
   revalidatePublicRoster();
 
