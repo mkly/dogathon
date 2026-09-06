@@ -243,14 +243,6 @@
 
 .stripeConnect .settingsIntro { max-width: 52ch; }
 
-.stripeBlockers {
-  margin: 12px 0 0;
-  padding-left: 18px;
-  font-size: 0.85rem;
-  font-weight: 700;
-  line-height: 1.5;
-}
-
 .stripeConnectForm {
   justify-self: start;
 }

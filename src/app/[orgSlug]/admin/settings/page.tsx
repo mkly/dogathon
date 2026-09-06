@@ -51,7 +51,7 @@ async function loadStripeConnection(orgId: string) {
     where: { id: orgId },
     select: { stripeAccountId: true, stripeDetailsSubmitted: true, stripeChargesEnabled: true },
   });
-  return stored && { ...stored, verifying: false, blockers: [] as string[] };
+  return stored;
 }
 
 async function StripeConnection({
@@ -65,11 +65,9 @@ async function StripeConnection({
 }) {
   const organization = await loadStripeConnection(orgId);
   const stripeNotReady = stripeNotReadyReason(organization);
-  const stripeBadge = organization?.verifying
-    ? { tone: "mustard" as const, label: "Verifying" }
-    : stripeNotReady
-      ? { tone: "brick" as const, label: "Not ready for payments" }
-      : { tone: "moss" as const, label: "Ready for payments" };
+  const stripeBadge = stripeNotReady
+    ? { tone: "brick" as const, label: "Not ready for payments" }
+    : { tone: "moss" as const, label: "Ready for payments" };
 
   return (
     <AdminSurface
@@ -86,13 +84,6 @@ async function StripeConnection({
               ? `${stripeNotReady} Sponsors cannot check out until Stripe enables card payments.`
               : `Connected and ready to accept $${SPONSORSHIP_MONTHLY_USD} monthly sponsorships.`}
           </p>
-          {organization && organization.blockers.length > 0 && (
-            <ul className={styles.stripeBlockers}>
-              {organization.blockers.map((blocker) => (
-                <li key={blocker}>{blocker}</li>
-              ))}
-            </ul>
-          )}
         </div>
         <div className={styles.connectorStatus}>
           <AdminBadge tone={stripeBadge.tone}>{stripeBadge.label}</AdminBadge>
