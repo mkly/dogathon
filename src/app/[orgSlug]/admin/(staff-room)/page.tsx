@@ -27,6 +27,7 @@ import { getEmailConnectorStatus } from "@/lib/email-connectors";
 import { formatDateTime } from "@/lib/format";
 import { getOrganizationAccessBySlug } from "@/lib/organization-access";
 import { prisma } from "@/lib/prisma";
+import { isSponsorUpdateRecipient } from "@/lib/sponsor-update-delivery";
 
 import pawcastWordmark from "../../../../../public/brand/pawcast-wordmark.png";
 
@@ -229,8 +230,11 @@ async function ApprovalQueue({
         resident: {
           include: {
             sponsorships: {
-              where: { orgId, status: "active" },
-              select: { id: true },
+              where: {
+                orgId,
+                OR: [{ status: "active" }, { endedReason: "adopted" }],
+              },
+              select: { id: true, status: true, endedReason: true },
             },
           },
         },
@@ -287,8 +291,10 @@ async function ApprovalQueue({
             </AdminEmptyState>
           </AdminSurface>
         ) : (
-          drafts.map((draft) => (
-            <DraftEditor
+          drafts.map((draft) => {
+            const recipientCount = draft.resident.sponsorships.filter((sponsorship) =>
+              isSponsorUpdateRecipient(draft.type, sponsorship)).length;
+            return <DraftEditor
               bodyText={draft.bodyText}
               emailConnected={emailConnector.connected}
               focusTargetId="draft-queue"
@@ -304,12 +310,12 @@ async function ApprovalQueue({
                 <h3>{draft.resident.name}</h3>
                 <p>{draft.resident.personality}</p>
                 <small>
-                  goes to {draft.resident.sponsorships.length}{" "}
-                  {pluralize("sponsor", draft.resident.sponsorships.length)}
+                  goes to {recipientCount}{" "}
+                  {pluralize("sponsor", recipientCount)}
                 </small>
               </div>
-            </DraftEditor>
-          ))
+            </DraftEditor>;
+          })
         )}
       </div>
     </section>

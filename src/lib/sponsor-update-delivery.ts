@@ -1,10 +1,26 @@
 import pMap from "p-map";
 
 import {
-  sendOrganizationEmail,
+  createOrganizationEmailSender,
   type DescribedSend,
   type EmailInput,
 } from "./email-connectors.ts";
+
+export type SponsorUpdateType = "regular" | "graduation";
+
+export type RecipientSponsorship = {
+  status: "active" | "ended";
+  endedReason: string | null;
+};
+
+export function isSponsorUpdateRecipient(
+  type: SponsorUpdateType,
+  sponsorship: RecipientSponsorship,
+): boolean {
+  return type === "graduation"
+    ? sponsorship.endedReason === "adopted"
+    : sponsorship.status === "active";
+}
 
 export type DeliverySponsorship = {
   id: string;
@@ -32,10 +48,8 @@ export type Delivery = {
   describedSend?: DescribedSend;
 };
 
-type EmailSender = (
-  orgId: string,
-  input: EmailInput,
-) => Promise<DescribedSend | null | void>;
+type EmailSender = (input: EmailInput) => Promise<DescribedSend | null | void>;
+type EmailSenderFactory = (orgId: string) => Promise<EmailSender>;
 
 export function companionPageUrl(origin: string, orgSlug: string, residentId: string): string {
   return new URL(
@@ -75,14 +89,15 @@ export async function deliverSponsorUpdate(
   orgId: string,
   sponsorUpdate: SponsorUpdateForDelivery,
   sponsorships: DeliverySponsorship[],
-  sendEmail: EmailSender = sendOrganizationEmail,
+  createEmailSender: EmailSenderFactory = createOrganizationEmailSender,
 ): Promise<Delivery[]> {
+  const sendEmail = await createEmailSender(orgId);
   return pMap(
     sponsorships,
     (sponsorship) =>
       attempt(
         () =>
-          sendEmail(orgId, {
+          sendEmail({
             to: sponsorship.sponsor.email,
             subject: sponsorUpdate.subject,
             body: sponsorUpdate.bodyHtml ?? sponsorUpdate.bodyText,

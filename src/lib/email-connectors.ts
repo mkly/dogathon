@@ -579,6 +579,80 @@ export async function sendOrganizationEmail(
   return (dependencies.sendEmailWithConnector ?? sendEmailWithConnector)(connector, input);
 }
 
+type OrganizationEmailSenderDependencies = {
+  findConnector?: (orgId: string) => Promise<StoredEmailConnector | null>;
+  sendAppEmail?: (input: EmailInput) => Promise<DescribedSend | null>;
+  sendEmailWithConnector?: (
+    connector: StoredEmailConnector,
+    input: EmailInput,
+  ) => Promise<DescribedSend | null>;
+  prepareConnector?: (connector: StoredEmailConnector) => Promise<StoredEmailConnector>;
+};
+
+async function prepareEmailConnector(
+  connector: StoredEmailConnector,
+  fetcher: Fetcher = fetch,
+): Promise<StoredEmailConnector> {
+  if (connector.type === "smtp" || !env.features.connectorEncryption) return connector;
+
+  const hasOAuthCredentials = connector.type === "gmail"
+    ? env.features.googleOAuth
+    : env.features.microsoftOAuth;
+  if (!hasOAuthCredentials || !connector.refreshTokenEncrypted) return connector;
+
+  if (
+    connector.accessTokenEncrypted
+    && connector.accessTokenExpiresAt
+    && connector.accessTokenExpiresAt > new Date(Date.now() + 60_000)
+  ) {
+    return connector;
+  }
+
+  const refreshed = await refreshAccessToken(connector, fetcher);
+  const [accessTokenEncrypted, refreshTokenEncrypted] = await Promise.all([
+    encryptEmailSecret(refreshed.accessToken),
+    encryptEmailSecret(refreshed.refreshToken),
+  ]);
+  await prisma.emailConnector.update({
+    where: { orgId: connector.orgId },
+    data: {
+      accessTokenEncrypted,
+      refreshTokenEncrypted,
+      accessTokenExpiresAt: refreshed.expiresAt,
+    },
+  });
+  return {
+    ...connector,
+    accessTokenEncrypted,
+    refreshTokenEncrypted,
+    accessTokenExpiresAt: refreshed.expiresAt,
+  };
+}
+
+/**
+ * Resolve and, when necessary, refresh an organization's connector once before
+ * a delivery fan-out. The returned sender reuses that stable credential for
+ * every recipient, avoiding concurrent refresh-token rotation.
+ */
+export async function createOrganizationEmailSender(
+  orgId: string,
+  dependencies: OrganizationEmailSenderDependencies = {},
+): Promise<(input: EmailInput) => Promise<DescribedSend | null>> {
+  const findConnector = dependencies.findConnector
+    ?? ((organizationId: string) => prisma.emailConnector.findUnique({
+      where: { orgId: organizationId },
+    }));
+  const connector = await findConnector(orgId);
+  if (!connector || !connector.verifiedAt) {
+    const sender = dependencies.sendAppEmail ?? sendAppEmail;
+    return (input) => sender(input);
+  }
+
+  const prepared = await (dependencies.prepareConnector ?? prepareEmailConnector)(connector);
+  const sender = dependencies.sendEmailWithConnector ?? sendEmailWithConnector;
+  return (input) => sender(prepared, input);
+}
+
 export async function getEmailConnectorStatus(orgId: string) {
   const connector = await prisma.emailConnector.findUnique({
     where: { orgId },

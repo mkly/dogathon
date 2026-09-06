@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { SponsorUpdateEmail } from "@/emails/sponsor-update-email";
+import { env } from "@/lib/env";
 import { requireApiOrganization } from "@/lib/organization-access";
 import { prisma } from "@/lib/prisma";
 import { companionPageUrl } from "@/lib/sponsor-update-delivery";
@@ -38,7 +39,7 @@ export async function GET(request: Request, { params }: RouteContext) {
     return Response.json({ error: "Update not found" }, { status: 404 });
   }
 
-  const origin = new URL(request.url).origin;
+  const origin = env.BETTER_AUTH_URL;
   const html = await render(createElement(SponsorUpdateEmail, {
     companionName: sponsorUpdate.resident.name,
     subject: sponsorUpdate.subject,

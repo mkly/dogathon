@@ -4,6 +4,7 @@ import test, { after, before } from "node:test";
 
 import {
   createEmailConnectorAuthorization,
+  createOrganizationEmailSender,
   decryptEmailConnectorOAuthSession,
   decryptEmailSecret,
   encryptEmailSecret,
@@ -391,6 +392,31 @@ test("routes organization email through its verified connector", async () => {
   );
 
   assert.equal(usedConnector, verified);
+});
+
+test("prepares a verified organization connector once for repeated sends", async () => {
+  const verified = connector("microsoft");
+  let prepared = 0;
+  let sent = 0;
+  const send = await createOrganizationEmailSender("org-a", {
+    findConnector: async () => verified,
+    prepareConnector: async (selected) => {
+      prepared += 1;
+      return selected;
+    },
+    sendEmailWithConnector: async () => {
+      sent += 1;
+      return null;
+    },
+  });
+
+  await Promise.all([
+    send({ to: "one@example.com", subject: "One", body: "Hello" }),
+    send({ to: "two@example.com", subject: "Two", body: "Hello" }),
+  ]);
+
+  assert.equal(prepared, 1);
+  assert.equal(sent, 2);
 });
 
 test("verifies and sends through a password-authenticated SMTP server", async () => {
