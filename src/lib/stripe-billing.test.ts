@@ -140,7 +140,7 @@ class MemoryBillingStore implements BillingStore {
     const email = input.sponsorEmail.trim().toLowerCase();
     const existing = this.sponsors.get(email);
     const sponsor = existing
-      ? { ...existing, name: input.sponsorName }
+      ? existing
       : {
           id: `sponsor_${this.sponsors.size + 1}`,
           email,
@@ -452,4 +452,33 @@ test("checkout completion reuses a sponsor by normalized email without linking a
   assert.equal(store.sponsors.get("sponsor@example.com")?.userId, null);
   assert.equal(store.sponsorships.get("cs_first")?.sponsorId, "sponsor_1");
   assert.equal(store.sponsorships.get("cs_second")?.sponsorId, "sponsor_1");
+});
+
+test("checkout completion does not overwrite an existing sponsor name", async () => {
+  const store = new MemoryBillingStore();
+  store.organization.stripeAccountId = "acct_fixture_rescue";
+  store.sponsors.set("sponsor@example.com", {
+    id: "sponsor_1",
+    email: "sponsor@example.com",
+    name: "Original Sponsor Name",
+    phone: null,
+    channel: "email",
+    userId: null,
+  });
+
+  await processStripeEvent(signedEvent({
+    id: "cs_keep_existing_sponsor_name",
+    object: "checkout.session",
+    customer: "cus_fixture",
+    metadata: {
+      orgId: "org_rescue",
+      residentId: "companion_mabel",
+      sponsorName: "Checkout Form Name",
+      sponsorEmail: "Sponsor@Example.com",
+    },
+    mode: "subscription",
+    subscription: "sub_keep_existing_sponsor_name",
+  }, "checkout.session.completed"), store);
+
+  assert.equal(store.sponsors.get("sponsor@example.com")?.name, "Original Sponsor Name");
 });

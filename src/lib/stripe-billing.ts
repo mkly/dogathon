@@ -112,7 +112,7 @@ const prismaBillingStore: BillingStore = {
     await prisma.$transaction(async (tx) => {
       const sponsor = await tx.sponsor.upsert({
         where: { email },
-        update: { name: input.sponsorName },
+        update: {},
         create: { email, name: input.sponsorName },
       });
 

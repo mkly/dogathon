@@ -4,6 +4,8 @@ import {
   stripeWebhookSecret,
 } from "@/lib/stripe-billing";
 import { revalidatePublicRoster } from "@/lib/public-roster-cache";
+import { prisma } from "@/lib/prisma";
+import { processStripeWebhookEvent } from "@/lib/stripe-webhook-events";
 
 export async function POST(request: Request) {
   const signature = request.headers.get("stripe-signature");
@@ -18,8 +20,12 @@ export async function POST(request: Request) {
   }
 
   try {
-    await processStripeEvent(event);
-    revalidatePublicRoster();
+    const processed = await processStripeWebhookEvent(
+      event,
+      prisma.stripeWebhookEvent,
+      processStripeEvent,
+    );
+    if (processed) revalidatePublicRoster();
     return Response.json({ received: true });
   } catch (error) {
     console.error("Stripe webhook processing failed", error);

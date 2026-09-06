@@ -285,6 +285,14 @@ model VolunteerPhoto {
   @@index([orgId, createdAt])
 }
 
+model StripeWebhookEvent {
+  id         String   @id
+  type       String
+  receivedAt DateTime @default(now())
+
+  @@map("stripe_webhook_event")
+}
+
 model SponsorUpdate {
   id           String              @id @default(uuid(4)) @db.Uuid
   orgId        String              @db.Uuid
