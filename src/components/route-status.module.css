@@ -47,6 +47,7 @@
 .queueCard { min-height: 226px; }
 .stack { display: grid; gap: 24px; }
 .settingsCard { min-height: 190px; }
+.settingsEditorCard { min-height: 310px; }
 .row { min-height: 92px; }
 
 .volunteer {

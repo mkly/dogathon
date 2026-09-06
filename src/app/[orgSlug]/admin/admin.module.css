@@ -283,6 +283,71 @@
 .saveSourceButton { min-width: 7rem; }
 .syncButton { min-width: 6.25rem; }
 .postscriptButton { min-width: 7rem; }
+.postscriptEditorField { overflow: hidden; }
+.postscriptEditor { display: grid; grid-template-columns: minmax(0, 1fr) minmax(180px, 0.7fr); }
+.postscriptToolbar {
+  display: flex;
+  grid-column: 1 / -1;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px;
+  border-bottom: 1px solid rgb(61 51 43 / 20%);
+  background: rgb(248 242 231 / 72%);
+}
+.postscriptToolbarButton {
+  min-height: 2rem;
+  padding: 0.35rem 0.55rem;
+  border: 1px solid rgb(61 51 43 / 28%);
+  border-radius: 5px;
+  background: white;
+  color: var(--felt-ink);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 850;
+  transition:
+    background-color var(--motion-duration-fast) var(--motion-ease-standard),
+    border-color var(--motion-duration-fast) var(--motion-ease-standard),
+    opacity var(--motion-duration-fast) var(--motion-ease-standard);
+}
+.postscriptToolbarButton:hover:not(:disabled),
+.postscriptToolbarButton[aria-pressed="true"] {
+  border-color: var(--felt-denim);
+  background: color-mix(in srgb, var(--felt-denim), white 82%);
+}
+.postscriptToolbarButton:disabled { cursor: not-allowed; opacity: 0.45; }
+.postscriptEditorContent { min-width: 0; border-right: 1px solid rgb(61 51 43 / 20%); }
+.postscriptEditorSurface {
+  min-height: 10rem;
+  padding: 0.8rem;
+  outline: 0;
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+.postscriptEditorSurface > :first-child { margin-top: 0; }
+.postscriptEditorSurface > :last-child { margin-bottom: 0; }
+.postscriptEditorSurface a { color: var(--felt-denim); text-decoration: underline; }
+.postscriptEditorLoading { min-height: 10rem; margin: 0; padding: 0.8rem; opacity: 0.62; }
+.postscriptPreview {
+  grid-column: 2;
+  grid-row: 2 / span 2;
+  min-width: 0;
+  padding: 0.8rem;
+  background: rgb(248 242 231 / 54%);
+}
+.postscriptPreview h3 { margin: 0 0 0.55rem; font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; }
+.postscriptPreview p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 0.82rem; line-height: 1.55; }
+.postscriptCounter {
+  grid-column: 1;
+  margin: 0;
+  padding: 0.45rem 0.8rem;
+  border-top: 1px solid rgb(61 51 43 / 14%);
+  font-size: 0.7rem;
+  font-weight: 800;
+  opacity: 0.68;
+  text-align: right;
+}
+.postscriptCounterOverLimit { color: var(--felt-brick); opacity: 1; }
 .inlineReveal, .noticeReveal, .statusReveal, .stripeConnectReveal { overflow: hidden; }
 .unsavedSource { margin: 0; font-size: 0.78rem; font-weight: 800; line-height: 1.4; }
 
@@ -308,6 +373,10 @@
   .dialogPanel { padding: 22px 18px; }
   .modalActions { align-items: stretch; flex-direction: column-reverse; }
   .settings { grid-template-columns: 1fr; gap: 26px; padding: 32px 24px; }
+  .postscriptEditor { grid-template-columns: 1fr; }
+  .postscriptEditorContent { border-right: 0; }
+  .postscriptPreview { grid-column: 1; grid-row: auto; border-top: 1px solid rgb(61 51 43 / 20%); }
+  .postscriptCounter { grid-column: 1; }
   .connectorHeader, .connectorStatus { align-items: stretch; flex-direction: column; }
   .smtpForm { grid-template-columns: 1fr; }
   .smtpForm > *, .smtpForm .modalActions, .smtpSecure { grid-column: 1; }
