@@ -19,7 +19,7 @@ export async function POST(request: Request) {
 
   const input = smtpInputSchema.safeParse(await request.json().catch(() => null));
   if (!input.success) {
-    return Response.json({ error: "Enter valid SMTP host, port, credentials, and sender email" }, { status: 400 });
+    return Response.json({ error: "Enter a valid SMTP host, port, credentials, and address sponsors will see" }, { status: 400 });
   }
   const { host, port, secure, user, password, fromEmail } = input.data;
 
