@@ -196,6 +196,7 @@
 
 .button {
   --admin-accent: var(--felt-denim);
+  position: relative;
   display: inline-flex;
   min-height: 2.5rem;
   align-items: center;
@@ -234,13 +235,16 @@
 }
 
 .linkStatus {
+  position: absolute;
+  top: 50%;
+  right: 0.55rem;
   width: 0.55rem;
   height: 0.55rem;
-  margin-left: 0.4rem;
   border: 2px solid currentColor;
   border-right-color: transparent;
   border-radius: 50%;
   opacity: 0;
+  translate: 0 -50%;
   visibility: hidden;
 }
 
