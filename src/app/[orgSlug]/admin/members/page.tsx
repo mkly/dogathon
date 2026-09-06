@@ -7,7 +7,6 @@ import { Suspense } from "react";
 
 import {
   AdminBadge,
-  AdminFooter,
   AdminHeader,
   AdminLink,
   AdminPage,
@@ -189,8 +188,6 @@ export default async function MembersPage({ params }: MembersPageProps) {
             orgSlug={orgSlug}
           /></SuspenseReveal>
         </Suspense>
-
-        <AdminFooter>organization members · keep the right people in the room</AdminFooter>
       </AdminPage>
     </PageViewTransition>
   );

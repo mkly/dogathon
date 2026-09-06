@@ -8,7 +8,6 @@ import { Suspense } from "react";
 import {
   AdminBadge,
   AdminEmptyState,
-  AdminFooter,
   AdminHeader,
   AdminLink,
   AdminPage as AdminPageShell,
@@ -366,8 +365,6 @@ export default async function AdminPage({ params }: AdminPageProps) {
         <Suspense fallback={<SuspenseFallback><ApprovalQueueLoading /></SuspenseFallback>}>
           <SuspenseReveal><ApprovalQueue canManageStaffArea={canManageStaffArea} orgId={context.orgId} orgSlug={orgSlug} /></SuspenseReveal>
         </Suspense>
-
-        <AdminFooter>the staff room · nobody wrote a single email today</AdminFooter>
       </AdminPageShell>
     </PageViewTransition>
   );
