@@ -46,7 +46,13 @@ function messageText(message: UIMessage) {
 }
 
 function visibleMessageText(message: UIMessage) {
-  return messageText(message).replaceAll(READY_MARKER, "").trim();
+  const text = messageText(message).replaceAll(READY_MARKER, "");
+  // The marker streams in token by token, so a trailing partial ("[[REA") has to
+  // go as well or it flashes in the thread before the marker completes.
+  for (let length = READY_MARKER.length - 1; length > 0; length -= 1) {
+    if (text.endsWith(READY_MARKER.slice(0, length))) return text.slice(0, -length).trim();
+  }
+  return text.trim();
 }
 
 export function CheckInChat({ orgSlug, residents, onFinish }: CheckInChatProps) {
@@ -292,7 +298,6 @@ function ChatSession({
           <span className={styles.srOnly}>Add photos</span>
           <input
             accept="image/*"
-            capture="environment"
             multiple
             onChange={(event) => selectPhotos(event.target.files)}
             ref={fileInputRef}
