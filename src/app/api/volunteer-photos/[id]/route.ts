@@ -28,7 +28,9 @@ export async function GET(request: Request, { params }: RouteContext) {
     return Response.json({ error: "Photo not found" }, { status: 404 });
   }
 
-  if (env.features.s3) return Response.redirect(photo.url, 308);
+  // Photos written before S3 was configured keep a same-origin URL; redirecting
+  // to one would throw, so only an absolute stored URL is worth a redirect.
+  if (env.features.s3 && URL.canParse(photo.url)) return Response.redirect(photo.url, 308);
 
   const stored = await getPhoto(photo.storageKey);
   if (!stored) return Response.json({ error: "Photo not found" }, { status: 404 });
