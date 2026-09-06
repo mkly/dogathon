@@ -6,7 +6,7 @@ import { useSyncExternalStore, type ReactNode } from "react";
 import { FeltLink, FeltPanel, StitchBadge } from "@/components/felt";
 import { SPONSORSHIP_MONTHLY_USD } from "@/lib/sponsorship-pricing";
 
-import styles from "../../../public.module.css";
+import styles from "../../../../public.module.css";
 
 export function CompanionBanner({ name }: { name: string }) {
   const searchParams = useSearchParams();

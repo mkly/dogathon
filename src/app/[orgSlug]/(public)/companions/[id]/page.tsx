@@ -15,7 +15,7 @@ import { SPONSORSHIP_MONTHLY_USD } from "@/lib/sponsorship-pricing";
 import { uuidSchema } from "@/lib/uuid";
 
 import { CompanionBanner, CompanionFormError, CompanionSponsorState } from "./companion-banner";
-import styles from "../../../public.module.css";
+import styles from "../../../../public.module.css";
 
 export const revalidate = 86400;
 
