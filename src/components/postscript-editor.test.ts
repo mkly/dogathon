@@ -27,7 +27,7 @@ Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", {
 const { createElement } = await import("react");
 const { cleanup, render, screen, waitFor } = await import("@testing-library/react");
 const { render: renderEmail } = await import("@react-email/render");
-const { PupdateEmail } = await import("../emails/pupdate-email");
+const { SponsorUpdateEmail } = await import("../emails/sponsor-update-email");
 const { PostscriptEditor } = await import("./postscript-editor");
 
 const classNames = {
@@ -140,9 +140,9 @@ test("keeps the editor preview and sent email plain text in agreement", async ()
     "We hope to see you there.",
   ]);
 
-  const emailPlainText = await renderEmail(createElement(PupdateEmail, {
+  const emailPlainText = await renderEmail(createElement(SponsorUpdateEmail, {
     companionName: "Biscuit",
-    subject: "A pupdate from Biscuit",
+    subject: "An update from Biscuit",
     bodyText: `Here is the latest.\n\n${postscript}`,
     companionUrl: "https://pawcast.test/companions/biscuit",
     origin: "https://pawcast.test",

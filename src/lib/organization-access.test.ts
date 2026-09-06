@@ -5,7 +5,7 @@ import { organizationRoles } from "./auth.ts";
 import { checkOrganizationPermission, forOrganization } from "./organization-access.ts";
 
 test("owners and admins can manage staff resources while billing remains owner-only", () => {
-  for (const resource of ["pupdate", "settings", "members", "roster"] as const) {
+  for (const resource of ["sponsorUpdate", "settings", "members", "roster"] as const) {
     assert.equal(organizationRoles.owner.authorize({ [resource]: ["manage"] }).success, true);
     assert.equal(organizationRoles.admin.authorize({ [resource]: ["manage"] }).success, true);
   }
@@ -14,8 +14,8 @@ test("owners and admins can manage staff resources while billing remains owner-o
 });
 
 test("members manage updates while volunteers cannot, and both have limited staff access", () => {
-  assert.equal(organizationRoles.member.authorize({ pupdate: ["manage"] }).success, true);
-  assert.equal(organizationRoles.volunteer.authorize({ pupdate: ["manage"] }).success, false);
+  assert.equal(organizationRoles.member.authorize({ sponsorUpdate: ["manage"] }).success, true);
+  assert.equal(organizationRoles.volunteer.authorize({ sponsorUpdate: ["manage"] }).success, false);
 
   for (const role of [organizationRoles.member, organizationRoles.volunteer]) {
     assert.equal(role.authorize({ roster: ["contribute"] }).success, true);

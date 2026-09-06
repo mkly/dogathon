@@ -1,7 +1,7 @@
-import { PupdateEmail } from "@/emails/pupdate-email";
+import { SponsorUpdateEmail } from "@/emails/sponsor-update-email";
 import { getEmailConnectorStatus } from "@/lib/email-connectors";
 import { requireApiOrganization } from "@/lib/organization-access";
-import { deliverPupdate, companionPageUrl } from "@/lib/pupdate-delivery";
+import { deliverSponsorUpdate, companionPageUrl } from "@/lib/sponsor-update-delivery";
 import { prisma } from "@/lib/prisma";
 import { uuidSchema } from "@/lib/uuid";
 import { render } from "@react-email/render";
@@ -15,11 +15,11 @@ export async function POST(request: Request, { params }: RouteContext) {
     return Response.json({ error: "Update not found" }, { status: 404 });
   }
 
-  const access = await requireApiOrganization(request.headers, { pupdate: ["manage"] });
+  const access = await requireApiOrganization(request.headers, { sponsorUpdate: ["manage"] });
   if (!access.ok) return access.response;
   const { orgId } = access.context;
 
-  const pupdate = await prisma.pupdate.findFirst({
+  const sponsorUpdate = await prisma.sponsorUpdate.findFirst({
     where: { id, orgId },
     include: {
       organization: { select: { slug: true } },
@@ -35,10 +35,10 @@ export async function POST(request: Request, { params }: RouteContext) {
     },
   });
 
-  if (!pupdate) {
+  if (!sponsorUpdate) {
     return Response.json({ error: "Update not found" }, { status: 404 });
   }
-  if (pupdate.status !== "draft") {
+  if (sponsorUpdate.status !== "draft") {
     return Response.json({ error: "Only draft updates can be approved" }, { status: 409 });
   }
 
@@ -50,7 +50,7 @@ export async function POST(request: Request, { params }: RouteContext) {
     );
   }
 
-  const claimed = await prisma.pupdate.updateMany({
+  const claimed = await prisma.sponsorUpdate.updateMany({
     where: { id, orgId, status: "draft" },
     data: { status: "approved" },
   });
@@ -59,34 +59,34 @@ export async function POST(request: Request, { params }: RouteContext) {
   }
 
   const origin = new URL(request.url).origin;
-  const companionUrl = companionPageUrl(origin, pupdate.organization.slug, pupdate.residentId);
-  const email = createElement(PupdateEmail, {
-    companionName: pupdate.resident.name,
-    subject: pupdate.subject,
-    bodyText: pupdate.bodyText,
+  const companionUrl = companionPageUrl(origin, sponsorUpdate.organization.slug, sponsorUpdate.residentId);
+  const email = createElement(SponsorUpdateEmail, {
+    companionName: sponsorUpdate.resident.name,
+    subject: sponsorUpdate.subject,
+    bodyText: sponsorUpdate.bodyText,
     companionUrl,
     origin,
-    photoUrl: pupdate.photoUrl ?? pupdate.resident.photoUrls[0] ?? null,
-    type: pupdate.type === "graduation" ? "graduation" : "regular",
+    photoUrl: sponsorUpdate.photoUrl ?? sponsorUpdate.resident.photoUrls[0] ?? null,
+    type: sponsorUpdate.type === "graduation" ? "graduation" : "regular",
   });
   const [bodyHtml, bodyText] = await Promise.all([
     render(email),
     render(email, { plainText: true }),
   ]);
-  const deliveries = await deliverPupdate(
+  const deliveries = await deliverSponsorUpdate(
     orgId,
     {
-      ...pupdate,
+      ...sponsorUpdate,
       bodyHtml,
       bodyText,
     },
-    pupdate.resident.sponsorships,
+    sponsorUpdate.resident.sponsorships,
   );
   const sentAt = new Date();
-  const sent = await prisma.pupdate.update({
+  const sent = await prisma.sponsorUpdate.update({
     where: { id_orgId: { id, orgId } },
     data: { status: "sent", sentAt },
   });
 
-  return Response.json({ pupdate: sent, deliveries });
+  return Response.json({ sponsorUpdate: sent, deliveries });
 }

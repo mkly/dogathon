@@ -46,7 +46,7 @@ async function getThirtyDaysAgo() {
 
 async function DashboardStats({ orgId, orgSlug }: { orgId: string; orgSlug: string }) {
   const thirtyDaysAgo = await getThirtyDaysAgo();
-  const [activeSponsorCount, sponsoredCompanionCount, sentPupdateCount] = await Promise.all([
+  const [activeSponsorCount, sponsoredCompanionCount, sentSponsorUpdateCount] = await Promise.all([
     prisma.sponsorship.count({ where: { orgId, status: "active" } }),
     prisma.resident.count({
       where: {
@@ -54,7 +54,7 @@ async function DashboardStats({ orgId, orgSlug }: { orgId: string; orgSlug: stri
         sponsorships: { some: { orgId, status: "active" } },
       },
     }),
-    prisma.pupdate.count({
+    prisma.sponsorUpdate.count({
       where: {
         orgId,
         status: "sent",
@@ -96,8 +96,8 @@ async function DashboardStats({ orgId, orgSlug }: { orgId: string; orgSlug: stri
         </AdminSurface>
       </Link>
       <AdminSurface className={styles.stat} tone="brick">
-        <strong>{sentPupdateCount}</strong>
-        <span>pupdates sent</span>
+        <strong>{sentSponsorUpdateCount}</strong>
+        <span>updates sent</span>
         <small>in the last 30 days</small>
       </AdminSurface>
     </section>
@@ -121,7 +121,7 @@ async function ComposeSection({ orgId, orgSlug }: { orgId: string; orgSlug: stri
     where: {
       orgId,
       volunteerNotes: { some: { orgId } },
-      pupdates: { none: { orgId, status: "draft" } },
+      sponsorUpdates: { none: { orgId, status: "draft" } },
     },
     orderBy: { name: "asc" },
     select: {
@@ -205,7 +205,7 @@ async function ApprovalQueue({
   orgSlug: string;
 }) {
   const [drafts, emailConnector] = await Promise.all([
-    prisma.pupdate.findMany({
+    prisma.sponsorUpdate.findMany({
       where: { orgId, status: "draft" },
       orderBy: { createdAt: "asc" },
       include: {
@@ -329,7 +329,7 @@ async function StripeNotice({ orgId, orgSlug }: { orgId: string; orgSlug: string
 export default async function AdminPage({ params }: AdminPageProps) {
   const { orgSlug } = await params;
   const access = await getOrganizationAccessBySlug(await headers(), orgSlug, {
-    pupdate: ["manage"],
+    sponsorUpdate: ["manage"],
   });
 
   if (!access) notFound();

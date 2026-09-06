@@ -15,7 +15,7 @@ export type DeliverySponsorship = {
   };
 };
 
-export type PupdateForDelivery = {
+export type SponsorUpdateForDelivery = {
   subject: string;
   bodyText: string;
   smsText: string;
@@ -71,9 +71,9 @@ async function attempt(
   }
 }
 
-export async function deliverPupdate(
+export async function deliverSponsorUpdate(
   orgId: string,
-  pupdate: PupdateForDelivery,
+  sponsorUpdate: SponsorUpdateForDelivery,
   sponsorships: DeliverySponsorship[],
   sendEmail: EmailSender = sendOrganizationEmail,
 ): Promise<Delivery[]> {
@@ -84,9 +84,9 @@ export async function deliverPupdate(
         () =>
           sendEmail(orgId, {
             to: sponsorship.sponsor.email,
-            subject: pupdate.subject,
-            body: pupdate.bodyHtml ?? pupdate.bodyText,
-            contentType: pupdate.bodyHtml ? "html" : "plain",
+            subject: sponsorUpdate.subject,
+            body: sponsorUpdate.bodyHtml ?? sponsorUpdate.bodyText,
+            contentType: sponsorUpdate.bodyHtml ? "html" : "plain",
           }),
         sponsorship.id,
         "email",

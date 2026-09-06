@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { after, afterEach, before, test } from "node:test";
 
-import { composePupdate } from "./composer.ts";
+import { composeSponsorUpdate } from "./composer.ts";
 import { env } from "./env.ts";
 
 const originalEnvironment = {
@@ -34,7 +34,7 @@ after(() => {
 });
 
 test("composes a grounded regular update without credentials", async () => {
-  const draft = await composePupdate({
+  const draft = await composeSponsorUpdate({
     companion: { name: "Biscuit", breed: "Corgi mix" },
     notes: [{ note: "The vet visit went well." }, "Teeth cleaned."],
     pinnedPostscript: "Come meet us at Saturday's adoption fair.",
@@ -51,7 +51,7 @@ test("composes a grounded regular update without credentials", async () => {
 
 test("appends a Markdown postscript verbatim", async () => {
   const postscript = "**Bold**\n\n[Link](https://example.org)\n\n## Heading\n\n- A bullet";
-  const draft = await composePupdate({
+  const draft = await composeSponsorUpdate({
     companion: { name: "Biscuit" },
     notes: ["Played fetch."],
     pinnedPostscript: postscript,
@@ -83,7 +83,7 @@ test("uses the configured chat-completions endpoint and model", async () => {
     });
   };
 
-  await composePupdate({
+  await composeSponsorUpdate({
     companion: { name: "Biscuit", breed: "Corgi mix", sex: "Female", ageText: "Adult" },
     notes: [{ note: "Had fun and met a new friend at the park." }],
     pinnedPostscript: "**A permanent note**",
@@ -114,7 +114,7 @@ test("uses the configured chat-completions endpoint and model", async () => {
 });
 
 test("supports a graduation update", async () => {
-  const draft = await composePupdate({
+  const draft = await composeSponsorUpdate({
     companion: { name: "Biscuit" },
     notes: [{ note: "Biscuit went home with a family today." }],
     pinnedPostscript: "Thank you for being part of the rescue.",

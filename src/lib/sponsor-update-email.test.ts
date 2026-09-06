@@ -4,7 +4,7 @@ import test from "node:test";
 import { render } from "@react-email/render";
 import { createElement } from "react";
 
-import { PupdateEmail } from "../emails/pupdate-email.tsx";
+import { SponsorUpdateEmail } from "../emails/sponsor-update-email.tsx";
 
 const base = {
   companionName: "Biscuit",
@@ -16,7 +16,7 @@ const base = {
 } as const;
 
 test("renders representative Markdown as themed HTML and plain text", async () => {
-  const email = createElement(PupdateEmail, base);
+  const email = createElement(SponsorUpdateEmail, base);
   const [html, plainText] = await Promise.all([
     render(email),
     render(email, { plainText: true }),
@@ -33,7 +33,7 @@ test("renders representative Markdown as themed HTML and plain text", async () =
 });
 
 test("resolves every asset and link to an absolute URL", async () => {
-  const html = await render(createElement(PupdateEmail, base));
+  const html = await render(createElement(SponsorUpdateEmail, base));
 
   assert.match(html, /https:\/\/pawcast\.test\/uploads\/biscuit\.jpg/u);
   assert.match(html, /https:\/\/pawcast\.test\/brand\/pawcast-wordmark\.png/u);
@@ -42,14 +42,14 @@ test("resolves every asset and link to an absolute URL", async () => {
 });
 
 test("omits the photo block when the resident has no photo", async () => {
-  const html = await render(createElement(PupdateEmail, { ...base, photoUrl: null }));
+  const html = await render(createElement(SponsorUpdateEmail, { ...base, photoUrl: null }));
 
   assert.ok(!html.includes("/uploads/"));
   assert.match(html, /An update from Biscuit/u);
 });
 
 test("escapes sponsor-facing copy instead of injecting it as markup", async () => {
-  const html = await render(createElement(PupdateEmail, {
+  const html = await render(createElement(SponsorUpdateEmail, {
     ...base,
     companionName: "Biscuit <script>",
     bodyText: "A note with <b>tags</b> & an ampersand.",
@@ -60,8 +60,8 @@ test("escapes sponsor-facing copy instead of injecting it as markup", async () =
 });
 
 test("switches the hero to the mustard adoption-day treatment", async () => {
-  const regular = await render(createElement(PupdateEmail, base));
-  const graduation = await render(createElement(PupdateEmail, { ...base, type: "graduation" }));
+  const regular = await render(createElement(SponsorUpdateEmail, base));
+  const graduation = await render(createElement(SponsorUpdateEmail, { ...base, type: "graduation" }));
 
   assert.match(regular, /A new update/u);
   assert.match(regular, /felt-moss\.jpg/u);
@@ -70,7 +70,7 @@ test("switches the hero to the mustard adoption-day treatment", async () => {
 });
 
 test("neutralizes unsafe markdown link destinations", async () => {
-  const html = await render(createElement(PupdateEmail, {
+  const html = await render(createElement(SponsorUpdateEmail, {
     ...base,
     bodyText: "[click](javascript:alert(1)) and [safe](https://pawcast.test/x)",
   }));
@@ -81,7 +81,7 @@ test("neutralizes unsafe markdown link destinations", async () => {
 
 test("renders a Markdown postscript in HTML and plain text", async () => {
   const postscript = "**Bold thanks**\n\n[Learn more](https://example.org)\n\n- First\n- Second";
-  const email = createElement(PupdateEmail, { ...base, bodyText: `${base.bodyText}\n\n${postscript}` });
+  const email = createElement(SponsorUpdateEmail, { ...base, bodyText: `${base.bodyText}\n\n${postscript}` });
   const [html, plainText] = await Promise.all([render(email), render(email, { plainText: true })]);
 
   assert.match(html, /<strong[^>]*>Bold thanks<\/strong>/u);

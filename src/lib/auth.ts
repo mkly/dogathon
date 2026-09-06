@@ -26,7 +26,7 @@ import { prisma } from "@/lib/prisma";
 
 export const organizationStatements = {
   ...defaultStatements,
-  pupdate: ["manage"],
+  sponsorUpdate: ["manage"],
   billing: ["manage"],
   settings: ["manage"],
   members: ["manage"],
@@ -39,7 +39,7 @@ const organizationAccessControl = createAccessControl(organizationStatements);
 export const organizationRoles = {
   owner: organizationAccessControl.newRole({
     ...ownerAc.statements,
-    pupdate: ["manage"],
+    sponsorUpdate: ["manage"],
     billing: ["manage"],
     settings: ["manage"],
     members: ["manage"],
@@ -48,7 +48,7 @@ export const organizationRoles = {
   }),
   admin: organizationAccessControl.newRole({
     ...adminAc.statements,
-    pupdate: ["manage"],
+    sponsorUpdate: ["manage"],
     billing: [],
     settings: ["manage"],
     members: ["manage"],
@@ -57,7 +57,7 @@ export const organizationRoles = {
   }),
   member: organizationAccessControl.newRole({
     ...memberAc.statements,
-    pupdate: ["manage"],
+    sponsorUpdate: ["manage"],
     billing: [],
     settings: [],
     members: [],
@@ -70,7 +70,7 @@ export const organizationRoles = {
     invitation: [],
     team: [],
     ac: [],
-    pupdate: [],
+    sponsorUpdate: [],
     billing: [],
     settings: [],
     members: [],

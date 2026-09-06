@@ -3,43 +3,43 @@ import { z } from "zod";
 
 import { createAiModel, hasAiCredentials } from "./ai-model.ts";
 
-export type PupdateType = "regular" | "graduation";
+export type SponsorUpdateType = "regular" | "graduation";
 
-export interface PupdateCompanion {
+export interface SponsorUpdateCompanion {
   name: string;
   breed?: string;
   sex?: string;
   ageText?: string;
 }
 
-export type PupdateNote = string | { note: string; [key: string]: unknown };
+export type SponsorUpdateNote = string | { note: string; [key: string]: unknown };
 
-export interface ComposePupdateInput {
-  companion: PupdateCompanion;
-  notes: PupdateNote[];
+export interface ComposeSponsorUpdateInput {
+  companion: SponsorUpdateCompanion;
+  notes: SponsorUpdateNote[];
   pinnedPostscript: string;
-  type: PupdateType;
+  type: SponsorUpdateType;
   companionPageUrl: string;
 }
 
-export interface ComposedPupdate {
+export interface ComposedSponsorUpdate {
   subject: string;
   bodyText: string;
 }
 
-const composedPupdateSchema = z.object({
+const composedSponsorUpdateSchema = z.object({
   subject: z.string(),
   bodyText: z.string(),
 });
 
-function cleanNotes(notes: PupdateNote[]): string[] {
+function cleanNotes(notes: SponsorUpdateNote[]): string[] {
   return notes
     .map((note) => (typeof note === "string" ? note : note.note))
     .map((note) => note.trim())
     .filter(Boolean);
 }
 
-function deterministicCompose(input: ComposePupdateInput): ComposedPupdate {
+function deterministicCompose(input: ComposeSponsorUpdateInput): ComposedSponsorUpdate {
   const name = input.companion.name.trim();
   const notes = cleanNotes(input.notes);
   const intro =
@@ -61,21 +61,21 @@ function appendPostscript(bodyText: string, postscript: string): string {
   return trimmedBody ? `${trimmedBody}\n\n${postscript}` : postscript;
 }
 
-function finalizeDraft(draft: ComposedPupdate, postscript: string): ComposedPupdate {
+function finalizeDraft(draft: ComposedSponsorUpdate, postscript: string): ComposedSponsorUpdate {
   return {
     subject: draft.subject.trim(),
     bodyText: appendPostscript(draft.bodyText, postscript),
   };
 }
 
-async function composeWithModel(input: ComposePupdateInput): Promise<ComposedPupdate> {
+async function composeWithModel(input: ComposeSponsorUpdateInput): Promise<ComposedSponsorUpdate> {
   const regularUpdateGuidance = input.type === "regular"
     ? " Treat the volunteer notes as the update: lead with what happened lately, such as activities, fun, or new friends. Use the companion profile only as light background flavor; do not turn the email into a profile or biography."
     : "";
   const { output } = await generateText({
     model: createAiModel(),
     maxOutputTokens: 900,
-    output: Output.object({ schema: composedPupdateSchema }),
+    output: Output.object({ schema: composedSponsorUpdateSchema }),
     instructions:
       `You write warm, short email updates in an animal shelter's voice. Use only facts in the supplied JSON; never invent details.${regularUpdateGuidance} Format the notes section with the literal Markdown heading "## Recent notes".`,
     prompt: JSON.stringify({
@@ -93,7 +93,7 @@ async function composeWithModel(input: ComposePupdateInput): Promise<ComposedPup
  * Draft a sponsor update. With no API key, this uses a deterministic template
  * so local demos and tests never require network access.
  */
-export async function composePupdate(input: ComposePupdateInput): Promise<ComposedPupdate> {
+export async function composeSponsorUpdate(input: ComposeSponsorUpdateInput): Promise<ComposedSponsorUpdate> {
   const name = input.companion.name.trim();
   if (!name) throw new Error("companion.name is required");
   if (input.type !== "regular" && input.type !== "graduation") {

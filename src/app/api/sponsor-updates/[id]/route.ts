@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { requireApiOrganization } from "@/lib/organization-access";
-import { MAX_SMS_LENGTH } from "@/lib/pupdate-sms";
+import { MAX_SMS_LENGTH } from "@/lib/sponsor-update-sms";
 import { prisma } from "@/lib/prisma";
 import { uuidSchema } from "@/lib/uuid";
 
@@ -24,7 +24,7 @@ export async function PATCH(request: Request, { params }: RouteContext) {
     return Response.json({ error: "Update not found" }, { status: 404 });
   }
 
-  const access = await requireApiOrganization(request.headers, { pupdate: ["manage"] });
+  const access = await requireApiOrganization(request.headers, { sponsorUpdate: ["manage"] });
   if (!access.ok) return access.response;
   const { orgId } = access.context;
 
@@ -46,21 +46,21 @@ export async function PATCH(request: Request, { params }: RouteContext) {
     return Response.json({ error: `SMS text must be ${MAX_SMS_LENGTH} characters or fewer` }, { status: 400 });
   }
 
-  const updated = await prisma.pupdate.updateMany({
+  const updated = await prisma.sponsorUpdate.updateMany({
     where: { id, orgId, status: "draft" },
     data: validated.data,
   });
 
   if (updated.count !== 1) {
-    const exists = await prisma.pupdate.findFirst({ where: { id, orgId }, select: { id: true } });
+    const exists = await prisma.sponsorUpdate.findFirst({ where: { id, orgId }, select: { id: true } });
     return Response.json(
       { error: exists ? "Only draft updates can be edited" : "Update not found" },
       { status: exists ? 409 : 404 },
     );
   }
 
-  const pupdate = await prisma.pupdate.findFirst({ where: { id, orgId } });
-  return Response.json({ pupdate });
+  const sponsorUpdate = await prisma.sponsorUpdate.findFirst({ where: { id, orgId } });
+  return Response.json({ sponsorUpdate });
 }
 
 export async function DELETE(request: Request, { params }: RouteContext) {
@@ -69,14 +69,14 @@ export async function DELETE(request: Request, { params }: RouteContext) {
     return Response.json({ error: "Update not found" }, { status: 404 });
   }
 
-  const access = await requireApiOrganization(request.headers, { pupdate: ["manage"] });
+  const access = await requireApiOrganization(request.headers, { sponsorUpdate: ["manage"] });
   if (!access.ok) return access.response;
   const { orgId } = access.context;
 
-  const deleted = await prisma.pupdate.deleteMany({ where: { id, orgId, status: "draft" } });
+  const deleted = await prisma.sponsorUpdate.deleteMany({ where: { id, orgId, status: "draft" } });
 
   if (deleted.count !== 1) {
-    const exists = await prisma.pupdate.findFirst({ where: { id, orgId }, select: { id: true } });
+    const exists = await prisma.sponsorUpdate.findFirst({ where: { id, orgId }, select: { id: true } });
     return Response.json(
       { error: exists ? "Only draft updates can be denied" : "Update not found" },
       { status: exists ? 409 : 404 },

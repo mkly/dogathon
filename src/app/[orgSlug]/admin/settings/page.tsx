@@ -151,9 +151,9 @@ async function RescueSettings({ orgId, orgSlug }: { orgId: string; orgSlug: stri
       <AdminSurface className={styles.settings} tone="denim">
         <div className={styles.settingsIntro}>
           <AdminEyebrow tone="denim">Email postscript</AdminEyebrow>
-          <h2>Added to every pupdate email</h2>
+          <h2>Added to every sponsor update email</h2>
           <p>
-            This note rides at the bottom of every pupdate sent to sponsors, for every
+            This note rides at the bottom of every update sent to sponsors, for every
             companion, until you change or clear it.
           </p>
         </div>

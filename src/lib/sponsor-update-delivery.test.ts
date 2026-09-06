@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { deliverPupdate, companionPageUrl } from "./pupdate-delivery.ts";
+import { deliverSponsorUpdate, companionPageUrl } from "./sponsor-update-delivery.ts";
 
 test("builds an organization-scoped companion URL", () => {
   assert.equal(
@@ -10,7 +10,7 @@ test("builds an organization-scoped companion URL", () => {
   );
 });
 
-const pupdate = {
+const sponsorUpdate = {
   subject: "An update from Biscuit",
   bodyText: "Biscuit had a great walk.",
   smsText: "Legacy composer text",
@@ -18,9 +18,9 @@ const pupdate = {
 
 test("delivers exactly one organization email to every sponsor, including legacy SMS preferences", async () => {
   const calls: Array<{ orgId: string; to: string; subject: string; body: string }> = [];
-  const deliveries = await deliverPupdate(
+  const deliveries = await deliverSponsorUpdate(
     "org-a",
-    pupdate,
+    sponsorUpdate,
     [
       { id: "email", sponsor: { email: "email@example.com", phone: null, channel: "email" } },
       { id: "both", sponsor: { email: "both@example.com", phone: "+15551234567", channel: "both" } },
@@ -44,9 +44,9 @@ test("delivers exactly one organization email to every sponsor, including legacy
 });
 
 test("records a failed email and continues with the remaining sponsors", async () => {
-  const deliveries = await deliverPupdate(
+  const deliveries = await deliverSponsorUpdate(
     "org-a",
-    pupdate,
+    sponsorUpdate,
     [
       { id: "broken", sponsor: { email: "broken@example.com", phone: null, channel: "email" } },
       { id: "working", sponsor: { email: "working@example.com", phone: null, channel: "email" } },
@@ -79,7 +79,7 @@ test("fans out with bounded concurrency while preserving sponsorship order", asy
     },
   }));
 
-  const deliveries = await deliverPupdate("org-a", pupdate, sponsorships, async () => {
+  const deliveries = await deliverSponsorUpdate("org-a", sponsorUpdate, sponsorships, async () => {
     active += 1;
     maxActive = Math.max(maxActive, active);
     await new Promise((resolve) => setTimeout(resolve, 10));
@@ -103,9 +103,9 @@ test("carries a described send through the delivery record", async () => {
     body: "Biscuit had a great walk.",
     contentType: "plain" as const,
   };
-  const deliveries = await deliverPupdate(
+  const deliveries = await deliverSponsorUpdate(
     "org-a",
-    pupdate,
+    sponsorUpdate,
     [{ id: "email", sponsor: { email: "email@example.com", phone: null, channel: "email" } }],
     async () => described,
   );
@@ -123,7 +123,7 @@ test("delivers to the Sponsor email currently loaded at approval time", async ()
   sponsorship.sponsor.email = "new@example.com";
 
   let deliveredTo = "";
-  await deliverPupdate("org-a", pupdate, [sponsorship], async (_orgId, input) => {
+  await deliverSponsorUpdate("org-a", sponsorUpdate, [sponsorship], async (_orgId, input) => {
     deliveredTo = input.to;
   });
 
