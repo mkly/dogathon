@@ -66,7 +66,7 @@ export function parseSettingsForm(formData: FormData): ParsedSettingsForm {
   if (!sourceUrl.success) {
     return {
       ok: false,
-      message: "Enter an http(s) adoption-page URL or a local capture path like seed/dogs-page-A.html.",
+      message: "Enter a public http(s) adoption-page URL or a local capture path like seed/dogs-page-A.html.",
     };
   }
 
