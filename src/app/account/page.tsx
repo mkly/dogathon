@@ -85,7 +85,7 @@ export default async function SponsorAccountPage() {
           <AdminSurface className={styles.profile} tone="mustard">
             <h2>Your profile</h2>
             <p className={styles.profileIntro}>These details are shared with your rescues.</p>
-            <SponsorProfileForm channel={sponsor.channel} email={sponsor.email} name={sponsor.name} phone={sponsor.phone ?? ""} />
+            <SponsorProfileForm email={sponsor.email} name={sponsor.name} />
           </AdminSurface>
 
           <AdminSurface className={styles.sponsorships} tone="denim">

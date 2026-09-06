@@ -11,11 +11,8 @@ import { createBillingPortalSession } from "@/lib/stripe-billing";
 import { env } from "@/lib/env";
 import { uuidSchema } from "@/lib/uuid";
 
-const SPONSORSHIP_CHANNELS = ["email", "sms", "both"] as const;
 const sponsorProfileSchema = z.object({
   name: z.string().trim().min(1),
-  phone: z.string().trim(),
-  channel: z.enum(SPONSORSHIP_CHANNELS),
 });
 
 export type AccountActionState = { error?: string; success?: boolean };
@@ -28,20 +25,13 @@ export async function updateSponsorProfile(
   if (!sponsor) redirect("/account/sign-in");
 
   const profile = sponsorProfileSchema.safeParse(Object.fromEntries(formData));
-  if (!profile.success && profile.error.issues.some((issue) => issue.path[0] === "name")) {
-    return { error: "Name is required" };
-  }
-  if (!profile.success) {
-    return { error: "Choose a valid update channel" };
-  }
-  const { name, phone, channel } = profile.data;
+  if (!profile.success) return { error: "Name is required" };
+  const { name } = profile.data;
 
   await prisma.sponsor.update({
     where: { id: sponsor.id },
     data: {
       name,
-      phone: phone || null,
-      channel,
     },
   });
 

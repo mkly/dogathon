@@ -75,8 +75,6 @@ export async function POST(request: Request) {
       // pin the picture from the notes this draft was written from: the roster
       // profile shot is the companion, but the update is about the day
       photoUrl: resident.volunteerNotes.find((note) => note.photoUrl)?.photoUrl ?? null,
-      // Kept only until the sibling delivery task removes the legacy column.
-      smsText: "",
       ...composed,
     },
   });

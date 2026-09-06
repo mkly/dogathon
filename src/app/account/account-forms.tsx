@@ -9,13 +9,11 @@ import styles from "./account.module.css";
 
 const initialState: AccountActionState = {};
 
-export function SponsorProfileForm({ channel, email, name, phone }: { channel: string; email: string; name: string; phone: string }) {
+export function SponsorProfileForm({ email, name }: { email: string; name: string }) {
   const [state, action, pending] = useActionState(updateSponsorProfile, initialState);
   return (
     <form action={action} className={styles.form}>
       <label>Name<AdminField><input defaultValue={name} name="name" required /></AdminField></label>
-      <label>Phone<AdminField><input defaultValue={phone} name="phone" placeholder="Optional" type="tel" /></AdminField></label>
-      <label>Send updates by<AdminField><select defaultValue={channel} name="channel"><option value="email">Email</option><option value="sms">SMS</option><option value="both">Email and SMS</option></select></AdminField></label>
       <p className={styles.email}>{email}</p>
       {state.error ? <p className={styles.actionStatus} role="alert">{state.error}</p> : null}
       {state.success ? <p className={styles.actionStatus} role="status">Profile saved.</p> : null}

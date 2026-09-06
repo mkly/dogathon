@@ -90,8 +90,6 @@ type SponsorRecord = {
   id: string;
   email: string;
   name: string;
-  phone: string | null;
-  channel: "email" | "sms" | "both";
   userId: string | null;
 };
 
@@ -147,8 +145,6 @@ class MemoryBillingStore implements BillingStore {
           id: `sponsor_${this.sponsors.size + 1}`,
           email,
           name: input.sponsorName,
-          phone: null,
-          channel: "email" as const,
           userId: null,
         };
     this.sponsors.set(email, sponsor);
@@ -372,8 +368,6 @@ test("Stripe Connect onboarding, checkout, and signed webhooks maintain sponsors
     id: "sponsor_1",
     email: "avery@example.com",
     name: "Avery Sponsor",
-    phone: null,
-    channel: "email",
     userId: null,
   });
 
@@ -492,8 +486,6 @@ test("checkout completion does not overwrite an existing sponsor name", async ()
     id: "sponsor_1",
     email: "sponsor@example.com",
     name: "Original Sponsor Name",
-    phone: null,
-    channel: "email",
     userId: null,
   });
 

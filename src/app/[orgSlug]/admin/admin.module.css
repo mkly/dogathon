@@ -126,9 +126,6 @@
 .draftEditor { display: grid; gap: 8px; }
 .draftEditor label { font-size: 0.68rem; font-weight: 900; letter-spacing: 0.08em; text-transform: uppercase; }
 .draftEditor textarea { resize: vertical; }
-.smsLabelRow { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
-.smsLabelRow span { font-size: 0.72rem; font-weight: 800; opacity: 0.65; }
-.draftEditor .smsError { margin: 0; color: var(--felt-brick); font-size: 0.75rem; font-weight: 900; opacity: 1; }
 .draftActions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
 .draftActions > * { flex: 1 1 auto; white-space: nowrap; }
 .approveButton { min-width: 9.5rem; }

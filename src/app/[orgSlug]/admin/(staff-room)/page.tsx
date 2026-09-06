@@ -301,7 +301,6 @@ async function ApprovalQueue({
               id={draft.id}
               key={draft.id}
               orgSlug={orgSlug}
-              smsText={draft.smsText}
               subject={draft.subject}
             >
               <PhotoPatch alt={`${draft.resident.name} portrait`} className={styles.photo} sizes="(max-width: 720px) 104px, 120px" src={draft.resident.photoUrls[0]} />

@@ -17,18 +17,17 @@ test("builds an organization-scoped companion URL", () => {
 const sponsorUpdate = {
   subject: "An update from Biscuit",
   bodyText: "Biscuit had a great walk.",
-  smsText: "Legacy composer text",
 };
 
-test("delivers exactly one organization email to every sponsor, including legacy SMS preferences", async () => {
+test("delivers exactly one organization email to every sponsor", async () => {
   const calls: Array<{ orgId: string; to: string; subject: string; body: string }> = [];
   const deliveries = await deliverSponsorUpdate(
     "org-a",
     sponsorUpdate,
     [
-      { id: "email", sponsor: { email: "email@example.com", phone: null, channel: "email" } },
-      { id: "both", sponsor: { email: "both@example.com", phone: "+15551234567", channel: "both" } },
-      { id: "sms", sponsor: { email: "sms@example.com", phone: "+15557654321", channel: "sms" } },
+      { id: "email", sponsor: { email: "email@example.com" } },
+      { id: "second", sponsor: { email: "second@example.com" } },
+      { id: "third", sponsor: { email: "third@example.com" } },
     ],
     async (orgId) => async (input) => {
       calls.push({ orgId, to: input.to, subject: input.subject, body: input.body });
@@ -37,13 +36,13 @@ test("delivers exactly one organization email to every sponsor, including legacy
 
   assert.deepEqual(deliveries, [
     { sponsorshipId: "email", channel: "email", status: "sent" },
-    { sponsorshipId: "both", channel: "email", status: "sent" },
-    { sponsorshipId: "sms", channel: "email", status: "sent" },
+    { sponsorshipId: "second", channel: "email", status: "sent" },
+    { sponsorshipId: "third", channel: "email", status: "sent" },
   ]);
   assert.deepEqual(calls.map(({ orgId, to }) => ({ orgId, to })), [
     { orgId: "org-a", to: "email@example.com" },
-    { orgId: "org-a", to: "both@example.com" },
-    { orgId: "org-a", to: "sms@example.com" },
+    { orgId: "org-a", to: "second@example.com" },
+    { orgId: "org-a", to: "third@example.com" },
   ]);
 });
 
@@ -52,8 +51,8 @@ test("records a failed email and continues with the remaining sponsors", async (
     "org-a",
     sponsorUpdate,
     [
-      { id: "broken", sponsor: { email: "broken@example.com", phone: null, channel: "email" } },
-      { id: "working", sponsor: { email: "working@example.com", phone: null, channel: "email" } },
+      { id: "broken", sponsor: { email: "broken@example.com" } },
+      { id: "working", sponsor: { email: "working@example.com" } },
     ],
     async () => async (input) => {
       if (input.to === "broken@example.com") throw new Error("Connector rejected the message");
@@ -78,8 +77,6 @@ test("fans out with bounded concurrency while preserving sponsorship order", asy
     id: `sponsor-${index}`,
     sponsor: {
       email: `sponsor-${index}@example.com`,
-      phone: null,
-      channel: "email" as const,
     },
   }));
 
@@ -115,7 +112,7 @@ test("carries a described send through the delivery record", async () => {
   const deliveries = await deliverSponsorUpdate(
     "org-a",
     sponsorUpdate,
-    [{ id: "email", sponsor: { email: "email@example.com", phone: null, channel: "email" } }],
+    [{ id: "email", sponsor: { email: "email@example.com" } }],
     async () => async () => described,
   );
 
@@ -127,7 +124,7 @@ test("carries a described send through the delivery record", async () => {
 test("delivers to the Sponsor email currently loaded at approval time", async () => {
   const sponsorship = {
     id: "updated",
-    sponsor: { email: "old@example.com", phone: null, channel: "email" as const },
+    sponsor: { email: "old@example.com" },
   };
   sponsorship.sponsor.email = "new@example.com";
 
@@ -151,8 +148,8 @@ test("prepares one sender before the concurrent fan-out", async () => {
     "org-a",
     sponsorUpdate,
     [
-      { id: "one", sponsor: { email: "one@example.com", phone: null, channel: "email" } },
-      { id: "two", sponsor: { email: "two@example.com", phone: null, channel: "email" } },
+      { id: "one", sponsor: { email: "one@example.com" } },
+      { id: "two", sponsor: { email: "two@example.com" } },
     ],
     async () => {
       preparations += 1;

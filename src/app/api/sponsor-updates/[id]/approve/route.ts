@@ -29,7 +29,6 @@ type ApprovalUpdate = {
   type: SponsorUpdateType;
   subject: string;
   bodyText: string;
-  smsText: string;
   photoUrl: string | null;
   status: "draft" | "approved" | "sent";
   organization: { slug: string };
@@ -73,7 +72,7 @@ const approvalDependencies: ApprovalDependencies = {
                 orgId,
                 OR: [{ status: "active" }, { endedReason: "adopted" }],
               },
-              include: { sponsor: { select: { email: true, phone: true, channel: true } } },
+              include: { sponsor: { select: { email: true } } },
               orderBy: { createdAt: "asc" },
             },
           },

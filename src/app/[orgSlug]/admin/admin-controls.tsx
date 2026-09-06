@@ -29,7 +29,6 @@ import {
   MotionReveal,
   useMotionTiming,
 } from "@/components/motion-primitives";
-import { MAX_SMS_LENGTH } from "@/lib/sponsor-update-sms";
 import {
   isTerminalRosterSyncStatus,
   ROSTER_SYNC_POLL_INTERVAL_MS,
@@ -98,7 +97,6 @@ export function DraftEditor({
   focusTargetId,
   id,
   orgSlug,
-  smsText: initialSmsText,
   subject: initialSubject,
 }: {
   bodyText: string;
@@ -107,7 +105,6 @@ export function DraftEditor({
   focusTargetId: string;
   id: string;
   orgSlug: string;
-  smsText: string;
   subject: string;
 }) {
   const apiFetch = useApiFetch();
@@ -116,43 +113,30 @@ export function DraftEditor({
   const [savedDraft, setSavedDraft] = useState({
     subject: initialSubject,
     bodyText: initialBodyText,
-    smsText: initialSmsText,
   });
   const [subject, setSubject] = useState(initialSubject);
   const [bodyText, setBodyText] = useState(initialBodyText);
-  const [smsText, setSmsText] = useState(initialSmsText);
   const [editorOpen, setEditorOpen] = useState(false);
   const [denyConfirmOpen, setDenyConfirmOpen] = useState(false);
   const shouldRestoreFocus = useRef(false);
   const [pending, setPending] = useState<"save" | "approve" | "deny" | null>(
     null,
   );
-  const smsTooLong = smsText.length > MAX_SMS_LENGTH;
   const motionTransition = useMotionTiming();
 
   function openEditor() {
     setSubject(savedDraft.subject);
     setBodyText(savedDraft.bodyText);
-    setSmsText(savedDraft.smsText);
     setEditorOpen(true);
   }
 
   function closeEditor() {
     setSubject(savedDraft.subject);
     setBodyText(savedDraft.bodyText);
-    setSmsText(savedDraft.smsText);
     setEditorOpen(false);
   }
 
   async function persistDraft(draft: typeof savedDraft) {
-    if (draft.smsText.length > MAX_SMS_LENGTH) {
-      pushToast(
-        "error",
-        `SMS text must be ${MAX_SMS_LENGTH} characters or fewer.`,
-      );
-      return false;
-    }
-
     await apiFetch(
       `/api/sponsor-updates/${id}`,
       {
@@ -164,23 +148,20 @@ export function DraftEditor({
         body: JSON.stringify({
           subject: draft.subject,
           emailBody: draft.bodyText,
-          smsBody: draft.smsText,
         }),
       },
       "Save draft",
     );
-    return true;
   }
 
   async function save() {
     setPending("save");
     try {
-      const editedDraft = { subject, bodyText, smsText };
-      if (await persistDraft(editedDraft)) {
-        setSavedDraft(editedDraft);
-        setEditorOpen(false);
-        pushToast("success", "Draft changes saved.");
-      }
+      const editedDraft = { subject, bodyText };
+      await persistDraft(editedDraft);
+      setSavedDraft(editedDraft);
+      setEditorOpen(false);
+      pushToast("success", "Draft changes saved.");
     } catch (error) {
       pushToast(
         "error",
@@ -200,7 +181,7 @@ export function DraftEditor({
       hideOptimistically(false);
       setPending("approve");
       try {
-        if (!(await persistDraft(savedDraft))) return;
+        await persistDraft(savedDraft);
         await apiFetch(
           `/api/sponsor-updates/${id}/approve`,
           {
@@ -270,7 +251,6 @@ export function DraftEditor({
             <div className={styles.draftPreview}>
               <p className={styles.draftSubject}>{savedDraft.subject}</p>
               <p>{savedDraft.bodyText}</p>
-              <small>SMS: {savedDraft.smsText}</small>
             </div>
             <div className={styles.draftActions}>
               <AdminButton
@@ -358,7 +338,7 @@ export function DraftEditor({
                             </AdminButton>
                           </div>
                           <Dialog.Description className={styles.dialogDescription}>
-                            Review the email and SMS copy before saving this draft.
+                            Review the email copy before saving this draft.
                           </Dialog.Description>
                           <div className={styles.draftEditor}>
                             <label htmlFor={`subject-${id}`}>Subject</label>
@@ -381,38 +361,6 @@ export function DraftEditor({
                                 value={bodyText}
                               />
                             </AdminField>
-                            <div className={styles.smsLabelRow}>
-                              <label htmlFor={`sms-${id}`}>SMS text</label>
-                              <span className={smsTooLong ? styles.smsError : undefined}>
-                                {smsText.length}/{MAX_SMS_LENGTH}
-                              </span>
-                            </div>
-                            <AdminField>
-                              <textarea
-                                aria-describedby={
-                                  smsTooLong ? `sms-error-${id}` : undefined
-                                }
-                                aria-invalid={smsTooLong}
-                                id={`sms-${id}`}
-                                onChange={(event) => setSmsText(event.target.value)}
-                                required
-                                rows={4}
-                                value={smsText}
-                              />
-                            </AdminField>
-                            <MotionReveal
-                              className={styles.inlineReveal}
-                              show={smsTooLong}
-                            >
-                              <p
-                                className={styles.smsError}
-                                id={`sms-error-${id}`}
-                                role="alert"
-                              >
-                                Shorten the SMS by {smsText.length - MAX_SMS_LENGTH}{" "}
-                                characters before saving.
-                              </p>
-                            </MotionReveal>
                             <div className={styles.modalActions}>
                               <AdminButton
                                 disabled={pending === "save"}
@@ -423,7 +371,7 @@ export function DraftEditor({
                               </AdminButton>
                               <AdminButton
                                 className={styles.saveDraftButton}
-                                disabled={pending !== null || smsTooLong}
+                                disabled={pending !== null}
                                 onClick={save}
                                 tone="mustard"
                               >
