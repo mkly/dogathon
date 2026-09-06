@@ -2,7 +2,11 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { organizationRoles } from "./auth.ts";
-import { checkOrganizationPermission, forOrganization } from "./organization-access.ts";
+import {
+  checkOrganizationPermission,
+  forOrganization,
+  requireApiOrganization,
+} from "./organization-access.ts";
 
 test("owners and admins can manage staff resources while billing remains owner-only", () => {
   for (const resource of ["sponsorUpdate", "settings", "members", "roster"] as const) {
@@ -57,5 +61,89 @@ test("permission checks pass through the better-auth verdict", async () => {
       await checkOrganizationPermission(headers, "org-a", { billing: ["manage"] }, api),
       success,
     );
+  }
+});
+
+test("API organization access returns 401 when an organization slug request is unauthenticated", async () => {
+  const access = await requireApiOrganization(
+    new Headers({ "x-organization-slug": "paws" }),
+    { roster: ["manage"] },
+    {
+      getAccessBySlug: async () => ({
+        authenticated: false,
+        context: null,
+        organization: { id: "org-a", name: "Paws", slug: "paws" },
+      }),
+      getContext: async () => null,
+      getSession: async () => null,
+    },
+  );
+
+  assert.equal(access.ok, false);
+  if (!access.ok) {
+    assert.equal(access.response.status, 401);
+    assert.deepEqual(await access.response.json(), { error: "Sign-in required" });
+  }
+});
+
+test("API organization access returns 403 when an authenticated slug request lacks membership", async () => {
+  const access = await requireApiOrganization(
+    new Headers({ "x-organization-slug": "paws" }),
+    { roster: ["manage"] },
+    {
+      getAccessBySlug: async () => ({
+        authenticated: true,
+        context: null,
+        organization: { id: "org-a", name: "Paws", slug: "paws" },
+      }),
+      getContext: async () => null,
+      getSession: async () => null,
+    },
+  );
+
+  assert.equal(access.ok, false);
+  if (!access.ok) {
+    assert.equal(access.response.status, 403);
+    assert.deepEqual(await access.response.json(), { error: "Organization membership required" });
+  }
+});
+
+test("API organization access returns 401 when the default request is unauthenticated", async () => {
+  const access = await requireApiOrganization(
+    new Headers(),
+    { roster: ["manage"] },
+    {
+      getAccessBySlug: async () => null,
+      getContext: async () => null,
+      getSession: async () => null,
+    },
+  );
+
+  assert.equal(access.ok, false);
+  if (!access.ok) {
+    assert.equal(access.response.status, 401);
+    assert.deepEqual(await access.response.json(), { error: "Sign-in required" });
+  }
+});
+
+test("API organization access returns 403 when an authenticated caller lacks active organization permission", async () => {
+  const session = {
+    session: { activeOrganizationId: "org-a" },
+    user: { id: "user-a" },
+  } as Awaited<ReturnType<typeof import("./auth-session.ts").getSession>>;
+  const access = await requireApiOrganization(
+    new Headers(),
+    { roster: ["manage"] },
+    {
+      getAccessBySlug: async () => null,
+      getContext: async () => null,
+      getSession: async () => session,
+    },
+  );
+
+  assert.equal(access.ok, false);
+  if (!access.ok) {
+    assert.equal(access.response.status, 403);
+    assert.deepEqual(await access.response.json(), { error: "Organization membership required" });
   }
 });
