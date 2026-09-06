@@ -82,11 +82,6 @@ async function DashboardStats({ orgId, orgSlug }: { orgId: string; orgSlug: stri
           <small>with at least one active sponsor</small>
         </AdminSurface>
       </Link>
-      <AdminSurface className={styles.stat} tone="brick">
-        <strong>92%</strong>
-        <span>updates opened</span>
-        <small>people love hearing from their companions</small>
-      </AdminSurface>
     </section>
   );
 }
@@ -94,7 +89,7 @@ async function DashboardStats({ orgId, orgSlug }: { orgId: string; orgSlug: stri
 function DashboardStatsLoading() {
   return (
     <section aria-label="Loading program statistics" className={styles.stats}>
-      {(["mustard", "moss", "denim", "brick"] as const).map((tone) => (
+      {(["mustard", "moss", "denim"] as const).map((tone) => (
         <AdminSurface className={`${styles.stat} ${styles.skeleton}`} key={tone} tone={tone} />
       ))}
     </section>
