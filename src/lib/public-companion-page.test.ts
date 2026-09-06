@@ -10,7 +10,8 @@ test("successful sponsorship queries hide the sponsor form", () => {
   assert.equal(sponsorshipSucceeded({ sponsored: "1" }), true);
   assert.equal(sponsorshipSucceeded({}), false);
   assert.equal(sponsorshipSucceeded({ sponsored: "0" }), false);
-  assert.equal(sponsorshipSucceeded({ sponsored: ["1", "1"] }), false);
+  assert.equal(sponsorshipSucceeded({ sponsored: ["1", "1"] }), true);
+  assert.equal(sponsorshipSucceeded({ error: ["billing"], sponsored: "1" }), false);
   assert.equal(sponsorshipSucceeded({ error: "billing", sponsored: "1" }), false);
 });
 
