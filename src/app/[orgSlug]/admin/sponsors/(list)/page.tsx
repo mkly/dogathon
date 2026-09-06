@@ -18,7 +18,7 @@ import { PageViewTransition } from "@/components/page-view-transition";
 import { getOrganizationAccessBySlug } from "@/lib/organization-access";
 import { prisma } from "@/lib/prisma";
 
-import styles from "./sponsors.module.css";
+import styles from "../sponsors.module.css";
 
 export const dynamic = "force-dynamic";
 

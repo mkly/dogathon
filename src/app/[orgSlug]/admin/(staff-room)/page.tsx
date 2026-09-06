@@ -27,12 +27,12 @@ import { formatDateTime } from "@/lib/format";
 import { getOrganizationAccessBySlug } from "@/lib/organization-access";
 import { prisma } from "@/lib/prisma";
 
-import pawcastWordmark from "../../../../public/brand/pawcast-wordmark.png";
+import pawcastWordmark from "../../../../../public/brand/pawcast-wordmark.png";
 
-import { ComposeButton, DraftEditor } from "./admin-controls";
-import { EMAIL_CONNECTOR_NOTICE_ID, emailConnectorBlockedReason } from "./gmail-notice";
-import { STRIPE_CONNECT_NOTICE_ID, stripeNotReadyReason } from "./stripe-notice";
-import styles from "./admin.module.css";
+import { ComposeButton, DraftEditor } from "../admin-controls";
+import { EMAIL_CONNECTOR_NOTICE_ID, emailConnectorBlockedReason } from "../gmail-notice";
+import { STRIPE_CONNECT_NOTICE_ID, stripeNotReadyReason } from "../stripe-notice";
+import styles from "../admin.module.css";
 
 export const dynamic = "force-dynamic";
 
