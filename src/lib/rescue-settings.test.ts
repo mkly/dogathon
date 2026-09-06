@@ -54,7 +54,7 @@ test("an invalid roster source is rejected without an update", () => {
 
   assert.deepEqual(parseSettingsForm(formData), {
     ok: false,
-    message: "Enter an http(s) adoption-page URL or a local capture path like seed/dogs-page-A.html.",
+    message: "Enter a public http(s) adoption-page URL or a local capture path like seed/dogs-page-A.html.",
   });
 });
 
@@ -65,7 +65,23 @@ test("a non-http scheme is rejected rather than read as a local capture path", (
 
     assert.deepEqual(parseSettingsForm(formData), {
       ok: false,
-      message: "Enter an http(s) adoption-page URL or a local capture path like seed/dogs-page-A.html.",
+      message: "Enter a public http(s) adoption-page URL or a local capture path like seed/dogs-page-A.html.",
     }, `expected ${value} to be rejected`);
+  }
+});
+
+test("private and IP-literal roster sources are rejected", () => {
+  for (const value of [
+    "http://localhost/dogs",
+    "http://rescue.localhost/dogs",
+    "http://10.0.0.1/dogs",
+    "http://169.254.169.254/latest/meta-data",
+    "http://[::1]/dogs",
+    "https://metadata.google.internal/computeMetadata/v1",
+  ]) {
+    const formData = new FormData();
+    formData.set("sourceUrl", value);
+
+    assert.equal(parseSettingsForm(formData).ok, false, `expected ${value} to be rejected`);
   }
 });

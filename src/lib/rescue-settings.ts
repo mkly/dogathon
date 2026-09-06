@@ -5,6 +5,7 @@ import {
   POSTSCRIPT_MAX_LENGTH,
   postscriptOverLimitMessage,
 } from "./postscript.ts";
+import { isPublicHttpUrl } from "./public-http-url.ts";
 
 export type RescueSettingsPatch = {
   pinnedPostscript?: string;
@@ -20,7 +21,9 @@ type ParsedSettingsForm =
       settings: RescueSettingsPatch;
     };
 
-const httpSourceSchema = z.url({ protocol: /^https?$/ }).transform((value) => new URL(value).toString());
+const httpSourceSchema = z.url({ protocol: /^https?$/ })
+  .refine(isPublicHttpUrl)
+  .transform((value) => new URL(value).toString());
 // A local capture path: no scheme, relative, no traversal, and an HTML file.
 const localSourceSchema = z.string()
   .refine((value) => !/^[a-z][a-z0-9+.-]*:/i.test(value))
@@ -63,7 +66,7 @@ export function parseSettingsForm(formData: FormData): ParsedSettingsForm {
   if (!sourceUrl.success) {
     return {
       ok: false,
-      message: "Enter an http(s) adoption-page URL or a local capture path like seed/dogs-page-A.html.",
+      message: "Enter a public http(s) adoption-page URL or a local capture path like seed/dogs-page-A.html.",
     };
   }
 

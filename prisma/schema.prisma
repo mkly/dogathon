@@ -325,7 +325,7 @@ model RescueSettings {
 
 /// Guidance the roster discovery agent leaves for its next crawl of a source:
 /// which listing and detail paths to include, how many companions to expect,
-/// and site quirks. The newest note for the configured source is shown to the
+/// and site quirks. One note is kept per configured source and shown to the
 /// agent so each sync stays scoped instead of rediscovering the whole site.
 model RosterSyncNote {
   id           String       @id @default(uuid(4)) @db.Uuid
@@ -335,5 +335,5 @@ model RosterSyncNote {
   createdAt    DateTime     @default(now())
   organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
 
-  @@index([orgId, sourceUrl, createdAt])
+  @@unique([orgId, sourceUrl])
 }
