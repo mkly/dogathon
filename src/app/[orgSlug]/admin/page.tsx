@@ -67,7 +67,7 @@ async function DashboardStats({ orgId, orgSlug }: { orgId: string; orgSlug: stri
         <AdminSurface className={styles.stat} tone="moss">
           <strong>{activeSponsorCount}</strong>
           <span>active sponsors</span>
-          <small>ready for the next pupdate</small>
+          <small>ready for the next update</small>
         </AdminSurface>
       </Link>
       <Link
@@ -127,7 +127,7 @@ async function ComposeSection({ orgId, orgSlug }: { orgId: string; orgSlug: stri
           {noteResidents.length} {pluralize("companion", noteResidents.length)}
         </AdminBadge>}
         eyebrow="Volunteer notebook"
-        title="Notes ready for a pupdate"
+        title="Notes ready for an update"
       />
 
       {noteResidents.length === 0 ? (

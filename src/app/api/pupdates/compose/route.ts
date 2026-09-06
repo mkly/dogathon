@@ -63,8 +63,8 @@ export async function POST(request: Request) {
       companionPageUrl: companionPageUrl(request.url, resident.organization.slug, resident.id),
     });
   } catch (error) {
-    console.error("Pupdate composition failed", error);
-    return Response.json({ error: "Drafting the pupdate failed. Please try again." }, { status: 502 });
+    console.error("Update composition failed", error);
+    return Response.json({ error: "Drafting the update failed. Please try again." }, { status: 502 });
   }
   const pupdate = await prisma.pupdate.create({
     data: {

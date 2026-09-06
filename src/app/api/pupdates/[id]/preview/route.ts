@@ -15,7 +15,7 @@ const previewQuerySchema = z.object({ org: z.string().trim().min(1).optional() }
 export async function GET(request: Request, { params }: RouteContext) {
   const { id } = await params;
   if (!uuidSchema.safeParse(id).success) {
-    return Response.json({ error: "Pupdate not found" }, { status: 404 });
+    return Response.json({ error: "Update not found" }, { status: 404 });
   }
 
   const requestHeaders = new Headers(request.headers);
@@ -35,7 +35,7 @@ export async function GET(request: Request, { params }: RouteContext) {
   });
 
   if (!pupdate) {
-    return Response.json({ error: "Pupdate not found" }, { status: 404 });
+    return Response.json({ error: "Update not found" }, { status: 404 });
   }
 
   const origin = new URL(request.url).origin;

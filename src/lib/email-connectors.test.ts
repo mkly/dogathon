@@ -452,7 +452,7 @@ test("verifies and sends through a password-authenticated SMTP server", async ()
         smtpUser: smtp.user,
         smtpPasswordEncrypted: await encryptEmailSecret(smtp.password),
       }),
-      { to: "sponsor@example.com", subject: "SMTP pupdate", body: "Biscuit says hello" },
+      { to: "sponsor@example.com", subject: "SMTP update", body: "Biscuit says hello" },
     );
   } finally {
     await new Promise<void>((resolve, reject) => {
@@ -461,6 +461,6 @@ test("verifies and sends through a password-authenticated SMTP server", async ()
   }
 
   assert.equal(messages.length, 1);
-  assert.match(messages[0]!, /Subject: SMTP pupdate/u);
+  assert.match(messages[0]!, /Subject: SMTP update/u);
   assert.match(messages[0]!, /Biscuit says hello/u);
 });

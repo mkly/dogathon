@@ -46,7 +46,7 @@ export function companionPageUrl(origin: string, orgSlug: string, residentId: st
 
 /**
  * One send failure must not abandon the rest of the fan-out, nor strand the
- * pupdate mid-approval, so every attempt is recorded rather than thrown.
+ * update mid-approval, so every attempt is recorded rather than thrown.
  */
 async function attempt(
   send: () => Promise<DescribedSend | null | void>,

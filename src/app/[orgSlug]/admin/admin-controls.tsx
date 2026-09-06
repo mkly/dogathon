@@ -326,7 +326,7 @@ export function DraftEditor({
                         <AdminSurface className={styles.dialogPanel} tone="oatmeal">
                           <div className={styles.dialogHeader}>
                             <div>
-                              <AdminEyebrow>Draft pupdate</AdminEyebrow>
+                              <AdminEyebrow>Draft update</AdminEyebrow>
                               <Dialog.Title asChild>
                                 <h2>Edit message</h2>
                               </Dialog.Title>
@@ -519,7 +519,7 @@ export function ComposeButton({
           },
           body: JSON.stringify({ residentId }),
         },
-        "Compose pupdate",
+        "Compose update",
       );
       await refreshAdminPage();
       pushToast("success", `${residentName}'s draft is ready for review.`);
@@ -528,7 +528,7 @@ export function ComposeButton({
         "error",
         error instanceof Error
           ? error.message
-          : "Compose pupdate could not reach the server.",
+          : "Compose update could not reach the server.",
       );
     } finally {
       setPending(false);
@@ -543,7 +543,7 @@ export function ComposeButton({
         onClick={compose}
         tone="denim"
       >
-        {pending ? "Composing…" : "Compose pupdate"}
+        {pending ? "Composing…" : "Compose update"}
       </AdminButton>
     </div>
   );
@@ -833,7 +833,7 @@ export function EmailConnectorSettings({
         "Disconnect email",
       );
       setConnector({ connected: false, type: null, fromEmail: null });
-      pushToast("success", "Sending address disconnected. Pupdates cannot be sent until a new one is connected.");
+      pushToast("success", "Sending address disconnected. Updates cannot be sent until a new one is connected.");
     } catch (error) {
       pushToast(
         "error",
@@ -858,9 +858,9 @@ export function EmailConnectorSettings({
       <div className={styles.connectorHeader}>
         <div>
           <AdminEyebrow>Organization email</AdminEyebrow>
-          <h2>Send pupdates from your email address</h2>
+          <h2>Send updates from your email address</h2>
           <p>
-            Every pupdate sent to sponsors comes from this address. Connect the Gmail,
+            Every update sent to sponsors comes from this address. Connect the Gmail,
             Microsoft 365, or SMTP mailbox sponsors should see and reply to; connecting
             a different account replaces the current one.
           </p>
@@ -1082,7 +1082,7 @@ export function PostscriptSettingsForm({
           id="pinnedPostscript"
           maxLength={2000}
           name="pinnedPostscript"
-          placeholder="A note that rides along with every pupdate…"
+          placeholder="A note that rides along with every update…"
         />
       </AdminField>
       <div className={styles.saveRow}>

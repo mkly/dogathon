@@ -152,7 +152,7 @@ async function RescueSettings({ orgId, orgSlug }: { orgId: string; orgSlug: stri
         <div className={styles.settingsIntro}>
           <AdminEyebrow tone="denim">Staff settings</AdminEyebrow>
           <h2>Pinned to every email this month</h2>
-          <p>The postscript rides at the bottom of each pupdate.</p>
+          <p>The postscript rides at the bottom of each update.</p>
         </div>
         <PostscriptSettingsForm orgSlug={orgSlug} pinnedPostscript={settings.pinnedPostscript} />
       </AdminSurface>

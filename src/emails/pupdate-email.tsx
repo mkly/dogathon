@@ -114,7 +114,7 @@ const markdownStyles = {
   bold: { fontWeight: 900 },
 } satisfies Record<string, CSSProperties>;
 
-/** Sponsor pupdate rendered with email-client-safe React Email primitives. */
+/** Sponsor update rendered with email-client-safe React Email primitives. */
 export function PupdateEmail(input: PupdateEmailProps) {
   const name = input.companionName.trim();
   const headline = input.subject.trim();
@@ -183,7 +183,7 @@ export function PupdateEmail(input: PupdateEmailProps) {
                   textTransform: "uppercase",
                 }}
               >
-                {graduation ? "Adoption day" : "A new pupdate"}
+                {graduation ? "Adoption day" : "A new update"}
               </Text>
               <Heading
                 as="h1"
