@@ -131,7 +131,7 @@ async function ComposeSection({ orgId, orgSlug }: { orgId: string; orgSlug: stri
       photoUrls: true,
       volunteerNotes: {
         orderBy: { createdAt: "desc" },
-        select: { createdAt: true },
+        select: { createdAt: true, note: true, photoUrl: true },
         take: 1,
       },
       _count: { select: { volunteerNotes: true } },
@@ -155,7 +155,7 @@ async function ComposeSection({ orgId, orgSlug }: { orgId: string; orgSlug: stri
       ) : (
         <div className={styles.composeGrid}>
           {noteResidents.map((resident) => {
-            const latestNote = resident.volunteerNotes[0]?.createdAt;
+            const latestNote = resident.volunteerNotes[0];
 
             return (
               <AdminSurface className={styles.composeItem} key={resident.id} tone="oatmeal">
@@ -163,7 +163,7 @@ async function ComposeSection({ orgId, orgSlug }: { orgId: string; orgSlug: stri
                   alt={`${resident.name} portrait`}
                   className={styles.composePhoto}
                   sizes="(max-width: 720px) 72px, 84px"
-                  src={resident.photoUrls[0]}
+                  src={latestNote?.photoUrl ?? resident.photoUrls[0]}
                 />
                 <div className={styles.composeCopy}>
                   <h3>{resident.name}</h3>
@@ -171,7 +171,8 @@ async function ComposeSection({ orgId, orgSlug }: { orgId: string; orgSlug: stri
                   <p>
                     {resident._count.volunteerNotes} {pluralize("volunteer note", resident._count.volunteerNotes)}
                   </p>
-                  {latestNote && <small>Latest {formatDateTime(latestNote)} UTC</small>}
+                  {latestNote ? <p>{latestNote.note}</p> : null}
+                  {latestNote && <small>Latest {formatDateTime(latestNote.createdAt)} UTC</small>}
                 </div>
                 <ComposeButton orgSlug={orgSlug} residentId={resident.id} residentName={resident.name} />
               </AdminSurface>

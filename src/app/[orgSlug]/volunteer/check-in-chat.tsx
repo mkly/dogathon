@@ -35,7 +35,7 @@ export type CheckInResult = {
 type CheckInChatProps = {
   orgSlug: string;
   residents: Resident[];
-  onFinish?: (result: CheckInResult) => Promise<void> | void;
+  onFinish: (result: CheckInResult) => Promise<void> | void;
 };
 
 function messageText(message: UIMessage) {
@@ -101,7 +101,7 @@ function ChatSession({
 }: {
   orgSlug: string;
   resident: Resident;
-  onFinish?: CheckInChatProps["onFinish"];
+  onFinish: CheckInChatProps["onFinish"];
 }) {
   const transport = useMemo(
     () => new DefaultChatTransport({
@@ -214,7 +214,7 @@ function ChatSession({
   }
 
   async function finishCheckIn() {
-    if (!onFinish || finishing) return;
+    if (finishing) return;
     setFinishing(true);
     setFinishError("");
     try {
@@ -279,13 +279,12 @@ function ChatSession({
         <div className={styles.finishRow}>
           <FeltButton
             className={styles.finishButton}
-            disabled={!onFinish || finishing || photos.some((photo) => photo.status === "uploading")}
+            disabled={finishing || photos.some((photo) => photo.status === "uploading")}
             onClick={() => void finishCheckIn()}
             tone="moss"
           >
             {finishing ? "Finishing…" : "Finish check-in"}
           </FeltButton>
-          {!onFinish ? <small>Finishing will be available when check-in storage is connected.</small> : null}
         </div>
       ) : null}
 

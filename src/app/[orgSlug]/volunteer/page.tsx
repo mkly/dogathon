@@ -10,8 +10,8 @@ import { prisma } from "@/lib/prisma";
 import { getOrganizationAccessBySlug } from "@/lib/organization-access";
 import { uuidSchema } from "@/lib/uuid";
 
+import { finishCheckIn } from "./actions";
 import { CheckInChat } from "./check-in-chat";
-import { volunteerErrorMessage } from "./errors";
 import styles from "./volunteer.module.css";
 
 export const dynamic = "force-dynamic";
@@ -27,7 +27,6 @@ type VolunteerPageProps = {
 };
 const volunteerQuerySchema = z.object({
   companion: uuidSchema.optional().catch(undefined),
-  error: z.string().optional().catch(undefined),
   submitted: z.literal("1").optional().catch(undefined),
 });
 
@@ -43,7 +42,7 @@ export default async function VolunteerPage({ params, searchParams }: VolunteerP
   }
   const { context } = access;
 
-  const [{ companion, error, submitted }, residents] = await Promise.all([
+  const [{ companion, submitted }, residents] = await Promise.all([
     searchParams.then((query) => volunteerQuerySchema.parse(query)),
     prisma.resident.findMany({
       where: {
@@ -57,7 +56,6 @@ export default async function VolunteerPage({ params, searchParams }: VolunteerP
   ]);
 
   const submittedCompanion = residents.find((resident) => resident.id === companion);
-  const errorMessage = volunteerErrorMessage(error);
 
   if (submitted === "1") {
     return (
@@ -92,7 +90,11 @@ export default async function VolunteerPage({ params, searchParams }: VolunteerP
           </header>
 
           {residents.length > 0 ? (
-            <CheckInChat orgSlug={orgSlug} residents={residents} />
+            <CheckInChat
+              onFinish={finishCheckIn.bind(null, orgSlug)}
+              orgSlug={orgSlug}
+              residents={residents}
+            />
           ) : (
             <FeltPanel className={styles.emptyPanel} tone="oatmeal">
               <AdminEmptyState variant="volunteer">
@@ -100,8 +102,6 @@ export default async function VolunteerPage({ params, searchParams }: VolunteerP
               </AdminEmptyState>
             </FeltPanel>
           )}
-
-          {errorMessage ? <p className={styles.error} role="alert">{errorMessage}</p> : null}
         </section>
       </AdminPage>
     </PageViewTransition>
