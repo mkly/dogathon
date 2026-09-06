@@ -27,7 +27,7 @@ import {
   MotionReveal,
   useMotionTiming,
 } from "@/components/motion-primitives";
-import { MAX_SMS_LENGTH } from "@/lib/pupdate-sms";
+import { MAX_SMS_LENGTH } from "@/lib/sponsor-update-sms";
 import {
   isTerminalRosterSyncStatus,
   ROSTER_SYNC_POLL_INTERVAL_MS,
@@ -136,7 +136,7 @@ export function DraftEditor({
     }
 
     await apiFetch(
-      `/api/pupdates/${id}`,
+      `/api/sponsor-updates/${id}`,
       {
         method: "PATCH",
         headers: {
@@ -184,7 +184,7 @@ export function DraftEditor({
       try {
         if (!(await persistDraft(savedDraft))) return;
         await apiFetch(
-          `/api/pupdates/${id}/approve`,
+          `/api/sponsor-updates/${id}/approve`,
           {
             method: "POST",
             headers: { "X-Organization-Slug": orgSlug },
@@ -212,7 +212,7 @@ export function DraftEditor({
       setPending("deny");
       try {
         await apiFetch(
-          `/api/pupdates/${id}`,
+          `/api/sponsor-updates/${id}`,
           {
             method: "DELETE",
             headers: { "X-Organization-Slug": orgSlug },
@@ -285,7 +285,7 @@ export function DraftEditor({
               {/* the themed email as the sponsor will see it, not the plain draft text */}
               <AdminLink
                 className={styles.previewLink}
-                href={`/api/pupdates/${id}/preview?org=${encodeURIComponent(orgSlug)}`}
+                href={`/api/sponsor-updates/${id}/preview?org=${encodeURIComponent(orgSlug)}`}
                 rel="noreferrer"
                 target="_blank"
               >
@@ -510,7 +510,7 @@ export function ComposeButton({
     setPending(true);
     try {
       await apiFetch(
-        "/api/pupdates/compose",
+        "/api/sponsor-updates/compose",
         {
           method: "POST",
           headers: {

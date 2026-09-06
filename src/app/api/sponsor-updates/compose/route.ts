@@ -1,8 +1,8 @@
 import { z } from "zod";
 
-import { composePupdate } from "@/lib/composer";
+import { composeSponsorUpdate } from "@/lib/composer";
 import { requireApiOrganization } from "@/lib/organization-access";
-import { companionPageUrl } from "@/lib/pupdate-delivery";
+import { companionPageUrl } from "@/lib/sponsor-update-delivery";
 import { prisma } from "@/lib/prisma";
 import { uuidSchema } from "@/lib/uuid";
 
@@ -12,7 +12,7 @@ const composeRequestSchema = z.object({
 });
 
 export async function POST(request: Request) {
-  const access = await requireApiOrganization(request.headers, { pupdate: ["manage"] });
+  const access = await requireApiOrganization(request.headers, { sponsorUpdate: ["manage"] });
   if (!access.ok) return access.response;
   const { orgId } = access.context;
 
@@ -50,7 +50,7 @@ export async function POST(request: Request) {
   const type = input.data.type ?? "regular";
   let composed;
   try {
-    composed = await composePupdate({
+    composed = await composeSponsorUpdate({
       companion: {
         name: resident.name,
         breed: resident.breed,
@@ -66,7 +66,7 @@ export async function POST(request: Request) {
     console.error("Update composition failed", error);
     return Response.json({ error: "Drafting the update failed. Please try again." }, { status: 502 });
   }
-  const pupdate = await prisma.pupdate.create({
+  const sponsorUpdate = await prisma.sponsorUpdate.create({
     data: {
       orgId,
       residentId: resident.id,
@@ -80,5 +80,5 @@ export async function POST(request: Request) {
     },
   });
 
-  return Response.json({ pupdate }, { status: 201 });
+  return Response.json({ sponsorUpdate }, { status: 201 });
 }

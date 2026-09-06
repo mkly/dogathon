@@ -57,7 +57,7 @@ model Organization {
   residents              Resident[]
   sponsorships           Sponsorship[]
   volunteerNotes         VolunteerNote[]
-  pupdates               Pupdate[]
+  sponsorUpdates               SponsorUpdate[]
   settings               RescueSettings?
   rosterSyncNotes        RosterSyncNote[]
   emailConnector         EmailConnector?
@@ -187,12 +187,12 @@ model Sponsor {
   sponsorships Sponsorship[]
 }
 
-enum PupdateType {
+enum SponsorUpdateType {
   regular
   graduation
 }
 
-enum PupdateStatus {
+enum SponsorUpdateStatus {
   draft
   approved
   sent
@@ -216,7 +216,7 @@ model Resident {
   updatedAt      DateTime        @updatedAt
   sponsorships   Sponsorship[]
   volunteerNotes VolunteerNote[]
-  pupdates       Pupdate[]
+  sponsorUpdates       SponsorUpdate[]
   organization   Organization    @relation(fields: [orgId], references: [id], onDelete: Cascade)
 
   @@unique([orgId, name])
@@ -265,18 +265,18 @@ model VolunteerNote {
   @@index([residentId, orgId, createdAt])
 }
 
-model Pupdate {
+model SponsorUpdate {
   id           String        @id @default(uuid(4)) @db.Uuid
   orgId        String        @db.Uuid
   residentId   String        @db.Uuid
-  type         PupdateType   @default(regular)
+  type         SponsorUpdateType   @default(regular)
   subject      String
   bodyText     String
   smsText      String
   /// The volunteer-note photo this update was written from, captured at compose
   /// time so the email never falls back to the roster's profile shot.
   photoUrl     String?
-  status       PupdateStatus @default(draft)
+  status       SponsorUpdateStatus @default(draft)
   sentAt       DateTime?
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt

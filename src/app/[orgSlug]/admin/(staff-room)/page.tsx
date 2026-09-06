@@ -102,7 +102,7 @@ async function ComposeSection({ orgId, orgSlug }: { orgId: string; orgSlug: stri
     where: {
       orgId,
       volunteerNotes: { some: { orgId } },
-      pupdates: { none: { orgId, status: "draft" } },
+      sponsorUpdates: { none: { orgId, status: "draft" } },
     },
     orderBy: { name: "asc" },
     select: {
@@ -186,7 +186,7 @@ async function ApprovalQueue({
   orgSlug: string;
 }) {
   const [drafts, emailConnector] = await Promise.all([
-    prisma.pupdate.findMany({
+    prisma.sponsorUpdate.findMany({
       where: { orgId, status: "draft" },
       orderBy: { createdAt: "asc" },
       include: {
@@ -310,7 +310,7 @@ async function StripeNotice({ orgId, orgSlug }: { orgId: string; orgSlug: string
 export default async function AdminPage({ params }: AdminPageProps) {
   const { orgSlug } = await params;
   const access = await getOrganizationAccessBySlug(await headers(), orgSlug, {
-    pupdate: ["manage"],
+    sponsorUpdate: ["manage"],
   });
 
   if (!access) notFound();

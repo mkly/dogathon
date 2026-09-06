@@ -157,7 +157,7 @@ export async function syncRoster(
           where: { id_orgId: { id: sponsorship.id, orgId } },
           data: { status: "ended", endedReason: "adopted" },
         });
-        await tx.pupdate.create({
+        await tx.sponsorUpdate.create({
           data: { ...graduationDraft(resident.id, resident.name, sponsorship.sponsor.name), orgId },
         });
       }

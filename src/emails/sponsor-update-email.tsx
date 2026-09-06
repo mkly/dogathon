@@ -13,7 +13,7 @@ import {
 import { Markdown } from "@react-email/markdown";
 import type { CSSProperties } from "react";
 
-export type PupdateEmailProps = {
+export type SponsorUpdateEmailProps = {
   companionName: string;
   subject: string;
   bodyText: string;
@@ -115,7 +115,7 @@ const markdownStyles = {
 } satisfies Record<string, CSSProperties>;
 
 /** Sponsor update rendered with email-client-safe React Email primitives. */
-export function PupdateEmail(input: PupdateEmailProps) {
+export function SponsorUpdateEmail(input: SponsorUpdateEmailProps) {
   const name = input.companionName.trim();
   const headline = input.subject.trim();
   const graduation = input.type === "graduation";
@@ -278,4 +278,4 @@ export function PupdateEmail(input: PupdateEmailProps) {
   );
 }
 
-export default PupdateEmail;
+export default SponsorUpdateEmail;
