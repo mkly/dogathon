@@ -58,7 +58,12 @@ export default async function OrganizationHome({ params }: OrganizationHomeProps
         {residents.length ? (
           <section aria-label="Companions available to sponsor" className={styles.companionGrid}>
             {residents.map((resident) => (
-              <FeltPanel className={styles.companionCard} key={resident.id} tone="oatmeal">
+              <FeltPanel
+                className={styles.companionCard}
+                key={resident.id}
+                stitched={false}
+                tone="oatmeal"
+              >
                 <ViewTransition
                   default="none"
                   name={`companion-${resident.id}`}
