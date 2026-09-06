@@ -58,6 +58,18 @@ const stripe = {
   STRIPE_WEBHOOK_SECRET: optionalTrimmedString,
 };
 
+// Without a bucket and region, volunteer photos use the local development store.
+const photoStorage = {
+  AWS_REGION: optionalTrimmedString,
+  AWS_ACCESS_KEY_ID: optionalTrimmedString,
+  AWS_SECRET_ACCESS_KEY: optionalTrimmedString,
+  S3_PHOTO_BUCKET: optionalTrimmedString,
+  S3_PUBLIC_BASE_URL: z.preprocess(
+    (value) => typeof value === "string" && value.trim() === "" ? undefined : value,
+    z.url().optional(),
+  ).transform((value) => value?.replace(/\/+$/u, "")),
+};
+
 // Without a complete SMTP configuration, platform mail is described rather than sent.
 const platformSmtp = {
   APP_SMTP_HOST: optionalTrimmedString,
@@ -100,6 +112,7 @@ const environmentSchema = z.object({
   ...firecrawl,
   ...scheduler,
   ...stripe,
+  ...photoStorage,
   ...platformSmtp,
   ...emailConnectors,
 }).superRefine((environment, context) => {
@@ -117,12 +130,27 @@ const environmentSchema = z.object({
       message: "is required in production",
     });
   }
+  if (environment.NODE_ENV === "production" && !environment.S3_PHOTO_BUCKET) {
+    context.addIssue({
+      code: "custom",
+      path: ["S3_PHOTO_BUCKET"],
+      message: "is required in production",
+    });
+  }
+  if (environment.NODE_ENV === "production" && !environment.AWS_REGION) {
+    context.addIssue({
+      code: "custom",
+      path: ["AWS_REGION"],
+      message: "is required in production",
+    });
+  }
 }).transform((environment) => ({
   ...environment,
   features: Object.freeze({
     ai: Boolean(environment.OPENAI_API_KEY),
     firecrawl: Boolean(environment.FIRECRAWL_API_KEY),
     stripe: Boolean(environment.STRIPE_SECRET_KEY),
+    s3: Boolean(environment.S3_PHOTO_BUCKET && environment.AWS_REGION),
     scheduler: Boolean(environment.CRON_SECRET),
     platformSmtp: Boolean(
       environment.APP_SMTP_HOST
