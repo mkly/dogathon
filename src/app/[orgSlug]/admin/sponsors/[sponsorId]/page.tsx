@@ -73,14 +73,6 @@ export default async function SponsorDetailPage({ params }: SponsorDetailPagePro
             <small>Email</small>
             <a href={`mailto:${sponsor.email}`}>{sponsor.email}</a>
           </div>
-          <div className={styles.profileItem}>
-            <small>Phone</small>
-            {sponsor.phone ? <a href={`tel:${sponsor.phone}`}>{sponsor.phone}</a> : <strong>Not provided</strong>}
-          </div>
-          <div className={styles.profileItem}>
-            <small>Preferred updates</small>
-            <strong>{sponsor.channel}</strong>
-          </div>
         </AdminSurface>
 
         <section aria-labelledby="history-heading">

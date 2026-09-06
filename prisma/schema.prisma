@@ -172,12 +172,6 @@ enum ResidentStatus {
   adopted
 }
 
-enum SponsorshipChannel {
-  email
-  sms
-  both
-}
-
 enum SponsorshipStatus {
   active
   ended
@@ -187,8 +181,6 @@ model Sponsor {
   id           String             @id @default(uuid(4)) @db.Uuid
   email        String             @unique
   name         String
-  phone        String?
-  channel      SponsorshipChannel @default(email)
   userId       String?            @unique @db.Uuid
   createdAt    DateTime           @default(now())
   updatedAt    DateTime           @updatedAt
@@ -307,7 +299,6 @@ model SponsorUpdate {
   type         SponsorUpdateType   @default(regular)
   subject      String
   bodyText     String
-  smsText      String
   /// The volunteer-note photo this update was written from, captured at compose
   /// time so the email never falls back to the roster's profile shot.
   photoUrl     String?

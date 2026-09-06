@@ -94,8 +94,6 @@ export default async function SponsorsPage({ params }: SponsorsPageProps) {
                   </div>
                   <div className={styles.contact}>
                     <p><a href={`mailto:${sponsor.email}`}>{sponsor.email}</a></p>
-                    <p>{sponsor.phone ? <a href={`tel:${sponsor.phone}`}>{sponsor.phone}</a> : "No phone provided"}</p>
-                    <p>Updates: {sponsor.channel}</p>
                     <AdminLink href={`/${orgSlug}/admin/sponsors/${sponsor.id}`} tone="mustard">
                       View sponsor
                     </AdminLink>

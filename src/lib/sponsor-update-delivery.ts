@@ -10,15 +10,12 @@ export type DeliverySponsorship = {
   id: string;
   sponsor: {
     email: string;
-    phone: string | null;
-    channel: "email" | "sms" | "both";
   };
 };
 
 export type SponsorUpdateForDelivery = {
   subject: string;
   bodyText: string;
-  smsText: string;
   /** The themed HTML email. Falls back to bodyText when it is not supplied. */
   bodyHtml?: string;
 };

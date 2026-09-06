@@ -27,7 +27,7 @@ export async function POST(request: Request, { params }: RouteContext) {
         include: {
           sponsorships: {
             where: { orgId, status: "active" },
-            include: { sponsor: { select: { email: true, phone: true, channel: true } } },
+            include: { sponsor: { select: { email: true } } },
             orderBy: { createdAt: "asc" },
           },
         },
