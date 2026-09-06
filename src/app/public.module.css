@@ -3,7 +3,7 @@
   width: min(100%, 980px);
   min-height: 100vh;
   margin: 0 auto;
-  padding: 30px 0 40px;
+  padding: 30px clamp(1rem, 4vw, 30px) 40px;
 }
 
 /* the wordmark is a cut felt object like everything else, not a flat logo */
@@ -299,7 +299,7 @@
 
 @media (max-width: 700px) {
   .siteShell {
-    padding: 2rem 1rem 4rem;
+    padding-block: 2rem 4rem;
   }
 
   .wordmark {
