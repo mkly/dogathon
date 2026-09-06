@@ -54,7 +54,7 @@ export function PostscriptSettingsForm({
     <form action={formAction} aria-busy={pending} className={styles.settingsForm}>
       <input name="orgSlug" type="hidden" value={orgSlug} />
       <label htmlFor="pinnedPostscript" id="pinnedPostscriptLabel">
-        This month&apos;s postscript
+        Email postscript
       </label>
       <AdminField className={styles.postscriptEditorField}>
         <PostscriptEditor
@@ -66,6 +66,7 @@ export function PostscriptSettingsForm({
           maxLength={POSTSCRIPT_MAX_LENGTH}
           name="pinnedPostscript"
           onValidityChange={handleValidityChange}
+          placeholder="Thank you for sponsoring. Our adoption fair is on the first Saturday of the month."
         />
       </AdminField>
       <div className={styles.saveRow}>
@@ -75,7 +76,7 @@ export function PostscriptSettingsForm({
           tone="mustard"
           type="submit"
         >
-          {pending ? "Pinning…" : "Save & pin 📌"}
+          {pending ? "Saving…" : "Save postscript"}
         </AdminButton>
       </div>
     </form>

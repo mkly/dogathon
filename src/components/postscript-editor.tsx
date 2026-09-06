@@ -1,6 +1,7 @@
 "use client";
 
 import { Link } from "@tiptap/extension-link";
+import { Placeholder } from "@tiptap/extension-placeholder";
 import { Markdown } from "@tiptap/markdown";
 import { EditorContent, useEditor, useEditorState } from "@tiptap/react";
 import { StarterKit } from "@tiptap/starter-kit";
@@ -28,6 +29,7 @@ type PostscriptEditorProps = {
   maxLength: number;
   name: string;
   onValidityChange?: (overLimit: boolean) => void;
+  placeholder?: string;
 };
 
 const editorExtensions = [
@@ -51,6 +53,7 @@ export function PostscriptEditor({
   maxLength,
   name,
   onValidityChange,
+  placeholder,
 }: PostscriptEditorProps) {
   const previewId = useId();
   const [markdown, setMarkdown] = useState(defaultValue);
@@ -79,7 +82,10 @@ export function PostscriptEditor({
         id,
       },
     },
-    extensions: editorExtensions,
+    extensions: [
+      ...editorExtensions,
+      Placeholder.configure({ placeholder: placeholder ?? "Write an email postscript…" }),
+    ],
     immediatelyRender: false,
     onCreate: ({ editor: editorInstance }) => syncContent(editorInstance),
     onUpdate: ({ editor: editorInstance }) => syncContent(editorInstance),

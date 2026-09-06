@@ -82,6 +82,25 @@ test("shows the editor content as plain text", async () => {
   });
 });
 
+test("shows the configured organization-wide note placeholder", async () => {
+  const placeholder = "Thank you for sponsoring. Our adoption fair is this Saturday.";
+  const { container } = render(
+    createElement(PostscriptEditor, {
+      classNames,
+      defaultValue: "",
+      id: "postscript",
+      maxLength: 2000,
+      name: "pinnedPostscript",
+      placeholder,
+    }),
+  );
+
+  await waitFor(() => {
+    const emptyParagraph = container.querySelector<HTMLElement>("p.is-editor-empty");
+    assert.equal(emptyParagraph?.dataset.placeholder, placeholder);
+  });
+});
+
 test("keeps the editor preview and sent email plain text in agreement", async () => {
   const postscript = [
     "Thanks for helping **Biscuit** feel *safe*.",
