@@ -5,12 +5,17 @@ import {
   succeedRosterSyncJob,
   superviseRosterSyncQueue,
   type ClaimedRosterSyncJob,
+  completeVolunteerPhotoCleanupJob,
+  enqueueVolunteerPhotoCleanupJob,
+  failVolunteerPhotoCleanupJob,
+  fetchVolunteerPhotoCleanupJob,
 } from "./roster-sync-queue.ts";
 import type { RosterSyncJobView } from "./roster-sync-client.ts";
 import { RosterSyncRefusal, syncRoster, type SyncSummary } from "./roster-sync.ts";
 import { isAuthorizedSchedulerRequest } from "./scheduler-auth.ts";
 import { env as appEnv } from "./env.ts";
 import type { SchedulerEnvironment } from "./scheduler-auth.ts";
+import { cleanupVolunteerPhotos } from "./volunteer-photo-cleanup.ts";
 
 export const DEFAULT_ROSTER_SYNC_DRAIN_BUDGET_MS = 4 * 60 * 1000;
 
@@ -63,6 +68,40 @@ export function createRosterSyncDrainer(dependencies: DrainDependencies = defaul
         ? `Roster sync exceeded its ${budgetMs}ms drain budget`
         : errorMessage(error);
       return { drained: true, job: await dependencies.fail(claimed.id, message) };
+    }
+  };
+}
+
+type PhotoCleanupDependencies = {
+  cleanup?: () => Promise<{ deleted: number }>;
+  complete?: (jobId: string) => Promise<void>;
+  enqueue?: () => Promise<string | null>;
+  fail?: (jobId: string, error: string) => Promise<void>;
+  fetch?: () => Promise<{ id: string } | null>;
+};
+
+const photoCleanupDefaults: Required<PhotoCleanupDependencies> = {
+  cleanup: cleanupVolunteerPhotos,
+  complete: completeVolunteerPhotoCleanupJob,
+  enqueue: enqueueVolunteerPhotoCleanupJob,
+  fail: failVolunteerPhotoCleanupJob,
+  fetch: fetchVolunteerPhotoCleanupJob,
+};
+
+export function createVolunteerPhotoCleanupDrainer(dependencies: PhotoCleanupDependencies = {}) {
+  const services = { ...photoCleanupDefaults, ...dependencies };
+  return async function drain() {
+    await services.enqueue();
+    const job = await services.fetch();
+    if (!job) return { drained: false as const };
+    try {
+      const result = await services.cleanup();
+      await services.complete(job.id);
+      return { drained: true as const, ...result };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Volunteer photo cleanup failed";
+      await services.fail(job.id, message);
+      throw error;
     }
   };
 }

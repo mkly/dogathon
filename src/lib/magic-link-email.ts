@@ -2,11 +2,22 @@ import {
   sendAppEmail,
   type AppMailerDependencies,
 } from "./app-mailer.ts";
+import { env } from "./env.ts";
 
 type MagicLinkEmail = {
   email: string;
   url: string;
 };
+
+export function redactEmailLink(url: string) {
+  try {
+    const parsed = new URL(url);
+    for (const key of [...parsed.searchParams.keys()]) parsed.searchParams.set(key, "[redacted]");
+    return parsed.toString();
+  } catch {
+    return "[redacted invalid URL]";
+  }
+}
 
 export async function sendMagicLinkEmail(
   { email, url }: MagicLinkEmail,
@@ -25,6 +36,7 @@ export async function sendMagicLinkEmail(
   }, dependencies);
 
   if (describedSend) {
-    console.info(`Dogathon magic link for ${email}: ${url}`);
+    const loggedUrl = env.NODE_ENV === "production" ? redactEmailLink(url) : url;
+    console.info(`Dogathon magic link for ${email}: ${loggedUrl}`);
   }
 }

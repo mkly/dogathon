@@ -12,7 +12,7 @@ import {
 
 import { sendAppEmail } from "@/lib/app-mailer";
 import { env } from "@/lib/env";
-import { sendMagicLinkEmail } from "@/lib/magic-link-email";
+import { redactEmailLink, sendMagicLinkEmail } from "@/lib/magic-link-email";
 import {
   organizationInvitationEmail,
   organizationInvitationExpiresInSeconds,
@@ -150,7 +150,10 @@ export const auth = betterAuth({
         const describedSend = await sendAppEmail(message);
 
         if (describedSend) {
-          console.info(`Dogathon invitation for ${email}: ${message.invitationUrl}`);
+          const loggedUrl = env.NODE_ENV === "production"
+            ? redactEmailLink(message.invitationUrl)
+            : message.invitationUrl;
+          console.info(`Dogathon invitation for ${email}: ${loggedUrl}`);
         }
       },
     }),

@@ -5,6 +5,7 @@ import { env } from "./env.ts";
 import type { SyncSummary } from "./roster-sync.ts";
 
 export const ROSTER_SYNC_QUEUE = "roster-sync";
+export const VOLUNTEER_PHOTO_CLEANUP_QUEUE = "volunteer-photo-cleanup";
 export const ROSTER_SYNC_RETRY_LIMIT = 3;
 export const ROSTER_SYNC_EXPIRE_SECONDS = 5 * 60;
 
@@ -66,6 +67,10 @@ export async function getRosterSyncBoss(): Promise<PgBoss> {
     globalForRosterSync.rosterSyncBossStart = boss.start().then(async () => {
       await boss.createQueue(ROSTER_SYNC_QUEUE, {
         policy: "exclusive",
+        retryLimit: ROSTER_SYNC_RETRY_LIMIT,
+        expireInSeconds: ROSTER_SYNC_EXPIRE_SECONDS,
+      });
+      await boss.createQueue(VOLUNTEER_PHOTO_CLEANUP_QUEUE, {
         retryLimit: ROSTER_SYNC_RETRY_LIMIT,
         expireInSeconds: ROSTER_SYNC_EXPIRE_SECONDS,
       });
@@ -208,4 +213,25 @@ export async function refuseRosterSyncJob(jobId: string, reason: string) {
 
 export async function failRosterSyncJob(jobId: string, error: string) {
   return (await defaultQueue()).fail(jobId, error);
+}
+
+export async function enqueueVolunteerPhotoCleanupJob() {
+  return (await getRosterSyncBoss()).send(VOLUNTEER_PHOTO_CLEANUP_QUEUE, {}, {
+    singletonKey: "daily-cleanup",
+    singletonSeconds: 24 * 60 * 60,
+    retryLimit: ROSTER_SYNC_RETRY_LIMIT,
+    expireInSeconds: ROSTER_SYNC_EXPIRE_SECONDS,
+  });
+}
+
+export async function fetchVolunteerPhotoCleanupJob() {
+  return (await getRosterSyncBoss()).fetch<Record<string, never>>(VOLUNTEER_PHOTO_CLEANUP_QUEUE).then((jobs) => jobs[0] ?? null);
+}
+
+export async function completeVolunteerPhotoCleanupJob(jobId: string) {
+  await (await getRosterSyncBoss()).complete(VOLUNTEER_PHOTO_CLEANUP_QUEUE, jobId);
+}
+
+export async function failVolunteerPhotoCleanupJob(jobId: string, error: string) {
+  await (await getRosterSyncBoss()).fail(VOLUNTEER_PHOTO_CLEANUP_QUEUE, jobId, { error });
 }

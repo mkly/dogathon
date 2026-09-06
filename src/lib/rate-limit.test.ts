@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { checkRateLimit, type RateLimitStore } from "./rate-limit.ts";
+import { anonymousRateLimitIdentity, checkRateLimit, type RateLimitStore } from "./rate-limit.ts";
 
 function memoryStore(): RateLimitStore & { buckets: Map<string, { count: number; expiresAt: Date }> } {
   const buckets = new Map<string, { count: number; expiresAt: Date }>();
@@ -33,4 +33,16 @@ test("rate limiter prunes expired buckets", async () => {
   assert.equal(store.buckets.size, 1);
   await checkRateLimit({ ...input, now: new Date("2026-09-06T12:01:00Z") });
   assert.equal(store.buckets.size, 1);
+});
+
+test("anonymous rate limits use a trusted platform IP, then the last forwarded hop", () => {
+  assert.equal(
+    anonymousRateLimitIdentity(new Headers({ "x-real-ip": "203.0.113.10", "x-forwarded-for": "client, proxy" })),
+    "ip:203.0.113.10",
+  );
+  assert.equal(
+    anonymousRateLimitIdentity(new Headers({ "x-forwarded-for": "client, proxy" })),
+    "ip:proxy",
+  );
+  assert.equal(anonymousRateLimitIdentity(new Headers(), "request-a"), "request:request-a");
 });

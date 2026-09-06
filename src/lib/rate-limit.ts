@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 
 import { getSession } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
@@ -36,9 +36,19 @@ export function rateLimitResponse(retryAfterSeconds: number) {
   return Response.json({ error: "Too many requests. Please try again later." }, { headers: { "Retry-After": String(retryAfterSeconds) }, status: 429 });
 }
 
+export function anonymousRateLimitIdentity(requestHeaders: Headers, requestId: string = randomUUID()) {
+  const platformIp = requestHeaders.get("x-real-ip")?.trim();
+  if (platformIp) return `ip:${platformIp}`;
+  const forwardedFor = requestHeaders.get("x-forwarded-for")
+    ?.split(",")
+    .map((value) => value.trim())
+    .filter(Boolean)
+    .at(-1);
+  return forwardedFor ? `ip:${forwardedFor}` : `request:${requestId}`;
+}
+
 export async function getRateLimitIdentity(requestHeaders: Headers): Promise<string> {
   const session = await getSession(requestHeaders);
   if (session) return `user:${session.user.id}`;
-  const forwardedFor = requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim();
-  return `ip:${forwardedFor || requestHeaders.get("x-real-ip") || "unknown"}`;
+  return anonymousRateLimitIdentity(requestHeaders);
 }

@@ -86,6 +86,7 @@ test("uses the configured S3 public base URL and custom cache policy", async (co
     DATABASE_URL: databaseUrl,
     AWS_REGION: "us-east-1",
     S3_PHOTO_BUCKET: "dogathon-photos",
+    S3_USE_AMBIENT_CREDENTIALS: "true",
     S3_PUBLIC_BASE_URL: "https://photos.example.com///",
   });
   const client = new S3Client({ region: environment.AWS_REGION });
