@@ -149,6 +149,24 @@ test("uses structured model output for a grounded summary", async () => {
   assert.match(messages[1].content, /calm garden walk/u);
 });
 
+test("keeps assistant messages that carry step boundary parts", () => {
+  const parsed = interviewRequestSchema.safeParse({
+    orgSlug: "happy-tails",
+    residentId: "3ba9b90a-8b0c-4aeb-9a65-2ea2787fc932",
+    messages: [
+      message("u1", "user", "We had a calm garden walk"),
+      {
+        id: "a1",
+        role: "assistant",
+        parts: [{ type: "step-start" }, { type: "text", text: "How was her mood?" }],
+      },
+    ],
+  });
+
+  assert.equal(parsed.success, true);
+  assert.deepEqual(parsed.data?.messages[1].parts, [{ type: "text", text: "How was her mood?" }]);
+});
+
 test("rejects oversized message lists and text parts", () => {
   const valid = { orgSlug: "happy-tails", residentId: "3ba9b90a-8b0c-4aeb-9a65-2ea2787fc932" };
 
@@ -159,5 +177,9 @@ test("rejects oversized message lists and text parts", () => {
   assert.equal(interviewRequestSchema.safeParse({
     ...valid,
     messages: [message("1", "user", "x".repeat(2001))],
+  }).success, false);
+  assert.equal(interviewRequestSchema.safeParse({
+    ...valid,
+    messages: [{ id: "a1", role: "assistant", parts: [{ type: "step-start" }] }],
   }).success, false);
 });
