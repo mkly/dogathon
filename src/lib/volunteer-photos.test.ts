@@ -22,6 +22,7 @@ test("attaches only scoped orphan photos and returns the first requested URL", a
   };
 
   const url = await attachVolunteerPhotos(tx as never, {
+    maxByteSize: 8_388_608,
     orgId: "org-1",
     residentId: "resident-1",
     noteId: "note-1",
@@ -33,6 +34,7 @@ test("attaches only scoped orphan photos and returns the first requested URL", a
     {
       where: {
         id: { in: ["photo-1", "photo-2"] },
+        byteSize: { lte: 8_388_608 },
         noteId: null,
         orgId: "org-1",
         residentId: "resident-1",
@@ -42,6 +44,7 @@ test("attaches only scoped orphan photos and returns the first requested URL", a
     {
       where: {
         id: { in: ["photo-1", "photo-2"] },
+        byteSize: { lte: 8_388_608 },
         noteId: "note-1",
         orgId: "org-1",
         residentId: "resident-1",
@@ -60,6 +63,7 @@ test("does not query when there are no photos", async () => {
   };
 
   assert.equal(await attachVolunteerPhotos(tx as never, {
+    maxByteSize: 8_388_608,
     orgId: "org-1",
     residentId: "resident-1",
     noteId: "note-1",
