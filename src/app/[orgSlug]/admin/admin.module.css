@@ -202,6 +202,24 @@
 
 .settingsStack { display: grid; gap: 24px; }
 
+.settingsNotice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 14px 18px;
+  border: 1px solid rgb(61 51 43 / 24%);
+  border-left: 4px solid var(--felt-moss);
+  border-radius: 6px;
+  background: rgb(255 252 245 / 88%);
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
+.settingsNoticeError { border-left-color: var(--felt-brick); }
+.settingsNotice p { margin: 0; }
+.settingsNotice button { flex: none; }
+
 .settingsSkeleton {
   position: relative;
   min-height: 190px;
@@ -224,14 +242,6 @@
 }
 
 .stripeConnect .settingsIntro { max-width: 52ch; }
-
-.stripeBlockers {
-  margin: 12px 0 0;
-  padding-left: 18px;
-  font-size: 0.85rem;
-  font-weight: 700;
-  line-height: 1.5;
-}
 
 .stripeConnectForm {
   justify-self: start;

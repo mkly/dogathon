@@ -31,23 +31,25 @@ export async function POST(request: Request) {
     return Response.json({ error: "type must be regular or graduation" }, { status: 400 });
   }
 
-  const resident = await prisma.resident.findFirst({
-    where: { id: input.data.residentId, orgId },
-    include: {
-      organization: { select: { slug: true } },
-      volunteerNotes: {
-        orderBy: { createdAt: "desc" },
-        take: 10,
-        // never pull photoData bytes into the compose payload
-        select: { note: true, photoUrl: true, createdAt: true },
+  const [resident, settings] = await Promise.all([
+    prisma.resident.findFirst({
+      where: { id: input.data.residentId, orgId },
+      include: {
+        organization: { select: { slug: true } },
+        volunteerNotes: {
+          orderBy: { createdAt: "desc" },
+          take: 10,
+          // never pull photoData bytes into the compose payload
+          select: { note: true, photoUrl: true, createdAt: true },
+        },
       },
-    },
-  });
+    }),
+    prisma.rescueSettings.findUnique({ where: { orgId } }),
+  ]);
   if (!resident) {
     return Response.json({ error: "Resident not found" }, { status: 404 });
   }
 
-  const settings = await prisma.rescueSettings.findUnique({ where: { orgId } });
   const type = input.data.type ?? "regular";
   let composed;
   try {

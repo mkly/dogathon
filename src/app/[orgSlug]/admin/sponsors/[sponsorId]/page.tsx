@@ -12,7 +12,7 @@ import {
   AdminSurface,
   AdminTable,
 } from "@/components/admin-ui";
-import { formatDate } from "@/lib/format";
+import { formatDate, sponsorshipStatusLabel } from "@/lib/format";
 import { PageViewTransition } from "@/components/page-view-transition";
 import { getOrganizationAccessBySlug } from "@/lib/organization-access";
 import { prisma } from "@/lib/prisma";
@@ -31,6 +31,8 @@ type SponsorDetailPageProps = {
   params: Promise<{ sponsorId: string; orgSlug: string }>;
 };
 
+const SPONSORSHIP_HISTORY_LIMIT = 100;
+
 export default async function SponsorDetailPage({ params }: SponsorDetailPageProps) {
   const { sponsorId, orgSlug } = await params;
   if (!uuidSchema.safeParse(sponsorId).success) notFound();
@@ -39,16 +41,30 @@ export default async function SponsorDetailPage({ params }: SponsorDetailPagePro
   });
 
   if (!access) notFound();
-  if (!access.context) redirect("/staff/organizations");
+  if (!access.context) {
+    const next = encodeURIComponent(`/${orgSlug}/admin/sponsors/${sponsorId}`);
+    redirect(access.authenticated ? "/staff/organizations" : `/staff/sign-in?next=${next}`);
+  }
   const { context } = access;
 
   const sponsor = await prisma.sponsor.findFirst({
     where: { id: sponsorId, sponsorships: { some: { orgId: context.orgId } } },
-    include: {
+    select: {
+      email: true,
+      name: true,
+      _count: { select: { sponsorships: { where: { orgId: context.orgId } } } },
       sponsorships: {
         where: { orgId: context.orgId },
-        include: { resident: { select: { name: true } } },
+        select: {
+          id: true,
+          status: true,
+          createdAt: true,
+          endedAt: true,
+          endedReason: true,
+          resident: { select: { name: true } },
+        },
         orderBy: { createdAt: "asc" },
+        take: SPONSORSHIP_HISTORY_LIMIT,
       },
     },
   });
@@ -78,7 +94,7 @@ export default async function SponsorDetailPage({ params }: SponsorDetailPagePro
         <section aria-labelledby="history-heading">
           <div className={styles.historyTitle}>
             <h2 id="history-heading">Sponsorship history</h2>
-            <AdminBadge tone="mustard">{sponsor.sponsorships.length} {pluralize("companion", sponsor.sponsorships.length)}</AdminBadge>
+            <AdminBadge tone="mustard">{sponsor._count.sponsorships} {pluralize("companion", sponsor._count.sponsorships)}</AdminBadge>
           </div>
           <AdminSurface className={styles.historyPanel} tone="oatmeal">
             <AdminTable>
@@ -95,7 +111,7 @@ export default async function SponsorDetailPage({ params }: SponsorDetailPagePro
                 {sponsor.sponsorships.map((sponsorship) => (
                   <tr key={sponsorship.id}>
                     <td>{sponsorship.resident.name}</td>
-                    <td><AdminStatus>{sponsorship.status}</AdminStatus></td>
+                    <td><AdminStatus>{sponsorshipStatusLabel(sponsorship.status)}</AdminStatus></td>
                     <td>{formatDate(sponsorship.createdAt)}</td>
                     <td>{sponsorship.endedAt ? formatDate(sponsorship.endedAt) : "—"}</td>
                     <td className={styles.reason}>{sponsorship.endedReason ?? "—"}</td>
@@ -104,6 +120,11 @@ export default async function SponsorDetailPage({ params }: SponsorDetailPagePro
               </tbody>
             </AdminTable>
           </AdminSurface>
+          {sponsor._count.sponsorships > SPONSORSHIP_HISTORY_LIMIT ? (
+            <p className={styles.limitNotice}>
+              Showing the first {SPONSORSHIP_HISTORY_LIMIT} sponsorships in this history.
+            </p>
+          ) : null}
         </section>
       </AdminPage>
     </PageViewTransition>

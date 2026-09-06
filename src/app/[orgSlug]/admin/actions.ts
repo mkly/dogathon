@@ -9,7 +9,7 @@ import { getOrganizationAccessBySlug } from "@/lib/organization-access";
 import { env } from "@/lib/env";
 import { prisma } from "@/lib/prisma";
 import { parseSettingsForm } from "@/lib/rescue-settings";
-import { createConnectOnboardingLink } from "@/lib/stripe-billing";
+import { createConnectOnboardingLink, refreshConnectStatus } from "@/lib/stripe-billing";
 
 export type SettingsState = {
   message: string;
@@ -41,6 +41,21 @@ export async function beginStripeOnboarding(formData: FormData) {
     returnUrl: `${env.BETTER_AUTH_URL}/api/stripe/connect/return${org}`,
   });
   redirect(link.url);
+}
+
+export async function refreshStripeConnection(formData: FormData) {
+  const input = organizationFormSchema.safeParse(Object.fromEntries(formData));
+  if (!input.success) notFound();
+  const { orgSlug } = input.data;
+  const access = await getOrganizationAccessBySlug(await headers(), orgSlug, {
+    billing: ["manage"],
+  });
+
+  if (!access) notFound();
+  if (!access.context) redirect("/staff/organizations");
+
+  await refreshConnectStatus(access.context.orgId);
+  revalidatePath(`/${orgSlug}/admin/settings`);
 }
 
 export async function saveSettings(
