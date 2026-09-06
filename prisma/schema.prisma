@@ -305,6 +305,7 @@ model SponsorUpdate {
 
   @@unique([id, orgId])
   @@index([orgId, status])
+  @@index([orgId, sentAt])
   @@index([residentId, orgId, status])
 }
 

@@ -39,6 +39,8 @@ export const dynamic = "force-dynamic";
 
 type AdminPageProps = { params: Promise<{ orgSlug: string }> };
 
+const STAFF_ROOM_LIST_LIMIT = 50;
+
 async function getThirtyDaysAgo() {
   await io();
   return new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
@@ -115,7 +117,7 @@ function DashboardStatsLoading() {
 }
 
 async function ComposeSection({ orgId, orgSlug }: { orgId: string; orgSlug: string }) {
-  const noteResidents = await prisma.resident.findMany({
+  const noteResidentResults = await prisma.resident.findMany({
     // once a draft exists the companion moves to the approval queue below,
     // so keep it out of the compose list until that draft is resolved
     where: {
@@ -123,7 +125,7 @@ async function ComposeSection({ orgId, orgSlug }: { orgId: string; orgSlug: stri
       volunteerNotes: { some: { orgId } },
       sponsorUpdates: { none: { orgId, status: "draft" } },
     },
-    orderBy: { name: "asc" },
+    orderBy: [{ name: "asc" }, { id: "asc" }],
     select: {
       id: true,
       name: true,
@@ -136,7 +138,10 @@ async function ComposeSection({ orgId, orgSlug }: { orgId: string; orgSlug: stri
       },
       _count: { select: { volunteerNotes: true } },
     },
+    take: STAFF_ROOM_LIST_LIMIT + 1,
   });
+  const noteResidentsTruncated = noteResidentResults.length > STAFF_ROOM_LIST_LIMIT;
+  const noteResidents = noteResidentResults.slice(0, STAFF_ROOM_LIST_LIMIT);
 
   return (
     <section className={styles.composeSection}>
@@ -147,6 +152,12 @@ async function ComposeSection({ orgId, orgSlug }: { orgId: string; orgSlug: stri
         eyebrow="Volunteer notebook"
         title="Notes ready for an update"
       />
+
+      {noteResidentsTruncated && (
+        <p className={styles.listLimitNotice} role="status">
+          Showing the first {STAFF_ROOM_LIST_LIMIT} companions with notes ready for an update.
+        </p>
+      )}
 
       {noteResidents.length === 0 ? (
         <AdminSurface className={styles.composeEmpty} tone="oatmeal">
@@ -205,10 +216,10 @@ async function ApprovalQueue({
   orgId: string;
   orgSlug: string;
 }) {
-  const [drafts, emailConnector] = await Promise.all([
+  const [draftResults, emailConnector] = await Promise.all([
     prisma.sponsorUpdate.findMany({
       where: { orgId, status: "draft" },
-      orderBy: { createdAt: "asc" },
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
       include: {
         resident: {
           include: {
@@ -219,9 +230,12 @@ async function ApprovalQueue({
           },
         },
       },
+      take: STAFF_ROOM_LIST_LIMIT + 1,
     }),
     getEmailConnectorStatus(orgId),
   ]);
+  const draftsTruncated = draftResults.length > STAFF_ROOM_LIST_LIMIT;
+  const drafts = draftResults.slice(0, STAFF_ROOM_LIST_LIMIT);
 
   return (
     <section className={styles.queueSection}>
@@ -230,6 +244,12 @@ async function ApprovalQueue({
         eyebrow="Approval queue"
         title="Waiting for your OK"
       />
+
+      {draftsTruncated && (
+        <p className={styles.listLimitNotice} role="status">
+          Showing the first {STAFF_ROOM_LIST_LIMIT} drafts in the approval queue.
+        </p>
+      )}
 
       <MotionReveal
         animateOnMount
