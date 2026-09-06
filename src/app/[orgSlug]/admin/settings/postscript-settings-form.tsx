@@ -7,6 +7,7 @@ import {
   PostscriptEditor,
   type PostscriptEditorClassNames,
 } from "@/components/postscript-editor";
+import { POSTSCRIPT_MAX_LENGTH } from "@/lib/postscript";
 import { pushToast } from "@/lib/toast";
 
 import { saveSettings, type SettingsState } from "../actions";
@@ -37,7 +38,9 @@ export function PostscriptSettingsForm({
     saveSettings,
     initialSettingsState,
   );
-  const [overLimit, setOverLimit] = useState(pinnedPostscript.length > 2000);
+  const [overLimit, setOverLimit] = useState(
+    pinnedPostscript.length > POSTSCRIPT_MAX_LENGTH,
+  );
   const handleValidityChange = useCallback((nextOverLimit: boolean) => {
     setOverLimit(nextOverLimit);
   }, []);
@@ -60,7 +63,7 @@ export function PostscriptSettingsForm({
           disabled={pending}
           id="pinnedPostscript"
           labelledBy="pinnedPostscriptLabel"
-          maxLength={2000}
+          maxLength={POSTSCRIPT_MAX_LENGTH}
           name="pinnedPostscript"
           onValidityChange={handleValidityChange}
         />

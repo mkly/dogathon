@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { parseSettingsForm } from "./rescue-settings";
+import { POSTSCRIPT_MAX_LENGTH, postscriptOverLimitMessage } from "./postscript";
 
 test("the postscript form does not clear the roster source", () => {
   const formData = new FormData();
@@ -11,6 +12,27 @@ test("the postscript form does not clear the roster source", () => {
     ok: true,
     message: "Email postscript saved.",
     settings: { pinnedPostscript: "Thanks for helping!" },
+  });
+});
+
+test("normalizes and neutralizes the saved Markdown postscript", () => {
+  const formData = new FormData();
+  formData.set("pinnedPostscript", "  **Bold**\r\n[unsafe](javascript:alert(1))\r[safe](https://example.org)  ");
+
+  assert.deepEqual(parseSettingsForm(formData), {
+    ok: true,
+    message: "Email postscript saved.",
+    settings: { pinnedPostscript: "**Bold**\n[unsafe](#))\n[safe](https://example.org)" },
+  });
+});
+
+test("rejects an over-limit postscript", () => {
+  const formData = new FormData();
+  formData.set("pinnedPostscript", "x".repeat(POSTSCRIPT_MAX_LENGTH + 1));
+
+  assert.deepEqual(parseSettingsForm(formData), {
+    ok: false,
+    message: postscriptOverLimitMessage(),
   });
 });
 

@@ -26,7 +26,14 @@ export function AdminRouteLoading({ variant = "directory" }: AdminRouteLoadingPr
     return (
       <main aria-busy="true" aria-label="Loading staff settings" className={styles.page}>
         <Skeleton className={styles.header} />
-        <div className={styles.stack}>{Array.from({ length: 4 }, (_, index) => <Skeleton className={styles.settingsCard} key={index} />)}</div>
+        <div className={styles.stack}>
+          {Array.from({ length: 4 }, (_, index) => (
+            <Skeleton
+              className={`${styles.settingsCard} ${index === 2 ? styles.settingsEditorCard : ""}`}
+              key={index}
+            />
+          ))}
+        </div>
       </main>
     );
   }

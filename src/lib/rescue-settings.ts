@@ -1,5 +1,11 @@
 import { z } from "zod";
 
+import { neutralizeUnsafeMarkdownDestinations } from "./markdown-safety.ts";
+import {
+  POSTSCRIPT_MAX_LENGTH,
+  postscriptOverLimitMessage,
+} from "./postscript.ts";
+
 export type RescueSettingsPatch = {
   pinnedPostscript?: string;
   sourceUrl?: string;
@@ -21,7 +27,7 @@ const localSourceSchema = z.string()
   .refine((value) => !value.startsWith("/") && !value.includes("..") && /\.html?$/i.test(value));
 const sourceSchema = z.union([httpSourceSchema, localSourceSchema]);
 const settingsFormSchema = z.object({
-  pinnedPostscript: z.string().trim().optional(),
+  pinnedPostscript: z.string().optional(),
   sourceUrl: z.string().optional(),
 });
 
@@ -39,7 +45,13 @@ export function parseSettingsForm(formData: FormData): ParsedSettingsForm {
 
   const settings: RescueSettingsPatch = {};
   if (savesPinnedPostscript) {
-    settings.pinnedPostscript = parsed.data.pinnedPostscript;
+    const pinnedPostscript = (parsed.data.pinnedPostscript ?? "")
+      .replace(/\r\n?/gu, "\n")
+      .trim();
+    if (pinnedPostscript.length > POSTSCRIPT_MAX_LENGTH) {
+      return { ok: false, message: postscriptOverLimitMessage() };
+    }
+    settings.pinnedPostscript = neutralizeUnsafeMarkdownDestinations(pinnedPostscript);
   }
 
   if (!savesSourceUrl) {

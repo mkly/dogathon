@@ -49,6 +49,20 @@ test("composes a grounded regular pupdate without credentials", async () => {
   assert.ok(draft.bodyText.endsWith("Come meet us at Saturday's adoption fair."));
 });
 
+test("appends a Markdown postscript verbatim", async () => {
+  const postscript = "**Bold**\n\n[Link](https://example.org)\n\n## Heading\n\n- A bullet";
+  const draft = await composePupdate({
+    companion: { name: "Biscuit" },
+    notes: ["Played fetch."],
+    pinnedPostscript: postscript,
+    type: "regular",
+    companionPageUrl: "https://pawcast.test/companions/biscuit",
+  });
+
+  assert.ok(draft.bodyText.endsWith(postscript));
+  assert.equal(draft.bodyText.slice(-postscript.length), postscript);
+});
+
 test("uses the configured chat-completions endpoint and model", async () => {
   env.OPENAI_API_KEY = "test-key";
   env.OPENAI_BASE_URL = "https://model.example/v1";
@@ -72,7 +86,7 @@ test("uses the configured chat-completions endpoint and model", async () => {
   await composePupdate({
     companion: { name: "Biscuit", breed: "Corgi mix", sex: "Female", ageText: "Adult" },
     notes: [{ note: "Had fun and met a new friend at the park." }],
-    pinnedPostscript: "",
+    pinnedPostscript: "**A permanent note**",
     type: "regular",
     companionPageUrl: "{{companionPageUrl}}",
   });
@@ -96,6 +110,7 @@ test("uses the configured chat-completions endpoint and model", async () => {
   });
   assert.equal("personality" in promptInput.companion, false);
   assert.equal("careNotes" in promptInput.companion, false);
+  assert.equal("pinnedPostscript" in promptInput, false);
 });
 
 test("supports a graduation pupdate", async () => {

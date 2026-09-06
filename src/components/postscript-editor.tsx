@@ -58,7 +58,11 @@ export function PostscriptEditor({
 
   const syncContent = (editorInstance: Editor) => {
     setMarkdown(editorInstance.getMarkdown());
-    setPlainText(editorInstance.getText({ blockSeparator: "\n\n" }));
+    setPlainText(
+      editorInstance
+        .getText({ blockSeparator: "\n\n" })
+        .replace(/\n{3,}/gu, "\n\n"),
+    );
   };
 
   const editor = useEditor({
