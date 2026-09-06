@@ -7,16 +7,11 @@ import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
 import { FeltButton, PhotoPatch } from "@/components/felt";
 
+import { CheckInChatView, type CheckInResident } from "./check-in-chat-view";
+import { MAX_PHOTO_BYTES } from "./photo-limits";
 import styles from "./volunteer.module.css";
 
-const MAX_PHOTO_BYTES = 8 * 1024 * 1024;
 const READY_MARKER = "[[READY]]";
-
-type Resident = {
-  id: string;
-  name: string;
-  photoUrls: string[];
-};
 
 type UploadedPhoto = {
   file: File;
@@ -34,7 +29,7 @@ export type CheckInResult = {
 
 type CheckInChatProps = {
   orgSlug: string;
-  residents: Resident[];
+  residents: CheckInResident[];
   onFinish: (result: CheckInResult) => Promise<void> | void;
 };
 
@@ -56,41 +51,32 @@ function visibleMessageText(message: UIMessage) {
 }
 
 export function CheckInChat({ orgSlug, residents, onFinish }: CheckInChatProps) {
-  const [residentId, setResidentId] = useState(residents[0].id);
-
   return (
-    <div className={styles.chatFrame}>
-      <div aria-label="Choose a companion" className={styles.companionPicker} role="radiogroup">
-        {residents.map((resident) => {
-          const selected = resident.id === residentId;
-          return (
-            <button
-              aria-checked={selected}
-              className={styles.companionChip}
-              key={resident.id}
-              onClick={() => setResidentId(resident.id)}
-              role="radio"
-              type="button"
-            >
-              <PhotoPatch
-                alt=""
-                className={styles.chipPhoto}
-                sizes="44px"
-                src={resident.photoUrls[0]}
-              />
-              <span>{resident.name}</span>
-            </button>
-          );
-        })}
-      </div>
-
-      <ChatSession
-        key={residentId}
-        onFinish={onFinish}
-        orgSlug={orgSlug}
-        resident={residents.find((resident) => resident.id === residentId) ?? residents[0]}
-      />
-    </div>
+    <CheckInChatView
+      classNames={{
+        chatFrame: styles.chatFrame,
+        companionChip: styles.companionChip,
+        companionPicker: styles.companionPicker,
+      }}
+      emptyState={<p className={styles.emptyPanel}>There are no companions to check in for yet.</p>}
+      renderPhoto={(resident) => (
+        <PhotoPatch
+          alt=""
+          className={styles.chipPhoto}
+          sizes="44px"
+          src={resident.photoUrls[0]}
+        />
+      )}
+      renderSession={(resident) => (
+        <ChatSession
+          key={resident.id}
+          onFinish={onFinish}
+          orgSlug={orgSlug}
+          resident={resident}
+        />
+      )}
+      residents={residents}
+    />
   );
 }
 
@@ -100,7 +86,7 @@ function ChatSession({
   onFinish,
 }: {
   orgSlug: string;
-  resident: Resident;
+  resident: CheckInResident;
   onFinish: CheckInChatProps["onFinish"];
 }) {
   const transport = useMemo(

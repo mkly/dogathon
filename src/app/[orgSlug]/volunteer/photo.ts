@@ -1,7 +1,8 @@
 import { fileTypeFromBuffer } from "file-type";
 import sharp from "sharp";
 
-export const MAX_PHOTO_BYTES = 8 * 1024 * 1024;
+import { MAX_PHOTO_BYTES } from "./photo-limits";
+
 const MAX_PHOTO_DIMENSION = 2048;
 
 // HEIC/HEIF are absent: sharp's prebuilt libvips carries no HEVC decoder, so

@@ -13,6 +13,8 @@ import { summarizeInterview } from "@/lib/volunteer-interview";
 import { interviewRequestSchema } from "@/lib/volunteer-interview-request";
 import { attachVolunteerPhotos } from "@/lib/volunteer-photos";
 
+import { MAX_PHOTO_BYTES } from "./photo-limits";
+
 const finishCheckInSchema = interviewRequestSchema.omit({ orgSlug: true }).extend({
   photoIds: z.array(z.uuid()).max(20),
 });
@@ -69,6 +71,7 @@ export async function finishCheckIn(orgSlug: string, rawInput: unknown) {
     });
 
     const photoUrl = await attachVolunteerPhotos(tx, {
+      maxByteSize: MAX_PHOTO_BYTES,
       noteId,
       orgId: context.orgId,
       photoIds,

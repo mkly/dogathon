@@ -1,6 +1,7 @@
 import type { Prisma } from "@/generated/prisma/client";
 
 type AttachVolunteerPhotosInput = {
+  maxByteSize: number;
   orgId: string;
   residentId: string;
   noteId: string;
@@ -23,6 +24,7 @@ export async function attachVolunteerPhotos(
   await tx.volunteerPhoto.updateMany({
     where: {
       id: { in: photoIds },
+      byteSize: { lte: input.maxByteSize },
       noteId: null,
       orgId: input.orgId,
       residentId: input.residentId,
@@ -33,6 +35,7 @@ export async function attachVolunteerPhotos(
   const attached = await tx.volunteerPhoto.findMany({
     where: {
       id: { in: photoIds },
+      byteSize: { lte: input.maxByteSize },
       noteId: input.noteId,
       orgId: input.orgId,
       residentId: input.residentId,
