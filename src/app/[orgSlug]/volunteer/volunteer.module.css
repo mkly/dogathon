@@ -1,7 +1,290 @@
 .shell {
-  width: min(100%, 46rem);
+  display: flex;
+  width: min(100%, 40rem);
+  min-height: 100dvh;
   min-width: 0;
   margin: 0 auto;
+  flex-direction: column;
+  background: rgb(248 242 231 / 52%);
+}
+
+.chatPage {
+  min-height: 100dvh;
+  padding: 0;
+  overflow-x: clip;
+}
+
+.chatHeader {
+  flex: 0 0 auto;
+  padding: max(1rem, env(safe-area-inset-top)) 1rem 0.8rem;
+  text-align: center;
+}
+
+.chatHeader h1 {
+  margin: 0.55rem 0 0;
+  font-size: clamp(1.55rem, 7vw, 2.2rem);
+  line-height: 1.05;
+}
+
+.chatHeader p {
+  margin: 0.4rem auto 0;
+  color: var(--felt-ink-soft);
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.chatFrame,
+.session {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+}
+
+.companionPicker {
+  display: flex;
+  min-width: 0;
+  min-height: 4.9rem;
+  gap: 0.55rem;
+  padding: 0.45rem 1rem 0.8rem;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: none;
+}
+
+.companionPicker::-webkit-scrollbar {
+  display: none;
+}
+
+.companionChip {
+  display: inline-flex;
+  min-width: max-content;
+  min-height: 3.25rem;
+  gap: 0.45rem;
+  padding: 0.3rem 0.7rem 0.3rem 0.3rem;
+  border: 2px solid transparent;
+  border-radius: 999px;
+  align-items: center;
+  color: var(--felt-ink);
+  background: var(--felt-oatmeal);
+  box-shadow: 0 3px 0 rgb(61 51 43 / 14%);
+  font: inherit;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.companionChip[aria-checked="true"] {
+  border-color: var(--felt-denim);
+  color: var(--felt-cream);
+  background: var(--felt-denim);
+}
+
+.companionChip:focus-visible,
+.composer button:focus-visible,
+.photoButton:focus-within,
+.photoTile button:focus-visible {
+  outline: 3px solid var(--felt-mustard);
+  outline-offset: 2px;
+}
+
+.chipPhoto {
+  width: 2.75rem;
+  margin: 0;
+  flex: 0 0 2.75rem;
+}
+
+.thread {
+  display: flex;
+  min-width: 0;
+  min-height: 12rem;
+  gap: 0.7rem;
+  padding: 1rem;
+  overflow-y: auto;
+  flex: 1;
+  flex-direction: column;
+  background: rgb(255 255 255 / 35%);
+  border-block: 2px dashed rgb(61 51 43 / 16%);
+  scroll-padding-bottom: 1rem;
+}
+
+.message {
+  width: fit-content;
+  max-width: min(86%, 30rem);
+  padding: 0.7rem 0.85rem;
+  border-radius: 15px 15px 15px 4px;
+  overflow-wrap: anywhere;
+  font-weight: 700;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
+.assistantMessage {
+  align-self: flex-start;
+  color: var(--felt-ink);
+  background: var(--felt-oatmeal);
+  box-shadow: 0 3px 0 rgb(61 51 43 / 12%);
+}
+
+.userMessage {
+  align-self: flex-end;
+  border-radius: 15px 15px 4px;
+  color: var(--felt-cream);
+  background: var(--felt-denim);
+}
+
+.typing {
+  opacity: 0.72;
+}
+
+.photoThread {
+  display: flex;
+  gap: 0.6rem;
+  overflow-x: auto;
+}
+
+.photoTile {
+  position: relative;
+  width: 6rem;
+  flex: 0 0 6rem;
+}
+
+.photoTile img {
+  display: block;
+  width: 6rem;
+  height: 6rem;
+  border: 3px solid var(--felt-cream);
+  border-radius: 12px;
+  object-fit: cover;
+  box-shadow: 0 3px 0 rgb(61 51 43 / 18%);
+}
+
+.photoTile button {
+  min-width: 2rem;
+  min-height: 2rem;
+  margin: 0.25rem 0.2rem 0 0;
+  padding: 0.2rem;
+  border: 0;
+  border-radius: 999px;
+  color: var(--felt-cream);
+  background: var(--felt-brick);
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.photoStatus {
+  position: absolute;
+  right: 0.25rem;
+  bottom: 2.35rem;
+  padding: 0.2rem 0.35rem;
+  border-radius: 6px;
+  color: var(--felt-cream);
+  background: rgb(61 51 43 / 82%);
+  font-size: 0.65rem;
+  font-weight: 900;
+}
+
+.finishRow {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.7rem 1rem 0;
+  text-align: center;
+}
+
+.finishButton {
+  min-height: 3rem;
+}
+
+.finishRow small {
+  color: var(--felt-ink-soft);
+  font-weight: 700;
+}
+
+.composer {
+  display: grid;
+  min-width: 0;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem max(0.75rem, env(safe-area-inset-bottom));
+  grid-template-columns: 2.9rem minmax(0, 1fr) 2.9rem;
+  background: var(--felt-ground);
+}
+
+.composer > input {
+  width: 100%;
+  min-width: 0;
+  min-height: 2.9rem;
+  padding: 0.65rem 0.8rem;
+  border: 2px solid rgb(61 51 43 / 20%);
+  border-radius: 999px;
+  color: var(--felt-ink);
+  background: var(--felt-cream);
+  font: inherit;
+  font-size: 16px;
+}
+
+.composer > input:focus-visible {
+  border-color: var(--felt-denim);
+  outline: 3px solid rgb(48 81 94 / 22%);
+}
+
+.composer > button,
+.photoButton {
+  display: grid;
+  width: 2.9rem;
+  min-width: 2.9rem;
+  height: 2.9rem;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  place-items: center;
+  color: var(--felt-cream);
+  background: var(--felt-denim);
+  font: inherit;
+  font-size: 1.45rem;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.composer > button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.photoButton {
+  position: relative;
+  background: var(--felt-brick);
+}
+
+.photoButton input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.chatError {
+  margin: 0.5rem 1rem 0;
+  color: #7b2820;
+  font-weight: 800;
+  text-align: center;
+}
+
+.emptyPanel {
+  margin: 1rem;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .form {
@@ -233,6 +516,17 @@
 }
 
 @media (min-width: 42rem) {
+  .chatPage {
+    padding: 1.5rem;
+  }
+
+  .shell {
+    min-height: calc(100dvh - 3rem);
+    border-radius: 24px;
+    overflow: hidden;
+    box-shadow: 0 10px 28px rgb(61 51 43 / 16%);
+  }
+
   .companionGrid {
     grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
     gap: 0.9rem;
@@ -248,5 +542,13 @@
 
   .confirmation {
     padding: 2.5rem 2rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .companionChip,
+  .message {
+    scroll-behavior: auto;
+    transition: none;
   }
 }

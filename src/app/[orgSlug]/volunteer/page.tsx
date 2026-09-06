@@ -3,17 +3,16 @@ import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
 
-import { AdminEmptyState, AdminHeader, AdminPage } from "@/components/admin-ui";
-import { FeltField, FeltLink, FeltPanel, PhotoPatch, StitchBadge } from "@/components/felt";
+import { AdminEmptyState, AdminPage } from "@/components/admin-ui";
+import { FeltLink, FeltPanel, StitchBadge } from "@/components/felt";
 import { PageViewTransition } from "@/components/page-view-transition";
 import { prisma } from "@/lib/prisma";
 import { getOrganizationAccessBySlug } from "@/lib/organization-access";
 import { uuidSchema } from "@/lib/uuid";
 
-import { submitVolunteerNote } from "./actions";
+import { CheckInChat } from "./check-in-chat";
 import { volunteerErrorMessage } from "./errors";
 import styles from "./volunteer.module.css";
-import { VolunteerPhotoInput, VolunteerSubmitButton } from "./volunteer-form";
 
 export const dynamic = "force-dynamic";
 
@@ -67,7 +66,7 @@ export default async function VolunteerPage({ params, searchParams }: VolunteerP
           <FeltPanel className={styles.confirmation} tone="moss">
             <StitchBadge tone="cream">Note tucked in</StitchBadge>
             <div aria-hidden="true" className={styles.confirmationMark}>✓</div>
-            <h1>Thanks for the pup-date!</h1>
+            <h1>Thanks for checking in!</h1>
             <p>
               {submittedCompanion
                 ? `${submittedCompanion.name}’s care team can see your note now.`
@@ -84,80 +83,25 @@ export default async function VolunteerPage({ params, searchParams }: VolunteerP
 
   return (
     <PageViewTransition>
-      <AdminPage variant="volunteer">
+      <AdminPage className={styles.chatPage} variant="volunteer">
         <section className={styles.shell}>
-          <AdminHeader
-            eyebrow={<StitchBadge tone="denim">Volunteer check-in</StitchBadge>}
-            lede="Three quick steps, made for the phone in your pocket."
-            title="How’s a pup doing?"
-            variant="volunteer"
-          />
+          <header className={styles.chatHeader}>
+            <StitchBadge tone="denim">Volunteer check-in</StitchBadge>
+            <h1>How’s a companion doing?</h1>
+            <p>Share the moments their care team and sponsor should know.</p>
+          </header>
 
-          <form action={submitVolunteerNote} className={styles.form}>
-            <input name="orgSlug" type="hidden" value={orgSlug} />
-            <fieldset className={styles.fieldset}>
-              <legend>1. Pick a companion</legend>
-              {residents.length > 0 ? (
-                <div className={styles.companionGrid}>
-                  {residents.map((resident, index) => (
-                    <label className={styles.companionChoice} key={resident.id}>
-                      <input
-                        defaultChecked={index === 0}
-                        name="residentId"
-                        required
-                        type="radio"
-                        value={resident.id}
-                      />
-                      <FeltPanel className={styles.companionCard} stitched={false} tone="oatmeal">
-                        <PhotoPatch
-                          alt={resident.name}
-                          className={styles.photo}
-                          sizes="(max-width: 720px) calc(50vw - 44px), 208px"
-                          src={resident.photoUrls[0]}
-                        />
-                        <span className={styles.companionName}>
-                          <span aria-hidden="true" className={styles.pickMark}>✓</span>
-                          <strong>{resident.name}</strong>
-                        </span>
-                      </FeltPanel>
-                    </label>
-                  ))}
-                </div>
-              ) : (
-                <FeltPanel tone="oatmeal">
-                  <AdminEmptyState variant="volunteer">
-                    No companions have active sponsors right now, so there’s no one to send a pup-date to yet.
-                  </AdminEmptyState>
-                </FeltPanel>
-              )}
-            </fieldset>
-
-            <FeltPanel className={styles.notePanel} tone="denim">
-              <label className={styles.inputLabel} htmlFor="note">
-                2. Add one quick note
-              </label>
-              <FeltField className={styles.noteField}>
-                <textarea
-                  id="note"
-                  maxLength={240}
-                  name="note"
-                  placeholder="Vet visit went well!"
-                  required
-                  rows={3}
-                />
-              </FeltField>
-
-              <label className={styles.inputLabel} htmlFor="photo">
-                3. Add a photo <span>(optional)</span>
-              </label>
-              <VolunteerPhotoInput />
-              <small>Take one now or choose one from your phone. Max 8 MB.</small>
+          {residents.length > 0 ? (
+            <CheckInChat orgSlug={orgSlug} residents={residents} />
+          ) : (
+            <FeltPanel className={styles.emptyPanel} tone="oatmeal">
+              <AdminEmptyState variant="volunteer">
+                No companions have active sponsors right now, so there’s no one to check in for yet.
+              </AdminEmptyState>
             </FeltPanel>
+          )}
 
-            {errorMessage ? <p className={styles.error} role="alert">{errorMessage}</p> : null}
-
-            <VolunteerSubmitButton disabled={residents.length === 0} />
-          </form>
+          {errorMessage ? <p className={styles.error} role="alert">{errorMessage}</p> : null}
         </section>
       </AdminPage>
     </PageViewTransition>
