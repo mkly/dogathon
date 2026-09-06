@@ -45,7 +45,7 @@ export async function POST(request: Request, { params }: RouteContext) {
   const emailConnector = await getEmailConnectorStatus(orgId);
   if (!emailConnector.connected) {
     return Response.json(
-      { error: "Connect and verify an organization email account before approving pupdates" },
+      { error: "Connect the email address pupdates are sent from before approving them" },
       { status: 409 },
     );
   }

@@ -3,5 +3,5 @@
 export const EMAIL_CONNECTOR_NOTICE_ID = "email-connector-approval-notice";
 
 export function emailConnectorBlockedReason() {
-  return "Connect and verify an organization email account before sending approved pupdates.";
+  return "Connect the email address pupdates are sent from before approving them.";
 }

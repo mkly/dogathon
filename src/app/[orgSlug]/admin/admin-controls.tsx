@@ -750,6 +750,7 @@ export function EmailConnectorSettings({
   const motionTransition = useMotionTiming();
 
   async function connectOAuth(provider: "gmail" | "microsoft") {
+    const label = provider === "gmail" ? "Gmail" : "Microsoft 365";
     setPending(provider);
     try {
       const response = await apiFetch(
@@ -762,7 +763,7 @@ export function EmailConnectorSettings({
       );
       const body = (await response.json()) as { url?: string };
       if (!body.url) {
-        pushToast("error", "The email provider returned no authorization URL.");
+        pushToast("error", "This email account did not return an authorization URL.");
         return;
       }
       window.location.assign(body.url);
@@ -771,7 +772,7 @@ export function EmailConnectorSettings({
         "error",
         error instanceof Error
           ? error.message
-          : `Could not start the ${provider} connection.`,
+          : `Could not start the ${label} email account setup.`,
       );
     } finally {
       setPending(null);
@@ -832,7 +833,7 @@ export function EmailConnectorSettings({
         "Disconnect email",
       );
       setConnector({ connected: false, type: null, fromEmail: null });
-      pushToast("success", "Organization email disconnected.");
+      pushToast("success", "Sending address disconnected. Pupdates cannot be sent until a new one is connected.");
     } catch (error) {
       pushToast(
         "error",
@@ -857,17 +858,18 @@ export function EmailConnectorSettings({
       <div className={styles.connectorHeader}>
         <div>
           <AdminEyebrow>Organization email</AdminEyebrow>
-          <h2>Choose one sending connection</h2>
+          <h2>Send pupdates from your email address</h2>
           <p>
-            Connecting a provider replaces this organization&apos;s previous
-            email connection.
+            Every pupdate sent to sponsors comes from this address. Connect the Gmail,
+            Microsoft 365, or SMTP mailbox sponsors should see and reply to; connecting
+            a different account replaces the current one.
           </p>
         </div>
         <div className={styles.connectorStatus}>
           <AdminBadge tone={connector.connected ? "moss" : "brick"}>
             {connector.connected
-              ? `${providerLabel}: ${connector.fromEmail}`
-              : "No verified connector"}
+              ? `Sending from ${connector.fromEmail} via ${providerLabel}`
+              : "No sending address yet"}
           </AdminBadge>
           <AnimatePresence initial={false}>
             {connector.connected ? (
@@ -905,7 +907,7 @@ export function EmailConnectorSettings({
               onClick={() => connectOAuth("gmail")}
               tone="denim"
             >
-              {pending === "gmail" ? "Opening Gmail…" : "Connect Gmail"}
+              {pending === "gmail" ? "Opening Gmail…" : "Use a Gmail address"}
             </AdminButton>
             <AdminButton
               className={styles.microsoftButton}
@@ -915,14 +917,14 @@ export function EmailConnectorSettings({
             >
               {pending === "microsoft"
                 ? "Opening Microsoft…"
-                : "Connect Microsoft 365"}
+                : "Use a Microsoft 365 address"}
             </AdminButton>
             <AdminButton
               disabled={pending !== null}
               onClick={() => setSmtpOpen(true)}
               tone="denim"
             >
-              Connect SMTP with password
+              Use another mailbox (SMTP)
             </AdminButton>
           </motion.div>
         ) : null}
@@ -957,7 +959,7 @@ export function EmailConnectorSettings({
                       <div>
                         <AdminEyebrow>Organization email</AdminEyebrow>
                         <Dialog.Title asChild>
-                          <h2>Connect SMTP with password</h2>
+                          <h2>Use another mailbox (SMTP)</h2>
                         </Dialog.Title>
                       </div>
                       <AdminButton
@@ -969,7 +971,7 @@ export function EmailConnectorSettings({
                       </AdminButton>
                     </div>
                     <Dialog.Description className={styles.dialogDescription}>
-                      Enter the credentials this organization will use to send email.
+                      Enter the mailbox details sponsors should see and reply to.
                     </Dialog.Description>
                     <form className={styles.smtpForm} onSubmit={saveSmtp}>
                       <label htmlFor="smtpHost">Host</label>
@@ -1007,7 +1009,7 @@ export function EmailConnectorSettings({
                           type="password"
                         />
                       </AdminField>
-                      <label htmlFor="smtpFromEmail">From email</label>
+                      <label htmlFor="smtpFromEmail">Address sponsors will see</label>
                       <AdminField>
                         <input
                           id="smtpFromEmail"
@@ -1035,7 +1037,7 @@ export function EmailConnectorSettings({
                           tone="mustard"
                           type="submit"
                         >
-                          {pending === "smtp" ? "Verifying…" : "Verify & use SMTP"}
+                          {pending === "smtp" ? "Verifying…" : "Verify & use this address"}
                         </AdminButton>
                       </div>
                     </form>
