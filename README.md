@@ -31,6 +31,21 @@ A multitenant Next.js app using PostgreSQL, Prisma, and Better Auth organization
 
 Open [http://localhost:3000](http://localhost:3000).
 
+## Volunteer photo storage
+
+Local development needs no AWS account. When `S3_PHOTO_BUCKET` and
+`AWS_REGION` are unset, volunteer photos are written beneath the gitignored
+`.photos/` directory and served through the application.
+
+Production requires `S3_PHOTO_BUCKET` and `AWS_REGION`. Configure AWS
+credentials through `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` (or the
+hosting platform's AWS credential provider), and grant the application write
+access to the bucket. Photo objects are public by design, so the bucket needs a
+public-read bucket policy or a public CDN such as CloudFront. Set
+`S3_PUBLIC_BASE_URL` to that CDN origin when applicable. Browser CORS rules are
+not required because uploads go through the Dogathon server rather than
+directly from the browser.
+
 ## Styling
 
 - Use CSS Modules only; do not use Tailwind or runtime CSS-in-JS.
@@ -44,7 +59,8 @@ Open [http://localhost:3000](http://localhost:3000).
 Configure the variables from `.env.example` as Vercel project environment
 variables before deploying. In particular, `DATABASE_URL` must point to a
 production PostgreSQL database, `BETTER_AUTH_SECRET` must be a production
-secret, and `BETTER_AUTH_URL` must be the deployed app URL. Set
+secret, `BETTER_AUTH_URL` must be the deployed app URL, and the S3 photo bucket
+and region must be configured as described above. Set
 `EMAIL_CONNECTOR_ENCRYPTION_KEY` to 32 random bytes encoded as base64 before an
 organization connects email, and configure the Google and/or Microsoft OAuth
 client variables for those connector choices; plain SMTP needs no app-wide

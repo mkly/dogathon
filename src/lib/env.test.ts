@@ -46,6 +46,8 @@ test("requires authentication and connector-encryption secrets in production", (
         error.message,
         /EMAIL_CONNECTOR_ENCRYPTION_KEY: is required in production/u,
       );
+      assert.match(error.message, /S3_PHOTO_BUCKET: is required in production/u);
+      assert.match(error.message, /AWS_REGION: is required in production/u);
       return true;
     },
   );
@@ -67,12 +69,20 @@ test("computes every capability flag once from parsed credentials", () => {
     MICROSOFT_CLIENT_ID: "microsoft-id",
     MICROSOFT_CLIENT_SECRET: "microsoft-secret",
     EMAIL_CONNECTOR_ENCRYPTION_KEY: encryptionKey,
+    AWS_REGION: "us-west-2",
+    S3_PHOTO_BUCKET: "dogathon-photos",
+    AWS_ACCESS_KEY_ID: "aws-access-key",
+    AWS_SECRET_ACCESS_KEY: "aws-secret-key",
+    S3_PUBLIC_BASE_URL: "https://photos.example.com///",
   });
+
+  assert.equal(parsed.S3_PUBLIC_BASE_URL, "https://photos.example.com");
 
   assert.deepEqual(parsed.features, {
     ai: true,
     firecrawl: true,
     stripe: true,
+    s3: true,
     scheduler: true,
     platformSmtp: true,
     googleOAuth: true,
@@ -97,12 +107,42 @@ test("keeps every capability false when its complete credential group is absent"
     ai: false,
     firecrawl: false,
     stripe: false,
+    s3: false,
     scheduler: false,
     platformSmtp: false,
     googleOAuth: false,
     microsoftOAuth: false,
     connectorEncryption: false,
   });
+});
+
+test("requires S3 storage configuration only in production", () => {
+  const development = parseEnvironment({
+    DATABASE_URL: "postgresql://dogathon:dogathon@localhost:5432/dogathon",
+  });
+  assert.equal(development.features.s3, false);
+
+  const encryptionKey = Buffer.alloc(32, 7).toString("base64");
+  const productionBase = {
+    NODE_ENV: "production",
+    DATABASE_URL: "postgresql://dogathon:dogathon@localhost:5432/dogathon",
+    BETTER_AUTH_SECRET: "a-production-secret-with-at-least-32-characters",
+    EMAIL_CONNECTOR_ENCRYPTION_KEY: encryptionKey,
+  };
+
+  assert.throws(
+    () => parseEnvironment({ ...productionBase, AWS_REGION: "us-west-2" }),
+    /S3_PHOTO_BUCKET: is required in production/u,
+  );
+  assert.throws(
+    () => parseEnvironment({ ...productionBase, S3_PHOTO_BUCKET: "dogathon-photos" }),
+    /AWS_REGION: is required in production/u,
+  );
+  assert.equal(parseEnvironment({
+    ...productionBase,
+    AWS_REGION: "us-west-2",
+    S3_PHOTO_BUCKET: "dogathon-photos",
+  }).features.s3, true);
 });
 
 test("empty optional credentials remain absent for dry-run behavior", () => {
