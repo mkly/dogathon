@@ -2,6 +2,7 @@ import type Stripe from "stripe";
 
 export type StripeWebhookEventStore = {
   create(input: { data: { id: string; type: string } }): Promise<unknown>;
+  delete(input: { where: { id: string } }): Promise<unknown>;
 };
 
 function isUniqueConstraintError(error: unknown) {
@@ -14,7 +15,8 @@ function isUniqueConstraintError(error: unknown) {
 /**
  * Records an event before processing it so Stripe retries are harmless. A
  * duplicate event ID has already been processed (or is being processed), so
- * callers can acknowledge it without running the handler again.
+ * callers can acknowledge it without running the handler again. Processing that
+ * fails drops the record again so Stripe's retry gets another chance.
  */
 export async function processStripeWebhookEvent(
   event: Stripe.Event,
@@ -28,6 +30,11 @@ export async function processStripeWebhookEvent(
     throw error;
   }
 
-  await processEvent(event);
+  try {
+    await processEvent(event);
+  } catch (error) {
+    await store.delete({ where: { id: event.id } }).catch(() => {});
+    throw error;
+  }
   return true;
 }
