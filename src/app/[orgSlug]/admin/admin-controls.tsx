@@ -3,9 +3,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as AlertDialog from "@radix-ui/react-alert-dialog";
 import * as Dialog from "@radix-ui/react-dialog";
+import { useRouter } from "next/navigation";
 import {
   type ReactNode,
   useActionState,
+  useCallback,
   useEffect,
   useOptimistic,
   useRef,
@@ -51,27 +53,42 @@ import styles from "./admin.module.css";
 
 const MotionAdminSurface = motion.create(AdminSurface);
 
-async function apiFetch(
-  input: RequestInfo | URL,
-  init: RequestInit,
-  action: string,
-) {
-  let response: Response;
-  try {
-    response = await fetch(input, init);
-  } catch {
-    throw new Error(`${action} could not reach the server.`);
-  }
-  if (response.ok) return response;
+/**
+ * The API routes answer 401 once the staff session is gone, so send the caller
+ * to sign-in with a `next` back to the page they were on instead of surfacing
+ * "Sign-in required" as a toast they cannot act on.
+ */
+function useApiFetch() {
+  const router = useRouter();
 
-  const body = (await response.json().catch(() => null)) as {
-    error?: unknown;
-  } | null;
-  if (typeof body?.error === "string" && body.error)
-    throw new Error(body.error);
-  if (response.status === 404)
-    throw new Error(`${action} is not wired up yet (404).`);
-  throw new Error(`${action} failed (${response.status}). Try again.`);
+  return useCallback(async (
+    input: RequestInfo | URL,
+    init: RequestInit,
+    action: string,
+  ) => {
+    let response: Response;
+    try {
+      response = await fetch(input, init);
+    } catch {
+      throw new Error(`${action} could not reach the server.`);
+    }
+    if (response.ok) return response;
+
+    if (response.status === 401) {
+      const next = `${window.location.pathname}${window.location.search}`;
+      router.push(`/staff/sign-in?next=${encodeURIComponent(next)}`);
+      throw new Error(`${action} needs you to sign in again.`);
+    }
+
+    const body = (await response.json().catch(() => null)) as {
+      error?: unknown;
+    } | null;
+    if (typeof body?.error === "string" && body.error)
+      throw new Error(body.error);
+    if (response.status === 404)
+      throw new Error(`${action} is not wired up yet (404).`);
+    throw new Error(`${action} failed (${response.status}). Try again.`);
+  }, [router]);
 }
 
 export function DraftEditor({
@@ -93,6 +110,7 @@ export function DraftEditor({
   smsText: string;
   subject: string;
 }) {
+  const apiFetch = useApiFetch();
   const [visible, hideOptimistically] = useOptimistic(true);
   const [, startTransition] = useTransition();
   const [savedDraft, setSavedDraft] = useState({
@@ -504,6 +522,7 @@ export function ComposeButton({
   residentId: string;
   residentName: string;
 }) {
+  const apiFetch = useApiFetch();
   const [pending, setPending] = useState(false);
 
   async function compose() {
@@ -556,6 +575,7 @@ export function RosterSyncSettings({
   initialSourceUrl: string;
   orgSlug: string;
 }) {
+  const apiFetch = useApiFetch();
   const queryClient = useQueryClient();
   const [state, formAction, saving] = useActionState(
     saveSettings,
@@ -742,6 +762,7 @@ export function EmailConnectorSettings({
   initialConnector: ConnectorStatus;
   orgSlug: string;
 }) {
+  const apiFetch = useApiFetch();
   const [connector, setConnector] = useState(initialConnector);
   const [pending, setPending] = useState<
     "gmail" | "microsoft" | "smtp" | "disconnect" | null
