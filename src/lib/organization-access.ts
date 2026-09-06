@@ -105,34 +105,54 @@ export async function getOrganizationAccessBySlug(
 export async function getOrganizationContext(
   requestHeaders: Headers,
   permission: OrganizationPermission,
+  session?: Awaited<ReturnType<typeof getSession>>,
 ): Promise<OrganizationContext | null> {
-  const session = await getSession(requestHeaders);
-  const orgId = session?.session.activeOrganizationId;
-  if (!session || !orgId) return null;
+  const resolvedSession = session ?? await getSession(requestHeaders);
+  const orgId = resolvedSession?.session.activeOrganizationId;
+  if (!resolvedSession || !orgId) return null;
 
   const [membership, permitted] = await Promise.all([
     prisma.member.findUnique({
       where: {
-        organizationId_userId: { organizationId: orgId, userId: session.user.id },
+        organizationId_userId: { organizationId: orgId, userId: resolvedSession.user.id },
       },
       select: { id: true, organizationId: true, role: true, userId: true },
     }),
     checkOrganizationPermission(requestHeaders, orgId, permission),
   ]);
 
-  return permitted ? organizationContext(session.user.id, membership, orgId) : null;
+  return permitted ? organizationContext(resolvedSession.user.id, membership, orgId) : null;
 }
+
+type ApiOrganizationDependencies = {
+  getAccessBySlug: typeof getOrganizationAccessBySlug;
+  getContext: typeof getOrganizationContext;
+  getSession: typeof getSession;
+};
+
+const defaultApiOrganizationDependencies: ApiOrganizationDependencies = {
+  getAccessBySlug: getOrganizationAccessBySlug,
+  getContext: getOrganizationContext,
+  getSession,
+};
 
 export async function requireApiOrganization(
   requestHeaders: Headers,
   permission: OrganizationPermission,
+  dependencies: ApiOrganizationDependencies = defaultApiOrganizationDependencies,
 ): Promise<
   | { ok: false; response: Response }
   | { ok: true; context: OrganizationContext }
 > {
   const slug = requestHeaders.get("x-organization-slug");
   if (slug) {
-    const access = await getOrganizationAccessBySlug(requestHeaders, slug, permission);
+    const access = await dependencies.getAccessBySlug(requestHeaders, slug, permission);
+    if (access && !access.authenticated) {
+      return {
+        ok: false,
+        response: Response.json({ error: "Sign-in required" }, { status: 401 }),
+      };
+    }
     if (!access?.context) {
       return {
         ok: false,
@@ -142,7 +162,15 @@ export async function requireApiOrganization(
     return { ok: true, context: access.context };
   }
 
-  const context = await getOrganizationContext(requestHeaders, permission);
+  const session = await dependencies.getSession(requestHeaders);
+  if (!session) {
+    return {
+      ok: false,
+      response: Response.json({ error: "Sign-in required" }, { status: 401 }),
+    };
+  }
+
+  const context = await dependencies.getContext(requestHeaders, permission, session);
   if (!context) {
     return {
       ok: false,
