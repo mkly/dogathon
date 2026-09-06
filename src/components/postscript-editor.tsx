@@ -24,6 +24,7 @@ type PostscriptEditorProps = {
   defaultValue: string;
   disabled?: boolean;
   id: string;
+  labelledBy?: string;
   maxLength: number;
   name: string;
   onValidityChange?: (overLimit: boolean) => void;
@@ -46,6 +47,7 @@ export function PostscriptEditor({
   defaultValue,
   disabled = false,
   id,
+  labelledBy,
   maxLength,
   name,
   onValidityChange,
@@ -65,7 +67,10 @@ export function PostscriptEditor({
     editable: !disabled,
     editorProps: {
       attributes: {
-        "aria-label": "Postscript content",
+        // Prefer the visible field label so the accessible name matches it.
+        ...(labelledBy
+          ? { "aria-labelledby": labelledBy }
+          : { "aria-label": "Postscript content" }),
         class: classNames.editorSurface,
         id,
       },
@@ -187,7 +192,6 @@ export function PostscriptEditor({
         </button>
         <button
           aria-label="Undo"
-          aria-pressed={false}
           className={classNames.toolbarButton}
           disabled={toolbarDisabled || !toolbarState?.canUndo}
           onClick={() => editor?.chain().focus().undo().run()}
@@ -197,7 +201,6 @@ export function PostscriptEditor({
         </button>
         <button
           aria-label="Redo"
-          aria-pressed={false}
           className={classNames.toolbarButton}
           disabled={toolbarDisabled || !toolbarState?.canRedo}
           onClick={() => editor?.chain().focus().redo().run()}

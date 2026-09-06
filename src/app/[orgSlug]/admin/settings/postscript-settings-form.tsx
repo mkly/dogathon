@@ -50,13 +50,16 @@ export function PostscriptSettingsForm({
   return (
     <form action={formAction} aria-busy={pending} className={styles.settingsForm}>
       <input name="orgSlug" type="hidden" value={orgSlug} />
-      <label htmlFor="pinnedPostscript">This month&apos;s postscript</label>
+      <label htmlFor="pinnedPostscript" id="pinnedPostscriptLabel">
+        This month&apos;s postscript
+      </label>
       <AdminField className={styles.postscriptEditorField}>
         <PostscriptEditor
           classNames={editorClassNames}
           defaultValue={pinnedPostscript}
           disabled={pending}
           id="pinnedPostscript"
+          labelledBy="pinnedPostscriptLabel"
           maxLength={2000}
           name="pinnedPostscript"
           onValidityChange={handleValidityChange}
