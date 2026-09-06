@@ -165,7 +165,7 @@ export default async function MembersPage({ params }: MembersPageProps) {
           }
           actionsClassName={styles.membersHeaderActions}
           brand={<Link href={`/${orgSlug}`} transitionTypes={["nav-back"]}>
-            <Image alt="Pawcast" preload src={pawcastWordmark} />
+            <Image alt="Dogathon" preload src={pawcastWordmark} />
           </Link>}
           className={styles.membersHeader}
           lede={access.organization.name}

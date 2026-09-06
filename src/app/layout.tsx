@@ -3,6 +3,7 @@ import { Nunito } from "next/font/google";
 import { Toaster } from "sonner";
 
 import { FeltFilters } from "@/components/felt";
+import { SPONSORSHIP_MONTHLY_USD } from "@/lib/sponsorship-pricing";
 
 import "./felt.css";
 import "./globals.css";
@@ -17,7 +18,7 @@ const nunito = Nunito({
 
 export const metadata: Metadata = {
   title: "Dogathon | Sponsor a rescue companion",
-  description: "Sponsor a rescue companion for $25 a month until adoption.",
+  description: `Sponsor a rescue companion for $${SPONSORSHIP_MONTHLY_USD} a month until adoption.`,
 };
 
 export default function RootLayout({

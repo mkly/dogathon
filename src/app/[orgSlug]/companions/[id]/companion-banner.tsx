@@ -4,6 +4,7 @@ import { useSearchParams } from "next/navigation";
 import { useSyncExternalStore, type ReactNode } from "react";
 
 import { FeltLink, FeltPanel, StitchBadge } from "@/components/felt";
+import { SPONSORSHIP_MONTHLY_USD } from "@/lib/sponsorship-pricing";
 
 import styles from "../../../public.module.css";
 
@@ -19,7 +20,9 @@ export function CompanionBanner({ name }: { name: string }) {
         <FeltPanel className={`${styles.confirmation} ${styles.confirmationTop}`} tone="moss">
           <StitchBadge tone="cream">You&apos;re a hero!</StitchBadge>
           <h2>Thank you for sponsoring {name}!</h2>
-          <p>Your $25 monthly sponsorship is active until {name} is adopted.</p>
+          <p>
+            Your ${SPONSORSHIP_MONTHLY_USD} monthly sponsorship is active until {name} is adopted.
+          </p>
           <FeltLink className={styles.cardLink} href="/account/sign-in">
             Create your sponsor account
           </FeltLink>

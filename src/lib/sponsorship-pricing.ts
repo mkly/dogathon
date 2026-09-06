@@ -1,0 +1,1 @@
+export const SPONSORSHIP_MONTHLY_USD = 25;

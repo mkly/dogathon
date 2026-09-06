@@ -24,6 +24,7 @@ import { PendingAdminSubmitButton } from "@/components/pending-submit-button";
 import { getEmailConnectorStatus } from "@/lib/email-connectors";
 import { getOrganizationAccessBySlug } from "@/lib/organization-access";
 import { prisma } from "@/lib/prisma";
+import { SPONSORSHIP_MONTHLY_USD } from "@/lib/sponsorship-pricing";
 import { refreshConnectStatus } from "@/lib/stripe-billing";
 
 import pawcastWordmark from "../../../../../public/brand/pawcast-wordmark.png";
@@ -98,7 +99,7 @@ async function StripeConnection({
           <p>
             {stripeNotReady
               ? `${stripeNotReady} Sponsors cannot check out until Stripe enables card payments.`
-              : "Connected and ready to accept $25 monthly sponsorships."}
+              : `Connected and ready to accept $${SPONSORSHIP_MONTHLY_USD} monthly sponsorships.`}
           </p>
           {organization && organization.blockers.length > 0 && (
             <ul className={styles.stripeBlockers}>
@@ -205,7 +206,7 @@ export default async function AdminSettingsPage({ params }: AdminSettingsPagePro
             </>
           }
           brand={<Link href={`/${orgSlug}`} transitionTypes={["nav-back"]}>
-            <Image alt="Pawcast" preload src={pawcastWordmark} />
+            <Image alt="Dogathon" preload src={pawcastWordmark} />
           </Link>}
           title="Staff settings"
         />

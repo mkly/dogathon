@@ -1,10 +1,9 @@
 import Stripe from "stripe";
 
 import { env } from "./env.ts";
+import { SPONSORSHIP_MONTHLY_USD } from "./sponsorship-pricing.ts";
 
 import { prisma } from "@/lib/prisma";
-
-export const SPONSORSHIP_MONTHLY_USD = 25;
 
 /** The resident cannot be sponsored right now, as opposed to billing being unconfigured. */
 export class ResidentUnavailableError extends Error {

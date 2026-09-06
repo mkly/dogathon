@@ -10,6 +10,7 @@ import {
   getPublicOrganizations,
   getPublicResidents,
 } from "@/lib/public-roster-cache";
+import { SPONSORSHIP_MONTHLY_USD } from "@/lib/sponsorship-pricing";
 
 import pawcastWordmark from "../../../public/brand/pawcast-wordmark.png";
 import feltPup from "../../../public/mascot/felt-pup-2.png";
@@ -34,7 +35,7 @@ export default async function OrganizationHome({ params }: OrganizationHomeProps
   return (
     <PageViewTransition>
       <main className={styles.siteShell}>
-        <Image alt="Pawcast" className={styles.wordmark} src={pawcastWordmark} />
+        <Image alt="Dogathon" className={styles.wordmark} src={pawcastWordmark} />
 
         <p>{organization.name}</p>
 
@@ -47,8 +48,9 @@ export default async function OrganizationHome({ params }: OrganizationHomeProps
               </span>
             </h1>
             <p className={styles.lede}>
-              Sponsor a resident for $25 a month until they find their forever home. You&apos;ll
-              help with everyday care and get the good news from their journey.
+              Sponsor a resident for ${SPONSORSHIP_MONTHLY_USD} a month until they find their
+              forever home. You&apos;ll help with everyday care and get the good news from their
+              journey.
             </p>
           </div>
           {/* decorative: the heading and lede already carry the meaning */}

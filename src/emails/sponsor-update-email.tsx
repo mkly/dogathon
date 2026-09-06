@@ -14,6 +14,7 @@ import { Markdown } from "@react-email/markdown";
 import type { CSSProperties } from "react";
 
 import { escapeHtmlInMarkdown, neutralizeUnsafeMarkdownDestinations } from "../lib/markdown-safety.ts";
+import { SPONSORSHIP_MONTHLY_USD } from "../lib/sponsorship-pricing.ts";
 
 export type SponsorUpdateEmailProps = {
   companionName: string;
@@ -133,7 +134,7 @@ export function SponsorUpdateEmail(input: SponsorUpdateEmailProps) {
       >
         <Container style={{ margin: "0 auto", maxWidth: "600px", width: "100%" }}>
           <Img
-            alt="Pawcast"
+            alt="Dogathon"
             src={absolute(input.origin, "/brand/pawcast-wordmark.png")}
             width="230"
             style={{ display: "block", height: "auto", margin: "0 auto 22px", maxWidth: "70%" }}
@@ -250,10 +251,11 @@ export function SponsorUpdateEmail(input: SponsorUpdateEmailProps) {
           </Section>
 
           <Text style={{ color: INK, fontSize: "13px", fontWeight: 800, lineHeight: "1.6", margin: "0 8px 6px", opacity: 0.72, textAlign: "center" }}>
-            You get this because you sponsor {name} for $25 a month until adoption.
+            You get this because you sponsor {name} for ${SPONSORSHIP_MONTHLY_USD} a month until
+            adoption.
           </Text>
           <Text style={{ color: INK, fontSize: "12px", fontWeight: 700, lineHeight: "1.6", margin: "0 8px", opacity: 0.55, textAlign: "center" }}>
-            Pawcast · the good news from the kennel, written by the people who scoop it
+            Dogathon · the good news from the kennel, written by the people who scoop it
           </Text>
         </Container>
       </Body>
