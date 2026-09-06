@@ -335,5 +335,5 @@ model RosterSyncNote {
   createdAt    DateTime     @default(now())
   organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
 
-  @@index([orgId, sourceUrl, createdAt])
+  @@unique([orgId, sourceUrl])
 }

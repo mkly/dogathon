@@ -69,3 +69,19 @@ test("a non-http scheme is rejected rather than read as a local capture path", (
     }, `expected ${value} to be rejected`);
   }
 });
+
+test("private and IP-literal roster sources are rejected", () => {
+  for (const value of [
+    "http://localhost/dogs",
+    "http://rescue.localhost/dogs",
+    "http://10.0.0.1/dogs",
+    "http://169.254.169.254/latest/meta-data",
+    "http://[::1]/dogs",
+    "https://metadata.google.internal/computeMetadata/v1",
+  ]) {
+    const formData = new FormData();
+    formData.set("sourceUrl", value);
+
+    assert.equal(parseSettingsForm(formData).ok, false, `expected ${value} to be rejected`);
+  }
+});

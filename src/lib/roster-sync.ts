@@ -10,6 +10,7 @@ import { env } from "./env.ts";
 import type { CompanionRecord } from "./parser.ts";
 import { DOCUMENT_SEPARATOR, parseCompanionRoster } from "./parser.ts";
 import { prisma } from "./prisma.ts";
+import { isPublicHttpUrl } from "./public-http-url.ts";
 import { revalidatePublicRoster } from "./public-roster-cache.ts";
 import { cancelStripeSubscription } from "./stripe-billing.ts";
 
@@ -57,6 +58,7 @@ const MAX_CRAWL_SUMMARY_CHARS = 4_000;
 // A live scrape should never make most of the current roster disappear at once.
 // Require a human to investigate instead of treating that disappearance as adoption.
 const MAX_LIVE_ADOPTION_FRACTION = 0.5;
+const RESIDENT_WRITE_BATCH_SIZE = 25;
 
 export class RosterSyncRefusal extends Error {
   readonly reason: string;
@@ -95,9 +97,8 @@ export async function syncRoster(
     throw new Error("Roster sync needs an adoption-page source URL; save one in staff settings first");
   }
   const sourceUrl = settings.sourceUrl;
-  const priorNote = await prisma.rosterSyncNote.findFirst({
-    where: { orgId, sourceUrl },
-    orderBy: { createdAt: "desc" },
+  const priorNote = await prisma.rosterSyncNote.findUnique({
+    where: { orgId_sourceUrl: { orgId, sourceUrl } },
     select: { notes: true },
   });
   options.signal?.throwIfAborted();
@@ -111,7 +112,7 @@ export async function syncRoster(
     signal: options.signal,
     priorNotes: priorNote?.notes ?? null,
     saveNotes: async (notes) => {
-      await prisma.rosterSyncNote.create({ data: { orgId, sourceUrl, notes } });
+      await saveRosterSyncNote(prisma, orgId, sourceUrl, notes);
     },
   });
   options.signal?.throwIfAborted();
@@ -141,10 +142,13 @@ export async function syncRoster(
       usedFallbackCapture || !rosterComplete,
     );
 
-    for (const companion of companions) {
-      options.signal?.throwIfAborted();
-      await upsertCompanion(tx, orgId, companion, !usedFallbackCapture && rosterComplete);
-    }
+    await upsertCompanions(
+      tx,
+      orgId,
+      companions,
+      !usedFallbackCapture && rosterComplete,
+      options.signal,
+    );
 
     let sponsorshipsClosed = 0;
 
@@ -317,6 +321,35 @@ export function assertPlausibleAdoptionCount(
 }
 
 export type SyncTransaction = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
+
+export async function saveRosterSyncNote(
+  store: Pick<typeof prisma, "rosterSyncNote">,
+  orgId: string,
+  sourceUrl: string,
+  notes: string,
+) {
+  await store.rosterSyncNote.upsert({
+    where: { orgId_sourceUrl: { orgId, sourceUrl } },
+    create: { orgId, sourceUrl, notes },
+    update: { notes, createdAt: new Date() },
+  });
+}
+
+export async function upsertCompanions(
+  tx: SyncTransaction,
+  orgId: string,
+  companions: CompanionRecord[],
+  liveSource: boolean,
+  signal?: AbortSignal,
+) {
+  for (let offset = 0; offset < companions.length; offset += RESIDENT_WRITE_BATCH_SIZE) {
+    signal?.throwIfAborted();
+    await Promise.all(
+      companions.slice(offset, offset + RESIDENT_WRITE_BATCH_SIZE)
+        .map((companion) => upsertCompanion(tx, orgId, companion, liveSource)),
+    );
+  }
+}
 
 async function upsertCompanion(
   tx: SyncTransaction,
@@ -1038,12 +1071,15 @@ function finiteNonNegativeInteger(value: unknown, fallback: number): number {
     : fallback;
 }
 
-function assertRelatedUrl(sourceUrl: string, candidate: unknown) {
+export function assertRelatedUrl(sourceUrl: string, candidate: unknown) {
   if (typeof candidate !== "string") throw new Error("Roster tool URL must be a string");
   const source = new URL(sourceUrl);
   const requested = new URL(candidate);
   if (requested.protocol !== "http:" && requested.protocol !== "https:") {
     throw new Error(`Roster tool refused unsupported protocol: ${requested.protocol}`);
+  }
+  if (!isPublicHttpUrl(source.toString()) || !isPublicHttpUrl(requested.toString())) {
+    throw new Error(`Roster tool refused private or non-public host: ${requested.hostname}`);
   }
   if (!isRelatedHost(source.hostname, requested.hostname)) {
     throw new Error(`Roster tool refused unrelated host: ${requested.hostname}`);

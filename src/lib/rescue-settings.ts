@@ -5,6 +5,7 @@ import {
   POSTSCRIPT_MAX_LENGTH,
   postscriptOverLimitMessage,
 } from "./postscript.ts";
+import { isPublicHttpUrl } from "./public-http-url.ts";
 
 export type RescueSettingsPatch = {
   pinnedPostscript?: string;
@@ -20,7 +21,9 @@ type ParsedSettingsForm =
       settings: RescueSettingsPatch;
     };
 
-const httpSourceSchema = z.url({ protocol: /^https?$/ }).transform((value) => new URL(value).toString());
+const httpSourceSchema = z.url({ protocol: /^https?$/ })
+  .refine(isPublicHttpUrl)
+  .transform((value) => new URL(value).toString());
 // A local capture path: no scheme, relative, no traversal, and an HTML file.
 const localSourceSchema = z.string()
   .refine((value) => !/^[a-z][a-z0-9+.-]*:/i.test(value))

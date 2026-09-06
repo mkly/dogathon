@@ -5,6 +5,7 @@ import { MockLanguageModelV3 } from "ai/test";
 
 import {
   assertPlausibleAdoptionCount,
+  assertRelatedUrl,
   cancelPendingStripeSubscriptions,
   closeAdoptedSponsorships,
   discoverRoster,
@@ -17,6 +18,8 @@ import {
   planRosterStatusChanges,
   requestFirecrawl,
   RosterSyncRefusal,
+  saveRosterSyncNote,
+  upsertCompanions,
 } from "./roster-sync.ts";
 import type { SyncTransaction } from "./roster-sync.ts";
 import { parseCompanionRoster } from "./parser.ts";
@@ -99,6 +102,82 @@ function rosterCompanion(name: string, adopted: boolean) {
     adopted,
   };
 }
+
+test("resident writes run in bounded batches", async () => {
+  let active = 0;
+  let peak = 0;
+  let writes = 0;
+  const tx = {
+    resident: {
+      upsert: async () => {
+        writes += 1;
+        active += 1;
+        peak = Math.max(peak, active);
+        await new Promise((resolve) => setImmediate(resolve));
+        active -= 1;
+      },
+    },
+  } as unknown as SyncTransaction;
+
+  await upsertCompanions(
+    tx,
+    "org-rescue",
+    Array.from({ length: 200 }, (_, index) => rosterCompanion(`Dog ${index}`, false)),
+    true,
+  );
+
+  assert.equal(writes, 200);
+  assert.equal(peak, 25);
+});
+
+test("sync notes replace the row for the same organization and source", async () => {
+  const calls: unknown[] = [];
+  const store = {
+    rosterSyncNote: {
+      upsert: async (input: unknown) => {
+        calls.push(input);
+        return {};
+      },
+    },
+  } as unknown as Pick<typeof import("./prisma.ts").prisma, "rosterSyncNote">;
+
+  await saveRosterSyncNote(store, "org-rescue", "https://rescue.example/dogs", "Use the dogs page.");
+
+  assert.equal(calls.length, 1);
+  const call = calls[0] as { update: { createdAt: Date } };
+  assert.ok(call.update.createdAt instanceof Date);
+  assert.deepEqual(call, {
+    where: {
+      orgId_sourceUrl: {
+        orgId: "org-rescue",
+        sourceUrl: "https://rescue.example/dogs",
+      },
+    },
+    create: {
+      orgId: "org-rescue",
+      sourceUrl: "https://rescue.example/dogs",
+      notes: "Use the dogs page.",
+    },
+    update: {
+      notes: "Use the dogs page.",
+      createdAt: call.update.createdAt,
+    },
+  });
+});
+
+test("related roster URLs still reject private and IP-literal hosts", () => {
+  for (const candidate of [
+    "http://localhost/dogs",
+    "http://10.0.0.1/dogs",
+    "http://169.254.169.254/latest/meta-data",
+    "http://[::1]/dogs",
+  ]) {
+    assert.throws(
+      () => assertRelatedUrl(candidate, candidate),
+      /private or non-public host/u,
+    );
+  }
+});
 
 test("adoption ends sponsorships at the adoption time and marks Stripe cancellations pending", async () => {
   const adoptedAt = new Date("2026-09-06T21:00:00.000Z");
