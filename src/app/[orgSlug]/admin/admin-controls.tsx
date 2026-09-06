@@ -749,6 +749,7 @@ export function EmailConnectorSettings({
   const motionTransition = useMotionTiming();
 
   async function connectOAuth(provider: "gmail" | "microsoft") {
+    const label = provider === "gmail" ? "Gmail" : "Microsoft 365";
     setPending(provider);
     try {
       const response = await apiFetch(
@@ -770,7 +771,7 @@ export function EmailConnectorSettings({
         "error",
         error instanceof Error
           ? error.message
-          : `Could not start the ${provider} email account setup.`,
+          : `Could not start the ${label} email account setup.`,
       );
     } finally {
       setPending(null);
