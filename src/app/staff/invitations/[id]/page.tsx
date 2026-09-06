@@ -126,7 +126,7 @@ export default async function InvitationPage({ params }: InvitationPageProps) {
             </div>
             <div>
               <dt>Expires</dt>
-              <dd><time dateTime={invitation.expiresAt.toISOString()}>{expiry}</time></dd>
+              <dd><time dateTime={invitation.expiresAt.toISOString()}>{expiry} UTC</time></dd>
             </div>
           </dl>
 

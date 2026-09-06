@@ -5,7 +5,7 @@
   margin: 0.35rem 0 0.6rem;
 }
 
-.tabs button span:last-child {
+.tabs button span + span {
   display: block;
   margin-top: 0.2rem;
   font-size: 0.68rem;
