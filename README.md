@@ -15,7 +15,7 @@ A multitenant Next.js app using PostgreSQL, Prisma, and Better Auth organization
 
    ```bash
    npm install
-   npm run db:migrate -- --name init
+   npm run db:migrate
    ```
 
    Roster sync jobs are stored in pg-boss's `pgboss` schema. Prisma does not

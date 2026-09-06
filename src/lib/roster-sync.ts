@@ -52,7 +52,7 @@ const MAX_SCRAPE_DATA_ENDPOINTS = 300;
 const MAX_SCRAPE_MARKDOWN_CHARS = 20_000;
 const MAX_FIRECRAWL_LOAD_MORE_CLICKS = 10;
 const FIRECRAWL_LOAD_MORE_WAIT_MS = 500;
-export const MAX_SYNC_NOTE_CHARS = 4_000;
+const MAX_SYNC_NOTE_CHARS = 4_000;
 const MAX_CRAWL_SUMMARY_CHARS = 4_000;
 // A live scrape should never make most of the current roster disappear at once.
 // Require a human to investigate instead of treating that disappearance as adoption.

@@ -11,11 +11,6 @@ const rosterPhotoPatterns = [
     hostname: "84e7617cb19add71cb0e.cdn6.editmysite.com",
     pathname: "/uploads/**",
   },
-  {
-    protocol: "https" as const,
-    hostname: "photos.rescue.example",
-    pathname: "/companions/**",
-  },
 ];
 
 function configuredPhotoPattern() {
@@ -52,20 +47,6 @@ const nextConfig: NextConfig = {
     remotePatterns: configuredPattern
       ? [...rosterPhotoPatterns, configuredPattern]
       : rosterPhotoPatterns,
-  },
-  async redirects() {
-    return [
-      {
-        source: "/:orgSlug/dogs/:id",
-        destination: "/:orgSlug/companions/:id",
-        permanent: true,
-      },
-      {
-        source: "/:orgSlug/admin/dogs-covered",
-        destination: "/:orgSlug/admin/companions-covered",
-        permanent: true,
-      },
-    ];
   },
   experimental: {
     serverActions: {

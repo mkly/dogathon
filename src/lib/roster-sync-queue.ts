@@ -54,7 +54,7 @@ export class RosterSyncJobNotFoundError extends Error {
   }
 }
 
-export async function getRosterSyncBoss(): Promise<PgBoss> {
+async function getRosterSyncBoss(): Promise<PgBoss> {
   if (!globalForRosterSync.rosterSyncBossStart) {
     const boss = globalForRosterSync.rosterSyncBoss ?? new PgBoss({
       connectionString: env.DATABASE_URL,

@@ -6,7 +6,7 @@ import {
 import { isAuthorizedSchedulerRequest, type SchedulerEnvironment } from "./scheduler-auth.ts";
 import { env as appEnv } from "./env.ts";
 
-export const DEFAULT_ROSTER_SYNC_STAGGER_MS = 5 * 60 * 1000;
+const DEFAULT_ROSTER_SYNC_STAGGER_MS = 5 * 60 * 1000;
 
 type ScheduledOrganization = { orgId: string };
 type ScheduledEnqueue = (input: {

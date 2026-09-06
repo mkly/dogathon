@@ -12,7 +12,7 @@ import { isAuthorizedSchedulerRequest } from "./scheduler-auth.ts";
 import { env as appEnv } from "./env.ts";
 import type { SchedulerEnvironment } from "./scheduler-auth.ts";
 
-export const DEFAULT_ROSTER_SYNC_DRAIN_BUDGET_MS = 4 * 60 * 1000;
+const DEFAULT_ROSTER_SYNC_DRAIN_BUDGET_MS = 4 * 60 * 1000;
 
 type DrainDependencies = {
   supervise: () => Promise<void>;

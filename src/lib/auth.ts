@@ -24,7 +24,7 @@ import {
 } from "@/lib/organization-slug";
 import { prisma } from "@/lib/prisma";
 
-export const organizationStatements = {
+const organizationStatements = {
   ...defaultStatements,
   sponsorUpdate: ["manage"],
   billing: ["manage"],
