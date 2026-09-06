@@ -25,8 +25,10 @@ export async function checkRateLimit({ identity, limit, now = new Date(), scope,
   const windowStart = Math.floor(now.getTime() / windowMs) * windowMs;
   const expiresAt = new Date(windowStart + windowMs);
   const bucket = createHash("sha256").update(`${scope}:${identity}:${windowStart}`).digest("hex");
-  await store.pruneExpired(now);
   const count = await store.increment(bucket, expiresAt);
+  // The first request of a window prunes; later ones reuse the row instead of
+  // issuing a delete on every call.
+  if (count === 1) await store.pruneExpired(now);
   return { allowed: count <= limit, retryAfterSeconds: Math.max(1, Math.ceil((expiresAt.getTime() - now.getTime()) / 1000)) };
 }
 
