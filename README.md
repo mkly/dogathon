@@ -44,7 +44,10 @@ access to the bucket. Photo objects are public by design, so the bucket needs a
 public-read bucket policy or a public CDN such as CloudFront. Set
 `S3_PUBLIC_BASE_URL` to that CDN origin when applicable. Browser CORS rules are
 not required because uploads go through the Dogathon server rather than
-directly from the browser.
+directly from the browser. When a roster sync begins using photos from a new
+host, add that HTTPS host and its photo path to `images.remotePatterns` in
+`next.config.ts`; unlisted hosts are intentionally rejected by the image
+optimizer.
 
 ## Styling
 
