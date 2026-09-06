@@ -70,6 +70,14 @@ model Organization {
   @@map("organization")
 }
 
+model RateLimitBucket {
+  bucket    String   @id
+  count     Int      @default(0)
+  expiresAt DateTime
+
+  @@index([expiresAt])
+}
+
 enum EmailConnectorType {
   gmail
   microsoft

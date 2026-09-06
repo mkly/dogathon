@@ -28,6 +28,7 @@ type VolunteerPageProps = {
 const volunteerQuerySchema = z.object({
   companion: uuidSchema.optional().catch(undefined),
   submitted: z.literal("1").optional().catch(undefined),
+  error: z.literal("rate-limited").optional().catch(undefined),
 });
 
 export default async function VolunteerPage({ params, searchParams }: VolunteerPageProps) {
@@ -42,7 +43,7 @@ export default async function VolunteerPage({ params, searchParams }: VolunteerP
   }
   const { context } = access;
 
-  const [{ companion, submitted }, residents] = await Promise.all([
+  const [{ companion, error, submitted }, residents] = await Promise.all([
     searchParams.then((query) => volunteerQuerySchema.parse(query)),
     prisma.resident.findMany({
       where: {
@@ -88,6 +89,7 @@ export default async function VolunteerPage({ params, searchParams }: VolunteerP
             <h1>How’s a companion doing?</h1>
             <p>Share the moments their care team and sponsor should know.</p>
           </header>
+          {error === "rate-limited" ? <p className={styles.chatError} role="alert">Please wait a little before trying again.</p> : null}
 
           {residents.length > 0 ? (
             <CheckInChat

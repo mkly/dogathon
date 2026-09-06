@@ -1,5 +1,6 @@
 import { getInterviewRouteContext, parseInterviewRouteRequest } from "../route-utils";
 import { interviewTurn } from "@/lib/volunteer-interview";
+import { checkRateLimit, getRateLimitIdentity, RATE_LIMITS, rateLimitResponse } from "@/lib/rate-limit";
 
 export async function POST(request: Request) {
   const parsed = await parseInterviewRouteRequest(request);
@@ -7,6 +8,9 @@ export async function POST(request: Request) {
 
   const route = await getInterviewRouteContext(request, parsed.input);
   if (!route.ok) return route.response;
+
+  const rateLimit = await checkRateLimit({ ...RATE_LIMITS.volunteerCheckIn, identity: await getRateLimitIdentity(request.headers), scope: "volunteer-checkin-chat" });
+  if (!rateLimit.allowed) return rateLimitResponse(rateLimit.retryAfterSeconds);
 
   try {
     return await interviewTurn(route.context);

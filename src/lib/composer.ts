@@ -68,13 +68,15 @@ function finalizeDraft(draft: ComposedSponsorUpdate, postscript: string): Compos
   };
 }
 
+const MAX_SPONSOR_UPDATE_OUTPUT_TOKENS = 900;
+
 async function composeWithModel(input: ComposeSponsorUpdateInput): Promise<ComposedSponsorUpdate> {
   const regularUpdateGuidance = input.type === "regular"
     ? " Treat the volunteer notes as the update: lead with what happened lately, such as activities, fun, or new friends. Use the companion profile only as light background flavor; do not turn the email into a profile or biography."
     : "";
   const { output } = await generateText({
     model: createAiModel(),
-    maxOutputTokens: 900,
+    maxOutputTokens: MAX_SPONSOR_UPDATE_OUTPUT_TOKENS,
     output: Output.object({ schema: composedSponsorUpdateSchema }),
     instructions:
       `You write warm, short email updates in an animal shelter's voice. Use only facts in the supplied JSON; never invent details.${regularUpdateGuidance} Format the notes section with the literal Markdown heading "## Recent notes".`,

@@ -99,6 +99,9 @@ export function buildInterviewSystemPrompt({
   ].join(" ");
 }
 
+const MAX_INTERVIEW_TURN_OUTPUT_TOKENS = 240;
+const MAX_INTERVIEW_SUMMARY_OUTPUT_TOKENS = 600;
+
 export async function interviewTurn(input: InterviewInput): Promise<Response> {
   if (!hasAiCredentials()) return textStreamResponse(scriptedReply(input));
 
@@ -106,7 +109,7 @@ export async function interviewTurn(input: InterviewInput): Promise<Response> {
     model: createAiModel(),
     instructions: buildInterviewSystemPrompt(input),
     messages: await convertToModelMessages(input.messages),
-    maxOutputTokens: 240,
+    maxOutputTokens: MAX_INTERVIEW_TURN_OUTPUT_TOKENS,
   });
 
   return result.toUIMessageStreamResponse();
@@ -122,7 +125,7 @@ export async function summarizeInterview(input: InterviewInput): Promise<{ note:
   const { output } = await generateText({
     model: createAiModel(),
     output: Output.object({ schema: interviewSummarySchema }),
-    maxOutputTokens: 600,
+    maxOutputTokens: MAX_INTERVIEW_SUMMARY_OUTPUT_TOKENS,
     instructions: [
       "Turn the volunteer interview into one concise plain-text care note for rescue staff.",
       "Use only facts in the transcript, do not invent details, and do not give medical advice.",

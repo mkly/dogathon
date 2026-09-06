@@ -29,6 +29,7 @@ function dependencies(overrides: Record<string, unknown> = {}) {
     newId: () => "8f77b971-f0b5-493c-aa9a-5931c1f17ea5",
     async processPhoto() { return { data: Uint8Array.from([4, 5]), mime: "image/jpeg" as const }; },
     async putPhoto() { return { url: "/api/volunteer-photos/photo-1?org=org-1" }; },
+    async rateLimit() { return { allowed: true, retryAfterSeconds: 60 }; },
     ...overrides,
   } as never;
 }

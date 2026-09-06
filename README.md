@@ -46,6 +46,10 @@ public-read bucket policy or a public CDN such as CloudFront. Set
 not required because uploads go through the Dogathon server rather than
 directly from the browser.
 
+## Request limits
+
+Photo uploads and volunteer check-in AI requests are limited to 20 requests per hour per signed-in user (or client IP when no session is present). Public sponsorship checkout creation is limited to 5 requests per hour on the same basis. These fixed-window counters are stored in PostgreSQL so the limits apply across Vercel instances. AI responses are capped at 240 tokens for a chat turn, 600 tokens for a check-in summary, and 900 tokens for sponsor-update composition.
+
 ## Styling
 
 - Use CSS Modules only; do not use Tailwind or runtime CSS-in-JS.
