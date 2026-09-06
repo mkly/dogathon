@@ -17,6 +17,7 @@ import {
   refreshConnectStatus,
 } from "./stripe-billing";
 import { env } from "./env.ts";
+import { SPONSORSHIP_MONTHLY_USD } from "./sponsorship-pricing.ts";
 
 env.STRIPE_SECRET_KEY = "sk_test_fixture";
 env.features = Object.freeze({ ...env.features, stripe: true });
@@ -185,11 +186,14 @@ function signedEvent(object: Record<string, unknown>, type: string) {
   return constructStripeEvent(payload, signature, secret);
 }
 
-test("Stripe SDK checkout request is a $25 direct subscription on the connected account", async () => {
+test(`Stripe SDK checkout request is a $${SPONSORSHIP_MONTHLY_USD} direct subscription on the connected account`, async () => {
   server.use(http.post(`${stripeApi}/v1/checkout/sessions`, async ({ request }) => {
     const body = await formData(request);
     assert.equal(body.get("mode"), "subscription");
-    assert.equal(body.get("line_items[0][price_data][unit_amount]"), "2500");
+    assert.equal(
+      body.get("line_items[0][price_data][unit_amount]"),
+      String(SPONSORSHIP_MONTHLY_USD * 100),
+    );
     assert.equal(body.get("line_items[0][price_data][recurring][interval]"), "month");
     assert.equal(body.get("line_items[0][price_data][product_data][name]"), "Sponsor Mabel");
     assert.equal(body.get("subscription_data[metadata][orgId]"), "org_rescue");

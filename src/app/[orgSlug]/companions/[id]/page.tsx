@@ -11,6 +11,7 @@ import {
   getPublicOrganization,
   getPublicResident,
 } from "@/lib/public-roster-cache";
+import { SPONSORSHIP_MONTHLY_USD } from "@/lib/sponsorship-pricing";
 import { uuidSchema } from "@/lib/uuid";
 
 import { CompanionBanner, CompanionFormError, CompanionSponsorState } from "./companion-banner";
@@ -109,7 +110,9 @@ export default async function CompanionPage({ params }: CompanionPageProps) {
             <FeltPanel className={styles.sponsorPanel} tone="oatmeal">
               <div className={styles.sponsorPitch}>
                 <p className={styles.eyebrow}>A steady paw</p>
-                <h2>Sponsor {resident.name} for $25/month until adopted</h2>
+                <h2>
+                  Sponsor {resident.name} for ${SPONSORSHIP_MONTHLY_USD}/month until adopted
+                </h2>
                 <p>We&apos;ll send little email updates from the rescue as {resident.name} settles in.</p>
               </div>
 
@@ -130,7 +133,7 @@ export default async function CompanionPage({ params }: CompanionPageProps) {
                 </FeltField>
 
                 <PendingFeltSubmitButton className={styles.sponsorButton} pendingLabel="Opening checkout…" tone="mustard" type="submit">
-                  Sponsor for $25/month until adopted
+                  Sponsor for ${SPONSORSHIP_MONTHLY_USD}/month until adopted
                 </PendingFeltSubmitButton>
               </form>
             </FeltPanel>

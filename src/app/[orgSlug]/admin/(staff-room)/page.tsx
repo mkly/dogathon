@@ -46,8 +46,12 @@ async function getThirtyDaysAgo() {
 
 async function DashboardStats({ orgId, orgSlug }: { orgId: string; orgSlug: string }) {
   const thirtyDaysAgo = await getThirtyDaysAgo();
-  const [activeSponsorCount, sponsoredCompanionCount, sentSponsorUpdateCount] = await Promise.all([
-    prisma.sponsorship.count({ where: { orgId, status: "active" } }),
+  const [activeSponsorships, sponsoredCompanionCount, sentSponsorUpdateCount] = await Promise.all([
+    prisma.sponsorship.aggregate({
+      where: { orgId, status: "active" },
+      _count: true,
+      _sum: { monthlyUsd: true },
+    }),
     prisma.resident.count({
       where: {
         orgId,
@@ -62,14 +66,15 @@ async function DashboardStats({ orgId, orgSlug }: { orgId: string; orgSlug: stri
       },
     }),
   ]);
-  const monthlyRecurring = activeSponsorCount * 25;
+  const activeSponsorCount = activeSponsorships._count;
+  const monthlyRecurring = activeSponsorships._sum.monthlyUsd ?? 0;
 
   return (
     <section aria-label="Program statistics" className={styles.stats}>
       <AdminSurface className={styles.stat} tone="mustard">
         <strong>${monthlyRecurring.toLocaleString()}</strong>
         <span>a month, recurring</span>
-        <small>active sponsorships × $25</small>
+        <small>{activeSponsorCount} active {pluralize("sponsorship", activeSponsorCount)}</small>
       </AdminSurface>
       <Link
         aria-label={`View active sponsors (${activeSponsorCount} active)`}
@@ -278,7 +283,10 @@ async function ApprovalQueue({
                 <AdminBadge tone={draft.type === "graduation" ? "mustard" : "denim"}>{draft.type}</AdminBadge>
                 <h3>{draft.resident.name}</h3>
                 <p>{draft.resident.personality}</p>
-                <small>goes to {draft.resident.sponsorships.length} sponsors</small>
+                <small>
+                  goes to {draft.resident.sponsorships.length}{" "}
+                  {pluralize("sponsor", draft.resident.sponsorships.length)}
+                </small>
               </div>
             </DraftEditor>
           ))
@@ -361,7 +369,7 @@ export default async function AdminPage({ params }: AdminPageProps) {
             </>
           }
           brand={<Link href={`/${orgSlug}`} transitionTypes={["nav-back"]}>
-            <Image alt="Pawcast" preload src={pawcastWordmark} />
+            <Image alt="Dogathon" preload src={pawcastWordmark} />
           </Link>}
           title="Staff room"
         />
