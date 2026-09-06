@@ -63,6 +63,10 @@ const photoStorage = {
   AWS_REGION: optionalTrimmedString,
   AWS_ACCESS_KEY_ID: optionalTrimmedString,
   AWS_SECRET_ACCESS_KEY: optionalTrimmedString,
+  S3_USE_AMBIENT_CREDENTIALS: z.preprocess(
+    (value) => typeof value === "string" ? value.trim() || undefined : value,
+    z.stringbool().default(false),
+  ),
   S3_PHOTO_BUCKET: optionalTrimmedString,
   S3_PUBLIC_BASE_URL: z.preprocess(
     (value) => typeof value === "string" && value.trim() === "" ? undefined : value,
@@ -142,6 +146,25 @@ const environmentSchema = z.object({
       code: "custom",
       path: ["AWS_REGION"],
       message: "is required in production",
+    });
+  }
+  if (environment.NODE_ENV === "production" && !environment.CRON_SECRET) {
+    context.addIssue({
+      code: "custom",
+      path: ["CRON_SECRET"],
+      message: "is required in production",
+    });
+  }
+  if (
+    environment.NODE_ENV === "production"
+    && environment.S3_PHOTO_BUCKET
+    && !environment.S3_USE_AMBIENT_CREDENTIALS
+    && (!environment.AWS_ACCESS_KEY_ID || !environment.AWS_SECRET_ACCESS_KEY)
+  ) {
+    context.addIssue({
+      code: "custom",
+      path: ["AWS_ACCESS_KEY_ID"],
+      message: "and AWS_SECRET_ACCESS_KEY are required for S3 in production unless S3_USE_AMBIENT_CREDENTIALS is enabled",
     });
   }
 }).transform((environment) => ({

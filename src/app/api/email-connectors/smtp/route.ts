@@ -13,6 +13,14 @@ const smtpInputSchema = z.object({
   fromEmail: z.string().trim().toLowerCase().email(),
 });
 
+export function smtpVerificationErrorMessage(error: unknown) {
+  const message = error instanceof Error ? error.message.toLowerCase() : "";
+  if (/auth|credential|password|login|535/u.test(message)) return "SMTP authentication failed. Check the username and password.";
+  if (/econnrefused|connection refused/u.test(message)) return "The SMTP server refused the connection.";
+  if (/tls|certificate|ssl/u.test(message)) return "The SMTP server's TLS configuration could not be verified.";
+  return "SMTP verification failed. Check the server settings and try again.";
+}
+
 export async function POST(request: Request) {
   const access = await requireApiOrganization(request.headers, { settings: ["manage"] });
   if (!access.ok) return access.response;
@@ -55,7 +63,7 @@ export async function POST(request: Request) {
     });
     return Response.json({ connected: true, type: "smtp", fromEmail });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "SMTP verification failed";
-    return Response.json({ error: message }, { status: 502 });
+    console.error("SMTP verification failed", error);
+    return Response.json({ error: smtpVerificationErrorMessage(error) }, { status: 502 });
   }
 }

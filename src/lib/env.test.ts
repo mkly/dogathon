@@ -48,6 +48,7 @@ test("requires authentication and connector-encryption secrets in production", (
       );
       assert.match(error.message, /S3_PHOTO_BUCKET: is required in production/u);
       assert.match(error.message, /AWS_REGION: is required in production/u);
+      assert.match(error.message, /CRON_SECRET: is required in production/u);
       return true;
     },
   );
@@ -140,9 +141,29 @@ test("requires S3 storage configuration only in production", () => {
   );
   assert.equal(parseEnvironment({
     ...productionBase,
+    CRON_SECRET: "scheduler-secret",
     AWS_REGION: "us-west-2",
     S3_PHOTO_BUCKET: "dogathon-photos",
+    AWS_ACCESS_KEY_ID: "access-key",
+    AWS_SECRET_ACCESS_KEY: "secret-key",
   }).features.s3, true);
+
+  assert.throws(
+    () => parseEnvironment({
+      ...productionBase,
+      CRON_SECRET: "scheduler-secret",
+      AWS_REGION: "us-west-2",
+      S3_PHOTO_BUCKET: "dogathon-photos",
+    }),
+    /AWS_ACCESS_KEY_ID: and AWS_SECRET_ACCESS_KEY are required/u,
+  );
+  assert.equal(parseEnvironment({
+    ...productionBase,
+    CRON_SECRET: "scheduler-secret",
+    AWS_REGION: "us-west-2",
+    S3_PHOTO_BUCKET: "dogathon-photos",
+    S3_USE_AMBIENT_CREDENTIALS: "true",
+  }).S3_USE_AMBIENT_CREDENTIALS, true);
 });
 
 test("empty optional credentials remain absent for dry-run behavior", () => {

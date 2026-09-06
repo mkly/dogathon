@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { checkRateLimit, type RateLimitStore } from "./rate-limit.ts";
+import { anonymousRateLimitIdentity, checkRateLimit, createRateLimitStore, type RateLimitStore } from "./rate-limit.ts";
 
 function memoryStore(): RateLimitStore & { buckets: Map<string, { count: number; expiresAt: Date }> } {
   const buckets = new Map<string, { count: number; expiresAt: Date }>();
@@ -33,4 +33,40 @@ test("rate limiter prunes expired buckets", async () => {
   assert.equal(store.buckets.size, 1);
   await checkRateLimit({ ...input, now: new Date("2026-09-06T12:01:00Z") });
   assert.equal(store.buckets.size, 1);
+});
+
+test("anonymous rate limits use a trusted platform IP, then the last forwarded hop", () => {
+  assert.equal(
+    anonymousRateLimitIdentity(new Headers({ "x-real-ip": "203.0.113.10", "x-forwarded-for": "client, proxy" })),
+    "ip:203.0.113.10",
+  );
+  assert.equal(
+    anonymousRateLimitIdentity(new Headers({ "x-forwarded-for": "client, proxy" })),
+    "ip:proxy",
+  );
+  assert.equal(anonymousRateLimitIdentity(new Headers(), "request-a"), "request:request-a");
+});
+
+test("a first-insert unique-constraint race retries instead of failing the request", async () => {
+  let attempts = 0;
+  const store = createRateLimitStore({
+    async deleteMany() { return undefined; },
+    async upsert() {
+      attempts += 1;
+      if (attempts === 1) throw Object.assign(new Error("Unique constraint failed"), { code: "P2002" });
+      return { count: 2 };
+    },
+  });
+
+  assert.equal(await store.increment("bucket", new Date("2026-09-06T13:00:00Z")), 2);
+  assert.equal(attempts, 2);
+});
+
+test("a non-race store failure still propagates", async () => {
+  const store = createRateLimitStore({
+    async deleteMany() { return undefined; },
+    async upsert() { throw Object.assign(new Error("connection lost"), { code: "P1001" }); },
+  });
+
+  await assert.rejects(() => store.increment("bucket", new Date()), /connection lost/u);
 });

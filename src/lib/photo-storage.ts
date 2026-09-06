@@ -18,6 +18,7 @@ type PhotoStorageEnvironment = Pick<
   | "AWS_REGION"
   | "AWS_ACCESS_KEY_ID"
   | "AWS_SECRET_ACCESS_KEY"
+  | "S3_USE_AMBIENT_CREDENTIALS"
   | "S3_PHOTO_BUCKET"
   | "S3_PUBLIC_BASE_URL"
   | "features"
@@ -56,13 +57,19 @@ function storageEnvironment(dependencies: PhotoStorageDependencies) {
 
 function s3Client(environment: PhotoStorageEnvironment, dependencies: PhotoStorageDependencies) {
   if (dependencies.s3Client) return dependencies.s3Client;
-  const credentials = environment.AWS_ACCESS_KEY_ID && environment.AWS_SECRET_ACCESS_KEY
-    ? {
-        accessKeyId: environment.AWS_ACCESS_KEY_ID,
-        secretAccessKey: environment.AWS_SECRET_ACCESS_KEY,
-      }
-    : undefined;
-  return new S3Client({ region: environment.AWS_REGION, credentials });
+  if (environment.S3_USE_AMBIENT_CREDENTIALS) {
+    return new S3Client({ region: environment.AWS_REGION });
+  }
+  if (!environment.AWS_ACCESS_KEY_ID || !environment.AWS_SECRET_ACCESS_KEY) {
+    throw new Error("S3 credentials are required unless S3_USE_AMBIENT_CREDENTIALS is enabled.");
+  }
+  return new S3Client({
+    region: environment.AWS_REGION,
+    credentials: {
+      accessKeyId: environment.AWS_ACCESS_KEY_ID,
+      secretAccessKey: environment.AWS_SECRET_ACCESS_KEY,
+    },
+  });
 }
 
 function encodedKey(key: string) {

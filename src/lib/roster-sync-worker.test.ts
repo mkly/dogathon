@@ -9,6 +9,7 @@ import { parseEnvironment } from "./env.ts";
 import {
   createRosterSyncDrainHandler,
   createRosterSyncDrainer,
+  createVolunteerPhotoCleanupDrainer,
 } from "./roster-sync-worker.ts";
 
 const summary: SyncSummary = {
@@ -136,6 +137,20 @@ test("the drainer supervises the queue before fetching a job", async () => {
 test("an empty queue is a successful no-op", async () => {
   const drain = createRosterSyncDrainer(dependencies({ fetch: async () => null }));
   assert.deepEqual(await drain(), { drained: false });
+});
+
+test("the photo cleanup job is enqueued, drained, and completed with the same worker fakes", async () => {
+  const calls: string[] = [];
+  const drain = createVolunteerPhotoCleanupDrainer({
+    enqueue: async () => { calls.push("enqueue"); return "job-2"; },
+    fetch: async () => { calls.push("fetch"); return { id: "job-2" }; },
+    cleanup: async () => { calls.push("cleanup"); return { deleted: 2 }; },
+    complete: async (id) => { calls.push(`complete:${id}`); },
+    fail: async () => { calls.push("fail"); },
+  });
+
+  assert.deepEqual(await drain(), { drained: true, deleted: 2 });
+  assert.deepEqual(calls, ["enqueue", "fetch", "cleanup", "complete:job-2"]);
 });
 
 test("a roster refusal is completed with a refused outcome", async () => {
