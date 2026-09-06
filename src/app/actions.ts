@@ -1,5 +1,6 @@
 "use server";
 
+import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
 
@@ -7,6 +8,7 @@ import { prisma } from "@/lib/prisma";
 import { env } from "@/lib/env";
 import { revalidatePublicRoster } from "@/lib/public-roster-cache";
 import { createStripeCheckout, ResidentUnavailableError } from "@/lib/stripe-billing";
+import { checkRateLimit, getRateLimitIdentity, RATE_LIMITS } from "@/lib/rate-limit";
 import { uuidSchema } from "@/lib/uuid";
 
 const sponsorshipRouteSchema = z.object({
@@ -43,6 +45,9 @@ export async function createSponsorship(formData: FormData) {
     select: { id: true },
   });
   if (!organization) notFound();
+
+  const rateLimit = await checkRateLimit({ ...RATE_LIMITS.sponsorshipCheckout, identity: await getRateLimitIdentity(await headers()), scope: "sponsorship-checkout" });
+  if (!rateLimit.allowed) redirect(`${companionPath}?error=rate-limited`);
 
   let checkoutUrl: string;
   try {

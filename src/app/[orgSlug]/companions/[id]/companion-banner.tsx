@@ -45,6 +45,8 @@ export function CompanionFormError({ name }: { name: string }) {
         ? `${name} is no longer available to sponsor.`
         : error === "billing"
           ? "Online sponsorship is not ready for this rescue yet. Please try again later."
+          : error === "rate-limited"
+            ? "Please wait a little before trying to sponsor again."
           : "Please complete the required fields."}
     </p>
   );

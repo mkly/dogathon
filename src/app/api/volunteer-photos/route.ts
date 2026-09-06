@@ -4,6 +4,7 @@ import { MAX_PHOTO_BYTES, processVolunteerPhoto } from "@/app/[orgSlug]/voluntee
 import { getOrganizationAccessBySlug } from "@/lib/organization-access";
 import { deletePhoto, photoKey, putPhoto } from "@/lib/photo-storage";
 import { prisma } from "@/lib/prisma";
+import { checkRateLimit, getRateLimitIdentity, RATE_LIMITS, rateLimitResponse } from "@/lib/rate-limit";
 import { parseVolunteerPhotoUpload } from "@/lib/volunteer-photo-upload";
 
 function uploadError(error: "photo-size" | "photo-type") {
@@ -26,6 +27,7 @@ type UploadDependencies = {
   newId: () => string;
   processPhoto: typeof processVolunteerPhoto;
   putPhoto: typeof putPhoto;
+  rateLimit: (requestHeaders: Headers) => Promise<{ allowed: boolean; retryAfterSeconds: number }>;
 };
 
 const uploadDependencies: UploadDependencies = {
@@ -49,6 +51,13 @@ const uploadDependencies: UploadDependencies = {
   newId: randomUUID,
   processPhoto: processVolunteerPhoto,
   putPhoto,
+  async rateLimit(requestHeaders) {
+    return checkRateLimit({
+      ...RATE_LIMITS.volunteerPhotoUpload,
+      identity: await getRateLimitIdentity(requestHeaders),
+      scope: "volunteer-photo-upload",
+    });
+  },
 };
 
 export function createVolunteerPhotoPostHandler(dependencies: UploadDependencies) {
@@ -74,6 +83,9 @@ export function createVolunteerPhotoPostHandler(dependencies: UploadDependencies
         { status: access.authenticated ? 404 : 401 },
       );
     }
+
+    const rateLimit = await dependencies.rateLimit(request.headers);
+    if (!rateLimit.allowed) return rateLimitResponse(rateLimit.retryAfterSeconds);
 
     if (!await dependencies.findResident(access.context.orgId, residentId)) {
       return Response.json({ error: "Companion not found" }, { status: 404 });

@@ -9,6 +9,7 @@ import { z } from "zod";
 import { getOrganizationAccessBySlug } from "@/lib/organization-access";
 import { prisma } from "@/lib/prisma";
 import { revalidatePublicRoster } from "@/lib/public-roster-cache";
+import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { summarizeInterview } from "@/lib/volunteer-interview";
 import { interviewRequestSchema } from "@/lib/volunteer-interview-request";
 import { attachVolunteerPhotos } from "@/lib/volunteer-photos";
@@ -34,6 +35,9 @@ export async function finishCheckIn(orgSlug: string, rawInput: unknown) {
     redirect(access.authenticated ? "/staff/organizations" : `/staff/sign-in?next=${next}`);
   }
   const { context } = access;
+
+  const rateLimit = await checkRateLimit({ ...RATE_LIMITS.volunteerCheckIn, identity: `user:${context.userId}`, scope: "volunteer-checkin-summary" });
+  if (!rateLimit.allowed) redirect(volunteerUrl(safeOrgSlug, { error: "rate-limited" }));
 
   const parsed = finishCheckInSchema.safeParse(rawInput);
   if (!parsed.success) throw new Error("The check-in details are invalid.");
