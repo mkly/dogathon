@@ -91,6 +91,7 @@
 .composeItem .actionStack { grid-column: 2; justify-items: start; }
 .composeItem .actionStack > * { white-space: nowrap; }
 .composeEmpty { padding: 26px; text-align: center; font-weight: 800; }
+.listLimitNotice { margin: -8px 0 20px; font-size: 0.78rem; font-weight: 800; opacity: 0.72; }
 
 .queueItem {
   display: grid;
