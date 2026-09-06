@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { composeSponsorUpdate } from "@/lib/composer";
+import { env } from "@/lib/env";
 import { requireApiOrganization } from "@/lib/organization-access";
 import { companionPageUrl } from "@/lib/sponsor-update-delivery";
 import { prisma } from "@/lib/prisma";
@@ -60,7 +61,7 @@ export async function POST(request: Request) {
       notes: resident.volunteerNotes,
       pinnedPostscript: settings?.pinnedPostscript ?? "",
       type,
-      companionPageUrl: companionPageUrl(request.url, resident.organization.slug, resident.id),
+      companionPageUrl: companionPageUrl(env.BETTER_AUTH_URL, resident.organization.slug, resident.id),
     });
   } catch (error) {
     console.error("Update composition failed", error);

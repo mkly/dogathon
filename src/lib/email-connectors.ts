@@ -490,25 +490,9 @@ export async function sendEmailWithConnector(
     return describeSend(connector, input);
   }
 
-  let accessToken = connector.accessTokenEncrypted
-    ? await decryptEmailSecret(connector.accessTokenEncrypted)
-    : null;
-  if (
-    !accessToken ||
-    !connector.accessTokenExpiresAt ||
-    connector.accessTokenExpiresAt <= new Date(Date.now() + 60_000)
-  ) {
-    const refreshed = await refreshAccessToken(connector, fetcher);
-    accessToken = refreshed.accessToken;
-    await prisma.emailConnector.update({
-      where: { orgId: connector.orgId },
-      data: {
-        accessTokenEncrypted: await encryptEmailSecret(refreshed.accessToken),
-        refreshTokenEncrypted: await encryptEmailSecret(refreshed.refreshToken),
-        accessTokenExpiresAt: refreshed.expiresAt,
-      },
-    });
-  }
+  const prepared = await prepareEmailConnector(connector, fetcher);
+  if (!prepared.accessTokenEncrypted) return describeSend(connector, input);
+  const accessToken = await decryptEmailSecret(prepared.accessTokenEncrypted);
 
   if (connector.type === "gmail") {
     const message = await new MailComposer({
@@ -556,27 +540,78 @@ export async function sendEmailWithConnector(
   return null;
 }
 
-export async function sendOrganizationEmail(
+type OrganizationEmailSenderDependencies = {
+  findConnector?: (orgId: string) => Promise<StoredEmailConnector | null>;
+  sendAppEmail?: (input: EmailInput) => Promise<DescribedSend | null>;
+  sendEmailWithConnector?: (
+    connector: StoredEmailConnector,
+    input: EmailInput,
+  ) => Promise<DescribedSend | null>;
+  prepareConnector?: (connector: StoredEmailConnector) => Promise<StoredEmailConnector>;
+};
+
+async function prepareEmailConnector(
+  connector: StoredEmailConnector,
+  fetcher: Fetcher = fetch,
+): Promise<StoredEmailConnector> {
+  if (connector.type === "smtp" || !env.features.connectorEncryption) return connector;
+
+  const hasOAuthCredentials = connector.type === "gmail"
+    ? env.features.googleOAuth
+    : env.features.microsoftOAuth;
+  if (!hasOAuthCredentials || !connector.refreshTokenEncrypted) return connector;
+
+  if (
+    connector.accessTokenEncrypted
+    && connector.accessTokenExpiresAt
+    && connector.accessTokenExpiresAt > new Date(Date.now() + 60_000)
+  ) {
+    return connector;
+  }
+
+  const refreshed = await refreshAccessToken(connector, fetcher);
+  const [accessTokenEncrypted, refreshTokenEncrypted] = await Promise.all([
+    encryptEmailSecret(refreshed.accessToken),
+    encryptEmailSecret(refreshed.refreshToken),
+  ]);
+  await prisma.emailConnector.update({
+    where: { orgId: connector.orgId },
+    data: {
+      accessTokenEncrypted,
+      refreshTokenEncrypted,
+      accessTokenExpiresAt: refreshed.expiresAt,
+    },
+  });
+  return {
+    ...connector,
+    accessTokenEncrypted,
+    refreshTokenEncrypted,
+    accessTokenExpiresAt: refreshed.expiresAt,
+  };
+}
+
+/**
+ * Resolve and, when necessary, refresh an organization's connector once before
+ * a delivery fan-out. The returned sender reuses that stable credential for
+ * every recipient, avoiding concurrent refresh-token rotation.
+ */
+export async function createOrganizationEmailSender(
   orgId: string,
-  input: EmailInput,
-  dependencies: {
-    findConnector?: (orgId: string) => Promise<StoredEmailConnector | null>;
-    sendAppEmail?: (input: EmailInput) => Promise<DescribedSend | null>;
-    sendEmailWithConnector?: (
-      connector: StoredEmailConnector,
-      input: EmailInput,
-    ) => Promise<DescribedSend | null>;
-  } = {},
-): Promise<DescribedSend | null> {
+  dependencies: OrganizationEmailSenderDependencies = {},
+): Promise<(input: EmailInput) => Promise<DescribedSend | null>> {
   const findConnector = dependencies.findConnector
     ?? ((organizationId: string) => prisma.emailConnector.findUnique({
       where: { orgId: organizationId },
     }));
   const connector = await findConnector(orgId);
   if (!connector || !connector.verifiedAt) {
-    return (dependencies.sendAppEmail ?? sendAppEmail)(input);
+    const sender = dependencies.sendAppEmail ?? sendAppEmail;
+    return (input) => sender(input);
   }
-  return (dependencies.sendEmailWithConnector ?? sendEmailWithConnector)(connector, input);
+
+  const prepared = await (dependencies.prepareConnector ?? prepareEmailConnector)(connector);
+  const sender = dependencies.sendEmailWithConnector ?? sendEmailWithConnector;
+  return (input) => sender(prepared, input);
 }
 
 export async function getEmailConnectorStatus(orgId: string) {

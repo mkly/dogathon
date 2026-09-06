@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { deliverSponsorUpdate, companionPageUrl } from "./sponsor-update-delivery.ts";
+import {
+  deliverSponsorUpdate,
+  companionPageUrl,
+  isSponsorUpdateRecipient,
+} from "./sponsor-update-delivery.ts";
 
 test("builds an organization-scoped companion URL", () => {
   assert.equal(
@@ -25,7 +29,7 @@ test("delivers exactly one organization email to every sponsor", async () => {
       { id: "second", sponsor: { email: "second@example.com" } },
       { id: "third", sponsor: { email: "third@example.com" } },
     ],
-    async (orgId, input) => {
+    async (orgId) => async (input) => {
       calls.push({ orgId, to: input.to, subject: input.subject, body: input.body });
     },
   );
@@ -50,7 +54,7 @@ test("records a failed email and continues with the remaining sponsors", async (
       { id: "broken", sponsor: { email: "broken@example.com" } },
       { id: "working", sponsor: { email: "working@example.com" } },
     ],
-    async (_orgId, input) => {
+    async () => async (input) => {
       if (input.to === "broken@example.com") throw new Error("Connector rejected the message");
     },
   );
@@ -76,12 +80,17 @@ test("fans out with bounded concurrency while preserving sponsorship order", asy
     },
   }));
 
-  const deliveries = await deliverSponsorUpdate("org-a", sponsorUpdate, sponsorships, async () => {
-    active += 1;
-    maxActive = Math.max(maxActive, active);
-    await new Promise((resolve) => setTimeout(resolve, 10));
-    active -= 1;
-  });
+  const deliveries = await deliverSponsorUpdate(
+    "org-a",
+    sponsorUpdate,
+    sponsorships,
+    async () => async () => {
+      active += 1;
+      maxActive = Math.max(maxActive, active);
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      active -= 1;
+    },
+  );
 
   assert.equal(maxActive, 4);
   assert.deepEqual(
@@ -104,7 +113,7 @@ test("carries a described send through the delivery record", async () => {
     "org-a",
     sponsorUpdate,
     [{ id: "email", sponsor: { email: "email@example.com" } }],
-    async () => described,
+    async () => async () => described,
   );
 
   assert.deepEqual(deliveries, [
@@ -120,9 +129,47 @@ test("delivers to the Sponsor email currently loaded at approval time", async ()
   sponsorship.sponsor.email = "new@example.com";
 
   let deliveredTo = "";
-  await deliverSponsorUpdate("org-a", sponsorUpdate, [sponsorship], async (_orgId, input) => {
-    deliveredTo = input.to;
-  });
+  await deliverSponsorUpdate(
+    "org-a",
+    sponsorUpdate,
+    [sponsorship],
+    async () => async (input) => {
+      deliveredTo = input.to;
+    },
+  );
 
   assert.equal(deliveredTo, "new@example.com");
+});
+
+test("prepares one sender before the concurrent fan-out", async () => {
+  let preparations = 0;
+  let sends = 0;
+  await deliverSponsorUpdate(
+    "org-a",
+    sponsorUpdate,
+    [
+      { id: "one", sponsor: { email: "one@example.com" } },
+      { id: "two", sponsor: { email: "two@example.com" } },
+    ],
+    async () => {
+      preparations += 1;
+      return async () => {
+        sends += 1;
+      };
+    },
+  );
+
+  assert.equal(preparations, 1);
+  assert.equal(sends, 2);
+});
+
+test("selects active recipients for regular updates and adopted recipients for graduations", () => {
+  const active = { status: "active" as const, endedReason: null };
+  const adopted = { status: "ended" as const, endedReason: "adopted" };
+  const cancelled = { status: "ended" as const, endedReason: "cancelled" };
+
+  assert.equal(isSponsorUpdateRecipient("regular", active), true);
+  assert.equal(isSponsorUpdateRecipient("regular", adopted), false);
+  assert.equal(isSponsorUpdateRecipient("graduation", adopted), true);
+  assert.equal(isSponsorUpdateRecipient("graduation", cancelled), false);
 });
