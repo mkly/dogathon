@@ -12,10 +12,10 @@ import {
 } from "@/lib/public-roster-cache";
 import { SPONSORSHIP_MONTHLY_USD } from "@/lib/sponsorship-pricing";
 
-import pawcastWordmark from "../../../public/brand/pawcast-wordmark.png";
-import feltPup from "../../../public/mascot/felt-pup-2.png";
+import pawcastWordmark from "../../../../public/brand/pawcast-wordmark.png";
+import feltPup from "../../../../public/mascot/felt-pup-2.png";
 
-import styles from "../public.module.css";
+import styles from "../../public.module.css";
 
 export const revalidate = 86400;
 

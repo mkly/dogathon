@@ -92,3 +92,34 @@ export function OrganizationsRouteLoading() {
     </main>
   );
 }
+
+export function PublicRouteLoading() {
+  return (
+    <main aria-busy="true" aria-label="Loading rescue companions" className={styles.publicPage}>
+      <Skeleton className={styles.publicWordmark} />
+      <Skeleton className={styles.publicOrganization} />
+      <Skeleton className={styles.publicHero} />
+      <div className={styles.publicGrid}>
+        {Array.from({ length: 3 }, (_, index) => (
+          <Skeleton className={styles.publicCard} key={index} />
+        ))}
+      </div>
+    </main>
+  );
+}
+
+export function SignInRouteLoading() {
+  return (
+    <main aria-busy="true" aria-label="Loading sign in" className={styles.centeredPage}>
+      <Skeleton className={styles.signInCard} />
+    </main>
+  );
+}
+
+export function InvitationRouteLoading() {
+  return (
+    <main aria-busy="true" aria-label="Loading invitation" className={styles.centeredPage}>
+      <Skeleton className={styles.invitationCard} />
+    </main>
+  );
+}

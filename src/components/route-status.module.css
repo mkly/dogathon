@@ -88,6 +88,29 @@
 
 .organizationCard { min-height: 150px; }
 
+.publicPage {
+  width: min(100%, 980px);
+  min-height: 100svh;
+  margin: 0 auto;
+  padding: 30px clamp(1rem, 4vw, 30px) 40px;
+}
+
+.publicWordmark { width: min(320px, 62%); height: 74px; }
+.publicOrganization { width: min(220px, 45%); height: 24px; margin: 16px 0 14px; }
+.publicHero { min-height: 250px; margin-bottom: 24px; }
+.publicGrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+.publicCard { min-height: 390px; }
+
+.centeredPage {
+  display: grid;
+  min-height: 100svh;
+  padding: 2rem 1rem 3rem;
+  place-items: center;
+}
+
+.signInCard { width: min(100%, 27rem); min-height: 390px; }
+.invitationCard { width: min(100%, 36rem); min-height: 540px; }
+
 .errorPage {
   display: grid;
   width: min(100% - 32px, 680px);
@@ -121,11 +144,14 @@
 
 @media (max-width: 760px) {
   .accountLayout { grid-template-columns: 1fr; }
+  .publicGrid { grid-template-columns: repeat(2, 1fr); }
 }
 
 @media (max-width: 620px) {
   .grid { grid-template-columns: 1fr; }
   .queueCard { min-height: 380px; }
+  .publicHero { min-height: 330px; }
+  .publicGrid { grid-template-columns: 1fr; }
 }
 
 @media (prefers-reduced-motion: reduce) {
