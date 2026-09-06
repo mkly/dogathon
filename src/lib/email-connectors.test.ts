@@ -10,7 +10,6 @@ import {
   encryptEmailSecret,
   exchangeEmailConnectorCode,
   sendEmailWithConnector,
-  sendOrganizationEmail,
   verifySmtpConfiguration,
   type StoredEmailConnector,
 } from "./email-connectors.ts";
@@ -329,12 +328,13 @@ test("routes organization email through the platform sender when no connector ex
 
   let result;
   try {
-    result = await sendOrganizationEmail("org-a", message, {
+    const send = await createOrganizationEmailSender("org-a", {
       findConnector: async () => null,
       sendEmailWithConnector: async () => {
         throw new Error("an organization connector must not be used");
       },
     });
+    result = await send(message);
   } finally {
     for (const [key, value] of smtpEnvironment) {
       env[key] = value;
@@ -354,20 +354,17 @@ test("routes organization email through the platform sender when its connector i
   const unverified = connector("smtp", { verifiedAt: null });
   let usedPlatformSender = false;
 
-  await sendOrganizationEmail(
-    "org-a",
-    { to: "sponsor@example.com", subject: "Biscuit update", body: "Hello" },
-    {
-      findConnector: async () => unverified,
-      sendAppEmail: async () => {
-        usedPlatformSender = true;
-        return null;
-      },
-      sendEmailWithConnector: async () => {
-        throw new Error("an unverified connector must not be used");
-      },
+  const send = await createOrganizationEmailSender("org-a", {
+    findConnector: async () => unverified,
+    sendAppEmail: async () => {
+      usedPlatformSender = true;
+      return null;
     },
-  );
+    sendEmailWithConnector: async () => {
+      throw new Error("an unverified connector must not be used");
+    },
+  });
+  await send({ to: "sponsor@example.com", subject: "Biscuit update", body: "Hello" });
 
   assert.equal(usedPlatformSender, true);
 });
@@ -376,20 +373,17 @@ test("routes organization email through its verified connector", async () => {
   const verified = connector("smtp");
   let usedConnector: StoredEmailConnector | undefined;
 
-  await sendOrganizationEmail(
-    "org-a",
-    { to: "sponsor@example.com", subject: "Biscuit update", body: "Hello" },
-    {
-      findConnector: async () => verified,
-      sendAppEmail: async () => {
-        throw new Error("the platform sender must not be used");
-      },
-      sendEmailWithConnector: async (selected) => {
-        usedConnector = selected;
-        return null;
-      },
+  const send = await createOrganizationEmailSender("org-a", {
+    findConnector: async () => verified,
+    sendAppEmail: async () => {
+      throw new Error("the platform sender must not be used");
     },
-  );
+    sendEmailWithConnector: async (selected) => {
+      usedConnector = selected;
+      return null;
+    },
+  });
+  await send({ to: "sponsor@example.com", subject: "Biscuit update", body: "Hello" });
 
   assert.equal(usedConnector, verified);
 });

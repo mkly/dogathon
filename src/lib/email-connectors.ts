@@ -490,25 +490,9 @@ export async function sendEmailWithConnector(
     return describeSend(connector, input);
   }
 
-  let accessToken = connector.accessTokenEncrypted
-    ? await decryptEmailSecret(connector.accessTokenEncrypted)
-    : null;
-  if (
-    !accessToken ||
-    !connector.accessTokenExpiresAt ||
-    connector.accessTokenExpiresAt <= new Date(Date.now() + 60_000)
-  ) {
-    const refreshed = await refreshAccessToken(connector, fetcher);
-    accessToken = refreshed.accessToken;
-    await prisma.emailConnector.update({
-      where: { orgId: connector.orgId },
-      data: {
-        accessTokenEncrypted: await encryptEmailSecret(refreshed.accessToken),
-        refreshTokenEncrypted: await encryptEmailSecret(refreshed.refreshToken),
-        accessTokenExpiresAt: refreshed.expiresAt,
-      },
-    });
-  }
+  const prepared = await prepareEmailConnector(connector, fetcher);
+  if (!prepared.accessTokenEncrypted) return describeSend(connector, input);
+  const accessToken = await decryptEmailSecret(prepared.accessTokenEncrypted);
 
   if (connector.type === "gmail") {
     const message = await new MailComposer({
@@ -554,29 +538,6 @@ export async function sendEmailWithConnector(
     throw new Error(`Microsoft send failed (${response.status})${detail ? `: ${detail}` : ""}`);
   }
   return null;
-}
-
-export async function sendOrganizationEmail(
-  orgId: string,
-  input: EmailInput,
-  dependencies: {
-    findConnector?: (orgId: string) => Promise<StoredEmailConnector | null>;
-    sendAppEmail?: (input: EmailInput) => Promise<DescribedSend | null>;
-    sendEmailWithConnector?: (
-      connector: StoredEmailConnector,
-      input: EmailInput,
-    ) => Promise<DescribedSend | null>;
-  } = {},
-): Promise<DescribedSend | null> {
-  const findConnector = dependencies.findConnector
-    ?? ((organizationId: string) => prisma.emailConnector.findUnique({
-      where: { orgId: organizationId },
-    }));
-  const connector = await findConnector(orgId);
-  if (!connector || !connector.verifiedAt) {
-    return (dependencies.sendAppEmail ?? sendAppEmail)(input);
-  }
-  return (dependencies.sendEmailWithConnector ?? sendEmailWithConnector)(connector, input);
 }
 
 type OrganizationEmailSenderDependencies = {
