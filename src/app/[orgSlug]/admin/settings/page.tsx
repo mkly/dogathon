@@ -161,7 +161,10 @@ async function RescueSettings({ orgId, orgSlug }: { orgId: string; orgSlug: stri
         <div className={styles.settingsIntro}>
           <AdminEyebrow>Roster sync</AdminEyebrow>
           <h2>Keep the adoption roster current</h2>
-          <p>Save the adoption-page source, then sync its current companions into the staff roster.</p>
+          <p id="roster-sync-description">
+            Save the adoption-page source and we will sync its companions into the staff roster
+            every night. Use Sync now to run the same sync right away.
+          </p>
         </div>
         <RosterSyncSettings initialSourceUrl={settings.sourceUrl} orgSlug={orgSlug} />
       </AdminSurface>
