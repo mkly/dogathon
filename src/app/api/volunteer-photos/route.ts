@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 
-import { MAX_PHOTO_BYTES } from "@/app/[orgSlug]/volunteer/photo-limits";
 import { processVolunteerPhoto } from "@/app/[orgSlug]/volunteer/photo";
+import { MAX_PHOTO_BYTES } from "@/app/[orgSlug]/volunteer/photo-limits";
 import { getOrganizationAccessBySlug } from "@/lib/organization-access";
 import { deletePhoto, photoKey, putPhoto } from "@/lib/photo-storage";
 import { prisma } from "@/lib/prisma";
