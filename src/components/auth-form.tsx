@@ -6,14 +6,13 @@ import { useRouter } from "next/navigation";
 import { FeltButton, FeltField } from "@/components/felt";
 import { authClient } from "@/lib/auth-client";
 
+import { AuthModeTabs, type AuthMode } from "./auth-mode-tabs";
 import styles from "./auth-form.module.css";
-
-type Mode = "sign-in" | "sign-up";
 
 type AuthFormProps = {
   fixedEmail?: string;
   hiddenTabs?: boolean;
-  initialMode?: Mode;
+  initialMode?: AuthMode;
   onAuthenticated?: () => Promise<void> | void;
   redirectTo?: string;
 };
@@ -26,7 +25,7 @@ export function AuthForm({
   redirectTo = "/staff/organizations",
 }: AuthFormProps) {
   const router = useRouter();
-  const [mode, setMode] = useState<Mode>(initialMode);
+  const [mode, setMode] = useState<AuthMode>(initialMode);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
@@ -66,26 +65,15 @@ export function AuthForm({
   return (
     <>
       {!hiddenTabs && (
-        <div aria-label="Authentication mode" className={styles.tabs}>
-          <FeltButton
-            onClick={() => {
-              setMode("sign-in");
-              setError(null);
-            }}
-            tone={mode === "sign-in" ? "mustard" : "denim-lt"}
-          >
-            Sign in
-          </FeltButton>
-          <FeltButton
-            onClick={() => {
-              setMode("sign-up");
-              setError(null);
-            }}
-            tone={mode === "sign-up" ? "mustard" : "denim-lt"}
-          >
-            Sign up
-          </FeltButton>
-        </div>
+        <AuthModeTabs
+          button={FeltButton}
+          className={styles.tabs}
+          mode={mode}
+          onSelect={(nextMode) => {
+            setMode(nextMode);
+            setError(null);
+          }}
+        />
       )}
 
       <form className={styles.form} onSubmit={handleSubmit}>

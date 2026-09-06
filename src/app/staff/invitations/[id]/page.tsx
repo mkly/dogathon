@@ -6,6 +6,7 @@ import { PageViewTransition } from "@/components/page-view-transition";
 import { SignOutButton } from "@/components/sign-out-button";
 import { PendingFeltSubmitButton } from "@/components/pending-submit-button";
 import { getSession } from "@/lib/auth-session";
+import { formatDateTime } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 import { uuidSchema } from "@/lib/uuid";
 
@@ -90,14 +91,7 @@ export default async function InvitationPage({ params }: InvitationPageProps) {
   const matchingAccount = session
     ? session.user.email.trim().toLowerCase() === invitation.email.trim().toLowerCase()
     : false;
-  const expiry = new Intl.DateTimeFormat("en-US", {
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-    month: "long",
-    timeZoneName: "short",
-    year: "numeric",
-  }).format(invitation.expiresAt);
+  const expiry = formatDateTime(invitation.expiresAt);
   const invitedAccountExists = session
     ? false
     : Boolean(await prisma.user.findFirst({

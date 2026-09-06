@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 
 import { FeltButton, FeltField } from "@/components/felt";
+import styles from "@/components/auth-form.module.css";
 import { organizationSlug, organizationSlugWhileTyping } from "@/lib/organization-slug-client";
 
 import { createOrganization } from "./actions";
@@ -15,19 +16,22 @@ export function CreateOrganizationForm() {
   const [slugEdited, setSlugEdited] = useState(false);
 
   return (
-    <form action={formAction}>
+    <form action={formAction} className={styles.form}>
+      <label htmlFor="organization-name">Rescue name</label>
       <FeltField>
         <input
+          id="organization-name"
           name="name"
           onChange={(event) => {
             if (!slugEdited) setSlug(organizationSlug(event.currentTarget.value));
           }}
-          placeholder="Rescue name"
           required
         />
       </FeltField>
+      <label htmlFor="organization-slug">Rescue URL name</label>
       <FeltField>
         <input
+          id="organization-slug"
           name="slug"
           onBlur={() => setSlug(organizationSlug(slug))}
           onChange={(event) => {
@@ -36,12 +40,11 @@ export function CreateOrganizationForm() {
             setSlugEdited(nextSlug.length > 0);
           }}
           pattern="[a-z0-9-]+"
-          placeholder="rescue-slug"
           required
           value={slug}
         />
       </FeltField>
-      {state.error ? <p role="alert">{state.error}</p> : null}
+      {state.error ? <p className={styles.error} role="alert">{state.error}</p> : null}
       <FeltButton disabled={pending} tone="moss" type="submit">
         {pending ? "Creating…" : "Create organization"}
       </FeltButton>
