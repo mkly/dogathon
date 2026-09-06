@@ -67,7 +67,7 @@ export default async function VolunteerPage({ params, searchParams }: VolunteerP
           <FeltPanel className={styles.confirmation} tone="moss">
             <StitchBadge tone="cream">Note tucked in</StitchBadge>
             <div aria-hidden="true" className={styles.confirmationMark}>✓</div>
-            <h1>Thanks for the pup-date!</h1>
+            <h1>Thanks for the update!</h1>
             <p>
               {submittedCompanion
                 ? `${submittedCompanion.name}’s care team can see your note now.`
@@ -89,7 +89,7 @@ export default async function VolunteerPage({ params, searchParams }: VolunteerP
           <AdminHeader
             eyebrow={<StitchBadge tone="denim">Volunteer check-in</StitchBadge>}
             lede="Three quick steps, made for the phone in your pocket."
-            title="How’s a pup doing?"
+            title="How’s a companion doing?"
             variant="volunteer"
           />
 
@@ -126,7 +126,7 @@ export default async function VolunteerPage({ params, searchParams }: VolunteerP
               ) : (
                 <FeltPanel tone="oatmeal">
                   <AdminEmptyState variant="volunteer">
-                    No companions have active sponsors right now, so there’s no one to send a pup-date to yet.
+                    No companions have active sponsors right now, so there’s no one to send an update to yet.
                   </AdminEmptyState>
                 </FeltPanel>
               )}

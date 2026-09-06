@@ -8,7 +8,7 @@ import { PupdateEmail } from "../emails/pupdate-email.tsx";
 
 const base = {
   companionName: "Biscuit",
-  subject: "A pupdate from Biscuit",
+  subject: "An update from Biscuit",
   bodyText: "Here is the latest.\n\n## Recent notes\n\n- Took a treat from a stranger.\n- Slept through the night.\n\nThank you.",
   companionUrl: "https://pawcast.test/companions/abc",
   origin: "https://pawcast.test",
@@ -45,7 +45,7 @@ test("omits the photo block when the resident has no photo", async () => {
   const html = await render(createElement(PupdateEmail, { ...base, photoUrl: null }));
 
   assert.ok(!html.includes("/uploads/"));
-  assert.match(html, /A pupdate from Biscuit/u);
+  assert.match(html, /An update from Biscuit/u);
 });
 
 test("escapes sponsor-facing copy instead of injecting it as markup", async () => {
@@ -63,7 +63,7 @@ test("switches the hero to the mustard adoption-day treatment", async () => {
   const regular = await render(createElement(PupdateEmail, base));
   const graduation = await render(createElement(PupdateEmail, { ...base, type: "graduation" }));
 
-  assert.match(regular, /A new pupdate/u);
+  assert.match(regular, /A new update/u);
   assert.match(regular, /felt-moss\.jpg/u);
   assert.match(graduation, /Adoption day/u);
   assert.match(graduation, /felt-mustard\.jpg/u);

@@ -13,7 +13,7 @@ test("owners and admins can manage staff resources while billing remains owner-o
   assert.equal(organizationRoles.admin.authorize({ billing: ["manage"] }).success, false);
 });
 
-test("members manage pupdates while volunteers cannot, and both have limited staff access", () => {
+test("members manage updates while volunteers cannot, and both have limited staff access", () => {
   assert.equal(organizationRoles.member.authorize({ pupdate: ["manage"] }).success, true);
   assert.equal(organizationRoles.volunteer.authorize({ pupdate: ["manage"] }).success, false);
 

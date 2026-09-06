@@ -12,7 +12,7 @@ type RouteContext = { params: Promise<{ id: string }> };
 export async function POST(request: Request, { params }: RouteContext) {
   const { id } = await params;
   if (!uuidSchema.safeParse(id).success) {
-    return Response.json({ error: "Pupdate not found" }, { status: 404 });
+    return Response.json({ error: "Update not found" }, { status: 404 });
   }
 
   const access = await requireApiOrganization(request.headers, { pupdate: ["manage"] });
@@ -36,16 +36,16 @@ export async function POST(request: Request, { params }: RouteContext) {
   });
 
   if (!pupdate) {
-    return Response.json({ error: "Pupdate not found" }, { status: 404 });
+    return Response.json({ error: "Update not found" }, { status: 404 });
   }
   if (pupdate.status !== "draft") {
-    return Response.json({ error: "Only draft pupdates can be approved" }, { status: 409 });
+    return Response.json({ error: "Only draft updates can be approved" }, { status: 409 });
   }
 
   const emailConnector = await getEmailConnectorStatus(orgId);
   if (!emailConnector.connected) {
     return Response.json(
-      { error: "Connect the email address pupdates are sent from before approving them" },
+      { error: "Connect the email address updates are sent from before approving them" },
       { status: 409 },
     );
   }
@@ -55,7 +55,7 @@ export async function POST(request: Request, { params }: RouteContext) {
     data: { status: "approved" },
   });
   if (claimed.count !== 1) {
-    return Response.json({ error: "Pupdate is already being approved" }, { status: 409 });
+    return Response.json({ error: "Update is already being approved" }, { status: 409 });
   }
 
   const origin = new URL(request.url).origin;

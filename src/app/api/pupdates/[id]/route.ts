@@ -21,7 +21,7 @@ const trimmedDraftSchema = draftInputSchema.transform(({ subject, emailBody, sms
 export async function PATCH(request: Request, { params }: RouteContext) {
   const { id } = await params;
   if (!uuidSchema.safeParse(id).success) {
-    return Response.json({ error: "Pupdate not found" }, { status: 404 });
+    return Response.json({ error: "Update not found" }, { status: 404 });
   }
 
   const access = await requireApiOrganization(request.headers, { pupdate: ["manage"] });
@@ -54,7 +54,7 @@ export async function PATCH(request: Request, { params }: RouteContext) {
   if (updated.count !== 1) {
     const exists = await prisma.pupdate.findFirst({ where: { id, orgId }, select: { id: true } });
     return Response.json(
-      { error: exists ? "Only draft pupdates can be edited" : "Pupdate not found" },
+      { error: exists ? "Only draft updates can be edited" : "Update not found" },
       { status: exists ? 409 : 404 },
     );
   }
@@ -66,7 +66,7 @@ export async function PATCH(request: Request, { params }: RouteContext) {
 export async function DELETE(request: Request, { params }: RouteContext) {
   const { id } = await params;
   if (!uuidSchema.safeParse(id).success) {
-    return Response.json({ error: "Pupdate not found" }, { status: 404 });
+    return Response.json({ error: "Update not found" }, { status: 404 });
   }
 
   const access = await requireApiOrganization(request.headers, { pupdate: ["manage"] });
@@ -78,7 +78,7 @@ export async function DELETE(request: Request, { params }: RouteContext) {
   if (deleted.count !== 1) {
     const exists = await prisma.pupdate.findFirst({ where: { id, orgId }, select: { id: true } });
     return Response.json(
-      { error: exists ? "Only draft pupdates can be denied" : "Pupdate not found" },
+      { error: exists ? "Only draft updates can be denied" : "Update not found" },
       { status: exists ? 409 : 404 },
     );
   }

@@ -11,7 +11,7 @@ test("builds an organization-scoped companion URL", () => {
 });
 
 const pupdate = {
-  subject: "A pupdate from Biscuit",
+  subject: "An update from Biscuit",
   bodyText: "Biscuit had a great walk.",
   smsText: "Legacy composer text",
 };
@@ -99,7 +99,7 @@ test("carries a described send through the delivery record", async () => {
     connector: "gmail" as const,
     from: "rescue@example.com",
     to: "email@example.com",
-    subject: "A pupdate from Biscuit",
+    subject: "An update from Biscuit",
     body: "Biscuit had a great walk.",
     contentType: "plain" as const,
   };

@@ -33,7 +33,7 @@ after(() => {
   globalThis.fetch = originalFetch;
 });
 
-test("composes a grounded regular pupdate without credentials", async () => {
+test("composes a grounded regular update without credentials", async () => {
   const draft = await composePupdate({
     companion: { name: "Biscuit", breed: "Corgi mix" },
     notes: [{ note: "The vet visit went well." }, "Teeth cleaned."],
@@ -98,7 +98,7 @@ test("uses the configured chat-completions endpoint and model", async () => {
   assert.equal("careNotes" in promptInput.companion, false);
 });
 
-test("supports a graduation pupdate", async () => {
+test("supports a graduation update", async () => {
   const draft = await composePupdate({
     companion: { name: "Biscuit" },
     notes: [{ note: "Biscuit went home with a family today." }],

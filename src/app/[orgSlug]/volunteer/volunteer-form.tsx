@@ -44,5 +44,5 @@ export function VolunteerPhotoInput() {
 
 export function VolunteerSubmitButton({ disabled }: { disabled: boolean }) {
   const { pending } = useFormStatus();
-  return <FeltButton className={styles.submit} disabled={disabled || pending} tone="brick" type="submit">{pending ? "Uploading pup-date…" : "Send pup-date"}</FeltButton>;
+  return <FeltButton className={styles.submit} disabled={disabled || pending} tone="brick" type="submit">{pending ? "Uploading update…" : "Send update"}</FeltButton>;
 }

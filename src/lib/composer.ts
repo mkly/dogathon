@@ -45,12 +45,12 @@ function deterministicCompose(input: ComposePupdateInput): ComposedPupdate {
   const intro =
     input.type === "graduation"
       ? `${name} was adopted today. You helped get ${name} there.`
-      : `Here is the latest pupdate from ${name}.`;
+      : `Here is the latest update from ${name}.`;
   const noteSection = notes.length > 0 ? `## Recent notes\n\n${notes.map((note) => `- ${note}`).join("\n")}` : "";
   const bodyText = [intro, noteSection, input.pinnedPostscript.trim()].filter(Boolean).join("\n\n");
 
   return {
-    subject: input.type === "graduation" ? `${name} found a home!` : `A pupdate from ${name}`,
+    subject: input.type === "graduation" ? `${name} found a home!` : `An update from ${name}`,
     bodyText,
   };
 }
@@ -84,7 +84,7 @@ async function composeWithModel(input: ComposePupdateInput): Promise<ComposedPup
 }
 
 /**
- * Draft a sponsor pupdate. With no API key, this uses a deterministic template
+ * Draft a sponsor update. With no API key, this uses a deterministic template
  * so local demos and tests never require network access.
  */
 export async function composePupdate(input: ComposePupdateInput): Promise<ComposedPupdate> {
