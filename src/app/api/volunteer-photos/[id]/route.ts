@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { env } from "@/lib/env";
+import { getPhoto } from "@/lib/photo-storage";
 import { prisma } from "@/lib/prisma";
 import { uuidSchema } from "@/lib/uuid";
 
@@ -7,7 +9,7 @@ type RouteContext = { params: Promise<{ id: string }> };
 const photoQuerySchema = z.object({ org: uuidSchema });
 
 /**
- * Serves a volunteer note's photo from the database. Public on purpose:
+ * Serves a volunteer photo from storage. Public on purpose:
  * these photos are embedded in sponsor emails, which cannot authenticate.
  */
 export async function GET(request: Request, { params }: RouteContext) {
@@ -17,18 +19,25 @@ export async function GET(request: Request, { params }: RouteContext) {
     return Response.json({ error: "Photo not found" }, { status: 404 });
   }
   const orgId = query.data.org;
-  const note = await prisma.volunteerNote.findFirst({
+  const photo = await prisma.volunteerPhoto.findFirst({
     where: { id, orgId },
-    select: { photoData: true, photoMime: true },
+    select: { storageKey: true, url: true },
   });
 
-  if (!note?.photoData || !note.photoMime) {
+  if (!photo) {
     return Response.json({ error: "Photo not found" }, { status: 404 });
   }
 
-  return new Response(new Uint8Array(note.photoData), {
+  // Photos written before S3 was configured keep a same-origin URL; redirecting
+  // to one would throw, so only an absolute stored URL is worth a redirect.
+  if (env.features.s3 && URL.canParse(photo.url)) return Response.redirect(photo.url, 308);
+
+  const stored = await getPhoto(photo.storageKey);
+  if (!stored) return Response.json({ error: "Photo not found" }, { status: 404 });
+
+  return new Response(Uint8Array.from(stored.data).buffer, {
     headers: {
-      "content-type": note.photoMime,
+      "content-type": stored.mime,
       "cache-control": "public, max-age=31536000, immutable",
     },
   });

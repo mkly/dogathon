@@ -8,18 +8,18 @@ datasource db {
 }
 
 model User {
-  id             String          @id @default(uuid(4)) @db.Uuid
-  name           String
-  email          String
-  emailVerified  Boolean         @default(false)
-  image          String?
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  sessions       Session[]
-  accounts       Account[]
-  members        Member[]
-  invitations    Invitation[]
-  sponsor        Sponsor?
+  id            String       @id @default(uuid(4)) @db.Uuid
+  name          String
+  email         String
+  emailVerified Boolean      @default(false)
+  image         String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  sessions      Session[]
+  accounts      Account[]
+  members       Member[]
+  invitations   Invitation[]
+  sponsor       Sponsor?
 
   username String?
 
@@ -46,7 +46,7 @@ model Session {
 }
 
 model Organization {
-  id                     String          @id @default(uuid(4)) @db.Uuid
+  id                     String           @id @default(uuid(4)) @db.Uuid
   name                   String
   slug                   String
   logo                   String?
@@ -57,13 +57,14 @@ model Organization {
   residents              Resident[]
   sponsorships           Sponsorship[]
   volunteerNotes         VolunteerNote[]
+  volunteerPhotos        VolunteerPhoto[]
   pupdates               Pupdate[]
   settings               RescueSettings?
   rosterSyncNotes        RosterSyncNote[]
   emailConnector         EmailConnector?
-  stripeAccountId        String?         @unique
-  stripeDetailsSubmitted Boolean         @default(false)
-  stripeChargesEnabled   Boolean         @default(false)
+  stripeAccountId        String?          @unique
+  stripeDetailsSubmitted Boolean          @default(false)
+  stripeChargesEnabled   Boolean          @default(false)
 
   @@unique([slug])
   @@map("organization")
@@ -76,7 +77,7 @@ enum EmailConnectorType {
 }
 
 model EmailConnector {
-  orgId                 String              @id @db.Uuid
+  orgId                 String             @id @db.Uuid
   type                  EmailConnectorType
   fromEmail             String
   accessTokenEncrypted  String?
@@ -88,9 +89,9 @@ model EmailConnector {
   smtpUser              String?
   smtpPasswordEncrypted String?
   verifiedAt            DateTime?
-  createdAt             DateTime            @default(now())
-  updatedAt             DateTime            @updatedAt
-  organization          Organization        @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+  organization          Organization       @relation(fields: [orgId], references: [id], onDelete: Cascade)
 }
 
 model Member {
@@ -199,25 +200,26 @@ enum PupdateStatus {
 }
 
 model Resident {
-  id             String          @id @default(uuid(4)) @db.Uuid
-  orgId          String          @db.Uuid
-  name           String
-  breed          String
-  dobText        String
-  ageText        String
-  sex            String
-  weightText     String
-  personality    String
-  careNotes      String[]
-  photoUrls      String[]
-  status         ResidentStatus  @default(available)
-  adoptedAt      DateTime?
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  sponsorships   Sponsorship[]
-  volunteerNotes VolunteerNote[]
-  pupdates       Pupdate[]
-  organization   Organization    @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  id              String           @id @default(uuid(4)) @db.Uuid
+  orgId           String           @db.Uuid
+  name            String
+  breed           String
+  dobText         String
+  ageText         String
+  sex             String
+  weightText      String
+  personality     String
+  careNotes       String[]
+  photoUrls       String[]
+  status          ResidentStatus   @default(available)
+  adoptedAt       DateTime?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  sponsorships    Sponsorship[]
+  volunteerNotes  VolunteerNote[]
+  volunteerPhotos VolunteerPhoto[]
+  pupdates        Pupdate[]
+  organization    Organization     @relation(fields: [orgId], references: [id], onDelete: Cascade)
 
   @@unique([orgId, name])
   @@unique([id, orgId])
@@ -249,20 +251,38 @@ model Sponsorship {
 }
 
 model VolunteerNote {
-  id           String       @id @default(uuid(4)) @db.Uuid
-  orgId        String       @db.Uuid
-  residentId   String       @db.Uuid
+  id           String           @id @default(uuid(4)) @db.Uuid
+  orgId        String           @db.Uuid
+  residentId   String           @db.Uuid
   note         String
   photoUrl     String?
-  photoData    Bytes?
-  photoMime    String?
-  createdAt    DateTime     @default(now())
-  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  resident     Resident     @relation(fields: [residentId, orgId], references: [id, orgId], onDelete: Cascade)
+  createdAt    DateTime         @default(now())
+  organization Organization     @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  resident     Resident         @relation(fields: [residentId, orgId], references: [id, orgId], onDelete: Cascade)
+  photos       VolunteerPhoto[]
 
   @@unique([id, orgId])
   @@index([orgId, createdAt])
   @@index([residentId, orgId, createdAt])
+}
+
+model VolunteerPhoto {
+  id           String         @id @default(uuid(4)) @db.Uuid
+  orgId        String         @db.Uuid
+  residentId   String         @db.Uuid
+  noteId       String?        @db.Uuid
+  storageKey   String         @unique
+  url          String
+  mime         String
+  byteSize     Int
+  createdAt    DateTime       @default(now())
+  organization Organization   @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  resident     Resident       @relation(fields: [residentId, orgId], references: [id, orgId], onDelete: Cascade)
+  note         VolunteerNote? @relation(fields: [noteId], references: [id], onDelete: Cascade)
+
+  @@unique([id, orgId])
+  @@index([noteId])
+  @@index([orgId, createdAt])
 }
 
 model Pupdate {

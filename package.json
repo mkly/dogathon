@@ -15,6 +15,7 @@
     "db:studio": "prisma studio",
     "seed": "prisma db seed",
     "jobs:drain": "sh scripts/drain-jobs.sh",
+    "photos:migrate": "tsx scripts/migrate-photos-to-s3.ts",
     "stripe:listen": "sh scripts/stripe-listen.sh",
     "postinstall": "prisma generate"
   },
