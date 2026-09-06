@@ -703,6 +703,7 @@ export function RosterSyncSettings({
           {saving ? "Saving…" : "Save source"}
         </AdminButton>
         <AdminButton
+          aria-describedby="roster-sync-description"
           className={styles.syncButton}
           disabled={saving || syncPending || sourceDirty}
           onClick={() => syncMutation.mutate()}
