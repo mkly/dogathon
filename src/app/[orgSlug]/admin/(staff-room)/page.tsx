@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { io } from "next/cache";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import pluralize from "pluralize";
@@ -38,13 +39,26 @@ export const dynamic = "force-dynamic";
 
 type AdminPageProps = { params: Promise<{ orgSlug: string }> };
 
+async function getThirtyDaysAgo() {
+  await io();
+  return new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+}
+
 async function DashboardStats({ orgId, orgSlug }: { orgId: string; orgSlug: string }) {
-  const [activeSponsorCount, sponsoredCompanionCount] = await Promise.all([
+  const thirtyDaysAgo = await getThirtyDaysAgo();
+  const [activeSponsorCount, sponsoredCompanionCount, sentPupdateCount] = await Promise.all([
     prisma.sponsorship.count({ where: { orgId, status: "active" } }),
     prisma.resident.count({
       where: {
         orgId,
         sponsorships: { some: { orgId, status: "active" } },
+      },
+    }),
+    prisma.pupdate.count({
+      where: {
+        orgId,
+        status: "sent",
+        sentAt: { gte: thirtyDaysAgo },
       },
     }),
   ]);
@@ -81,6 +95,11 @@ async function DashboardStats({ orgId, orgSlug }: { orgId: string; orgSlug: stri
           <small>with at least one active sponsor</small>
         </AdminSurface>
       </Link>
+      <AdminSurface className={styles.stat} tone="brick">
+        <strong>{sentPupdateCount}</strong>
+        <span>pupdates sent</span>
+        <small>in the last 30 days</small>
+      </AdminSurface>
     </section>
   );
 }
@@ -88,7 +107,7 @@ async function DashboardStats({ orgId, orgSlug }: { orgId: string; orgSlug: stri
 function DashboardStatsLoading() {
   return (
     <section aria-label="Loading program statistics" className={styles.stats}>
-      {(["mustard", "moss", "denim"] as const).map((tone) => (
+      {(["mustard", "moss", "denim", "brick"] as const).map((tone) => (
         <AdminSurface className={`${styles.stat} ${styles.skeleton}`} key={tone} tone={tone} />
       ))}
     </section>
