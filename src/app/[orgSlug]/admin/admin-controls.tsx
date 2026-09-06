@@ -152,18 +152,16 @@ export function DraftEditor({
       },
       "Save draft",
     );
-    return true;
   }
 
   async function save() {
     setPending("save");
     try {
       const editedDraft = { subject, bodyText };
-      if (await persistDraft(editedDraft)) {
-        setSavedDraft(editedDraft);
-        setEditorOpen(false);
-        pushToast("success", "Draft changes saved.");
-      }
+      await persistDraft(editedDraft);
+      setSavedDraft(editedDraft);
+      setEditorOpen(false);
+      pushToast("success", "Draft changes saved.");
     } catch (error) {
       pushToast(
         "error",
@@ -183,7 +181,7 @@ export function DraftEditor({
       hideOptimistically(false);
       setPending("approve");
       try {
-        if (!(await persistDraft(savedDraft))) return;
+        await persistDraft(savedDraft);
         await apiFetch(
           `/api/sponsor-updates/${id}/approve`,
           {

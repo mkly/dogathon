@@ -21,14 +21,10 @@ export async function updateSponsorProfile(
   _previousState: AccountActionState,
   formData: FormData,
 ): Promise<AccountActionState> {
-  void _previousState;
   const sponsor = await getSponsorContext(await headers());
   if (!sponsor) redirect("/account/sign-in");
 
   const profile = sponsorProfileSchema.safeParse(Object.fromEntries(formData));
-  if (!profile.success && profile.error.issues.some((issue) => issue.path[0] === "name")) {
-    return { error: "Name is required" };
-  }
   if (!profile.success) return { error: "Name is required" };
   const { name } = profile.data;
 
