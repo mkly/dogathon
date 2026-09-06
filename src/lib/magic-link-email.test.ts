@@ -7,7 +7,7 @@ import { magicLink } from "better-auth/plugins";
 
 import type { MailTransport, TransportFactory } from "./email-connectors.ts";
 import { parseEnvironment } from "./env.ts";
-import { sendMagicLinkEmail } from "./magic-link-email.ts";
+import { redactEmailLink, sendMagicLinkEmail } from "./magic-link-email.ts";
 
 test("magic-link sign-in sends the verification URL through sendAppEmail", async () => {
   let sentMessage: Parameters<MailTransport["sendMail"]>[0] | undefined;
@@ -62,4 +62,16 @@ test("magic-link sign-in sends the verification URL through sendAppEmail", async
   assert.equal(sentMessage?.subject, "Sign in to your Dogathon sponsor account");
   assert.match(String(sentMessage?.text), /http:\/\/localhost:3000\/api\/auth\/magic-link\/verify\?/);
   assert.match(String(sentMessage?.text), /callbackURL=%2Faccount/);
+});
+
+test("redacting an emailed link hides the secret in the query and, when asked, the path", () => {
+  assert.equal(
+    redactEmailLink("http://localhost:3000/api/auth/magic-link/verify?token=secret&callbackURL=%2Faccount"),
+    "http://localhost:3000/api/auth/magic-link/verify?token=%5Bredacted%5D&callbackURL=%5Bredacted%5D",
+  );
+  assert.equal(
+    redactEmailLink("http://localhost:3000/staff/invitations/secret-invitation-id", { lastPathSegment: true }),
+    "http://localhost:3000/staff/invitations/[redacted]",
+  );
+  assert.equal(redactEmailLink("not-a-url"), "[redacted invalid URL]");
 });

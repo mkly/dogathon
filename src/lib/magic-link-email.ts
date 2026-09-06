@@ -9,10 +9,20 @@ type MagicLinkEmail = {
   url: string;
 };
 
-export function redactEmailLink(url: string) {
+/**
+ * Strips the secret out of an emailed link before it reaches a production log.
+ * Query values always carry it (magic links); `lastPathSegment` covers links
+ * whose token is the final path segment (organization invitations).
+ */
+export function redactEmailLink(url: string, { lastPathSegment = false } = {}) {
   try {
     const parsed = new URL(url);
     for (const key of [...parsed.searchParams.keys()]) parsed.searchParams.set(key, "[redacted]");
+    if (lastPathSegment) {
+      const segments = parsed.pathname.split("/");
+      if (segments.at(-1)) segments[segments.length - 1] = "[redacted]";
+      parsed.pathname = segments.join("/");
+    }
     return parsed.toString();
   } catch {
     return "[redacted invalid URL]";

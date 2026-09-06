@@ -11,13 +11,38 @@ export const RATE_LIMITS = {
 
 export type RateLimitStore = { increment(bucket: string, expiresAt: Date): Promise<number>; pruneExpired(now: Date): Promise<void> };
 
-const prismaRateLimitStore: RateLimitStore = {
-  async increment(bucket, expiresAt) {
-    const result = await prisma.rateLimitBucket.upsert({ where: { bucket }, create: { bucket, count: 1, expiresAt }, update: { count: { increment: 1 }, expiresAt }, select: { count: true } });
-    return result.count;
-  },
-  async pruneExpired(now) { await prisma.rateLimitBucket.deleteMany({ where: { expiresAt: { lte: now } } }); },
+type RateLimitBucketDelegate = {
+  deleteMany(args: { where: { expiresAt: { lte: Date } } }): Promise<unknown>;
+  upsert(args: {
+    create: { bucket: string; count: number; expiresAt: Date };
+    select: { count: true };
+    update: { count: { increment: number }; expiresAt: Date };
+    where: { bucket: string };
+  }): Promise<{ count: number }>;
 };
+
+function isUniqueConstraintViolation(error: unknown) {
+  return typeof error === "object" && error !== null && (error as { code?: unknown }).code === "P2002";
+}
+
+export function createRateLimitStore(buckets: RateLimitBucketDelegate): RateLimitStore {
+  return {
+    async increment(bucket, expiresAt) {
+      const upsert = () => buckets.upsert({ where: { bucket }, create: { bucket, count: 1, expiresAt }, update: { count: { increment: 1 }, expiresAt }, select: { count: true } });
+      try {
+        return (await upsert()).count;
+      } catch (error) {
+        // Concurrent first requests in a window race on the insert; the loser
+        // retries and takes the atomic increment path instead of returning 500.
+        if (!isUniqueConstraintViolation(error)) throw error;
+        return (await upsert()).count;
+      }
+    },
+    async pruneExpired(now) { await buckets.deleteMany({ where: { expiresAt: { lte: now } } }); },
+  };
+}
+
+const prismaRateLimitStore = createRateLimitStore(prisma.rateLimitBucket);
 
 type RateLimitOptions = { identity: string; limit: number; now?: Date; scope: string; store?: RateLimitStore; windowMs: number };
 

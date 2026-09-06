@@ -151,7 +151,7 @@ export const auth = betterAuth({
 
         if (describedSend) {
           const loggedUrl = env.NODE_ENV === "production"
-            ? redactEmailLink(message.invitationUrl)
+            ? redactEmailLink(message.invitationUrl, { lastPathSegment: true })
             : message.invitationUrl;
           console.info(`Dogathon invitation for ${email}: ${loggedUrl}`);
         }
