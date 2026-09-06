@@ -244,7 +244,7 @@ function smtpCredentialsPresent(connector: StoredEmailConnector): boolean {
   );
 }
 
-export function oauthCallbackUrl(origin: string, provider: Exclude<EmailConnectorKind, "smtp">) {
+function oauthCallbackUrl(origin: string, provider: Exclude<EmailConnectorKind, "smtp">) {
   return new URL(`/api/email-connectors/${provider}/callback`, origin).toString();
 }
 

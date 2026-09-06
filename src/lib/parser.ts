@@ -134,7 +134,7 @@ function documentBatches(source: string): string[] {
   return batches.map((batch) => batch.join(DOCUMENT_SEPARATOR));
 }
 
-export function parseCompanionRosterDeterministic(source: string): CompanionRecord[] {
+function parseCompanionRosterDeterministic(source: string): CompanionRecord[] {
   const sections = source.includes("<h3")
     ? splitHtmlSections(source)
     : markdownSections(source);

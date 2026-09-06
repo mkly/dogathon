@@ -102,7 +102,7 @@ export async function getOrganizationAccessBySlug(
   };
 }
 
-export async function getOrganizationContext(
+async function getOrganizationContext(
   requestHeaders: Headers,
   permission: OrganizationPermission,
   session?: Awaited<ReturnType<typeof getSession>>,
