@@ -81,7 +81,7 @@ export function createVolunteerPhotoPostHandler(dependencies: UploadDependencies
     if (!access.context) {
       return Response.json(
         { error: "Organization membership required" },
-        { status: access.authenticated ? 404 : 401 },
+        { status: access.authenticated ? 403 : 401 },
       );
     }
 

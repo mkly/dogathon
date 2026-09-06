@@ -16,6 +16,26 @@ export type InterviewRouteContext = {
   orgName: string;
 };
 
+type InterviewRouteDependencies = {
+  findCompanion: (orgId: string, residentId: string) => Promise<InterviewRouteContext["companion"] | null>;
+  getAccess: typeof getOrganizationAccessBySlug;
+};
+
+const interviewRouteDependencies: InterviewRouteDependencies = {
+  async findCompanion(orgId, residentId) {
+    return prisma.resident.findFirst({
+      where: {
+        id: residentId,
+        orgId,
+        status: "available",
+        sponsorships: { some: { status: "active" } },
+      },
+      select: { name: true, breed: true, sex: true, ageText: true },
+    });
+  },
+  getAccess: getOrganizationAccessBySlug,
+};
+
 export async function parseInterviewRouteRequest(
   request: Request,
 ): Promise<{ ok: false; response: Response } | { ok: true; input: InterviewRequest }> {
@@ -43,35 +63,37 @@ export async function parseInterviewRouteRequest(
   return { ok: true, input: parsed.data };
 }
 
-export async function getInterviewRouteContext(
-  request: Request,
-  input: InterviewRequest,
-): Promise<{ ok: false; response: Response } | { ok: true; context: InterviewRouteContext }> {
-  const access = await getOrganizationAccessBySlug(request.headers, input.orgSlug, {
-    roster: ["contribute"],
-  });
-  if (!access) {
-    return { ok: false, response: Response.json({ error: "Organization not found" }, { status: 404 }) };
-  }
-  if (!access.context) {
-    return { ok: false, response: Response.json({ error: "Unauthorized" }, { status: 401 }) };
-  }
+export function createGetInterviewRouteContext(dependencies: InterviewRouteDependencies) {
+  return async function getRouteContext(
+    request: Request,
+    input: InterviewRequest,
+  ): Promise<{ ok: false; response: Response } | { ok: true; context: InterviewRouteContext }> {
+    const access = await dependencies.getAccess(request.headers, input.orgSlug, {
+      roster: ["contribute"],
+    });
+    if (!access) {
+      return { ok: false, response: Response.json({ error: "Organization not found" }, { status: 404 }) };
+    }
+    if (!access.context) {
+      return {
+        ok: false,
+        response: Response.json(
+          { error: access.authenticated ? "Organization membership required" : "Sign-in required" },
+          { status: access.authenticated ? 403 : 401 },
+        ),
+      };
+    }
 
-  const companion = await prisma.resident.findFirst({
-    where: {
-      id: input.residentId,
-      orgId: access.context.orgId,
-      status: "available",
-      sponsorships: { some: { status: "active" } },
-    },
-    select: { name: true, breed: true, sex: true, ageText: true },
-  });
-  if (!companion) {
-    return { ok: false, response: Response.json({ error: "Companion not found" }, { status: 404 }) };
-  }
+    const companion = await dependencies.findCompanion(access.context.orgId, input.residentId);
+    if (!companion) {
+      return { ok: false, response: Response.json({ error: "Companion not found" }, { status: 404 }) };
+    }
 
-  return {
-    ok: true,
-    context: { companion, messages: input.messages, orgName: access.organization.name },
+    return {
+      ok: true,
+      context: { companion, messages: input.messages, orgName: access.organization.name },
+    };
   };
 }
+
+export const getInterviewRouteContext = createGetInterviewRouteContext(interviewRouteDependencies);

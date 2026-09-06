@@ -34,7 +34,7 @@ const interviewSummarySchema = z.object({
   note: z.string().trim().min(1).max(2000),
 });
 
-function messageText(message: UIMessage): string {
+export function messageText(message: UIMessage): string {
   return message.parts
     .filter((part): part is Extract<(typeof message.parts)[number], { type: "text" }> =>
       part.type === "text")

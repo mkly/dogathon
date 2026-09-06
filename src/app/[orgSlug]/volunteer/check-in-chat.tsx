@@ -6,12 +6,14 @@ import Image from "next/image";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
 import { FeltButton, PhotoPatch } from "@/components/felt";
+import { messageText } from "@/lib/volunteer-interview";
 
 import { CheckInChatView, type CheckInResident } from "./check-in-chat-view";
 import { MAX_PHOTO_BYTES } from "./photo-limits";
 import styles from "./volunteer.module.css";
 
 const READY_MARKER = "[[READY]]";
+const MAX_PHOTO_MEGABYTES = MAX_PHOTO_BYTES / (1024 * 1024);
 
 type UploadedPhoto = {
   file: File;
@@ -33,13 +35,6 @@ type CheckInChatProps = {
   onFinish: (result: CheckInResult) => Promise<void> | void;
 };
 
-function messageText(message: UIMessage) {
-  return message.parts
-    .filter((part) => part.type === "text")
-    .map((part) => part.text)
-    .join("");
-}
-
 function visibleMessageText(message: UIMessage) {
   const text = messageText(message).replaceAll(READY_MARKER, "");
   // The marker streams in token by token, so a trailing partial ("[[REA") has to
@@ -58,13 +53,12 @@ export function CheckInChat({ orgSlug, residents, onFinish }: CheckInChatProps) 
         companionChip: styles.companionChip,
         companionPicker: styles.companionPicker,
       }}
-      emptyState={<p className={styles.emptyPanel}>There are no companions to check in for yet.</p>}
       renderPhoto={(resident) => (
         <PhotoPatch
           alt=""
           className={styles.chipPhoto}
           sizes="44px"
-          src={resident.photoUrls[0]}
+          src={resident.photoUrl}
         />
       )}
       renderSession={(resident) => (
@@ -112,6 +106,9 @@ function ChatSession({
   );
   const canFinish = hasReadyMarker || userMessageCount >= 3;
   const busy = status === "submitted" || status === "streaming";
+  const completedAssistantMessages = messages.filter((message, index) => (
+    message.role === "assistant" && !(busy && index === messages.length - 1)
+  ));
 
   useEffect(() => {
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -165,7 +162,7 @@ function ChatSession({
         continue;
       }
       if (file.size > MAX_PHOTO_BYTES) {
-        setPhotoError("Each photo must be smaller than 8 MB.");
+        setPhotoError(`Each photo must be smaller than ${MAX_PHOTO_MEGABYTES} MB.`);
         continue;
       }
       const previewUrl = URL.createObjectURL(file);
@@ -217,7 +214,7 @@ function ChatSession({
 
   return (
     <div className={styles.session}>
-      <div aria-live="polite" className={styles.thread}>
+      <div className={styles.thread}>
         {messages.length === 0 ? (
           <div className={`${styles.message} ${styles.assistantMessage}`}>
             Start with what you and {resident.name} did together today.
@@ -238,7 +235,7 @@ function ChatSession({
         })}
 
         {photos.length > 0 ? (
-          <div aria-label="Photos for this check-in" className={styles.photoThread}>
+          <div aria-label="Photos for this check-in" className={styles.photoThread} role="group">
             {photos.map((photo) => (
               <div className={styles.photoTile} key={photo.id}>
                 <Image alt="Selected check-in photo" height={96} src={photo.previewUrl} unoptimized width={96} />
@@ -259,6 +256,12 @@ function ChatSession({
         {busy ? <div className={`${styles.message} ${styles.assistantMessage} ${styles.typing}`}>Thinking…</div> : null}
         {error ? <p className={styles.chatError} role="alert">The interviewer paused. Send your message again.</p> : null}
         <div ref={threadEndRef} />
+      </div>
+
+      <div aria-live="polite" className={styles.srOnly}>
+        {completedAssistantMessages.map((message) => (
+          <span key={message.id}>{visibleMessageText(message)}</span>
+        ))}
       </div>
 
       {canFinish ? (
@@ -292,7 +295,6 @@ function ChatSession({
         <label className={styles.srOnly} htmlFor={`check-in-message-${resident.id}`}>Message</label>
         <input
           autoComplete="off"
-          disabled={busy}
           id={`check-in-message-${resident.id}`}
           maxLength={2000}
           onChange={(event) => setInput(event.target.value)}

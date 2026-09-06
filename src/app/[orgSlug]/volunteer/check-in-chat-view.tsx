@@ -6,7 +6,7 @@ import { useRef, useState } from "react";
 export type CheckInResident = {
   id: string;
   name: string;
-  photoUrls: string[];
+  photoUrl?: string;
 };
 
 type CheckInChatViewProps = {
@@ -15,7 +15,6 @@ type CheckInChatViewProps = {
     companionChip: string;
     companionPicker: string;
   };
-  emptyState: ReactNode;
   renderPhoto: (resident: CheckInResident) => ReactNode;
   renderSession: (resident: CheckInResident) => ReactNode;
   residents: CheckInResident[];
@@ -23,7 +22,6 @@ type CheckInChatViewProps = {
 
 export function CheckInChatView({
   classNames,
-  emptyState,
   renderPhoto,
   renderSession,
   residents,
@@ -32,7 +30,7 @@ export function CheckInChatView({
   const chipRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const selectedIndex = residents.findIndex((resident) => resident.id === residentId);
 
-  if (residents.length === 0) return emptyState;
+  if (residents.length === 0) return null;
 
   const activeIndex = selectedIndex === -1 ? 0 : selectedIndex;
   const selectedResident = residents[activeIndex];

@@ -55,7 +55,7 @@ test("rejects unauthenticated and wrong-organization uploads", async () => {
       };
     },
   }));
-  assert.equal((await wrongOrganization(request())).status, 404);
+  assert.equal((await wrongOrganization(request())).status, 403);
 });
 
 test("validates processed image content and stores only photo metadata", async () => {

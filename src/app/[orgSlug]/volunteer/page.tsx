@@ -28,8 +28,10 @@ type VolunteerPageProps = {
 const volunteerQuerySchema = z.object({
   companion: uuidSchema.optional().catch(undefined),
   submitted: z.literal("1").optional().catch(undefined),
-  error: z.literal("rate-limited").optional().catch(undefined),
+  error: z.enum(["invalid", "rate-limited", "unavailable"]).optional().catch(undefined),
 });
+
+const MAX_CHECK_IN_RESIDENTS = 100;
 
 export default async function VolunteerPage({ params, searchParams }: VolunteerPageProps) {
   const { orgSlug } = await params;
@@ -53,8 +55,15 @@ export default async function VolunteerPage({ params, searchParams }: VolunteerP
       },
       orderBy: { name: "asc" },
       select: { id: true, name: true, photoUrls: true },
+      take: MAX_CHECK_IN_RESIDENTS,
     }),
   ]);
+
+  const checkInResidents = residents.map(({ id, name, photoUrls }) => ({
+    id,
+    name,
+    photoUrl: photoUrls[0],
+  }));
 
   const submittedCompanion = residents.find((resident) => resident.id === companion);
 
@@ -90,12 +99,14 @@ export default async function VolunteerPage({ params, searchParams }: VolunteerP
             <p>Share the moments their care team and sponsor should know.</p>
           </header>
           {error === "rate-limited" ? <p className={styles.chatError} role="alert">Please wait a little before trying again.</p> : null}
+          {error === "invalid" ? <p className={styles.chatError} role="alert">The check-in details were invalid. Please try again.</p> : null}
+          {error === "unavailable" ? <p className={styles.chatError} role="alert">We could not save that check-in. The companion may no longer be available.</p> : null}
 
-          {residents.length > 0 ? (
+          {checkInResidents.length > 0 ? (
             <CheckInChat
               onFinish={finishCheckIn.bind(null, orgSlug)}
               orgSlug={orgSlug}
-              residents={residents}
+              residents={checkInResidents}
             />
           ) : (
             <FeltPanel className={styles.emptyPanel} tone="oatmeal">

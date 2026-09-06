@@ -27,9 +27,9 @@ const { cleanup, fireEvent, render, screen } = await import("@testing-library/re
 const { CheckInChatView } = await import("./check-in-chat-view.tsx");
 
 const residents = [
-  { id: "one", name: "Biscuit", photoUrls: [] },
-  { id: "two", name: "Mabel", photoUrls: [] },
-  { id: "three", name: "Scout", photoUrls: [] },
+  { id: "one", name: "Biscuit" },
+  { id: "two", name: "Mabel" },
+  { id: "three", name: "Scout" },
 ];
 const classNames = {
   chatFrame: "chat-frame",
@@ -42,7 +42,6 @@ afterEach(cleanup);
 function renderView(currentResidents = residents) {
   return render(createElement(CheckInChatView, {
     classNames,
-    emptyState: createElement("p", null, "No companions are available."),
     renderPhoto: () => null,
     renderSession: (resident) => createElement("p", null, `Checking in with ${resident.name}`),
     residents: currentResidents,
@@ -72,9 +71,9 @@ test("moves companion selection and focus with radio group keyboard controls", (
   assert.equal(document.activeElement, biscuit);
 });
 
-test("renders the empty state when there are no residents", () => {
+test("renders nothing when there are no residents", () => {
   renderView([]);
 
-  assert.equal(screen.getByText("No companions are available.").tagName, "P");
+  assert.equal(document.body.textContent, "");
   assert.equal(screen.queryByRole("radiogroup"), null);
 });

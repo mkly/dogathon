@@ -8,7 +8,6 @@ import { z } from "zod";
 
 import { getOrganizationAccessBySlug } from "@/lib/organization-access";
 import { prisma } from "@/lib/prisma";
-import { revalidatePublicRoster } from "@/lib/public-roster-cache";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { summarizeInterview } from "@/lib/volunteer-interview";
 import { interviewRequestSchema } from "@/lib/volunteer-interview-request";
@@ -42,7 +41,7 @@ export async function finishCheckIn(orgSlug: string, rawInput: unknown) {
   if (!rateLimit.allowed) redirect(volunteerUrl(safeOrgSlug, { error: "rate-limited" }));
 
   const parsed = finishCheckInSchema.safeParse(rawInput);
-  if (!parsed.success) throw new Error("The check-in details are invalid.");
+  if (!parsed.success) redirect(volunteerUrl(safeOrgSlug, { error: "invalid" }));
   const { residentId, messages, photoIds } = parsed.data;
 
   const resident = await prisma.resident.findFirst({
@@ -55,38 +54,40 @@ export async function finishCheckIn(orgSlug: string, rawInput: unknown) {
     select: { ageText: true, breed: true, id: true, name: true, sex: true },
   });
 
-  if (!resident) throw new Error("That companion is no longer available.");
+  if (!resident) redirect(volunteerUrl(safeOrgSlug, { error: "unavailable" }));
 
-  const { note } = await summarizeInterview({
-    companion: resident,
-    messages,
-    orgName: access.organization.name,
-  });
+  try {
+    const { note } = await summarizeInterview({
+      companion: resident,
+      messages,
+      orgName: access.organization.name,
+    });
 
-  const noteId = randomUUID();
-  await prisma.$transaction(async (tx) => {
-    await tx.volunteerNote.create({
-      data: {
-        id: noteId,
+    const noteId = randomUUID();
+    await prisma.$transaction(async (tx) => {
+      await tx.volunteerNote.create({
+        data: {
+          id: noteId,
+          orgId: context.orgId,
+          note,
+          residentId,
+        },
+      });
+
+      const photoUrl = await attachVolunteerPhotos(tx, {
+        maxByteSize: MAX_PHOTO_BYTES,
+        noteId,
         orgId: context.orgId,
-        note,
+        photoIds,
         residentId,
-      },
+      });
+      if (photoUrl) {
+        await tx.volunteerNote.update({ where: { id: noteId }, data: { photoUrl } });
+      }
     });
-
-    const photoUrl = await attachVolunteerPhotos(tx, {
-      maxByteSize: MAX_PHOTO_BYTES,
-      noteId,
-      orgId: context.orgId,
-      photoIds,
-      residentId,
-    });
-    if (photoUrl) {
-      await tx.volunteerNote.update({ where: { id: noteId }, data: { photoUrl } });
-    }
-  });
-
-  revalidatePublicRoster();
+  } catch {
+    redirect(volunteerUrl(safeOrgSlug, { error: "unavailable" }));
+  }
 
   redirect(volunteerUrl(safeOrgSlug, { companion: residentId, submitted: "1" }));
 }
