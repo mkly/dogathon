@@ -206,7 +206,7 @@ export default async function AdminSettingsPage({ params }: AdminSettingsPagePro
             </>
           }
           brand={<Link href={`/${orgSlug}`} transitionTypes={["nav-back"]}>
-            <Image alt="Dogathon" preload src={pawcastWordmark} />
+            <Image alt="Pawcast" preload src={pawcastWordmark} />
           </Link>}
           title="Staff settings"
         />

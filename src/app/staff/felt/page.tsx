@@ -13,12 +13,12 @@ export default function FeltStyleguidePage() {
     <PageViewTransition>
       <main className={styles.page}>
         <header className={styles.header}>
-          <StitchBadge tone="brick">Sirius design system</StitchBadge>
+          <StitchBadge tone="brick">Pawcast design system</StitchBadge>
           <h1>Cut from the same cloth</h1>
           <p>
             Shared felt primitives for warm, practical rescue experiences. The
             irregular edges, layered shadows, and visible stitches come from the
-            original Sirius mockups.
+            original Pawcast mockups.
           </p>
         </header>
 

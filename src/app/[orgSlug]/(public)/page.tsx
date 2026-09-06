@@ -35,7 +35,7 @@ export default async function OrganizationHome({ params }: OrganizationHomeProps
   return (
     <PageViewTransition>
       <main className={styles.siteShell}>
-        <Image alt="Dogathon" className={styles.wordmark} src={pawcastWordmark} />
+        <Image alt="Pawcast" className={styles.wordmark} src={pawcastWordmark} />
 
         <p>{organization.name}</p>
 
