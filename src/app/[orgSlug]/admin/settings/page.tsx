@@ -25,11 +25,10 @@ import { getEmailConnectorStatus } from "@/lib/email-connectors";
 import { getOrganizationAccessBySlug } from "@/lib/organization-access";
 import { prisma } from "@/lib/prisma";
 import { SPONSORSHIP_MONTHLY_USD } from "@/lib/sponsorship-pricing";
-import { refreshConnectStatus } from "@/lib/stripe-billing";
 
 import pawcastWordmark from "../../../../../public/brand/pawcast-wordmark.png";
 
-import { beginStripeOnboarding } from "../actions";
+import { beginStripeOnboarding, refreshStripeConnection } from "../actions";
 import {
   EmailConnectorSettings,
   RosterSyncSettings,
@@ -37,36 +36,22 @@ import {
 import { EMAIL_CONNECTOR_NOTICE_ID } from "../gmail-notice";
 import { STRIPE_CONNECT_NOTICE_ID, stripeNotReadyReason } from "../stripe-notice";
 import styles from "../admin.module.css";
+import { ConnectorResultNotice } from "./connector-result-notice";
 import { PostscriptSettingsForm } from "./postscript-settings-form";
 
 export const dynamic = "force-dynamic";
 
-type AdminSettingsPageProps = { params: Promise<{ orgSlug: string }> };
+type AdminSettingsPageProps = {
+  params: Promise<{ orgSlug: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+};
 
-// Stripe owns the truth about whether an account can take card payments, so ask it
-// on each visit rather than trusting the stored flags; fall back to them if Stripe
-// is unreachable.
 async function loadStripeConnection(orgId: string) {
   const stored = await prisma.organization.findUnique({
     where: { id: orgId },
     select: { stripeAccountId: true, stripeDetailsSubmitted: true, stripeChargesEnabled: true },
   });
-  if (!stored?.stripeAccountId) {
-    return stored && { ...stored, verifying: false, blockers: [] as string[] };
-  }
-  try {
-    const live = await refreshConnectStatus(orgId);
-    return {
-      stripeAccountId: live.id,
-      stripeDetailsSubmitted: live.detailsSubmitted,
-      stripeChargesEnabled: live.chargesEnabled,
-      verifying: live.verifying,
-      blockers: live.blockers,
-    };
-  } catch (error) {
-    console.warn("Could not refresh the Stripe Connect status; showing the stored one.", error);
-    return { ...stored, verifying: false, blockers: [] };
-  }
+  return stored && { ...stored, verifying: false, blockers: [] as string[] };
 }
 
 async function StripeConnection({
@@ -129,6 +114,14 @@ async function StripeConnection({
           </PendingAdminSubmitButton>
         </form>
       </MotionReveal>
+      {organization?.stripeAccountId && canOnboard ? (
+        <form action={refreshStripeConnection} className={styles.stripeConnectForm}>
+          <input name="orgSlug" type="hidden" value={orgSlug} />
+          <PendingAdminSubmitButton pendingLabel="Refreshing…" tone="oatmeal" type="submit">
+            Refresh Stripe status
+          </PendingAdminSubmitButton>
+        </form>
+      ) : null}
     </AdminSurface>
   );
 }
@@ -180,8 +173,12 @@ function SettingsCardLoading({ tone }: { tone: "denim" | "moss" | "mustard" | "o
   return <AdminSurface aria-label="Loading settings" className={`${styles.settings} ${styles.settingsSkeleton}`} tone={tone} />;
 }
 
-export default async function AdminSettingsPage({ params }: AdminSettingsPageProps) {
-  const { orgSlug } = await params;
+export default async function AdminSettingsPage({ params, searchParams }: AdminSettingsPageProps) {
+  const [{ orgSlug }, query] = await Promise.all([params, searchParams]);
+  const connectorResult =
+    query.emailConnector === "connected" || query.emailConnector === "error"
+      ? query.emailConnector
+      : null;
   const access = await getOrganizationAccessBySlug(await headers(), orgSlug, {
     settings: ["manage"],
   });
@@ -212,6 +209,7 @@ export default async function AdminSettingsPage({ params }: AdminSettingsPagePro
         />
 
         <div className={styles.settingsStack}>
+          {connectorResult ? <ConnectorResultNotice result={connectorResult} /> : null}
           <Suspense fallback={<SuspenseFallback><SettingsCardLoading tone="mustard" /></SuspenseFallback>}>
             <SuspenseReveal><StripeConnection canOnboard={context.role === "owner"} orgId={context.orgId} orgSlug={orgSlug} /></SuspenseReveal>
           </Suspense>

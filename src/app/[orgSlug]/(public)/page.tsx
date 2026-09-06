@@ -74,7 +74,7 @@ export default async function OrganizationHome({ params }: OrganizationHomeProps
                   <PhotoPatch
                     alt={`${resident.name}, ${resident.breed}`}
                     className={styles.gridPhoto}
-                    sizes="(max-width: 640px) calc(100vw - 80px), (max-width: 1028px) 29vw, 274px"
+                    sizes="(max-width: 700px) calc(100vw - 80px), (max-width: 1028px) 29vw, 274px"
                     src={resident.photoUrls[0]}
                   />
                 </ViewTransition>

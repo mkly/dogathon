@@ -79,9 +79,20 @@
   color: inherit;
 }
 
-.capitalize {
-  text-transform: capitalize;
+.limitNotice { margin: 10px 0 0; font-size: 0.8rem; font-weight: 750; }
+
+.pagination {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 12px;
+  margin-top: 20px;
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-align: center;
 }
+
+.pagination > :last-child { justify-self: end; }
 
 @media (max-width: 720px) {
   .backLink,

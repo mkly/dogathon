@@ -24,7 +24,7 @@ import {
 } from "@/components/page-view-transition";
 import { SignOutButton } from "@/components/sign-out-button";
 import { getEmailConnectorStatus } from "@/lib/email-connectors";
-import { formatDateTime } from "@/lib/format";
+import { formatDateTime, formatMonthlyAmount } from "@/lib/format";
 import { getOrganizationAccessBySlug } from "@/lib/organization-access";
 import { prisma } from "@/lib/prisma";
 import { isSponsorUpdateRecipient } from "@/lib/sponsor-update-delivery";
@@ -75,7 +75,7 @@ async function DashboardStats({ orgId, orgSlug }: { orgId: string; orgSlug: stri
   return (
     <section aria-label="Program statistics" className={styles.stats}>
       <AdminSurface className={styles.stat} tone="mustard">
-        <strong>${monthlyRecurring.toLocaleString()}</strong>
+        <strong>{formatMonthlyAmount(monthlyRecurring)}</strong>
         <span>a month, recurring</span>
         <small>{activeSponsorCount} active {pluralize("sponsorship", activeSponsorCount)}</small>
       </AdminSurface>

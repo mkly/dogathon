@@ -6,7 +6,7 @@ import { AdminBadge, AdminSurface } from "@/components/admin-ui";
 import { SignOutButton } from "@/components/sign-out-button";
 import { PageViewTransition } from "@/components/page-view-transition";
 import { getSession } from "@/lib/auth-session";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatMonthlyAmount, sponsorshipStatusLabel } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 import { getSponsorContext } from "@/lib/sponsor-access";
 
@@ -19,14 +19,6 @@ export const metadata: Metadata = {
   title: "Sponsor account | Dogathon",
   description: "Manage your Dogathon sponsorships and contact preferences.",
 };
-
-function formatMonthlyAmount(monthlyUsd: number) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 0,
-  }).format(monthlyUsd);
-}
 
 export default async function SponsorAccountPage() {
   const requestHeaders = await headers();
@@ -105,7 +97,7 @@ export default async function SponsorAccountPage() {
                       <p className={styles.rescue}>{record.organization.name}</p>
                       <div className={styles.details}>
                         <AdminBadge tone={record.status === "active" ? "moss" : "brick"}>
-                          <span className={styles.status}>{record.status}</span>
+                          <span className={styles.status}>{sponsorshipStatusLabel(record.status)}</span>
                         </AdminBadge>
                         <span>Started {formatDate(record.createdAt)}</span>
                         <span>{formatMonthlyAmount(record.monthlyUsd)}/month</span>

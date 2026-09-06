@@ -59,7 +59,7 @@ export default async function CompanionPage({ params }: CompanionPageProps) {
                     alt={resident.name}
                     className={styles.heroPhoto}
                     preload
-                    sizes="(max-width: 720px) calc(100vw - 48px), 22rem"
+                    sizes="(max-width: 700px) calc(100vw - 48px), 22rem"
                     src={photo}
                   />
                 </ViewTransition>
@@ -68,7 +68,7 @@ export default async function CompanionPage({ params }: CompanionPageProps) {
                   alt={`${resident.name}, photo ${index + 1}`}
                   className={styles.extraPhoto}
                   key={photo}
-                  sizes="(max-width: 720px) calc(100vw - 48px), 22rem"
+                  sizes="(max-width: 700px) calc(100vw - 48px), 22rem"
                   src={photo}
                 />
               )

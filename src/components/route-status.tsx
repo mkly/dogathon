@@ -1,7 +1,7 @@
 import styles from "./route-status.module.css";
 
 type AdminRouteLoadingProps = {
-  variant?: "dashboard" | "directory" | "members" | "settings";
+  variant?: "dashboard" | "directory" | "members" | "settings" | "sponsors" | "sponsor" | "companions";
 };
 
 function Skeleton({ className }: { className: string }) {
@@ -46,6 +46,35 @@ export function AdminRouteLoading({ variant = "directory" }: AdminRouteLoadingPr
         <div className={styles.stack}>{Array.from({ length: 3 }, (_, index) => <Skeleton className={styles.row} key={index} />)}</div>
         <Skeleton className={styles.sectionTitle} />
         <div className={styles.stack}><Skeleton className={styles.row} /><Skeleton className={styles.row} /></div>
+      </main>
+    );
+  }
+
+  if (variant === "sponsor") {
+    return (
+      <main aria-busy="true" aria-label="Loading sponsor details" className={`${styles.page} ${styles.directory}`}>
+        <Skeleton className={styles.header} />
+        <Skeleton className={styles.profileRow} />
+        <Skeleton className={styles.sectionTitle} />
+        <Skeleton className={styles.tableCard} />
+      </main>
+    );
+  }
+
+  if (variant === "sponsors" || variant === "companions") {
+    return (
+      <main
+        aria-busy="true"
+        aria-label={variant === "sponsors" ? "Loading sponsors" : "Loading companions covered"}
+        className={`${styles.page} ${styles.directory}`}
+      >
+        <Skeleton className={styles.header} />
+        <Skeleton className={styles.directorySummary} />
+        <div className={styles.stack}>
+          {Array.from({ length: 3 }, (_, index) => (
+            <Skeleton className={variant === "companions" ? styles.companionTableCard : styles.tableCard} key={index} />
+          ))}
+        </div>
       </main>
     );
   }

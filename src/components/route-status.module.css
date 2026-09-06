@@ -49,6 +49,10 @@
 .settingsCard { min-height: 190px; }
 .settingsEditorCard { min-height: 310px; }
 .row { min-height: 92px; }
+.directorySummary { width: min(420px, 72%); height: 36px; margin-bottom: 20px; }
+.profileRow { min-height: 88px; margin-bottom: 24px; }
+.tableCard { min-height: 240px; }
+.companionTableCard { min-height: 350px; }
 
 .volunteer {
   display: flex;
@@ -144,14 +148,16 @@
 
 @media (max-width: 760px) {
   .accountLayout { grid-template-columns: 1fr; }
-  .publicGrid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 700px) {
+  .publicHero { min-height: 330px; }
+  .publicGrid { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 620px) {
   .grid { grid-template-columns: 1fr; }
   .queueCard { min-height: 380px; }
-  .publicHero { min-height: 330px; }
-  .publicGrid { grid-template-columns: 1fr; }
 }
 
 @media (prefers-reduced-motion: reduce) {

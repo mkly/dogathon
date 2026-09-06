@@ -14,7 +14,7 @@ import {
 } from "@/components/admin-ui";
 import { PhotoPatch } from "@/components/felt";
 import { PageViewTransition } from "@/components/page-view-transition";
-import { formatDate } from "@/lib/format";
+import { formatDate, sponsorshipStatusLabel } from "@/lib/format";
 import { getOrganizationAccessBySlug } from "@/lib/organization-access";
 import { prisma } from "@/lib/prisma";
 
@@ -27,39 +27,71 @@ export const metadata: Metadata = {
   description: "Private sponsorship directory grouped by companion for Dogathon staff.",
 };
 
-type CompanionsCoveredPageProps = { params: Promise<{ orgSlug: string }> };
+type CompanionsCoveredPageProps = {
+  params: Promise<{ orgSlug: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+};
 
-export default async function CompanionsCoveredPage({ params }: CompanionsCoveredPageProps) {
-  const { orgSlug } = await params;
+const DIRECTORY_PAGE_SIZE = 50;
+const SPONSORSHIPS_PER_COMPANION_LIMIT = 100;
+
+function pageFromQuery(value: string | string[] | undefined) {
+  const parsed = Number(Array.isArray(value) ? value[0] : value);
+  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : 1;
+}
+
+export default async function CompanionsCoveredPage({ params, searchParams }: CompanionsCoveredPageProps) {
+  const [{ orgSlug }, query] = await Promise.all([params, searchParams]);
+  const page = pageFromQuery(query.page);
   const access = await getOrganizationAccessBySlug(await headers(), orgSlug, {
     sponsors: ["read"],
   });
 
   if (!access) notFound();
-  if (!access.context) redirect("/staff/organizations");
+  if (!access.context) {
+    const next = encodeURIComponent(`/${orgSlug}/admin/companions-covered`);
+    redirect(access.authenticated ? "/staff/organizations" : `/staff/sign-in?next=${next}`);
+  }
   const { context } = access;
 
-  const residents = await prisma.resident.findMany({
-    where: { orgId: context.orgId, sponsorships: { some: { orgId: context.orgId } } },
-    include: {
-      sponsorships: {
-        where: { orgId: context.orgId },
-        include: { sponsor: true },
-        orderBy: { createdAt: "asc" },
+  const residentWhere = {
+    orgId: context.orgId,
+    sponsorships: { some: { orgId: context.orgId } },
+  };
+  const [residentCount, sponsorshipCount, activelyCoveredCount, residents] = await Promise.all([
+    prisma.resident.count({ where: residentWhere }),
+    prisma.sponsorship.count({ where: { orgId: context.orgId } }),
+    prisma.resident.count({
+      where: { orgId: context.orgId, sponsorships: { some: { orgId: context.orgId, status: "active" } } },
+    }),
+    prisma.resident.findMany({
+      where: residentWhere,
+      select: {
+        id: true,
+        name: true,
+        breed: true,
+        photoUrls: true,
+        status: true,
+        _count: { select: { sponsorships: { where: { orgId: context.orgId } } } },
+        sponsorships: {
+          where: { orgId: context.orgId },
+          select: {
+            id: true,
+            status: true,
+            createdAt: true,
+            sponsor: { select: { email: true, name: true } },
+          },
+          orderBy: { createdAt: "asc" },
+          take: SPONSORSHIPS_PER_COMPANION_LIMIT,
+        },
       },
-    },
-    orderBy: { name: "asc" },
-  });
-
-  const sponsorshipCount = residents.reduce(
-    (total, resident) => total + resident.sponsorships.length,
-    0,
-  );
-  // The /admin stat card counts only companions with a live sponsor, so spell out that
-  // slice here too: this page also keeps companions whose sponsorships have all ended.
-  const activelyCoveredCount = residents.filter((resident) =>
-    resident.sponsorships.some(({ status }) => status === "active"),
-  ).length;
+      orderBy: [{ name: "asc" }, { id: "asc" }],
+      skip: (page - 1) * DIRECTORY_PAGE_SIZE,
+      take: DIRECTORY_PAGE_SIZE,
+    }),
+  ]);
+  const hasPreviousPage = page > 1;
+  const hasNextPage = page * DIRECTORY_PAGE_SIZE < residentCount;
 
   return (
     <PageViewTransition>
@@ -76,7 +108,7 @@ export default async function CompanionsCoveredPage({ params }: CompanionsCovere
 
         <div className={styles.summary}>
           <p>
-            {residents.length} {pluralize("companion", residents.length)} · {sponsorshipCount}{" "}
+            {residentCount} {pluralize("companion", residentCount)} · {sponsorshipCount}{" "}
             {pluralize("sponsorship", sponsorshipCount)} · {activelyCoveredCount}{" "}
             actively covered
           </p>
@@ -115,8 +147,8 @@ export default async function CompanionsCoveredPage({ params }: CompanionsCovere
                           {resident.status}
                         </AdminBadge>
                         <AdminBadge tone={hasActiveSponsor ? "moss" : "brick"}>
-                          {resident.sponsorships.length}{" "}
-                          {pluralize("sponsor", resident.sponsorships.length)}
+                          {resident._count.sponsorships}{" "}
+                          {pluralize("sponsor", resident._count.sponsorships)}
                         </AdminBadge>
                       </div>
                     </div>
@@ -147,16 +179,35 @@ export default async function CompanionsCoveredPage({ params }: CompanionsCovere
                               {sponsorship.sponsor.email}
                             </a>
                           </td>
-                          <td className={styles.capitalize}>{sponsorship.status}</td>
+                          <td>{sponsorshipStatusLabel(sponsorship.status)}</td>
                           <td>{formatDate(sponsorship.createdAt)}</td>
                         </tr>
                       ))}
                     </tbody>
                   </AdminTable>
+                  {resident._count.sponsorships > SPONSORSHIPS_PER_COMPANION_LIMIT ? (
+                    <p className={styles.limitNotice}>
+                      Showing the first {SPONSORSHIPS_PER_COMPANION_LIMIT} sponsorships.
+                    </p>
+                  ) : null}
                 </AdminSurface>
               );
             })}
           </section>
+        )}
+
+        {(hasPreviousPage || hasNextPage) && (
+          <nav aria-label="Companions covered pages" className={styles.pagination}>
+            {hasPreviousPage ? (
+              <AdminLink href={page === 2 ? `/${orgSlug}/admin/companions-covered` : `/${orgSlug}/admin/companions-covered?page=${page - 1}`}>
+                Previous page
+              </AdminLink>
+            ) : <span />}
+            <span>Page {page}</span>
+            {hasNextPage ? (
+              <AdminLink href={`/${orgSlug}/admin/companions-covered?page=${page + 1}`}>Next page</AdminLink>
+            ) : <span />}
+          </nav>
         )}
       </AdminPage>
     </PageViewTransition>
