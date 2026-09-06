@@ -13,7 +13,7 @@ export function AdminRouteLoading({ variant = "directory" }: AdminRouteLoadingPr
     return (
       <main aria-busy="true" aria-label="Loading staff room" className={styles.page}>
         <Skeleton className={styles.header} />
-        <div className={styles.stats}>{Array.from({ length: 3 }, (_, index) => <Skeleton className={styles.stat} key={index} />)}</div>
+        <div className={styles.stats}>{Array.from({ length: 4 }, (_, index) => <Skeleton className={styles.stat} key={index} />)}</div>
         <Skeleton className={styles.sectionTitle} />
         <div className={styles.grid}>{Array.from({ length: 4 }, (_, index) => <Skeleton className={styles.card} key={index} />)}</div>
         <Skeleton className={styles.sectionTitle} />
@@ -26,7 +26,14 @@ export function AdminRouteLoading({ variant = "directory" }: AdminRouteLoadingPr
     return (
       <main aria-busy="true" aria-label="Loading staff settings" className={styles.page}>
         <Skeleton className={styles.header} />
-        <div className={styles.stack}>{Array.from({ length: 4 }, (_, index) => <Skeleton className={styles.settingsCard} key={index} />)}</div>
+        <div className={styles.stack}>
+          {Array.from({ length: 4 }, (_, index) => (
+            <Skeleton
+              className={`${styles.settingsCard} ${index === 2 ? styles.settingsEditorCard : ""}`}
+              key={index}
+            />
+          ))}
+        </div>
       </main>
     );
   }

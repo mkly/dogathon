@@ -47,7 +47,7 @@ function deterministicCompose(input: ComposeSponsorUpdateInput): ComposedSponsor
       ? `${name} was adopted today. You helped get ${name} there.`
       : `Here is the latest update from ${name}.`;
   const noteSection = notes.length > 0 ? `## Recent notes\n\n${notes.map((note) => `- ${note}`).join("\n")}` : "";
-  const bodyText = [intro, noteSection, input.pinnedPostscript.trim()].filter(Boolean).join("\n\n");
+  const bodyText = appendPostscript([intro, noteSection].filter(Boolean).join("\n\n"), input.pinnedPostscript);
 
   return {
     subject: input.type === "graduation" ? `${name} found a home!` : `An update from ${name}`,
@@ -55,16 +55,17 @@ function deterministicCompose(input: ComposeSponsorUpdateInput): ComposedSponsor
   };
 }
 
-function ensureRequiredContent(
-  draft: ComposedSponsorUpdate,
-  input: ComposeSponsorUpdateInput,
-): ComposedSponsorUpdate {
-  const postscript = input.pinnedPostscript.trim();
-  const bodyText = postscript && !draft.bodyText.includes(postscript)
-    ? `${draft.bodyText.trim()}\n\n${postscript}`
-    : draft.bodyText.trim();
+function appendPostscript(bodyText: string, postscript: string): string {
+  if (!postscript) return bodyText.trim();
+  const trimmedBody = bodyText.trim();
+  return trimmedBody ? `${trimmedBody}\n\n${postscript}` : postscript;
+}
 
-  return { subject: draft.subject.trim(), bodyText };
+function finalizeDraft(draft: ComposedSponsorUpdate, postscript: string): ComposedSponsorUpdate {
+  return {
+    subject: draft.subject.trim(),
+    bodyText: appendPostscript(draft.bodyText, postscript),
+  };
 }
 
 async function composeWithModel(input: ComposeSponsorUpdateInput): Promise<ComposedSponsorUpdate> {
@@ -77,10 +78,15 @@ async function composeWithModel(input: ComposeSponsorUpdateInput): Promise<Compo
     output: Output.object({ schema: composedSponsorUpdateSchema }),
     instructions:
       `You write warm, short email updates in an animal shelter's voice. Use only facts in the supplied JSON; never invent details.${regularUpdateGuidance} Format the notes section with the literal Markdown heading "## Recent notes".`,
-    prompt: JSON.stringify(input),
+    prompt: JSON.stringify({
+      companion: input.companion,
+      notes: input.notes,
+      type: input.type,
+      companionPageUrl: input.companionPageUrl,
+    }),
   });
 
-  return ensureRequiredContent(output, input);
+  return finalizeDraft(output, input.pinnedPostscript);
 }
 
 /**

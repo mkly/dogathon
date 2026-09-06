@@ -57,7 +57,7 @@ model Organization {
   residents              Resident[]
   sponsorships           Sponsorship[]
   volunteerNotes         VolunteerNote[]
-  sponsorUpdates               SponsorUpdate[]
+  sponsorUpdates         SponsorUpdate[]
   settings               RescueSettings?
   rosterSyncNotes        RosterSyncNote[]
   emailConnector         EmailConnector?
@@ -216,7 +216,7 @@ model Resident {
   updatedAt      DateTime        @updatedAt
   sponsorships   Sponsorship[]
   volunteerNotes VolunteerNote[]
-  sponsorUpdates       SponsorUpdate[]
+  sponsorUpdates SponsorUpdate[]
   organization   Organization    @relation(fields: [orgId], references: [id], onDelete: Cascade)
 
   @@unique([orgId, name])
@@ -266,9 +266,9 @@ model VolunteerNote {
 }
 
 model SponsorUpdate {
-  id           String        @id @default(uuid(4)) @db.Uuid
-  orgId        String        @db.Uuid
-  residentId   String        @db.Uuid
+  id           String              @id @default(uuid(4)) @db.Uuid
+  orgId        String              @db.Uuid
+  residentId   String              @db.Uuid
   type         SponsorUpdateType   @default(regular)
   subject      String
   bodyText     String
@@ -278,10 +278,10 @@ model SponsorUpdate {
   photoUrl     String?
   status       SponsorUpdateStatus @default(draft)
   sentAt       DateTime?
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  organization Organization  @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  resident     Resident      @relation(fields: [residentId, orgId], references: [id, orgId], onDelete: Cascade)
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+  organization Organization        @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  resident     Resident            @relation(fields: [residentId, orgId], references: [id, orgId], onDelete: Cascade)
 
   @@unique([id, orgId])
   @@index([orgId, status])

@@ -13,6 +13,8 @@ import {
 import { Markdown } from "@react-email/markdown";
 import type { CSSProperties } from "react";
 
+import { escapeHtmlInMarkdown, neutralizeUnsafeMarkdownDestinations } from "../lib/markdown-safety.ts";
+
 export type SponsorUpdateEmailProps = {
   companionName: string;
   subject: string;
@@ -46,25 +48,6 @@ function absolute(origin: string, path: string): string {
   } catch {
     return path;
   }
-}
-
-/** The composer controls Markdown, but sponsor-facing text must never inject HTML. */
-function escapeHtmlInMarkdown(value: string): string {
-  return value.replace(/&/gu, "&amp;").replace(/</gu, "&lt;").replace(/>/gu, "&gt;");
-}
-
-const SAFE_DESTINATION = /^(?:https?:|mailto:|[/#])/iu;
-
-/**
- * Markdown link and image destinations are author-supplied and reach a preview
- * page served from our own origin, so only web schemes are allowed through.
- */
-function neutralizeUnsafeDestinations(value: string): string {
-  return value.replace(
-    /(\]\(\s*)([^)\s]*)/gu,
-    (match, open: string, destination: string) =>
-      destination === "" || SAFE_DESTINATION.test(destination) ? match : `${open}#`,
-  );
 }
 
 function feltBackground(tone: string, tile: string): CSSProperties {
@@ -241,7 +224,7 @@ export function SponsorUpdateEmail(input: SponsorUpdateEmailProps) {
               ) : null}
 
               <Markdown markdownCustomStyles={markdownStyles}>
-                {neutralizeUnsafeDestinations(escapeHtmlInMarkdown(input.bodyText.trim()))}
+                {neutralizeUnsafeMarkdownDestinations(escapeHtmlInMarkdown(input.bodyText.trim()))}
               </Markdown>
 
               <Section style={{ textAlign: "center" }}>

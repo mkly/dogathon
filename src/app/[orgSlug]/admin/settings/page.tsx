@@ -31,12 +31,12 @@ import pawcastWordmark from "../../../../../public/brand/pawcast-wordmark.png";
 import { beginStripeOnboarding } from "../actions";
 import {
   EmailConnectorSettings,
-  PostscriptSettingsForm,
   RosterSyncSettings,
 } from "../admin-controls";
 import { EMAIL_CONNECTOR_NOTICE_ID } from "../gmail-notice";
 import { STRIPE_CONNECT_NOTICE_ID, stripeNotReadyReason } from "../stripe-notice";
 import styles from "../admin.module.css";
+import { PostscriptSettingsForm } from "./postscript-settings-form";
 
 export const dynamic = "force-dynamic";
 

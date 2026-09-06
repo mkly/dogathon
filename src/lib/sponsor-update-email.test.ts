@@ -78,3 +78,16 @@ test("neutralizes unsafe markdown link destinations", async () => {
   assert.ok(!html.includes("javascript:"));
   assert.match(html, /href="https:\/\/pawcast\.test\/x"/u);
 });
+
+test("renders a Markdown postscript in HTML and plain text", async () => {
+  const postscript = "**Bold thanks**\n\n[Learn more](https://example.org)\n\n- First\n- Second";
+  const email = createElement(SponsorUpdateEmail, { ...base, bodyText: `${base.bodyText}\n\n${postscript}` });
+  const [html, plainText] = await Promise.all([render(email), render(email, { plainText: true })]);
+
+  assert.match(html, /<strong[^>]*>Bold thanks<\/strong>/u);
+  assert.match(html, /href="https:\/\/example\.org"/u);
+  assert.match(html, /<li(?:\s|>)/u);
+  assert.match(plainText, /Bold thanks/u);
+  assert.match(plainText, /Learn more[\s\S]*https:\/\/example\.org/u);
+  assert.ok(!plainText.includes("**Bold thanks**"));
+});
