@@ -6,7 +6,6 @@ import { z } from "zod";
 
 import { prisma } from "@/lib/prisma";
 import { env } from "@/lib/env";
-import { revalidatePublicRoster } from "@/lib/public-roster-cache";
 import { createStripeCheckout, ResidentUnavailableError } from "@/lib/stripe-billing";
 import { checkRateLimit, getRateLimitIdentity, RATE_LIMITS } from "@/lib/rate-limit";
 import { uuidSchema } from "@/lib/uuid";
@@ -60,7 +59,6 @@ export async function createSponsorship(formData: FormData) {
       cancelUrl: `${env.BETTER_AUTH_URL}${companionPath}?checkout=canceled`,
     });
     checkoutUrl = session.url;
-    revalidatePublicRoster();
   } catch (error) {
     if (error instanceof ResidentUnavailableError) {
       redirect(`${companionPath}?error=unavailable`);

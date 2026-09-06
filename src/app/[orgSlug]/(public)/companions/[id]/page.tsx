@@ -15,12 +15,14 @@ import { SPONSORSHIP_MONTHLY_USD } from "@/lib/sponsorship-pricing";
 import { uuidSchema } from "@/lib/uuid";
 
 import { CompanionBanner, CompanionFormError, CompanionSponsorState } from "./companion-banner";
+import { companionFacts, sponsorshipSucceeded } from "./companion-page";
 import styles from "../../../../public.module.css";
 
 export const revalidate = 86400;
 
 type CompanionPageProps = {
   params: Promise<{ id: string; orgSlug: string }>;
+  searchParams: Promise<{ error?: string | string[]; sponsored?: string | string[] }>;
 };
 
 export async function generateStaticParams() {
@@ -28,8 +30,9 @@ export async function generateStaticParams() {
   return companions.map(({ id, organization }) => ({ id, orgSlug: organization.slug }));
 }
 
-export default async function CompanionPage({ params }: CompanionPageProps) {
+export default async function CompanionPage({ params, searchParams }: CompanionPageProps) {
   const { id, orgSlug } = await params;
+  const sponsored = sponsorshipSucceeded(await searchParams);
   if (!uuidSchema.safeParse(id).success) notFound();
   const organization = await getPublicOrganization(orgSlug);
   if (!organization) notFound();
@@ -89,7 +92,7 @@ export default async function CompanionPage({ params }: CompanionPageProps) {
             </StitchBadge>
             <h1>{resident.name}</h1>
             <p className={styles.companionFacts}>
-              {resident.breed} · {resident.sex} · {resident.ageText} · {resident.weightText}
+              {companionFacts(resident)}
             </p>
             <p className={styles.personality}>{resident.personality}</p>
 
@@ -106,7 +109,7 @@ export default async function CompanionPage({ params }: CompanionPageProps) {
         </section>
 
         {available ? (
-          <CompanionSponsorState>
+          <CompanionSponsorState sponsored={sponsored}>
             <FeltPanel className={styles.sponsorPanel} tone="oatmeal">
               <div className={styles.sponsorPitch}>
                 <p className={styles.eyebrow}>A steady paw</p>

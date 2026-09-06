@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useSyncExternalStore, type ReactNode } from "react";
+import type { ReactNode } from "react";
 
 import { FeltLink, FeltPanel, StitchBadge } from "@/components/felt";
 import { SPONSORSHIP_MONTHLY_USD } from "@/lib/sponsorship-pricing";
@@ -55,16 +55,12 @@ export function CompanionFormError({ name }: { name: string }) {
   );
 }
 
-const subscribeToNothing = () => () => {};
-
-export function CompanionSponsorState({ children }: { children: ReactNode }) {
-  const search = useSyncExternalStore(
-    subscribeToNothing,
-    () => window.location.search,
-    () => "",
-  );
-  const params = new URLSearchParams(search);
-
-  if (params.get("sponsored") === "1" && !params.get("error")) return null;
-  return children;
+export function CompanionSponsorState({
+  children,
+  sponsored,
+}: {
+  children: ReactNode;
+  sponsored: boolean;
+}) {
+  return sponsored ? null : children;
 }
