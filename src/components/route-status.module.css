@@ -16,14 +16,14 @@
 }
 
 .page {
-  width: min(100%, 1120px);
+  width: min(100%, 1180px);
   min-height: 100vh;
   margin: 0 auto;
-  padding: 30px 0 40px;
+  padding: 30px clamp(14px, 4vw, 30px) 40px;
 }
 
 .directory {
-  width: min(100%, 1040px);
+  width: min(100%, 1100px);
   padding-top: 24px;
 }
 
@@ -111,7 +111,6 @@
 }
 
 @media (max-width: 900px) {
-  .page { padding-inline: 14px; }
   .stats { grid-template-columns: repeat(2, 1fr); }
   .companions { grid-template-columns: repeat(2, 1fr); }
 }
