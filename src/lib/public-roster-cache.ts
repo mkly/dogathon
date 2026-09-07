@@ -46,7 +46,19 @@ export const getPublicResident = unstable_cache(
 // it identifies nobody and must never match one of them.
 export const getPublicResidentBySource = unstable_cache(
   async (orgId: string, sourceUrl: string) => (sourceUrl
-    ? prisma.resident.findFirst({ where: { orgId, sourceUrl } })
+    ? prisma.resident.findFirst({
+        where: { orgId, sourceUrl },
+        select: {
+          id: true,
+          name: true,
+          breed: true,
+          ageText: true,
+          sex: true,
+          photoUrls: true,
+          status: true,
+          _count: { select: { sponsorships: { where: { status: "active" } } } },
+        },
+      })
     : null),
   ["public-resident-by-source"],
   PUBLIC_ROSTER_CACHE,

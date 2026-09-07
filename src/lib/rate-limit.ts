@@ -4,6 +4,7 @@ import { getSession } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
 
 export const RATE_LIMITS = {
+  publicRead: { limit: 120, windowMs: 60 * 1000 },
   sponsorshipCheckout: { limit: 5, windowMs: 60 * 60 * 1000 },
   volunteerCheckIn: { limit: 20, windowMs: 60 * 60 * 1000 },
   volunteerPhotoUpload: { limit: 20, windowMs: 60 * 60 * 1000 },
