@@ -9,10 +9,16 @@ const dateTimeFormatter = new Intl.DateTimeFormat("en-US", {
   timeZone: "UTC",
 });
 
-const usdFormatter = new Intl.NumberFormat("en-US", {
+const wholeUsdFormatter = new Intl.NumberFormat("en-US", {
   style: "currency",
   currency: "USD",
-  minimumFractionDigits: 0,
+  maximumFractionDigits: 0,
+});
+
+const centsUsdFormatter = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+  minimumFractionDigits: 2,
   maximumFractionDigits: 2,
 });
 
@@ -25,7 +31,8 @@ export function formatDateTime(date: Date | string) {
 }
 
 export function formatMonthlyAmount(monthlyCents: number) {
-  return usdFormatter.format(monthlyCents / 100);
+  const formatter = monthlyCents % 100 === 0 ? wholeUsdFormatter : centsUsdFormatter;
+  return formatter.format(monthlyCents / 100);
 }
 
 export function sponsorshipStatusLabel(status: "active" | "ended") {

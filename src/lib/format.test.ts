@@ -6,6 +6,8 @@ import { formatMonthlyAmount, sponsorshipStatusLabel } from "./format.ts";
 test("formats monthly sponsorship amounts stored in cents", () => {
   assert.equal(formatMonthlyAmount(2500), "$25");
   assert.equal(formatMonthlyAmount(123456), "$1,234.56");
+  assert.equal(formatMonthlyAmount(3250), "$32.50");
+  assert.equal(formatMonthlyAmount(3205), "$32.05");
 });
 
 test("formats sponsorship statuses for display", () => {
