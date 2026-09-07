@@ -85,13 +85,6 @@ const defaultDependencies: SponsorshipCheckoutDependencies = {
   },
 };
 
-export function findSponsorshipOrganization(
-  slug: string,
-  dependencies: SponsorshipCheckoutDependencies = defaultDependencies,
-) {
-  return dependencies.findOrganization(slug);
-}
-
 function checkoutError(
   code: SponsorshipCheckoutErrorCode,
   context: {
@@ -110,16 +103,6 @@ function checkoutError(
     residentId: context.residentId,
     retryAfterSeconds: context.retryAfterSeconds,
   };
-}
-
-function normalizedSource(value: string) {
-  try {
-    const url = new URL(value);
-    if (url.protocol !== "http:" && url.protocol !== "https:") return "";
-  } catch {
-    return "";
-  }
-  return normalizeSourceUrl(value);
 }
 
 export async function startSponsorshipCheckout(
@@ -172,7 +155,7 @@ export async function startSponsorshipCheckout(
   if (target.kind === "resident-id") {
     residentId = target.value;
   } else {
-    const sourceUrl = normalizedSource(target.value);
+    const sourceUrl = normalizeSourceUrl(target.value);
     if (!sourceUrl) return checkoutError("invalid", { destination, orgSlug });
     const resident = await dependencies.findResidentBySource(organization.id, sourceUrl);
     if (!resident) return checkoutError("unavailable", { destination, orgSlug });
