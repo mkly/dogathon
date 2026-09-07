@@ -31,6 +31,29 @@ A multitenant Next.js app using PostgreSQL, Prisma, and Better Auth organization
 
 Open [http://localhost:3000](http://localhost:3000).
 
+## Integrations
+
+A rescue can link an animal page on any website or CMS to its matching Pawcast sponsor form. Use
+the app base URL and organization slug, then pass the animal page's absolute URL as `source`:
+
+```text
+https://pawcast.example/happy-paws/sponsor?source=https%3A%2F%2Frescue.example%2Fdogs%2Fbiscuit
+```
+
+The app normalizes the source URL and looks it up in that organization's synced public roster. A
+match redirects to the companion's sponsor page, including when the companion has since been
+adopted. A missing or unknown source shows a rescue-branded message with a link to the public
+roster instead of a 404.
+
+For a CMS template, URL-encode the current page's canonical absolute URL and substitute it for
+`ENCODED_PAGE_URL` in this framework-independent link:
+
+```html
+<a href="https://pawcast.example/happy-paws/sponsor?source=ENCODED_PAGE_URL">
+  Sponsor this companion
+</a>
+```
+
 ## Volunteer photo storage
 
 Local development needs no AWS account. When `S3_PHOTO_BUCKET` and
