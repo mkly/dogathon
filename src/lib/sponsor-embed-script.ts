@@ -27,6 +27,8 @@ export const sponsorEmbedScript = String.raw`(() => {
 
   const message = (text, tone) => create("p", "message " + PREFIX + "message-" + tone, text);
 
+  const isHidden = (root, part) => root.getAttribute("data-sponsor-" + part) === "hide";
+
   const sourceFor = (root) => {
     const configured = root.getAttribute("data-sponsor-source");
     if (configured) return new URL(configured, window.location.href).toString();
@@ -129,7 +131,7 @@ export const sponsorEmbedScript = String.raw`(() => {
       const companion = await response.json();
       const content = document.createDocumentFragment();
       content.append(styles());
-      if (companion.photoUrl) {
+      if (companion.photoUrl && !isHidden(root, "photo")) {
         const photo = create("img", "photo");
         photo.setAttribute("src", companion.photoUrl);
         photo.setAttribute("alt", companion.name);

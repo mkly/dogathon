@@ -21,9 +21,11 @@ const companion = {
 };
 
 async function renderWidget({
+  photo,
   response = companion,
   url = "https://rescue.example/dogs/biscuit#bio",
 }: {
+  photo?: string;
   response?: typeof companion;
   url?: string;
 } = {}) {
@@ -40,9 +42,10 @@ async function renderWidget({
     },
   });
 
-  dom.window.eval(sponsorEmbedScript);
   const root = dom.window.document.querySelector<HTMLElement>("[data-sponsor-org]");
   assert.ok(root);
+  if (photo !== undefined) root.setAttribute("data-sponsor-photo", photo);
+  dom.window.eval(sponsorEmbedScript);
   for (let index = 0; index < 20 && !root.hasAttribute("data-sponsor-rendered"); index += 1) {
     await new Promise((resolve) => setTimeout(resolve, 0));
   }
@@ -79,6 +82,21 @@ test("renders companion data and a checkout form using the public endpoints", as
   assert.ok(form?.querySelector('[name="sponsorEmail"][required]'));
   assert.equal(root.innerHTML.includes(companion.name), true);
 });
+
+for (const [photo, expected] of [
+  [undefined, true],
+  ["show", true],
+  ["hide", false],
+] as const) {
+  test(`${photo ?? "an absent value"} for data-sponsor-photo ${expected ? "shows" : "hides"} the photo`, async () => {
+    const { root } = await renderWidget({ photo });
+
+    assert.equal(Boolean(root.querySelector(".dogathon-sponsor-photo")), expected);
+    if (!expected) {
+      assert.equal(root.querySelector("style")?.nextElementSibling?.className, "dogathon-sponsor-name");
+    }
+  });
+}
 
 for (const [query, expected] of [
   ["sponsored=1", "Thank you! Your sponsorship is confirmed."],
