@@ -18,6 +18,7 @@ export type CompanionRecord = {
   careNotes: string[];
   photoUrls: string[];
   adopted: boolean;
+  sourceUrl?: string;
 };
 
 export type ParseCompanionRosterOptions = {

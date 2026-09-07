@@ -31,6 +31,7 @@ async function main() {
   const biscuit = await prisma.resident.upsert({
     where: { orgId_name: { orgId: organization.id, name: "Biscuit" } },
     update: {
+      sourceUrl: "",
       breed: "Mixed breed",
       dobText: "Unknown",
       ageText: "Adult",
@@ -45,6 +46,7 @@ async function main() {
     create: {
       orgId: organization.id,
       name: "Biscuit",
+      sourceUrl: "",
       breed: "Mixed breed",
       dobText: "Unknown",
       ageText: "Adult",
@@ -155,6 +157,7 @@ async function main() {
   const juniper = await prisma.resident.upsert({
     where: { orgId_name: { orgId: secondOrganization.id, name: "Juniper" } },
     update: {
+      sourceUrl: "",
       breed: "Terrier mix",
       dobText: "2022",
       ageText: "Young adult",
@@ -169,6 +172,7 @@ async function main() {
     create: {
       orgId: secondOrganization.id,
       name: "Juniper",
+      sourceUrl: "",
       breed: "Terrier mix",
       dobText: "2022",
       ageText: "Young adult",

@@ -203,6 +203,7 @@ model Resident {
   id              String           @id @default(uuid(4)) @db.Uuid
   orgId           String           @db.Uuid
   name            String
+  sourceUrl       String           @default("")
   breed           String
   dobText         String
   ageText         String

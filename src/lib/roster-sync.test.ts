@@ -103,6 +103,32 @@ function rosterCompanion(name: string, adopted: boolean) {
   };
 }
 
+test("a source URL match updates a renamed companion", async () => {
+  const writes: unknown[] = [];
+  const tx = {
+    resident: {
+      findFirst: async () => ({ id: "resident-1" }),
+      update: async (input: unknown) => { writes.push(input); },
+      upsert: async () => { throw new Error("name fallback should not run"); },
+    },
+  } as unknown as SyncTransaction;
+
+  await upsertCompanions(tx, "org-rescue", [{
+    ...rosterCompanion("Renamed Biscuit", false),
+    sourceUrl: "HTTPS://RESCUE.EXAMPLE/dogs/biscuit/?utm_source=newsletter",
+  }], true);
+
+  assert.deepEqual(writes, [{
+    where: { id_orgId: { id: "resident-1", orgId: "org-rescue" } },
+    data: {
+      name: "Renamed Biscuit",
+      breed: "", dobText: "", ageText: "", sex: "", weightText: "", personality: "",
+      careNotes: [], photoUrls: [], sourceUrl: "https://rescue.example/dogs/biscuit",
+      status: "available", adoptedAt: null,
+    },
+  }]);
+});
+
 test("resident writes run in bounded batches", async () => {
   let active = 0;
   let peak = 0;
@@ -391,6 +417,39 @@ test("a scrape without a completed crawl is not treated as a complete roster", a
 
   assert.equal(discovery.rosterCompleteness.complete, false);
   assert.equal(discovery.rosterCompleteness.status, "crawl-not-run");
+});
+
+test("discovery retains detail-page URLs from scrape metadata", async () => {
+  let step = 0;
+  const detailUrl = "https://rescue.example/companions/hattie/";
+  const discovery = await discoverRosterWithCompleteness("https://rescue.example/companions", {
+    model: scriptedModel(async () => {
+      step += 1;
+      if (step > 1) return { role: "assistant", content: "Done." };
+      return {
+        role: "assistant",
+        content: null,
+        tool_calls: [{
+          id: "crawl-1",
+          type: "function",
+          function: {
+            name: "firecrawl_crawl",
+            arguments: JSON.stringify({ url: "https://rescue.example/companions" }),
+          },
+        }],
+      };
+    }),
+    firecrawl: async () => ({
+      status: "completed",
+      data: [{
+        markdown: "# Hattie",
+        metadata: { sourceURL: detailUrl },
+      }],
+      completeness: { complete: true, status: "completed", completed: 1, total: 1 },
+    }),
+  });
+
+  assert.deepEqual(discovery.documents, [{ text: "# Hattie", sourceUrl: detailUrl }]);
 });
 
 test("a crawl contributes every document to roster parsing while returning a bounded summary", async () => {

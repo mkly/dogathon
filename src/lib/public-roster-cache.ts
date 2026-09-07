@@ -39,6 +39,14 @@ export const getPublicResident = unstable_cache(
   PUBLIC_ROSTER_CACHE,
 );
 
+export const getPublicResidentBySource = unstable_cache(
+  (orgId: string, sourceUrl: string) => prisma.resident.findFirst({
+    where: { orgId, sourceUrl },
+  }),
+  ["public-resident-by-source"],
+  PUBLIC_ROSTER_CACHE,
+);
+
 export const getPublicCompanionParams = unstable_cache(
   () => prisma.resident.findMany({
     where: { status: "available" },

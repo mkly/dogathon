@@ -12,6 +12,7 @@ import { DOCUMENT_SEPARATOR, parseCompanionRoster } from "./parser.ts";
 import { prisma } from "./prisma.ts";
 import { isPublicHttpUrl } from "./public-http-url.ts";
 import { revalidatePublicRoster } from "./public-roster-cache.ts";
+import { normalizeSourceUrl } from "./source-url.ts";
 import { cancelStripeSubscription } from "./stripe-billing.ts";
 
 export type SyncSummary = {
@@ -108,6 +109,7 @@ export async function syncRoster(
     rosterComplete,
     rosterCompleteness,
     source,
+    documents,
   } = await loadRoster(sourceUrl, {
     signal: options.signal,
     priorNotes: priorNote?.notes ?? null,
@@ -116,7 +118,13 @@ export async function syncRoster(
     },
   });
   options.signal?.throwIfAborted();
-  const companions = await parseCompanionRoster(text);
+  const companions = (await Promise.all((documents ?? [{ text, sourceUrl: source }]).map(
+    async (document) => (await parseCompanionRoster(document.text)).map((companion) => ({
+      ...companion,
+      // A listing remains the source when discovery did not yield a detail page.
+      sourceUrl: normalizeSourceUrl(document.sourceUrl),
+    })),
+  ))).flat();
   options.signal?.throwIfAborted();
 
   if (companions.length === 0) {
@@ -127,9 +135,10 @@ export async function syncRoster(
     options.signal?.throwIfAborted();
     const before = await tx.resident.findMany({
       where: { orgId },
-      select: { id: true, name: true, status: true },
+      select: { id: true, name: true, sourceUrl: true, status: true },
     });
     const existingNames = new Set(before.map((resident) => resident.name));
+    const existingSourceUrls = new Set(before.map((resident) => resident.sourceUrl).filter(Boolean));
     const { adoptionCandidates, restoreCandidates } = planRosterStatusChanges(
       before,
       companions,
@@ -172,8 +181,10 @@ export async function syncRoster(
     }) as PendingStripeCancellation[];
 
     return {
-      created: companions.filter((companion) => !existingNames.has(companion.name)).length,
-      updated: companions.filter((companion) => existingNames.has(companion.name)).length,
+      created: companions.filter((companion) => !existingNames.has(companion.name)
+        && !existingSourceUrls.has(normalizeSourceUrl(companion.sourceUrl ?? ""))).length,
+      updated: companions.filter((companion) => existingNames.has(companion.name)
+        || existingSourceUrls.has(normalizeSourceUrl(companion.sourceUrl ?? ""))).length,
       adopted: adoptionCandidates.length,
       restored: restoreCandidates.length,
       sponsorshipsClosed,
@@ -270,6 +281,7 @@ export async function cancelPendingStripeSubscriptions(
 type ResidentStatusSnapshot = {
   id: string;
   name: string;
+  sourceUrl?: string;
   status: string;
 };
 
@@ -278,9 +290,9 @@ export function planRosterStatusChanges<T extends ResidentStatusSnapshot>(
   companions: CompanionRecord[],
   source: Pick<RosterSource, "usedFallbackCapture" | "rosterComplete">,
 ) {
-  const rosterNames = new Set(companions.map((companion) => companion.name));
-  const explicitlyAdopted = new Set(
-    companions.filter((companion) => companion.adopted).map((companion) => companion.name),
+  const onRoster = (resident: T) => companions.some((companion) => companionMatchesResident(companion, resident));
+  const explicitlyAdopted = (resident: T) => companions.some(
+    (companion) => companion.adopted && companionMatchesResident(companion, resident),
   );
   const absenceIsReliable = !source.usedFallbackCapture && source.rosterComplete;
 
@@ -289,19 +301,25 @@ export function planRosterStatusChanges<T extends ResidentStatusSnapshot>(
   // explicit Adopted marker, but never infer a status from a missing companion.
   const adoptionCandidates = before.filter(
     (resident) => resident.status === "available"
-      && (explicitlyAdopted.has(resident.name)
-        || (absenceIsReliable && !rosterNames.has(resident.name))),
+      && (explicitlyAdopted(resident) || (absenceIsReliable && !onRoster(resident))),
   );
 
   // Restoration uses the same evidence standard: only a complete live roster
   // proves that an unmarked resident should be available again.
   const restoreCandidates = absenceIsReliable ? before.filter(
     (resident) => resident.status === "adopted"
-      && rosterNames.has(resident.name)
-      && !explicitlyAdopted.has(resident.name),
+      && onRoster(resident)
+      && !explicitlyAdopted(resident),
   ) : [];
 
   return { adoptionCandidates, restoreCandidates };
+}
+
+function companionMatchesResident(companion: CompanionRecord, resident: ResidentStatusSnapshot): boolean {
+  const sourceUrl = normalizeSourceUrl(companion.sourceUrl ?? "");
+  return sourceUrl && resident.sourceUrl
+    ? sourceUrl === resident.sourceUrl
+    : companion.name === resident.name;
 }
 
 export function assertPlausibleAdoptionCount(
@@ -357,6 +375,7 @@ async function upsertCompanion(
   companion: CompanionRecord,
   liveSource: boolean,
 ) {
+  const sourceUrl = normalizeSourceUrl(companion.sourceUrl ?? "");
   const profile = {
     breed: companion.breed,
     dobText: companion.dobText,
@@ -366,7 +385,27 @@ async function upsertCompanion(
     personality: companion.personality,
     careNotes: companion.careNotes,
     photoUrls: companion.photoUrls,
+    sourceUrl,
   };
+
+  const existingBySource = sourceUrl ? await tx.resident.findFirst({
+    where: { orgId, sourceUrl },
+    select: { id: true },
+  }) : null;
+
+  if (existingBySource) {
+    await tx.resident.update({
+      where: { id_orgId: { id: existingBySource.id, orgId } },
+      data: {
+        name: companion.name,
+        ...profile,
+        ...(liveSource && !companion.adopted
+          ? { status: "available" as const, adoptedAt: null }
+          : {}),
+      },
+    });
+    return;
+  }
 
   await tx.resident.upsert({
     where: { orgId_name: { orgId, name: companion.name } },
@@ -399,7 +438,11 @@ export type RosterSource = {
   rosterCompleteness: RosterCompleteness;
   /** The configured source or bundled capture that supplied the roster. */
   source: string;
+  /** Parsed pages paired with their public page URL when discovery knows it. */
+  documents?: RosterDocument[];
 };
+
+type RosterDocument = { text: string; sourceUrl: string };
 
 export async function loadRoster(
   sourceUrl: string,
@@ -414,6 +457,7 @@ export async function loadRoster(
       rosterComplete: true,
       rosterCompleteness: completeRoster("local"),
       source: sourceUrl,
+      documents: [{ text: await readFile(localPath, { encoding: "utf8", signal: options.signal }), sourceUrl }],
     };
   }
 
@@ -443,6 +487,7 @@ export async function loadRoster(
       total: 0,
     },
     source: `seed/${capture}`,
+    documents: [{ text: await readFile(seedCapturePath(capture), { encoding: "utf8", signal: options.signal }), sourceUrl }],
   };
 }
 
@@ -502,12 +547,12 @@ export async function discoverRoster(
 export async function discoverRosterWithCompleteness(
   sourceUrl: string,
   options: RosterDiscoveryOptions = {},
-): Promise<{ text: string; rosterCompleteness: RosterCompleteness; notes: string | null }> {
+): Promise<{ text: string; rosterCompleteness: RosterCompleteness; notes: string | null; documents: RosterDocument[] }> {
   const firecrawl = options.firecrawl
     ?? ((name, input) => requestFirecrawl(name, input, { sourceUrl, signal: options.signal }));
-  const documents: string[] = [];
-  const listingDocuments: string[] = [];
-  const bulkDocuments: string[] = [];
+  const documents: RosterDocument[] = [];
+  const listingDocuments: RosterDocument[] = [];
+  const bulkDocuments: RosterDocument[] = [];
   const crawlCompleteness: RosterCompleteness[] = [];
   const log = options.log ?? ((message: string) => console.info(`[roster-sync] ${message}`));
   let toolCalls = 0;
@@ -541,10 +586,13 @@ export async function discoverRosterWithCompleteness(
       const result = await firecrawl(name, input);
       options.signal?.throwIfAborted();
       if (FETCHING_TOOLS.has(name)) {
-        const scraped = extractScrapedTexts(result);
-        if (BULK_TOOLS.has(name)) bulkDocuments.push(...scraped);
-        else if (isListingFetch(sourceUrl, input)) listingDocuments.push(...scraped);
-        else documents.push(...scraped);
+        const requestedUrls = name === "firecrawl_batch_scrape" && Array.isArray(input.urls)
+          ? [...new Set(input.urls.filter((url): url is string => typeof url === "string"))]
+          : [typeof input.url === "string" ? input.url : sourceUrl];
+        const sourceDocuments = extractScrapedDocuments(result, requestedUrls);
+        if (BULK_TOOLS.has(name)) bulkDocuments.push(...sourceDocuments);
+        else if (isListingFetch(sourceUrl, input)) listingDocuments.push(...sourceDocuments);
+        else documents.push(...sourceDocuments);
       }
       if (BULK_TOOLS.has(name)) {
         const completeness = readCrawlCompleteness(result);
@@ -660,7 +708,8 @@ export async function discoverRosterWithCompleteness(
     throw new Error("Roster discovery completed without scraping roster content");
   }
   return {
-    text: rosterDocuments.join(DOCUMENT_SEPARATOR),
+    text: rosterDocuments.map((document) => document.text).join(DOCUMENT_SEPARATOR),
+    documents: rosterDocuments,
     rosterCompleteness: combineCrawlCompleteness(crawlCompleteness),
     notes: savedNotes,
   };
@@ -1242,6 +1291,34 @@ export function extractScrapedTexts(value: unknown): string[] {
     if (nested.length > 0) return nested;
   }
   return [];
+}
+
+function extractScrapedDocuments(value: unknown, fallbackUrls: string[]): RosterDocument[] {
+  const record = value && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null;
+  const values = record && Array.isArray(record.data) ? record.data : [value];
+
+  return values.flatMap((item, index) => {
+    const sourceUrl = scrapedSourceUrl(item)
+      ?? fallbackUrls[index]
+      ?? fallbackUrls[0]
+      ?? "";
+    return extractScrapedTexts(item).map((text) => ({ text, sourceUrl }));
+  });
+}
+
+function scrapedSourceUrl(value: unknown): string | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const record = value as Record<string, unknown>;
+  const metadata = record.metadata && typeof record.metadata === "object"
+    && !Array.isArray(record.metadata)
+    ? record.metadata as Record<string, unknown>
+    : null;
+  for (const candidate of [metadata?.sourceURL, metadata?.sourceUrl, record.sourceURL, record.sourceUrl]) {
+    if (typeof candidate === "string" && /^https?:\/\//iu.test(candidate)) return candidate;
+  }
+  return null;
 }
 
 function resolveLocalSource(sourceUrl: string): string | null {
