@@ -39,10 +39,12 @@ export const getPublicResident = unstable_cache(
   PUBLIC_ROSTER_CACHE,
 );
 
+// An empty source URL is the default for every resident that no page named, so
+// it identifies nobody and must never match one of them.
 export const getPublicResidentBySource = unstable_cache(
-  (orgId: string, sourceUrl: string) => prisma.resident.findFirst({
-    where: { orgId, sourceUrl },
-  }),
+  async (orgId: string, sourceUrl: string) => (sourceUrl
+    ? prisma.resident.findFirst({ where: { orgId, sourceUrl } })
+    : null),
   ["public-resident-by-source"],
   PUBLIC_ROSTER_CACHE,
 );

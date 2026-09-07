@@ -15,6 +15,7 @@ import {
   graduationDraft,
   loadRoster,
   loadRosterSource,
+  onlyIdentifyingSourceUrls,
   planRosterStatusChanges,
   requestFirecrawl,
   RosterSyncRefusal,
@@ -102,6 +103,19 @@ function rosterCompanion(name: string, adopted: boolean) {
     adopted,
   };
 }
+
+test("only a page that yielded one companion names it", () => {
+  const listing = "https://rescue.example/companions";
+  const detail = "https://rescue.example/companions/hattie";
+  const companions = onlyIdentifyingSourceUrls([
+    { ...rosterCompanion("Biscuit", false), sourceUrl: listing },
+    { ...rosterCompanion("Juniper", false), sourceUrl: listing },
+    { ...rosterCompanion("Hattie", false), sourceUrl: detail },
+    { ...rosterCompanion("Unknown page", false), sourceUrl: "" },
+  ]);
+
+  assert.deepEqual(companions.map((companion) => companion.sourceUrl), ["", "", detail, ""]);
+});
 
 test("a source URL match updates a renamed companion", async () => {
   const writes: unknown[] = [];

@@ -118,13 +118,9 @@ export async function syncRoster(
     },
   });
   options.signal?.throwIfAborted();
-  const companions = (await Promise.all((documents ?? [{ text, sourceUrl: source }]).map(
-    async (document) => (await parseCompanionRoster(document.text)).map((companion) => ({
-      ...companion,
-      // A listing remains the source when discovery did not yield a detail page.
-      sourceUrl: normalizeSourceUrl(document.sourceUrl),
-    })),
-  ))).flat();
+  const companions = onlyIdentifyingSourceUrls(
+    await parseRosterDocuments(documents ?? [{ text, sourceUrl: source }], options.signal),
+  );
   options.signal?.throwIfAborted();
 
   if (companions.length === 0) {
@@ -353,6 +349,57 @@ export async function saveRosterSyncNote(
   });
 }
 
+/**
+ * Parses each gathered page on its own so a companion keeps the URL of the page
+ * it came from. The parser already batches and bounds its own model calls, so
+ * pages are parsed a few at a time rather than all at once.
+ */
+const ROSTER_DOCUMENT_CONCURRENCY = 4;
+
+async function parseRosterDocuments(
+  documents: RosterDocument[],
+  signal?: AbortSignal,
+): Promise<CompanionRecord[]> {
+  const parsed: CompanionRecord[][] = new Array(documents.length);
+  let next = 0;
+  const worker = async () => {
+    while (next < documents.length) {
+      signal?.throwIfAborted();
+      const index = next++;
+      const document = documents[index];
+      parsed[index] = (await parseCompanionRoster(document.text)).map((companion) => ({
+        ...companion,
+        // A listing remains the source when discovery did not yield a detail page.
+        sourceUrl: normalizeSourceUrl(document.sourceUrl),
+      }));
+    }
+  };
+  await Promise.all(
+    Array.from({ length: Math.min(ROSTER_DOCUMENT_CONCURRENCY, documents.length) }, worker),
+  );
+  return parsed.flat();
+}
+
+/**
+ * A source URL identifies one companion, so only a page that yielded exactly one
+ * companion can name it. A listing that yielded several leaves all of them
+ * unidentified instead of colliding on the unique (orgId, sourceUrl) index and
+ * folding a whole roster into the first resident that claimed the page.
+ */
+export function onlyIdentifyingSourceUrls(companions: CompanionRecord[]): CompanionRecord[] {
+  const pageCounts = new Map<string, number>();
+  for (const companion of companions) {
+    if (companion.sourceUrl) {
+      pageCounts.set(companion.sourceUrl, (pageCounts.get(companion.sourceUrl) ?? 0) + 1);
+    }
+  }
+  return companions.map((companion) => (
+    companion.sourceUrl && pageCounts.get(companion.sourceUrl) === 1
+      ? companion
+      : { ...companion, sourceUrl: "" }
+  ));
+}
+
 export async function upsertCompanions(
   tx: SyncTransaction,
   orgId: string,
@@ -451,13 +498,14 @@ export async function loadRoster(
   options.signal?.throwIfAborted();
   const localPath = resolveLocalSource(sourceUrl);
   if (localPath) {
+    const text = await readFile(localPath, { encoding: "utf8", signal: options.signal });
     return {
-      text: await readFile(localPath, { encoding: "utf8", signal: options.signal }),
+      text,
       usedFallbackCapture: false,
       rosterComplete: true,
       rosterCompleteness: completeRoster("local"),
       source: sourceUrl,
-      documents: [{ text: await readFile(localPath, { encoding: "utf8", signal: options.signal }), sourceUrl }],
+      documents: [{ text, sourceUrl }],
     };
   }
 
@@ -475,8 +523,9 @@ export async function loadRoster(
   }
 
   const capture = fallbackCapture(sourceUrl);
+  const captureText = await readFile(seedCapturePath(capture), { encoding: "utf8", signal: options.signal });
   return {
-    text: await readFile(seedCapturePath(capture), { encoding: "utf8", signal: options.signal }),
+    text: captureText,
     usedFallbackCapture: true,
     rosterComplete: false,
     rosterCompleteness: {
@@ -487,7 +536,7 @@ export async function loadRoster(
       total: 0,
     },
     source: `seed/${capture}`,
-    documents: [{ text: await readFile(seedCapturePath(capture), { encoding: "utf8", signal: options.signal }), sourceUrl }],
+    documents: [{ text: captureText, sourceUrl }],
   };
 }
 
