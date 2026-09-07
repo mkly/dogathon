@@ -161,5 +161,14 @@ export const sponsorEmbedScript = String.raw`(() => {
     }
   };
 
-  document.querySelectorAll("[data-sponsor-org]").forEach((root) => { void render(root); });
+  const renderAll = () => {
+    document.querySelectorAll("[data-sponsor-org]").forEach((root) => { void render(root); });
+  };
+
+  // A CMS may enqueue this script in the head, before the containers exist.
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", renderAll, { once: true });
+  } else {
+    renderAll();
+  }
 })();`;

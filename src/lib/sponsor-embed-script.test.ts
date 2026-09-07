@@ -108,3 +108,26 @@ for (const [status, expected] of [
     assert.equal(root.querySelector<HTMLAnchorElement>("a")?.href, companion.companionUrl);
   });
 }
+
+test("renders containers parsed after a script loaded from the head", async () => {
+  const dom = new JSDOM(`<!doctype html><html><head>
+    <script type="application/json" src="https://pawcast.example/embed.js"></script>
+  </head><body></body></html>`, { runScripts: "outside-only", url: "https://rescue.example/dogs/biscuit" });
+  Object.defineProperty(dom.window, "fetch", {
+    configurable: true,
+    value: async () => ({ json: async () => companion, ok: true, status: 200 }),
+  });
+
+  assert.equal(dom.window.document.readyState, "loading");
+  dom.window.eval(sponsorEmbedScript);
+
+  const root = dom.window.document.createElement("div");
+  root.setAttribute("data-sponsor-org", "happy-paws");
+  dom.window.document.body.append(root);
+
+  for (let index = 0; index < 20 && !root.hasAttribute("data-sponsor-rendered"); index += 1) {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  }
+  assert.ok(root.hasAttribute("data-sponsor-rendered"), "widget did not render a late container");
+  assert.equal(root.querySelector(".dogathon-sponsor-name")?.textContent, "Biscuit");
+});
