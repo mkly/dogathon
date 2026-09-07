@@ -10,6 +10,7 @@ const PROJECT_ONLY_RESERVED_ORGANIZATION_SLUGS = [
   "_next",
   "next",
   "brand",
+  "embed.js",
   "felt",
   "mascot",
   "textures",
