@@ -12,7 +12,8 @@ const dateTimeFormatter = new Intl.DateTimeFormat("en-US", {
 const usdFormatter = new Intl.NumberFormat("en-US", {
   style: "currency",
   currency: "USD",
-  maximumFractionDigits: 0,
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 2,
 });
 
 export function formatDate(date: Date | string) {
@@ -23,8 +24,8 @@ export function formatDateTime(date: Date | string) {
   return dateTimeFormatter.format(new Date(date));
 }
 
-export function formatMonthlyAmount(monthlyUsd: number) {
-  return usdFormatter.format(monthlyUsd);
+export function formatMonthlyAmount(monthlyCents: number) {
+  return usdFormatter.format(monthlyCents / 100);
 }
 
 export function sponsorshipStatusLabel(status: "active" | "ended") {

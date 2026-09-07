@@ -1,7 +1,7 @@
 import Stripe from "stripe";
 
 import { env } from "./env.ts";
-import { SPONSORSHIP_MONTHLY_USD } from "./sponsorship-pricing.ts";
+import { DEFAULT_SPONSORSHIP_MONTHLY_CENTS } from "./rescue-settings.ts";
 
 import { prisma } from "@/lib/prisma";
 
@@ -19,6 +19,7 @@ type ConnectedOrganization = {
   stripeAccountId: string | null;
   stripeDetailsSubmitted: boolean;
   stripeChargesEnabled: boolean;
+  settings: { sponsorshipMonthlyCents: number } | null;
 };
 
 type AvailableResident = {
@@ -55,6 +56,7 @@ export interface BillingStore {
     stripeCheckoutSessionId: string;
     stripeSubscriptionId: string;
     stripeCustomerId: string | null;
+    monthlyCents: number;
   }): Promise<void>;
   endSponsorship(input: {
     orgId: string;
@@ -73,6 +75,7 @@ const prismaBillingStore: BillingStore = {
         stripeAccountId: true,
         stripeDetailsSubmitted: true,
         stripeChargesEnabled: true,
+        settings: { select: { sponsorshipMonthlyCents: true } },
       },
     });
   },
@@ -129,7 +132,7 @@ const prismaBillingStore: BillingStore = {
           orgId: input.orgId,
           residentId: input.residentId,
           sponsorId: sponsor.id,
-          monthlyUsd: SPONSORSHIP_MONTHLY_USD,
+          monthlyCents: input.monthlyCents,
           status: "active",
           stripeCheckoutSessionId: input.stripeCheckoutSessionId,
           stripeSubscriptionId: input.stripeSubscriptionId,
@@ -268,6 +271,8 @@ export async function createStripeCheckout(
     throw new Error("This organization is not ready to accept sponsorship payments");
   }
   if (!resident) throw new ResidentUnavailableError();
+  const monthlyCents = organization.settings?.sponsorshipMonthlyCents
+    ?? DEFAULT_SPONSORSHIP_MONTHLY_CENTS;
 
   const session = await stripe().checkout.sessions.create(
     {
@@ -277,7 +282,7 @@ export async function createStripeCheckout(
         {
           price_data: {
             currency: "usd",
-            unit_amount: SPONSORSHIP_MONTHLY_USD * 100,
+            unit_amount: monthlyCents,
             recurring: { interval: "month" },
             product_data: { name: `Sponsor ${resident.name}` },
           },
@@ -289,11 +294,13 @@ export async function createStripeCheckout(
         residentId: input.residentId,
         sponsorName: input.sponsorName,
         sponsorEmail: input.sponsorEmail,
+        monthlyCents: String(monthlyCents),
       },
       subscription_data: {
         metadata: {
           orgId: input.orgId,
           residentId: input.residentId,
+          monthlyCents: String(monthlyCents),
         },
       },
       success_url: input.successUrl,
@@ -350,9 +357,19 @@ export async function processStripeEvent(
 
   if (event.type === "checkout.session.completed") {
     const session = event.data.object;
-    const { orgId, residentId, sponsorName, sponsorEmail } = session.metadata ?? {};
+    const { orgId, residentId, sponsorName, sponsorEmail, monthlyCents: monthlyCentsValue } = session.metadata ?? {};
     const subscriptionId = id(session.subscription);
-    if (!event.account || !orgId || !residentId || !sponsorName || !sponsorEmail || !subscriptionId) {
+    const monthlyCents = Number(monthlyCentsValue);
+    if (
+      !event.account
+      || !orgId
+      || !residentId
+      || !sponsorName
+      || !sponsorEmail
+      || !subscriptionId
+      || !Number.isSafeInteger(monthlyCents)
+      || monthlyCents <= 0
+    ) {
       return;
     }
     const [organization, resident] = await Promise.all([
@@ -369,6 +386,7 @@ export async function processStripeEvent(
       stripeCheckoutSessionId: session.id,
       stripeSubscriptionId: subscriptionId,
       stripeCustomerId: id(session.customer),
+      monthlyCents,
     });
     return;
   }

@@ -13,14 +13,15 @@ import {
 import { Markdown } from "@react-email/markdown";
 import type { CSSProperties } from "react";
 
+import { formatMonthlyAmount } from "../lib/format.ts";
 import { escapeHtmlInMarkdown, neutralizeUnsafeMarkdownDestinations } from "../lib/markdown-safety.ts";
-import { SPONSORSHIP_MONTHLY_USD } from "../lib/sponsorship-pricing.ts";
 
 export type SponsorUpdateEmailProps = {
   companionName: string;
   subject: string;
   bodyText: string;
   companionUrl: string;
+  monthlyCents: number;
   /** Absolute origin for the wordmark, texture, and photo. */
   origin: string;
   photoUrl?: string | null;
@@ -251,7 +252,7 @@ export function SponsorUpdateEmail(input: SponsorUpdateEmailProps) {
           </Section>
 
           <Text style={{ color: INK, fontSize: "13px", fontWeight: 800, lineHeight: "1.6", margin: "0 8px 6px", opacity: 0.72, textAlign: "center" }}>
-            You get this because you sponsor {name} for ${SPONSORSHIP_MONTHLY_USD} a month until
+            You get this because you sponsor {name} for {formatMonthlyAmount(input.monthlyCents)} a month until
             adoption.
           </Text>
           <Text style={{ color: INK, fontSize: "12px", fontWeight: 700, lineHeight: "1.6", margin: "0 8px", opacity: 0.55, textAlign: "center" }}>

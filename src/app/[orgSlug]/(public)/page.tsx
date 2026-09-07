@@ -5,12 +5,13 @@ import { notFound } from "next/navigation";
 import { FeltLink, FeltPanel, PhotoPatch } from "@/components/felt";
 import { PageViewTransition } from "@/components/page-view-transition";
 import { ViewTransition } from "react";
+import { formatMonthlyAmount } from "@/lib/format";
 import {
   getPublicOrganization,
   getPublicOrganizations,
   getPublicResidents,
 } from "@/lib/public-roster-cache";
-import { SPONSORSHIP_MONTHLY_USD } from "@/lib/sponsorship-pricing";
+import { DEFAULT_SPONSORSHIP_MONTHLY_CENTS } from "@/lib/rescue-settings";
 
 import pawcastWordmark from "../../../../public/brand/pawcast-wordmark.png";
 import feltPup from "../../../../public/mascot/felt-pup-2.png";
@@ -31,6 +32,9 @@ export default async function OrganizationHome({ params }: OrganizationHomeProps
   const organization = await getPublicOrganization(orgSlug);
   if (!organization) notFound();
   const residents = await getPublicResidents(organization.id);
+  const monthlyAmount = formatMonthlyAmount(
+    organization.settings?.sponsorshipMonthlyCents ?? DEFAULT_SPONSORSHIP_MONTHLY_CENTS,
+  );
 
   return (
     <PageViewTransition>
@@ -48,7 +52,7 @@ export default async function OrganizationHome({ params }: OrganizationHomeProps
               </span>
             </h1>
             <p className={styles.lede}>
-              Sponsor a resident for ${SPONSORSHIP_MONTHLY_USD} a month until they find their
+              Sponsor a resident for {monthlyAmount} a month until they find their
               forever home. You&apos;ll help with everyday care and get the good news from their
               journey.
             </p>

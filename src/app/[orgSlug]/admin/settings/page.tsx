@@ -22,9 +22,10 @@ import {
 } from "@/components/page-view-transition";
 import { PendingAdminSubmitButton } from "@/components/pending-submit-button";
 import { getEmailConnectorStatus } from "@/lib/email-connectors";
+import { formatMonthlyAmount } from "@/lib/format";
 import { getOrganizationAccessBySlug } from "@/lib/organization-access";
 import { prisma } from "@/lib/prisma";
-import { SPONSORSHIP_MONTHLY_USD } from "@/lib/sponsorship-pricing";
+import { DEFAULT_SPONSORSHIP_MONTHLY_CENTS } from "@/lib/rescue-settings";
 
 import pawcastWordmark from "../../../../../public/brand/pawcast-wordmark.png";
 
@@ -38,6 +39,7 @@ import { STRIPE_CONNECT_NOTICE_ID, stripeNotReadyReason } from "../stripe-notice
 import styles from "../admin.module.css";
 import { ConnectorResultNotice } from "./connector-result-notice";
 import { PostscriptSettingsForm } from "./postscript-settings-form";
+import { SponsorshipSettingsForm } from "./sponsorship-settings-form";
 
 export const dynamic = "force-dynamic";
 
@@ -49,7 +51,12 @@ type AdminSettingsPageProps = {
 async function loadStripeConnection(orgId: string) {
   const stored = await prisma.organization.findUnique({
     where: { id: orgId },
-    select: { stripeAccountId: true, stripeDetailsSubmitted: true, stripeChargesEnabled: true },
+    select: {
+      stripeAccountId: true,
+      stripeDetailsSubmitted: true,
+      stripeChargesEnabled: true,
+      settings: { select: { sponsorshipMonthlyCents: true } },
+    },
   });
   return stored;
 }
@@ -65,6 +72,9 @@ async function StripeConnection({
 }) {
   const organization = await loadStripeConnection(orgId);
   const stripeNotReady = stripeNotReadyReason(organization);
+  const monthlyAmount = formatMonthlyAmount(
+    organization?.settings?.sponsorshipMonthlyCents ?? DEFAULT_SPONSORSHIP_MONTHLY_CENTS,
+  );
   const stripeBadge = stripeNotReady
     ? { tone: "brick" as const, label: "Not ready for payments" }
     : { tone: "moss" as const, label: "Ready for payments" };
@@ -82,7 +92,7 @@ async function StripeConnection({
           <p>
             {stripeNotReady
               ? `${stripeNotReady} Sponsors cannot check out until Stripe enables card payments.`
-              : `Connected and ready to accept $${SPONSORSHIP_MONTHLY_USD} monthly sponsorships.`}
+              : `Connected and ready to accept ${monthlyAmount} monthly sponsorships.`}
           </p>
         </div>
         <div className={styles.connectorStatus}>
@@ -129,7 +139,12 @@ async function EmailSettings({ orgId, orgSlug }: { orgId: string; orgSlug: strin
 
 async function RescueSettings({ orgId, orgSlug }: { orgId: string; orgSlug: string }) {
   const storedSettings = await prisma.rescueSettings.findUnique({ where: { orgId } });
-  const settings = storedSettings ?? { pinnedPostscript: "", sourceUrl: "" };
+  const settings = storedSettings ?? {
+    allowedOrigins: [],
+    pinnedPostscript: "",
+    sourceUrl: "",
+    sponsorshipMonthlyCents: DEFAULT_SPONSORSHIP_MONTHLY_CENTS,
+  };
 
   return (
     <>
@@ -156,11 +171,27 @@ async function RescueSettings({ orgId, orgSlug }: { orgId: string; orgSlug: stri
         </div>
         <RosterSyncSettings initialSourceUrl={settings.sourceUrl} orgSlug={orgSlug} />
       </AdminSurface>
+
+      <AdminSurface className={styles.settings} tone="brick">
+        <div className={styles.settingsIntro}>
+          <AdminEyebrow tone="brick">Sponsorship embeds</AdminEyebrow>
+          <h2>Price and trusted rescue sites</h2>
+          <p>
+            Set the monthly sponsorship amount and the exact rescue-site origins allowed to use
+            public embeds and checkout.
+          </p>
+        </div>
+        <SponsorshipSettingsForm
+          allowedOrigins={settings.allowedOrigins}
+          orgSlug={orgSlug}
+          sponsorshipMonthlyCents={settings.sponsorshipMonthlyCents}
+        />
+      </AdminSurface>
     </>
   );
 }
 
-function SettingsCardLoading({ tone }: { tone: "denim" | "moss" | "mustard" | "oatmeal" }) {
+function SettingsCardLoading({ tone }: { tone: "brick" | "denim" | "moss" | "mustard" | "oatmeal" }) {
   return <AdminSurface aria-label="Loading settings" className={`${styles.settings} ${styles.settingsSkeleton}`} tone={tone} />;
 }
 
@@ -209,7 +240,7 @@ export default async function AdminSettingsPage({ params, searchParams }: AdminS
             <SuspenseReveal><EmailSettings orgId={context.orgId} orgSlug={orgSlug} /></SuspenseReveal>
           </Suspense>
 
-          <Suspense fallback={<SuspenseFallback><><SettingsCardLoading tone="denim" /><SettingsCardLoading tone="moss" /></></SuspenseFallback>}>
+          <Suspense fallback={<SuspenseFallback><><SettingsCardLoading tone="denim" /><SettingsCardLoading tone="moss" /><SettingsCardLoading tone="brick" /></></SuspenseFallback>}>
             <SuspenseReveal><RescueSettings orgId={context.orgId} orgSlug={orgSlug} /></SuspenseReveal>
           </Suspense>
         </div>

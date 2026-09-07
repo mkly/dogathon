@@ -4,11 +4,11 @@ import { useSearchParams } from "next/navigation";
 import type { ReactNode } from "react";
 
 import { FeltLink, FeltPanel, StitchBadge } from "@/components/felt";
-import { SPONSORSHIP_MONTHLY_USD } from "@/lib/sponsorship-pricing";
+import { formatMonthlyAmount } from "@/lib/format";
 
 import styles from "../../../../public.module.css";
 
-export function CompanionBanner({ name }: { name: string }) {
+export function CompanionBanner({ monthlyCents, name }: { monthlyCents: number; name: string }) {
   const searchParams = useSearchParams();
   const error = searchParams.get("error");
   const sponsored = searchParams.get("sponsored") === "1" && !error;
@@ -21,7 +21,7 @@ export function CompanionBanner({ name }: { name: string }) {
           <StitchBadge tone="cream">You&apos;re a hero!</StitchBadge>
           <h2>Thank you for sponsoring {name}!</h2>
           <p>
-            Your ${SPONSORSHIP_MONTHLY_USD} monthly sponsorship is active until {name} is adopted.
+            Your {formatMonthlyAmount(monthlyCents)} monthly sponsorship is active until {name} is adopted.
           </p>
           <FeltLink className={styles.cardLink} href="/account/sign-in">
             Create your sponsor account

@@ -6,12 +6,13 @@ import { createSponsorship } from "@/app/actions";
 import { FeltField, FeltLink, FeltPanel, PhotoPatch, StitchBadge } from "@/components/felt";
 import { PageViewTransition } from "@/components/page-view-transition";
 import { PendingFeltSubmitButton } from "@/components/pending-submit-button";
+import { formatMonthlyAmount } from "@/lib/format";
 import {
   getPublicCompanionParams,
   getPublicOrganization,
   getPublicResident,
 } from "@/lib/public-roster-cache";
-import { SPONSORSHIP_MONTHLY_USD } from "@/lib/sponsorship-pricing";
+import { DEFAULT_SPONSORSHIP_MONTHLY_CENTS } from "@/lib/rescue-settings";
 import { uuidSchema } from "@/lib/uuid";
 
 import { CompanionBanner, CompanionFormError, CompanionSponsorState } from "./companion-banner";
@@ -41,12 +42,17 @@ export default async function CompanionPage({ params, searchParams }: CompanionP
   if (!resident) notFound();
 
   const available = resident.status === "available";
+  const monthlyCents = organization.settings?.sponsorshipMonthlyCents
+    ?? DEFAULT_SPONSORSHIP_MONTHLY_CENTS;
+  const monthlyAmount = formatMonthlyAmount(monthlyCents);
   return (
     <PageViewTransition>
       <main className={`${styles.siteShell} ${styles.detailShell}`}>
         <Link className={styles.backLink} href={`/${orgSlug}`} transitionTypes={["nav-back"]}>← All residents</Link>
 
-        <Suspense fallback={null}><CompanionBanner name={resident.name} /></Suspense>
+        <Suspense fallback={null}>
+          <CompanionBanner monthlyCents={monthlyCents} name={resident.name} />
+        </Suspense>
 
         <section className={styles.profile}>
           <div className={styles.gallery}>
@@ -114,7 +120,7 @@ export default async function CompanionPage({ params, searchParams }: CompanionP
               <div className={styles.sponsorPitch}>
                 <p className={styles.eyebrow}>A steady paw</p>
                 <h2>
-                  Sponsor {resident.name} for ${SPONSORSHIP_MONTHLY_USD}/month until adopted
+                  Sponsor {resident.name} for {monthlyAmount}/month until adopted
                 </h2>
                 <p>We&apos;ll send little email updates from the rescue as {resident.name} settles in.</p>
               </div>
@@ -136,7 +142,7 @@ export default async function CompanionPage({ params, searchParams }: CompanionP
                 </FeltField>
 
                 <PendingFeltSubmitButton className={styles.sponsorButton} pendingLabel="Opening checkout…" tone="mustard" type="submit">
-                  Sponsor for ${SPONSORSHIP_MONTHLY_USD}/month until adopted
+                  Sponsor for {monthlyAmount}/month until adopted
                 </PendingFeltSubmitButton>
               </form>
             </FeltPanel>

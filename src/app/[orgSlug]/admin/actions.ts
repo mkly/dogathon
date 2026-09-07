@@ -8,6 +8,7 @@ import { z } from "zod";
 import { getOrganizationAccessBySlug } from "@/lib/organization-access";
 import { env } from "@/lib/env";
 import { prisma } from "@/lib/prisma";
+import { revalidatePublicRoster } from "@/lib/public-roster-cache";
 import { parseSettingsForm } from "@/lib/rescue-settings";
 import { createConnectOnboardingLink, refreshConnectStatus } from "@/lib/stripe-billing";
 
@@ -90,6 +91,7 @@ export async function saveSettings(
     create: { orgId: context.orgId, ...parsed.settings },
   });
 
+  revalidatePublicRoster();
   revalidatePath(`/${orgSlug}/admin/settings`);
   return {
     status: "success",

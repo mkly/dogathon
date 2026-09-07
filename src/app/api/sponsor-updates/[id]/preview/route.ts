@@ -4,6 +4,7 @@ import { SponsorUpdateEmail } from "@/emails/sponsor-update-email";
 import { env } from "@/lib/env";
 import { requireApiOrganization } from "@/lib/organization-access";
 import { prisma } from "@/lib/prisma";
+import { DEFAULT_SPONSORSHIP_MONTHLY_CENTS } from "@/lib/rescue-settings";
 import { companionPageUrl } from "@/lib/sponsor-update-delivery";
 import { uuidSchema } from "@/lib/uuid";
 import { render } from "@react-email/render";
@@ -30,7 +31,12 @@ export async function GET(request: Request, { params }: RouteContext) {
   const sponsorUpdate = await prisma.sponsorUpdate.findFirst({
     where: { id, orgId },
     include: {
-      organization: { select: { slug: true } },
+      organization: {
+        select: {
+          slug: true,
+          settings: { select: { sponsorshipMonthlyCents: true } },
+        },
+      },
       resident: { select: { name: true, photoUrls: true } },
     },
   });
@@ -45,6 +51,8 @@ export async function GET(request: Request, { params }: RouteContext) {
     subject: sponsorUpdate.subject,
     bodyText: sponsorUpdate.bodyText,
     companionUrl: companionPageUrl(origin, sponsorUpdate.organization.slug, sponsorUpdate.residentId),
+    monthlyCents: sponsorUpdate.organization.settings?.sponsorshipMonthlyCents
+      ?? DEFAULT_SPONSORSHIP_MONTHLY_CENTS,
     origin,
     photoUrl: sponsorUpdate.photoUrl ?? sponsorUpdate.resident.photoUrls[0] ?? null,
     type: sponsorUpdate.type === "graduation" ? "graduation" : "regular",

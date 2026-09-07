@@ -90,7 +90,7 @@ async function main() {
       orgId: organization.id,
       residentId: biscuit.id,
       sponsorId: sponsor.id,
-      monthlyUsd: 25,
+      monthlyCents: 2500,
       status: "active" as const,
       endedReason: null,
     };
@@ -101,11 +101,7 @@ async function main() {
       });
     } else {
       await prisma.sponsorship.create({
-        data: {
-          orgId: organization.id,
-          residentId: biscuit.id,
-          sponsorId: sponsor.id,
-        },
+        data: sponsorshipData,
       });
     }
   }
@@ -136,11 +132,15 @@ async function main() {
     update: {
       sourceUrl: "seed/dogs-page-B.html",
       pinnedPostscript: "Come meet the companions at our next adoption fair!",
+      sponsorshipMonthlyCents: 2500,
+      allowedOrigins: ["https://example-rescue.org"],
     },
     create: {
       orgId: organization.id,
       sourceUrl: "seed/dogs-page-B.html",
       pinnedPostscript: "Come meet the companions at our next adoption fair!",
+      sponsorshipMonthlyCents: 2500,
+      allowedOrigins: ["https://example-rescue.org"],
     },
   });
 
@@ -206,7 +206,7 @@ async function main() {
     orgId: secondOrganization.id,
     residentId: juniper.id,
     sponsorId: sam.id,
-    monthlyUsd: 25,
+    monthlyCents: 3000,
     status: "active" as const,
     endedReason: null,
   };
@@ -217,11 +217,7 @@ async function main() {
     });
   } else {
     await prisma.sponsorship.create({
-      data: {
-        orgId: secondOrganization.id,
-        residentId: juniper.id,
-        sponsorId: sam.id,
-      },
+      data: secondSponsorshipData,
     });
   }
 
@@ -252,11 +248,15 @@ async function main() {
     update: {
       sourceUrl: "seed/dogs-page-A.html",
       pinnedPostscript: "Happy Tails adoption hours are Saturday afternoons.",
+      sponsorshipMonthlyCents: 3000,
+      allowedOrigins: ["https://happy-tails.example"],
     },
     create: {
       orgId: secondOrganization.id,
       sourceUrl: "seed/dogs-page-A.html",
       pinnedPostscript: "Happy Tails adoption hours are Saturday afternoons.",
+      sponsorshipMonthlyCents: 3000,
+      allowedOrigins: ["https://happy-tails.example"],
     },
   });
 

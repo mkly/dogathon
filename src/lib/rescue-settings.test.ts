@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { parseSettingsForm } from "./rescue-settings";
+import {
+  isAllowedOrigin,
+  parseAllowedOrigins,
+  parseSettingsForm,
+} from "./rescue-settings";
 import { POSTSCRIPT_MAX_LENGTH, postscriptOverLimitMessage } from "./postscript";
 
 test("the postscript form does not clear the roster source", () => {
@@ -84,4 +88,36 @@ test("private and IP-literal roster sources are rejected", () => {
 
     assert.equal(parseSettingsForm(formData).ok, false, `expected ${value} to be rejected`);
   }
+});
+
+test("parses the sponsorship price and canonical allowed origins", () => {
+  const formData = new FormData();
+  formData.set("sponsorshipMonthlyDollars", "32.50");
+  formData.set("allowedOrigins", "https://rescue.example/\nhttps://rescue.example\nhttps://embed.example:8443");
+
+  assert.deepEqual(parseSettingsForm(formData), {
+    ok: true,
+    message: "Sponsorship settings saved.",
+    settings: {
+      sponsorshipMonthlyCents: 3250,
+      allowedOrigins: ["https://rescue.example", "https://embed.example:8443"],
+    },
+  });
+});
+
+test("allowed origins are exact, scheme-sensitive, and port-sensitive", () => {
+  const settings = { allowedOrigins: ["https://rescue.example", "https://embed.example:8443"] };
+
+  assert.equal(isAllowedOrigin(settings, "https://rescue.example"), true);
+  assert.equal(isAllowedOrigin(settings, "http://rescue.example"), false);
+  assert.equal(isAllowedOrigin(settings, "https://embed.example"), false);
+  assert.equal(isAllowedOrigin(settings, "https://embed.example:8443"), true);
+  assert.equal(isAllowedOrigin({ allowedOrigins: ["https://*.example"] }, "https://dogs.example"), false);
+});
+
+test("rejects paths, wildcards, and production localhost origins", () => {
+  assert.equal(parseAllowedOrigins("https://rescue.example/embed", false), null);
+  assert.equal(parseAllowedOrigins("https://*.example", false), null);
+  assert.equal(parseAllowedOrigins("http://localhost:3000", true), null);
+  assert.deepEqual(parseAllowedOrigins("http://localhost:3000", false), ["http://localhost:3000"]);
 });

@@ -51,7 +51,7 @@ export default async function SponsorAccountPage() {
     where: { sponsorId: sponsor.id },
     select: {
       id: true,
-      monthlyUsd: true,
+      monthlyCents: true,
       status: true,
       createdAt: true,
       stripeCustomerId: true,
@@ -100,7 +100,7 @@ export default async function SponsorAccountPage() {
                           <span className={styles.status}>{sponsorshipStatusLabel(record.status)}</span>
                         </AdminBadge>
                         <span>Started {formatDate(record.createdAt)}</span>
-                        <span>{formatMonthlyAmount(record.monthlyUsd)}/month</span>
+                        <span>{formatMonthlyAmount(record.monthlyCents)}/month</span>
                       </div>
                     </div>
                     {record.stripeCustomerId ? (

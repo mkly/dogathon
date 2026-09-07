@@ -18,7 +18,10 @@ export const getPublicOrganizations = unstable_cache(
 );
 
 export const getPublicOrganization = unstable_cache(
-  (slug: string) => prisma.organization.findUnique({ where: { slug } }),
+  (slug: string) => prisma.organization.findUnique({
+    where: { slug },
+    include: { settings: true },
+  }),
   ["public-organization"],
   PUBLIC_ROSTER_CACHE,
 );

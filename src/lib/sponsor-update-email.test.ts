@@ -11,6 +11,7 @@ const base = {
   subject: "An update from Biscuit",
   bodyText: "Here is the latest.\n\n## Recent notes\n\n- Took a treat from a stranger.\n- Slept through the night.\n\nThank you.",
   companionUrl: "https://pawcast.test/companions/abc",
+  monthlyCents: 3250,
   origin: "https://pawcast.test",
   photoUrl: "/uploads/biscuit.jpg",
 } as const;

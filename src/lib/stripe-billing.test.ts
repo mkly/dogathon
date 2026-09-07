@@ -18,7 +18,6 @@ import {
   refreshConnectStatus,
 } from "./stripe-billing";
 import { env } from "./env.ts";
-import { SPONSORSHIP_MONTHLY_USD } from "./sponsorship-pricing.ts";
 
 env.STRIPE_SECRET_KEY = "sk_test_fixture";
 env.features = Object.freeze({ ...env.features, stripe: true });
@@ -100,6 +99,7 @@ class MemoryBillingStore implements BillingStore {
     stripeAccountId: null as string | null,
     stripeDetailsSubmitted: false,
     stripeChargesEnabled: false,
+    settings: { sponsorshipMonthlyCents: 3750 },
   };
 
   resident = { id: "companion_mabel", name: "Mabel", orgId: "org_rescue" };
@@ -183,17 +183,18 @@ function signedEvent(object: Record<string, unknown>, type: string) {
   return constructStripeEvent(payload, signature, secret);
 }
 
-test(`Stripe SDK checkout request is a $${SPONSORSHIP_MONTHLY_USD} direct subscription on the connected account`, async () => {
+test("Stripe SDK checkout uses the organization's monthly price on the connected account", async () => {
   server.use(http.post(`${stripeApi}/v1/checkout/sessions`, async ({ request }) => {
     const body = await formData(request);
     assert.equal(body.get("mode"), "subscription");
     assert.equal(
       body.get("line_items[0][price_data][unit_amount]"),
-      String(SPONSORSHIP_MONTHLY_USD * 100),
+      "3750",
     );
     assert.equal(body.get("line_items[0][price_data][recurring][interval]"), "month");
     assert.equal(body.get("line_items[0][price_data][product_data][name]"), "Sponsor Mabel");
     assert.equal(body.get("subscription_data[metadata][orgId]"), "org_rescue");
+    assert.equal(body.get("subscription_data[metadata][monthlyCents]"), "3750");
     assert.equal(request.headers.get("stripe-account"), "acct_fixture_rescue");
     return HttpResponse.json({
       id: "cs_sdk_fixture",
@@ -347,6 +348,7 @@ test("Stripe Connect onboarding, checkout, and signed webhooks maintain sponsors
       residentId: "companion_mabel",
       sponsorName: "Avery Sponsor",
       sponsorEmail: "avery@example.com",
+      monthlyCents: "3750",
     },
     mode: "subscription",
     subscription: "sub_fixture",
@@ -361,6 +363,7 @@ test("Stripe Connect onboarding, checkout, and signed webhooks maintain sponsors
     stripeCheckoutSessionId: "cs_fixture",
     stripeSubscriptionId: "sub_fixture",
     stripeCustomerId: "cus_fixture",
+    monthlyCents: 3750,
     sponsorId: "sponsor_1",
     status: "active",
   });
@@ -400,6 +403,7 @@ test("webhooks ignore a connected account that does not belong to the organizati
       residentId: "companion_mabel",
       sponsorName: "Mallory",
       sponsorEmail: "mallory@example.com",
+      monthlyCents: "3750",
     },
     mode: "subscription",
     subscription: "sub_wrong_account",
@@ -445,6 +449,7 @@ test("a resident adopted mid-checkout still records the paid sponsorship", async
       residentId: "companion_mabel",
       sponsorName: "Avery Sponsor",
       sponsorEmail: "avery@example.com",
+      monthlyCents: "3750",
     },
     mode: "subscription",
     subscription: "sub_adopted",
@@ -467,6 +472,7 @@ test("checkout completion reuses a sponsor by normalized email without linking a
         residentId: "companion_mabel",
         sponsorName: "Avery Sponsor",
         sponsorEmail: email,
+        monthlyCents: "3750",
       },
       mode: "subscription",
       subscription: `sub_${sessionId}`,
@@ -498,6 +504,7 @@ test("checkout completion does not overwrite an existing sponsor name", async ()
       residentId: "companion_mabel",
       sponsorName: "Checkout Form Name",
       sponsorEmail: "Sponsor@Example.com",
+      monthlyCents: "3750",
     },
     mode: "subscription",
     subscription: "sub_keep_existing_sponsor_name",

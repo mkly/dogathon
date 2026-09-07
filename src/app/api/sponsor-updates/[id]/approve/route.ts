@@ -11,6 +11,7 @@ import {
   type SponsorUpdateType,
 } from "@/lib/sponsor-update-delivery";
 import { prisma } from "@/lib/prisma";
+import { DEFAULT_SPONSORSHIP_MONTHLY_CENTS } from "@/lib/rescue-settings";
 import { uuidSchema } from "@/lib/uuid";
 import { render } from "@react-email/render";
 import { createElement } from "react";
@@ -31,7 +32,10 @@ type ApprovalUpdate = {
   bodyText: string;
   photoUrl: string | null;
   status: "draft" | "approved" | "sent";
-  organization: { slug: string };
+  organization: {
+    slug: string;
+    settings: { sponsorshipMonthlyCents: number } | null;
+  };
   resident: {
     name: string;
     photoUrls: string[];
@@ -64,7 +68,12 @@ const approvalDependencies: ApprovalDependencies = {
     return prisma.sponsorUpdate.findFirst({
       where: { id, orgId },
       include: {
-        organization: { select: { slug: true } },
+        organization: {
+          select: {
+            slug: true,
+            settings: { select: { sponsorshipMonthlyCents: true } },
+          },
+        },
         resident: {
           include: {
             sponsorships: {
@@ -95,6 +104,8 @@ const approvalDependencies: ApprovalDependencies = {
       subject: update.subject,
       bodyText: update.bodyText,
       companionUrl: companionPageUrl(origin, update.organization.slug, update.residentId),
+      monthlyCents: update.organization.settings?.sponsorshipMonthlyCents
+        ?? DEFAULT_SPONSORSHIP_MONTHLY_CENTS,
       origin,
       photoUrl: update.photoUrl ?? update.resident.photoUrls[0] ?? null,
       type: update.type,

@@ -53,7 +53,7 @@ async function DashboardStats({ orgId, orgSlug }: { orgId: string; orgSlug: stri
     prisma.sponsorship.aggregate({
       where: { orgId, status: "active" },
       _count: true,
-      _sum: { monthlyUsd: true },
+      _sum: { monthlyCents: true },
     }),
     prisma.resident.count({
       where: {
@@ -70,7 +70,7 @@ async function DashboardStats({ orgId, orgSlug }: { orgId: string; orgSlug: stri
     }),
   ]);
   const activeSponsorCount = activeSponsorships._count;
-  const monthlyRecurring = activeSponsorships._sum.monthlyUsd ?? 0;
+  const monthlyRecurring = activeSponsorships._sum.monthlyCents ?? 0;
 
   return (
     <section aria-label="Program statistics" className={styles.stats}>

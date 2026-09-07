@@ -3,9 +3,9 @@ import test from "node:test";
 
 import { formatMonthlyAmount, sponsorshipStatusLabel } from "./format.ts";
 
-test("formats whole-dollar monthly sponsorship amounts", () => {
-  assert.equal(formatMonthlyAmount(25), "$25");
-  assert.equal(formatMonthlyAmount(1234), "$1,234");
+test("formats monthly sponsorship amounts stored in cents", () => {
+  assert.equal(formatMonthlyAmount(2500), "$25");
+  assert.equal(formatMonthlyAmount(123456), "$1,234.56");
 });
 
 test("formats sponsorship statuses for display", () => {
