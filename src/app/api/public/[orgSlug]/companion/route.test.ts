@@ -127,6 +127,7 @@ test("rate limits reads before looking up a companion", async () => {
 
   assert.equal(response.status, 429);
   assert.equal(response.headers.get("retry-after"), "17");
+  assert.equal(response.headers.get("cache-control"), "no-store");
   assert.equal(response.headers.get("access-control-allow-origin"), null);
   assert.equal(lookedUp, false);
 });

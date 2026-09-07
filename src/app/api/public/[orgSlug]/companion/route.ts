@@ -90,11 +90,15 @@ export function createPublicCompanionHandlers(
 
     const rateLimit = await publicDependencies.rateLimit(request.headers);
     if (!rateLimit.allowed) {
-      return withPublicHeaders(
+      const limited = withPublicHeaders(
         rateLimitResponse(rateLimit.retryAfterSeconds),
         request,
         organization,
       );
+      // A rate limit is per-caller, so a shared cache must never hand this
+      // refusal to the next reader of the same companion.
+      limited.headers.set("Cache-Control", "no-store");
+      return limited;
     }
 
     const sourceUrl = normalizeSourceUrl(new URL(request.url).searchParams.get("source") ?? "");
