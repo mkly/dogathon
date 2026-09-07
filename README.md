@@ -54,6 +54,45 @@ For a CMS template, URL-encode the current page's canonical absolute URL and sub
 </a>
 ```
 
+### Embedded sponsor card
+
+The framework-free sponsor card works in WordPress, static sites, and other CMS templates. Add a
+container for each companion and load the script once from the Dogathon deployment:
+
+```html
+<div
+  data-sponsor-org="happy-paws"
+  data-sponsor-source="https://rescue.example/dogs/biscuit"
+  data-sponsor-return="https://rescue.example/dogs/biscuit"
+></div>
+<script src="https://pawcast.example/embed.js"></script>
+```
+
+`data-sponsor-org` is required. `data-sponsor-source` defaults to the current page URL with its
+fragment removed, and `data-sponsor-return` defaults to the current page URL. The script does not
+use cookies or dependencies. Its classes all begin with `dogathon-sponsor-`, so a host site can
+override the bundled presentation without affecting unrelated elements. Run the app locally and
+open `/embed-demo.html`; its `org` and `source` query parameters make it easy to exercise a synced
+companion.
+
+The embed depends on these public endpoint contracts:
+
+- `GET /api/public/{orgSlug}/companion?source={absolutePageUrl}` returns `{ id, name, breed,
+  ageText, sex, photoUrl, monthlyCents, currency, status, companionUrl, sponsorUrl }`. `status` is
+  `available`, `sponsored`, or `adopted`; an unknown organization or source returns `404` with
+  `{ error }`.
+- `POST /api/public/{orgSlug}/checkout` accepts either form-encoded or JSON `source`,
+  `sponsorName`, `sponsorEmail`, and `returnTo`. `returnTo` must be an absolute URL on an origin
+  configured for that organization. A form post redirects to Stripe with `303`; a JSON request
+  returns `{ url }`.
+- Successful and canceled checkout redirects add `sponsored=1` (plus `session_id`) or
+  `checkout=canceled` to `returnTo`. Checkout errors add `error=invalid`, `error=rate-limited`,
+  `error=unavailable`, or `error=billing`. JSON errors return the same code in `{ error }` with
+  status `400`, `429`, `409`, or `502`, respectively.
+- Cross-origin reads and JSON checkout calls require the page origin in the organization's allowed
+  origins. Normal HTML form navigation does not require CORS, but its `returnTo` origin is still
+  validated.
+
 ## Volunteer photo storage
 
 Local development needs no AWS account. When `S3_PHOTO_BUCKET` and

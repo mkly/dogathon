@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Dogathon sponsor embed demo</title>
+    <style>
+      body { max-width: 48rem; margin: 3rem auto; padding: 0 1rem; background: #f5f1e8; font-family: system-ui, sans-serif; }
+      code { background: #fff; padding: .1rem .25rem; }
+    </style>
+  </head>
+  <body>
+    <h1>Sponsor embed demo</h1>
+    <p>
+      Add <code>?org=organization-slug&amp;source=https://rescue.example/dogs/name</code>
+      to test a synced companion. Without a matching source, the embed demonstrates its public-roster fallback.
+    </p>
+    <div id="sponsor-demo" data-sponsor-org="maple-street"></div>
+    <script>
+      const demo = document.querySelector("#sponsor-demo");
+      const demoParameters = new URL(window.location.href).searchParams;
+      if (demoParameters.get("org")) demo.setAttribute("data-sponsor-org", demoParameters.get("org"));
+      if (demoParameters.get("source")) demo.setAttribute("data-sponsor-source", demoParameters.get("source"));
+    </script>
+    <script src="/embed.js"></script>
+  </body>
+</html>
