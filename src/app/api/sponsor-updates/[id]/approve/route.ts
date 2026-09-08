@@ -5,13 +5,15 @@ import { requireApiOrganization } from "@/lib/organization-access";
 import {
   deliverSponsorUpdate,
   companionPageUrl,
-  isSponsorUpdateRecipient,
+  isRegularSponsorUpdateRecipient,
   type Delivery,
   type DeliverySponsorship,
   type SponsorUpdateType,
 } from "@/lib/sponsor-update-delivery";
 import { prisma } from "@/lib/prisma";
 import { DEFAULT_SPONSORSHIP_MONTHLY_CENTS } from "@/lib/rescue-settings";
+import { sponsorshipSelectionUrl } from "@/lib/sponsorship-selection-token";
+import { pauseStripeCollection } from "@/lib/stripe-billing";
 import { uuidSchema } from "@/lib/uuid";
 import { render } from "@react-email/render";
 import { createElement } from "react";
@@ -20,8 +22,9 @@ type RouteContext = { params: Promise<{ id: string }> };
 
 type ApprovalSponsorship = DeliverySponsorship & {
   monthlyCents: number;
+  residentId: string;
   status: "active" | "awaiting" | "ended";
-  endedReason: "adopted" | "unavailable" | "canceled" | null;
+  stripeSubscriptionId: string | null;
 };
 
 type ApprovalUpdate = {
@@ -33,8 +36,11 @@ type ApprovalUpdate = {
   bodyText: string;
   photoUrl: string | null;
   status: "draft" | "approved" | "sent" | "dismissed";
+  sponsorshipId: string | null;
+  awaitingTransitionedAt: Date | null;
   organization: {
     slug: string;
+    stripeAccountId: string | null;
   };
   resident: {
     name: string;
@@ -42,27 +48,77 @@ type ApprovalUpdate = {
     photoUrls: string[];
     sponsorships: ApprovalSponsorship[];
   };
+  sponsorship: ApprovalSponsorship | null;
 };
 
 type ApprovalDependencies = {
-  claimUpdate: (id: string, orgId: string) => Promise<number>;
+  claimUpdate: (update: ApprovalUpdate, claimedAt: Date) => Promise<boolean>;
   deliver: typeof deliverSponsorUpdate;
   findUpdate: (id: string, orgId: string) => Promise<ApprovalUpdate | null>;
   getConnectorStatus: typeof getEmailConnectorStatus;
   markSent: (id: string, orgId: string, sentAt: Date) => Promise<unknown>;
   now: () => Date;
-  renderMessage: (update: ApprovalUpdate, monthlyCents: number) => Promise<{ bodyHtml: string; bodyText: string }>;
+  pauseCollection: typeof pauseStripeCollection;
+  renderMessage: (
+    update: ApprovalUpdate,
+    monthlyCents: number,
+    renderedAt: Date,
+  ) => Promise<{ bodyHtml: string; bodyText: string }>;
   requireOrganization: typeof requireApiOrganization;
   resetDraft: (id: string, orgId: string) => Promise<void>;
 };
 
+function sponsorshipTokenSecret() {
+  if (!env.BETTER_AUTH_SECRET) {
+    throw new Error("BETTER_AUTH_SECRET is required for sponsor selection links");
+  }
+  return env.BETTER_AUTH_SECRET;
+}
+
 const approvalDependencies: ApprovalDependencies = {
-  async claimUpdate(id, orgId) {
-    const claimed = await prisma.sponsorUpdate.updateMany({
-      where: { id, orgId, status: "draft" },
-      data: { status: "approved" },
+  async claimUpdate(update, claimedAt) {
+    if (update.type !== "graduation") {
+      const claimed = await prisma.sponsorUpdate.updateMany({
+        where: { id: update.id, orgId: update.orgId, status: "draft" },
+        data: { status: "approved" },
+      });
+      return claimed.count === 1;
+    }
+    if (!update.sponsorshipId) return false;
+
+    return prisma.$transaction(async (tx) => {
+      const sponsorship = await tx.sponsorship.updateMany({
+        where: {
+          id: update.sponsorshipId!,
+          orgId: update.orgId,
+          residentId: update.residentId,
+          status: update.awaitingTransitionedAt ? "awaiting" : "active",
+        },
+        data: update.awaitingTransitionedAt
+          ? { status: "awaiting" }
+          : { status: "awaiting", awaitingSince: claimedAt },
+      });
+      if (sponsorship.count !== 1) return false;
+
+      const claimed = await tx.sponsorUpdate.updateMany({
+        where: {
+          id: update.id,
+          orgId: update.orgId,
+          status: "draft",
+          sponsorshipId: update.sponsorshipId,
+          awaitingTransitionedAt: update.awaitingTransitionedAt ? { not: null } : null,
+        },
+        data: {
+          status: "approved",
+          ...(!update.awaitingTransitionedAt ? { awaitingTransitionedAt: claimedAt } : {}),
+        },
+      });
+      if (claimed.count !== 1) throw new Error("Sponsor update approval claim was lost");
+      return true;
+    }).catch((error) => {
+      if (error instanceof Error && error.message === "Sponsor update approval claim was lost") return false;
+      throw error;
     });
-    return claimed.count;
   },
   deliver: deliverSponsorUpdate,
   async findUpdate(id, orgId) {
@@ -72,14 +128,18 @@ const approvalDependencies: ApprovalDependencies = {
         organization: {
           select: {
             slug: true,
+            stripeAccountId: true,
           },
+        },
+        sponsorship: {
+          include: { sponsor: { select: { email: true } } },
         },
         resident: {
           include: {
             sponsorships: {
               where: {
                 orgId,
-                OR: [{ status: "active" }, { endedReason: "adopted" }],
+                status: "active",
               },
               include: { sponsor: { select: { email: true } } },
               orderBy: { createdAt: "asc" },
@@ -97,13 +157,23 @@ const approvalDependencies: ApprovalDependencies = {
     });
   },
   now: () => new Date(),
-  async renderMessage(update, monthlyCents) {
+  pauseCollection: pauseStripeCollection,
+  async renderMessage(update, monthlyCents, renderedAt) {
     const origin = env.BETTER_AUTH_URL;
+    const actionUrl = update.type === "graduation"
+      ? sponsorshipSelectionUrl(
+        origin,
+        update.organization.slug,
+        update.sponsorshipId!,
+        sponsorshipTokenSecret(),
+        renderedAt,
+      )
+      : companionPageUrl(origin, update.organization.slug, update.residentId);
     const email = createElement(SponsorUpdateEmail, {
       companionName: update.resident.name,
       subject: update.subject,
       bodyText: update.bodyText,
-      companionUrl: companionPageUrl(origin, update.organization.slug, update.residentId),
+      actionUrl,
       monthlyCents,
       origin,
       photoUrl: update.photoUrl ?? update.resident.photoUrls[0] ?? null,
@@ -151,6 +221,19 @@ export function createApproveSponsorUpdateHandler(dependencies: ApprovalDependen
     if (sponsorUpdate.status !== "draft") {
       return Response.json({ error: "Only draft updates can be approved" }, { status: 409 });
     }
+    if (
+      sponsorUpdate.type === "graduation"
+      && (!sponsorUpdate.sponsorshipId
+        || !sponsorUpdate.sponsorship
+        || sponsorUpdate.sponsorship.residentId !== sponsorUpdate.residentId
+        || (sponsorUpdate.sponsorship.status !== "active"
+          && !(sponsorUpdate.sponsorship.status === "awaiting" && sponsorUpdate.awaitingTransitionedAt)))
+    ) {
+      return Response.json(
+        { error: "This sponsorship is no longer active" },
+        { status: 409 },
+      );
+    }
 
     const emailConnector = await dependencies.getConnectorStatus(orgId);
     if (!emailConnector.connected) {
@@ -160,18 +243,28 @@ export function createApproveSponsorUpdateHandler(dependencies: ApprovalDependen
       );
     }
 
-    if (await dependencies.claimUpdate(id, orgId) !== 1) {
-      return Response.json({ error: "Update is already being approved" }, { status: 409 });
+    const approvedAt = dependencies.now();
+    if (!(await dependencies.claimUpdate(sponsorUpdate, approvedAt))) {
+      return Response.json({ error: "Update or sponsorship is no longer available for approval" }, { status: 409 });
     }
 
     try {
-      const sponsorships = sponsorUpdate.resident.sponsorships.filter((sponsorship) =>
-        isSponsorUpdateRecipient(sponsorUpdate.type, sponsorship, sponsorUpdate.resident.available));
+      const sponsorships = sponsorUpdate.type === "graduation"
+        ? [sponsorUpdate.sponsorship!]
+        : sponsorUpdate.resident.sponsorships.filter((sponsorship) =>
+          isRegularSponsorUpdateRecipient(sponsorship, sponsorUpdate.resident.available));
+      if (sponsorUpdate.type === "graduation") {
+        await dependencies.pauseCollection({
+          stripeAccountId: sponsorUpdate.organization.stripeAccountId,
+          subscriptionId: sponsorUpdate.sponsorship!.stripeSubscriptionId,
+        });
+      }
       const groups = Map.groupBy(sponsorships, ({ monthlyCents }) => monthlyCents);
       const deliveries = (await Promise.all([...groups].map(async ([monthlyCents, recipients]) => {
         const message = await dependencies.renderMessage(
           sponsorUpdate,
           monthlyCents ?? DEFAULT_SPONSORSHIP_MONTHLY_CENTS,
+          approvedAt,
         );
         return dependencies.deliver(orgId, { ...sponsorUpdate, ...message }, recipients);
       }))).flat();

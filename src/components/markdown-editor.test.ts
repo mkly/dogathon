@@ -144,7 +144,7 @@ test("keeps the editor preview and sent email plain text in agreement", async ()
     companionName: "Biscuit",
     subject: "An update from Biscuit",
     bodyText: `Here is the latest.\n\n${postscript}`,
-    companionUrl: "https://pawcast.test/companions/biscuit",
+    actionUrl: "https://pawcast.test/companions/biscuit",
     monthlyCents: 2500,
     origin: "https://pawcast.test",
   }), { plainText: true });

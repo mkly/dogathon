@@ -20,7 +20,7 @@ export type SponsorUpdateEmailProps = {
   companionName: string;
   subject: string;
   bodyText: string;
-  companionUrl: string;
+  actionUrl: string;
   monthlyCents: number;
   /** Absolute origin for the wordmark, texture, and photo. */
   origin: string;
@@ -231,7 +231,7 @@ export function SponsorUpdateEmail(input: SponsorUpdateEmailProps) {
 
               <Section style={{ textAlign: "center" }}>
                 <Button
-                  href={input.companionUrl}
+                  href={input.actionUrl}
                   style={{
                     ...feltBackground(MUSTARD, absolute(input.origin, TILE.mustard)),
                     borderRadius: "15px",
@@ -245,7 +245,7 @@ export function SponsorUpdateEmail(input: SponsorUpdateEmailProps) {
                     textDecoration: "none",
                   }}
                 >
-                  See {name}&rsquo;s page &rarr;
+                  {graduation ? "Choose your next companion" : <>See {name}&rsquo;s page &rarr;</>}
                 </Button>
               </Section>
             </Section>
