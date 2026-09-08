@@ -13,6 +13,10 @@ export const PUBLIC_SPONSORABLE_RESIDENT_WHERE = {
   sponsorships: { none: { status: "active" } },
 } satisfies Prisma.ResidentWhereInput;
 
+const ACTIVE_SPONSORSHIP_COUNT = {
+  _count: { select: { sponsorships: { where: { status: "active" } } } },
+} satisfies Prisma.ResidentInclude;
+
 export function isPublicResidentSponsorable(resident: {
   available: boolean;
   _count: { sponsorships: number };
@@ -52,9 +56,14 @@ export const getPublicResidents = unstable_cache(
   PUBLIC_ROSTER_CACHE,
 );
 
+// The companion page is also where checkout returns land, so it reads every
+// resident and applies isPublicResidentSponsorable itself: a sponsor coming
+// back from Stripe still sees their confirmation for the companion they just
+// took off the roster.
 export const getPublicResident = unstable_cache(
   (orgId: string, id: string) => prisma.resident.findFirst({
-    where: { id, orgId, ...PUBLIC_SPONSORABLE_RESIDENT_WHERE },
+    where: { id, orgId },
+    include: ACTIVE_SPONSORSHIP_COUNT,
   }),
   ["public-resident"],
   PUBLIC_ROSTER_CACHE,
@@ -76,7 +85,7 @@ export const getPublicResidentBySource = unstable_cache(
           sex: true,
           photoUrls: true,
           available: true,
-          _count: { select: { sponsorships: { where: { status: "active" } } } },
+          ...ACTIVE_SPONSORSHIP_COUNT,
         },
       })
     : null),
@@ -97,7 +106,7 @@ export const getPublicResidentBySlug = unstable_cache(
       sex: true,
       photoUrls: true,
       available: true,
-      _count: { select: { sponsorships: { where: { status: "active" } } } },
+      ...ACTIVE_SPONSORSHIP_COUNT,
     },
   }),
   ["public-resident-by-slug"],

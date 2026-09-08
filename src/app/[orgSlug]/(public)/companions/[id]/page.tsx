@@ -10,12 +10,13 @@ import {
   getPublicCompanionParams,
   getPublicOrganization,
   getPublicResident,
+  isPublicResidentSponsorable,
 } from "@/lib/public-roster-cache";
 import { DEFAULT_SPONSORSHIP_MONTHLY_CENTS } from "@/lib/rescue-settings";
 import { uuidSchema } from "@/lib/uuid";
 
 import { CompanionBanner, CompanionFormError, CompanionSponsorState } from "./companion-banner";
-import { companionFacts, sponsorshipSucceeded } from "./companion-page";
+import { companionFacts, isCheckoutReturn, sponsorshipSucceeded } from "./companion-page";
 import { SponsorSubmitButton } from "./sponsor-submit-button";
 import styles from "../../../../public.module.css";
 
@@ -33,13 +34,16 @@ export async function generateStaticParams() {
 
 export default async function CompanionPage({ params, searchParams }: CompanionPageProps) {
   const { id, orgSlug } = await params;
-  const sponsored = sponsorshipSucceeded(await searchParams);
+  const companionSearchParams = await searchParams;
+  const sponsored = sponsorshipSucceeded(companionSearchParams);
   if (!uuidSchema.safeParse(id).success) notFound();
   const organization = await getPublicOrganization(orgSlug);
   if (!organization) notFound();
   const resident = await getPublicResident(organization.id, id);
 
   if (!resident) notFound();
+  const sponsorable = isPublicResidentSponsorable(resident);
+  if (!sponsorable && !isCheckoutReturn(companionSearchParams)) notFound();
 
   const tiers = organization.sponsorshipTiers;
   const firstTier = tiers[0];
@@ -95,7 +99,7 @@ export default async function CompanionPage({ params, searchParams }: CompanionP
           </div>
 
           <div className={styles.profileCopy}>
-            <StitchBadge tone="moss">Available</StitchBadge>
+            {sponsorable && <StitchBadge tone="moss">Available</StitchBadge>}
             <h1>{resident.name}</h1>
             <p className={styles.companionFacts}>
               {companionFacts(resident)}
@@ -114,67 +118,69 @@ export default async function CompanionPage({ params, searchParams }: CompanionP
           </div>
         </section>
 
-        <CompanionSponsorState sponsored={sponsored}>
-          <FeltPanel className={styles.sponsorPanel} tone="oatmeal">
-            <div className={styles.sponsorPitch}>
-              <p className={styles.eyebrow}>Monthly sponsorship</p>
-              <h2>
-                {tiers.length < 2
-                  ? `Cover ${resident.name}'s care for ${monthlyAmount} a month`
-                  : `Help cover ${resident.name}'s care every month`}
-              </h2>
-              <p>
-                Your gift goes toward food, vet visits, and a warm bed while {resident.name} waits
-                for a home. You&apos;ll get updates from the rescue along the way, and your
-                sponsorship ends on its own the day {resident.name} no longer needs one.
-              </p>
-            </div>
+        {sponsorable && (
+          <CompanionSponsorState sponsored={sponsored}>
+            <FeltPanel className={styles.sponsorPanel} tone="oatmeal">
+              <div className={styles.sponsorPitch}>
+                <p className={styles.eyebrow}>Monthly sponsorship</p>
+                <h2>
+                  {tiers.length < 2
+                    ? `Cover ${resident.name}'s care for ${monthlyAmount} a month`
+                    : `Help cover ${resident.name}'s care every month`}
+                </h2>
+                <p>
+                  Your gift goes toward food, vet visits, and a warm bed while {resident.name} waits
+                  for a home. You&apos;ll get updates from the rescue along the way, and your
+                  sponsorship ends on its own the day {resident.name} no longer needs one.
+                </p>
+              </div>
 
-            <Suspense fallback={null}><CompanionFormError name={resident.name} /></Suspense>
+              <Suspense fallback={null}><CompanionFormError name={resident.name} /></Suspense>
 
-            <form action={createSponsorship} className={styles.sponsorForm}>
-              <input name="orgSlug" type="hidden" value={orgSlug} />
-              <input name="residentId" type="hidden" value={resident.id} />
+              <form action={createSponsorship} className={styles.sponsorForm}>
+                <input name="orgSlug" type="hidden" value={orgSlug} />
+                <input name="residentId" type="hidden" value={resident.id} />
 
-              {tiers.length < 2 ? (
-                defaultTier ? (
-                  <div className={styles.singleTier}>
-                    <input name="tier" type="hidden" value={defaultTier.id} />
-                    <p>{defaultTier.description}</p>
-                  </div>
-                ) : null
-              ) : (
-                <fieldset className={styles.sponsorshipTiers}>
-                  <legend>Pick a monthly amount</legend>
-                  {tiers.map((tier) => (
-                    <label className={styles.sponsorshipTier} key={tier.id}>
-                      <input defaultChecked={tier.id === defaultTier?.id} name="tier" required type="radio" value={tier.id} />
-                      <Stitch fine />
-                      <span>
-                        <strong>{formatMonthlyAmount(tier.monthlyCents)}/month</strong>
-                        <small>{tier.description}</small>
-                      </span>
-                    </label>
-                  ))}
-                </fieldset>
-              )}
+                {tiers.length < 2 ? (
+                  defaultTier ? (
+                    <div className={styles.singleTier}>
+                      <input name="tier" type="hidden" value={defaultTier.id} />
+                      <p>{defaultTier.description}</p>
+                    </div>
+                  ) : null
+                ) : (
+                  <fieldset className={styles.sponsorshipTiers}>
+                    <legend>Pick a monthly amount</legend>
+                    {tiers.map((tier) => (
+                      <label className={styles.sponsorshipTier} key={tier.id}>
+                        <input defaultChecked={tier.id === defaultTier?.id} name="tier" required type="radio" value={tier.id} />
+                        <Stitch fine />
+                        <span>
+                          <strong>{formatMonthlyAmount(tier.monthlyCents)}/month</strong>
+                          <small>{tier.description}</small>
+                        </span>
+                      </label>
+                    ))}
+                  </fieldset>
+                )}
 
-              <label htmlFor="sponsorName">Your name</label>
-              <FeltField>
-                <input autoComplete="name" id="sponsorName" name="sponsorName" required />
-              </FeltField>
+                <label htmlFor="sponsorName">Your name</label>
+                <FeltField>
+                  <input autoComplete="name" id="sponsorName" name="sponsorName" required />
+                </FeltField>
 
-              <label htmlFor="sponsorEmail">Email</label>
-              <FeltField>
-                <input autoComplete="email" id="sponsorEmail" name="sponsorEmail" required type="email" />
-              </FeltField>
+                <label htmlFor="sponsorEmail">Email</label>
+                <FeltField>
+                  <input autoComplete="email" id="sponsorEmail" name="sponsorEmail" required type="email" />
+                </FeltField>
 
-              <SponsorSubmitButton className={styles.sponsorButton} pendingLabel="Opening checkout…" tone="mustard" type="submit">
-                Continue to checkout
-              </SponsorSubmitButton>
-            </form>
-          </FeltPanel>
-        </CompanionSponsorState>
+                <SponsorSubmitButton className={styles.sponsorButton} pendingLabel="Opening checkout…" tone="mustard" type="submit">
+                  Continue to checkout
+                </SponsorSubmitButton>
+              </form>
+            </FeltPanel>
+          </CompanionSponsorState>
+        )}
       </main>
     </PageViewTransition>
   );

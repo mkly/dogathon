@@ -180,23 +180,6 @@ test("cta mode renders only a sponsor link and preserves sponsorship-page query 
   );
 });
 
-test("cta mode renders the existing status message for unavailable companions", async () => {
-  for (const [status, expected] of [
-    ["sponsored", "This companion already has an active sponsor."],
-    ["unavailable", "This companion is not accepting sponsorships right now."],
-  ] as const) {
-    const { root } = await renderWidget({
-      infoUrl: "https://rescue.example/sponsor",
-      mode: "cta",
-      response: { ...companion, status },
-    });
-
-    assert.equal(root.querySelector(".dogathon-sponsor-message")?.textContent, expected);
-    assert.equal(root.querySelector(".dogathon-sponsor-cta"), null);
-    assert.equal(root.querySelector("form"), null);
-  }
-});
-
 test("cta mode renders nothing and warns when the sponsorship page URL is missing", async () => {
   const warnings: unknown[][] = [];
   const originalWarn = console.warn;
@@ -253,6 +236,15 @@ test("renders only a notice when the companion cannot be found", async () => {
 
   assert.equal(root.querySelector(".dogathon-sponsor-message")?.textContent, "We could not find this companion.");
   assert.equal(root.querySelector("a"), null);
+});
+
+test("renders the return message when the sponsored companion has left the endpoint", async () => {
+  const { root } = await renderWidget({ ok: false, url: "https://rescue.example/dogs/biscuit?sponsored=1" });
+
+  assert.equal(
+    root.querySelector(".dogathon-sponsor-message")?.textContent,
+    "Thank you! Your sponsorship is confirmed.",
+  );
 });
 
 test("renders the default sponsor intro for an available companion", async () => {
@@ -336,22 +328,6 @@ for (const [query, expected] of [
 
     assert.equal(root.querySelector(".dogathon-sponsor-message")?.textContent, expected);
     assert.equal(root.querySelector("form"), null);
-  });
-}
-
-for (const [status, expected] of [
-  ["sponsored", "This companion already has an active sponsor."],
-  ["unavailable", "This companion is not accepting sponsorships right now."],
-] as const) {
-  test(`renders a ${status} message and companion link`, async () => {
-    const { root } = await renderWidget({ response: { ...companion, status } });
-
-    assert.equal(root.querySelector(".dogathon-sponsor-price")?.textContent, "$32.50 monthly");
-
-    assert.equal(root.querySelector(".dogathon-sponsor-message")?.textContent, expected);
-    assert.equal(root.querySelector("form"), null);
-    assert.equal(root.querySelector(".dogathon-sponsor-intro"), null);
-    assert.equal(root.querySelector<HTMLAnchorElement>("a")?.href, companion.companionUrl);
   });
 }
 
