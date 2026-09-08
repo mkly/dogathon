@@ -138,7 +138,7 @@ test("a source URL match updates a renamed companion", async () => {
       }],
       findFirst: async () => ({ id: "resident-1", unavailabilityReason: null }),
       update: async (input: unknown) => { writes.push(input); },
-      create: async () => { throw new Error("existing companion should not be created"); },
+      upsert: async () => { throw new Error("existing companion should not be created"); },
     },
   } as unknown as SyncTransaction;
 
@@ -163,12 +163,11 @@ test("live upserts restore unavailable residents but preserve adopted residents"
   const tx = {
     resident: {
       findMany: async () => [],
-      findFirst: async (input: { where: { OR: Array<{ name?: string }> } }) => {
-        const name = input.where.OR.find((candidate) => candidate.name)?.name;
-        return name === "Hattie"
+      findFirst: async (input: { where: { name?: string } }) => (
+        input.where.name === "Hattie"
           ? { id: "resident-unavailable", unavailabilityReason: "unavailable" }
-          : { id: "resident-adopted", unavailabilityReason: "adopted" };
-      },
+          : { id: "resident-adopted", unavailabilityReason: "adopted" }
+      ),
       update: async (input: unknown) => { writes.push(input); },
     },
   } as unknown as SyncTransaction;
@@ -189,6 +188,52 @@ test("live upserts restore unavailable residents but preserve adopted residents"
   assert.equal("unavailabilityReason" in preserved, false);
 });
 
+test("a source URL match outranks a different resident holding the new name", async () => {
+  const lookups: Array<Record<string, unknown>> = [];
+  const writes: Array<{ where: { id_orgId: { id: string } } }> = [];
+  const tx = {
+    resident: {
+      findMany: async () => [],
+      findFirst: async (input: { where: Record<string, unknown> }) => {
+        lookups.push(input.where);
+        return input.where.sourceUrl ? { id: "renamed", unavailabilityReason: null } : null;
+      },
+      update: async (input: unknown) => { writes.push(input as { where: { id_orgId: { id: string } } }); },
+      upsert: async () => { throw new Error("a source URL match should not be created"); },
+    },
+  } as unknown as SyncTransaction;
+
+  await upsertCompanions(tx, "org-rescue", [{
+    ...rosterCompanion("Walnut", false),
+    sourceUrl: "https://rescue.example/dogs/biscuit",
+  }], true);
+
+  assert.deepEqual(lookups, [{ orgId: "org-rescue", sourceUrl: "https://rescue.example/dogs/biscuit" }]);
+  assert.deepEqual(writes.map((write) => write.where.id_orgId.id), ["renamed"]);
+});
+
+test("two companions sharing a name upsert onto one row instead of failing", async () => {
+  const upserts: Array<{ where: { orgId_name: { name: string } } }> = [];
+  const tx = {
+    resident: {
+      findMany: async () => [],
+      findFirst: async () => null,
+      upsert: async (input: unknown) => {
+        upserts.push(input as { where: { orgId_name: { name: string } } });
+      },
+    },
+  } as unknown as SyncTransaction;
+
+  await upsertCompanions(
+    tx,
+    "org-rescue",
+    [rosterCompanion("Buddy", false), rosterCompanion("Buddy", false)],
+    true,
+  );
+
+  assert.deepEqual(upserts.map((write) => write.where.orgId_name.name), ["Buddy", "Buddy"]);
+});
+
 test("resident writes run in bounded batches", async () => {
   let active = 0;
   let peak = 0;
@@ -197,7 +242,7 @@ test("resident writes run in bounded batches", async () => {
     resident: {
       findMany: async () => [],
       findFirst: async () => null,
-      create: async () => {
+      upsert: async () => {
         writes += 1;
         active += 1;
         peak = Math.max(peak, active);

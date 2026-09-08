@@ -455,14 +455,13 @@ async function upsertCompanion(
     sourceUrl,
   };
 
-  const existing = await tx.resident.findFirst({
-    where: {
-      orgId,
-      OR: [
-        ...(sourceUrl ? [{ sourceUrl }] : []),
-        { name: companion.name },
-      ],
-    },
+  // Source URL identifies a companion across a rename, so it outranks the name
+  // fallback exactly as the slug allocation above does.
+  const existing = (sourceUrl ? await tx.resident.findFirst({
+    where: { orgId, sourceUrl },
+    select: { id: true, unavailabilityReason: true },
+  }) : null) ?? await tx.resident.findFirst({
+    where: { orgId, name: companion.name },
     select: { id: true, unavailabilityReason: true },
   });
 
@@ -481,8 +480,12 @@ async function upsertCompanion(
     return;
   }
 
-  await tx.resident.create({
-    data: {
+  // Two companions can share a name on one roster, and a batch writes them
+  // concurrently: upsert so the second one updates the first's row instead of
+  // failing the unique constraint and aborting the whole sync transaction.
+  await tx.resident.upsert({
+    where: { orgId_name: { orgId, name: companion.name } },
+    create: {
       orgId,
       name: companion.name,
       slug,
@@ -490,6 +493,7 @@ async function upsertCompanion(
       available: !companion.adopted,
       unavailabilityReason: companion.adopted ? "adopted" : null,
     },
+    update: { ...profile },
   });
 }
 
