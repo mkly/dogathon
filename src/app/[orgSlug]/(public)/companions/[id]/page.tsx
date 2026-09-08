@@ -121,13 +121,17 @@ export default async function CompanionPage({ params, searchParams }: CompanionP
           <CompanionSponsorState sponsored={sponsored}>
             <FeltPanel className={styles.sponsorPanel} tone="oatmeal">
               <div className={styles.sponsorPitch}>
-                <p className={styles.eyebrow}>A steady paw</p>
+                <p className={styles.eyebrow}>Monthly sponsorship</p>
                 <h2>
                   {tiers.length < 2
-                    ? `Sponsor ${resident.name} for ${monthlyAmount}/month until adopted`
-                    : `Choose how you'd like to sponsor ${resident.name}`}
+                    ? `Cover ${resident.name}'s care for ${monthlyAmount} a month`
+                    : `Help cover ${resident.name}'s care every month`}
                 </h2>
-                <p>We&apos;ll send little email updates from the rescue as {resident.name} settles in.</p>
+                <p>
+                  Your gift goes toward food, vet visits, and a warm bed while {resident.name} waits
+                  for a home. You&apos;ll get updates from the rescue along the way, and your
+                  sponsorship ends the day {resident.name} is adopted.
+                </p>
               </div>
 
               <Suspense fallback={null}><CompanionFormError name={resident.name} /></Suspense>
@@ -145,7 +149,7 @@ export default async function CompanionPage({ params, searchParams }: CompanionP
                   ) : null
                 ) : (
                   <fieldset className={styles.sponsorshipTiers}>
-                    <legend>Choose a monthly sponsorship</legend>
+                    <legend>Pick a monthly amount</legend>
                     {tiers.map((tier) => (
                       <label className={styles.sponsorshipTier} key={tier.id}>
                         <input defaultChecked={tier.id === defaultTier?.id} name="tier" required type="radio" value={tier.id} />
@@ -177,8 +181,8 @@ export default async function CompanionPage({ params, searchParams }: CompanionP
           </CompanionSponsorState>
         ) : (
           <FeltPanel className={styles.confirmation} tone="brick">
-            <h2>{resident.name} has been adopted!</h2>
-            <p>Their sponsorship chapter is complete. Meet another resident who could use your help.</p>
+            <h2>{resident.name} has found a home</h2>
+            <p>Sponsorships for {resident.name} have ended. Another resident is still waiting for one.</p>
             <FeltLink
               className={styles.cardLink}
               href={`/${orgSlug}`}

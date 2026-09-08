@@ -134,7 +134,7 @@ export const sponsorEmbedScript = String.raw`(() => {
     }
 
     const choices = create("fieldset", "tiers");
-    choices.append(create("legend", "tiers-legend", "Choose a monthly sponsorship"));
+    choices.append(create("legend", "tiers-legend", "Pick a monthly amount"));
     tiers.forEach((tier) => {
       const choice = create("label", "tier");
       const input = create("input", "tier-input");
