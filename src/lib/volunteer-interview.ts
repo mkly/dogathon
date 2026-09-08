@@ -35,9 +35,9 @@ type InterviewTurnOptions = {
 };
 
 const SCRIPTED_QUESTIONS = [
-  (name: string) => `What did you and ${name} do together today?`,
-  (name: string) => `How was ${name}'s mood and energy?`,
-  () => "Is there anything else staff should know, such as eating, drinking, bathroom habits, or a nice moment?",
+  (name: string) => `What did you and ${name} get up to today?`,
+  (name: string) => `What was ${name} like today: playful, sleepy, silly, cuddly?`,
+  (name: string) => `Was there a moment with ${name} that made you smile, something a sponsor would love to hear about?`,
 ] as const;
 
 const interviewSummarySchema = z.object({
@@ -60,7 +60,7 @@ function scriptedReply(input: InterviewInput): string {
     return SCRIPTED_QUESTIONS[questionsAsked](input.companion.name);
   }
 
-  return `Thanks — that gives the ${input.orgName ?? "rescue"} team what they need. [[READY]]`;
+  return `Thanks, ${input.companion.name}'s sponsors are going to love hearing about this. [[READY]]`;
 }
 
 function textStreamResponse(text: string, input: InterviewInput, options: InterviewTurnOptions): Response {
@@ -94,21 +94,24 @@ export function buildInterviewSystemPrompt({
   orgName,
 }: Omit<InterviewInput, "messages">): string {
   return [
-    `You are a warm volunteer interviewer for ${orgName ?? "an animal rescue"}.`,
-    `You are asking about ${companion.name}, a ${companion.ageText} ${companion.breed} (${companion.sex}).`,
-    "Ask one short question at a time and ask no more than five questions total.",
-    "Gather only facts the volunteer knows: what they did together, mood and energy, eating and drinking, bathroom habits, anything staff should know, and a nice moment for sponsors.",
+    `You are a friendly interviewer for ${orgName ?? "an animal rescue"}, chatting with a volunteer who just spent time with ${companion.name}, a ${companion.ageText} ${companion.breed} (${companion.sex}).`,
+    `Your only job is to collect fun, vivid material for the short email updates that ${companion.name}'s sponsors receive. Sponsors are people who give a little each month and want to feel close to ${companion.name}; the conversation is not a wellness check, a care log, or a report for staff.`,
+    "Ask one short, curious question at a time and ask no more than five questions total.",
+    "Go after the good stuff: what they did together, games and favorite spots, personality quirks, funny or sweet moments, new friends, small wins like a new trick or a brave first, and the volunteer's own feelings about the visit. Follow up on anything charming to get a concrete detail a sponsor could picture.",
+    "Do not ask about eating, drinking, bathroom habits, weight, medication, or health, and do not ask what staff should know. If the volunteer raises a concern, acknowledge it kindly in a few words and steer back to the visit.",
     "Never invent facts, give medical advice, or use dog-specific wording; call the animal a companion.",
     "When opening the conversation with a photo, first describe one concrete visible detail about the setting, posture, expression, or what the companion is doing in one short sentence, then ask the first question.",
     "Never infer health, breed, or identity from a photo. If no photo is provided, skip the description and ask the first question.",
-    "When you have enough information, respond with one short wrap-up whose final text is exactly [[READY]].",
+    "When you have enough for a lively update, respond with one short, appreciative wrap-up whose final text is exactly [[READY]].",
   ].join(" ");
 }
 
 // Reasoning models spend their thinking inside this budget before any visible
-// text; a small cap leaves the volunteer with an empty reply.
-const MAX_INTERVIEW_TURN_OUTPUT_TOKENS = 1200;
-const MAX_INTERVIEW_SUMMARY_OUTPUT_TOKENS = 1500;
+// text, so it only exists as a runaway guard and must stay far above what a
+// turn or note needs; a tight cap shows up as an empty reply or as a summary
+// that fails with "No output generated".
+const MAX_INTERVIEW_TURN_OUTPUT_TOKENS = 8000;
+const MAX_INTERVIEW_SUMMARY_OUTPUT_TOKENS = 8000;
 
 async function generateOpening(input: InterviewInput, includePhoto: boolean): Promise<string> {
   const content = includePhoto && input.photo
@@ -174,17 +177,24 @@ export async function summarizeInterview(input: InterviewInput): Promise<{ note:
     .map((message) => `${message.role}: ${messageText(message)}`)
     .filter((line) => !line.endsWith(": "))
     .join("\n");
-  const { output } = await generateText({
-    model: createAiModel(),
-    output: Output.object({ schema: interviewSummarySchema }),
-    maxOutputTokens: MAX_INTERVIEW_SUMMARY_OUTPUT_TOKENS,
-    instructions: [
-      "Turn the volunteer interview into one concise plain-text care note for rescue staff.",
-      "Use only facts in the transcript, do not invent details, and do not give medical advice.",
-      "First person is allowed. The note must be no longer than 2000 characters.",
-    ].join(" "),
-    prompt: JSON.stringify({ companion: input.companion, transcript }),
-  });
+  let output: { note: string } | undefined;
+  try {
+    ({ output } = await generateText({
+      model: createAiModel(),
+      output: Output.object({ schema: interviewSummarySchema }),
+      maxOutputTokens: MAX_INTERVIEW_SUMMARY_OUTPUT_TOKENS,
+      instructions: [
+        "Turn the volunteer interview into one concise plain-text note that a writer will later draw on for a cheerful email update to the companion's sponsors.",
+        "Keep the vivid specifics: activities, personality, funny or sweet moments, and the volunteer's own wording. Use only facts in the transcript, do not invent details, and leave out anything that reads like a medical or care report.",
+        "First person is allowed. The note must be no longer than 2000 characters.",
+      ].join(" "),
+      prompt: JSON.stringify({ companion: input.companion, transcript }),
+    }));
+  } catch (error) {
+    // the transcript itself travels with the note, so the composer still has
+    // the volunteer's own words when the digest falls back to their answers
+    console.error("volunteer check-in summary model failed; using the volunteer's answers as the note", error);
+  }
 
-  return output;
+  return output ?? deterministicSummary(input.messages);
 }

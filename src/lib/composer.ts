@@ -76,7 +76,9 @@ function finalizeDraft(draft: ComposedSponsorUpdate, postscript: string): Compos
   };
 }
 
-const MAX_SPONSOR_UPDATE_OUTPUT_TOKENS = 900;
+// a runaway guard only: a reasoning model thinks inside this budget, so it must
+// stay far above what the email itself needs
+const MAX_SPONSOR_UPDATE_OUTPUT_TOKENS = 8000;
 
 async function composeWithModel(input: ComposeSponsorUpdateInput): Promise<ComposedSponsorUpdate> {
   const regularUpdateGuidance = input.type === "regular"

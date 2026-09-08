@@ -63,18 +63,16 @@ test("builds a bounded, grounded companion interview prompt", () => {
 test("uses the deterministic three-question script and then marks the interview ready", async () => {
   const turns = [message("u0", "user", "I'd like to check in")];
   const expectedQuestions = [
-    "What did you and Biscuit do together today?",
-    "How was Biscuit's mood and energy?",
-    "Is there anything else staff should know",
+    "What did you and Biscuit get up to today?",
+    "What was Biscuit like today",
+    "Was there a moment with Biscuit that made you smile",
   ];
 
   for (const [index, expected] of expectedQuestions.entries()) {
     const response = await interviewTurn({ companion, orgName: "Happy Tails", messages: turns });
     const body = await response.text();
     assert.match(body, new RegExp(expected.replace(/[?' ]/gu, "."), "u"));
-    turns.push(message(`a${index}`, "assistant", body.includes("bathroom")
-      ? "Is there anything else staff should know, such as eating, drinking, bathroom habits, or a nice moment?"
-      : expectedQuestions[index]));
+    turns.push(message(`a${index}`, "assistant", body.trim()));
     turns.push(message(`u${index + 1}`, "user", `Answer ${index + 1}`));
   }
 
@@ -94,7 +92,7 @@ test("passes the complete text-only turn to the persistence callback", async () 
   assert.equal(persisted?.length, 2);
   assert.deepEqual(persisted?.[0], original[0]);
   assert.equal(persisted?.[1].role, "assistant");
-  assert.match(persisted ? messageText(persisted[1]) : "", /do together today/u);
+  assert.match(persisted ? messageText(persisted[1]) : "", /get up to today/u);
 });
 
 test("summarizes fallback answers deterministically", async () => {
