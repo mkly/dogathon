@@ -102,6 +102,7 @@ export const sponsorEmbedScript = String.raw`(() => {
     if (returnState === "error") {
       const errors = {
         invalid: "Please check your details and try again.",
+        "invalid-tier": "Please choose a sponsorship tier and try again.",
         "rate-limited": "Too many checkout attempts. Please wait and try again.",
         unavailable: "This companion is not currently available for sponsorship.",
         billing: "Checkout is temporarily unavailable. Please try again later.",
@@ -111,10 +112,51 @@ export const sponsorEmbedScript = String.raw`(() => {
     return null;
   };
 
-  const sponsorForm = (org, source, returnTo) => {
+  const tierFields = (tiers, monthlyCents, currency) => {
+    // An organization that has never saved its sponsorship settings has no tiers, and checkout
+    // falls back to the default price, so the card shows that price and posts no tier at all.
+    if (tiers.length < 2) {
+      const tier = tiers[0];
+      const fields = document.createDocumentFragment();
+      if (tier) {
+        const selectedTier = create("input");
+        selectedTier.setAttribute("type", "hidden");
+        selectedTier.setAttribute("name", "tier");
+        selectedTier.setAttribute("value", tier.id);
+        fields.append(selectedTier);
+      }
+      const summary = create("div", "single-tier");
+      summary.append(create("p", "price", price(tier ? tier.monthlyCents : monthlyCents, currency)));
+      if (tier) summary.append(create("p", "tier-description", tier.description));
+      fields.append(summary);
+      return fields;
+    }
+
+    const choices = create("fieldset", "tiers");
+    choices.append(create("legend", "tiers-legend", "Choose a monthly sponsorship"));
+    tiers.forEach((tier, index) => {
+      const choice = create("label", "tier");
+      const input = create("input", "tier-input");
+      input.setAttribute("type", "radio");
+      input.setAttribute("name", "tier");
+      input.setAttribute("value", tier.id);
+      input.setAttribute("required", "");
+      if (index === 0) input.setAttribute("checked", "");
+      const copy = create("span", "tier-copy");
+      copy.append(create("span", "tier-price", price(tier.monthlyCents, currency)));
+      copy.append(create("span", "tier-description", tier.description));
+      choice.append(input, copy);
+      choices.append(choice);
+    });
+    return choices;
+  };
+
+  const sponsorForm = (org, source, returnTo, tiers, monthlyCents, currency) => {
     const form = create("form", "form");
     form.setAttribute("method", "post");
     form.setAttribute("action", appOrigin + "/api/public/" + encodeURIComponent(org) + "/checkout");
+
+    form.append(tierFields(tiers, monthlyCents, currency));
 
     [["sponsorName", "Your name", "text"], ["sponsorEmail", "Email address", "email"]].forEach(([name, labelText, type]) => {
       const label = create("label", "field");
@@ -145,7 +187,7 @@ export const sponsorEmbedScript = String.raw`(() => {
 
   const styles = () => {
     const node = document.createElement("style");
-    node.textContent = ".dogathon-sponsor-root{box-sizing:border-box;max-width:32rem}.dogathon-sponsor-root *{box-sizing:border-box}.dogathon-sponsor-photo{display:block;width:100%;max-height:22rem;object-fit:cover;border-radius:.7rem}.dogathon-sponsor-name{margin:.9rem 0 .2rem;font-size:1.5rem}.dogathon-sponsor-details,.dogathon-sponsor-status,.dogathon-sponsor-price{margin:.2rem 0;color:#5d554b}.dogathon-sponsor-price{font-weight:700;color:inherit}.dogathon-sponsor-intro{margin:1rem 0 0}.dogathon-sponsor-message{padding:.75rem;border-radius:.5rem;background:#f3f0ea}.dogathon-sponsor-message-success{background:#e4f3e8}.dogathon-sponsor-message-error{background:#f8e5e2}.dogathon-sponsor-root-cta .dogathon-sponsor-message{padding:0;background:none}.dogathon-sponsor-form{display:grid;gap:.8rem;margin-top:1rem}.dogathon-sponsor-field{display:grid;gap:.25rem}.dogathon-sponsor-label{font-weight:650}.dogathon-sponsor-input{width:100%;padding:.65rem;border:1px solid #9c9388;border-radius:.4rem;font:inherit}.dogathon-sponsor-button,.dogathon-sponsor-cta{display:inline-block;padding:.6rem 1.2rem;border:1px solid currentColor;border-radius:.4rem;background:transparent;color:inherit;font:inherit;font-weight:600;line-height:1.2;text-decoration:none;cursor:pointer}.dogathon-sponsor-button:hover,.dogathon-sponsor-cta:hover{text-decoration:underline}.dogathon-sponsor-link{color:#315c3a;text-decoration:underline;text-underline-offset:.15em}";
+    node.textContent = ".dogathon-sponsor-root{box-sizing:border-box;max-width:32rem}.dogathon-sponsor-root *{box-sizing:border-box}.dogathon-sponsor-photo{display:block;width:100%;max-height:22rem;object-fit:cover;border-radius:.7rem}.dogathon-sponsor-name{margin:.9rem 0 .2rem;font-size:1.5rem}.dogathon-sponsor-details,.dogathon-sponsor-status,.dogathon-sponsor-price{margin:.2rem 0;color:#5d554b}.dogathon-sponsor-price,.dogathon-sponsor-tier-price{font-weight:700;color:inherit}.dogathon-sponsor-intro{margin:1rem 0 0}.dogathon-sponsor-message{padding:.75rem;border-radius:.5rem;background:#f3f0ea}.dogathon-sponsor-message-success{background:#e4f3e8}.dogathon-sponsor-message-error{background:#f8e5e2}.dogathon-sponsor-root-cta .dogathon-sponsor-message{padding:0;background:none}.dogathon-sponsor-form{display:grid;gap:.8rem;margin-top:1rem}.dogathon-sponsor-tiers{display:grid;gap:.45rem;margin:0;padding:0;border:0}.dogathon-sponsor-tiers-legend{margin-bottom:.2rem;padding:0;font-weight:650}.dogathon-sponsor-tier{display:flex;gap:.65rem;padding:.65rem;border:1px solid #9c9388;cursor:pointer}.dogathon-sponsor-tier-input{margin:.2rem 0 0}.dogathon-sponsor-tier-copy{display:grid;gap:.15rem}.dogathon-sponsor-tier-description{margin:.2rem 0;color:#5d554b}.dogathon-sponsor-field{display:grid;gap:.25rem}.dogathon-sponsor-label{font-weight:650}.dogathon-sponsor-input{width:100%;padding:.65rem;border:1px solid #9c9388;border-radius:.4rem;font:inherit}.dogathon-sponsor-button,.dogathon-sponsor-cta{display:inline-block;padding:.6rem 1.2rem;border:1px solid currentColor;border-radius:.4rem;background:transparent;color:inherit;font:inherit;font-weight:600;line-height:1.2;text-decoration:none;cursor:pointer}.dogathon-sponsor-button:hover,.dogathon-sponsor-cta:hover{text-decoration:underline}.dogathon-sponsor-link{color:#315c3a;text-decoration:underline;text-underline-offset:.15em}";
     return node;
   };
 
@@ -207,10 +249,14 @@ export const sponsorEmbedScript = String.raw`(() => {
       if (!isHidden(root, "details")) {
         content.append(create("p", "details", [companion.breed, companion.ageText, companion.sex].filter(Boolean).join(" · ")));
       }
-      content.append(create("p", "price", price(companion.monthlyCents, companion.currency)));
+      const returned = returnMessage();
+      // The price otherwise only appears inside the sponsorship form, which these states replace.
+      const showsForm = !returned && companion.status !== "adopted" && companion.status !== "sponsored";
+      if (!showsForm) {
+        content.append(create("p", "price", price(companion.monthlyCents, companion.currency)));
+      }
       content.append(create("p", "status", statusText(companion.status)));
 
-      const returned = returnMessage();
       if (returned) {
         content.append(returned);
       } else if (companion.status === "adopted") {
@@ -220,7 +266,7 @@ export const sponsorEmbedScript = String.raw`(() => {
       } else {
         const intro = sponsorIntro(root, companion.name);
         if (intro !== null) content.append(create("p", "intro", intro));
-        content.append(sponsorForm(org, source, returnToFor(root)));
+        content.append(sponsorForm(org, source, returnToFor(root), companion.tiers || [], companion.monthlyCents, companion.currency));
       }
       if (companion.status === "adopted" || companion.status === "sponsored") {
         content.append(link(companion.companionUrl, "View companion details"));

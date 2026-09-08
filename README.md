@@ -86,7 +86,10 @@ dependencies. Its classes all begin with
 `dogathon-sponsor-`, so a host site can override the bundled presentation without affecting
 unrelated elements. Run the app locally and open `/embed-demo.html`; its `org`, `source`,
 `photo=hide`, `name=hide`, `details=hide`, `intro`, and `roster` query parameters make it easy to exercise a
-synced companion and the display controls.
+synced companion, its configured sponsorship tiers, and the display controls. Multiple tiers render
+as a monthly sponsorship picker with the first option selected; a single tier keeps the compact
+price-and-description presentation; an organization with no tiers configured shows the default price
+and posts no tier at all.
 
 ### Shared sponsorship page
 

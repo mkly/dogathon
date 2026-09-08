@@ -18,6 +18,10 @@ const companion = {
   sex: "Female",
   sponsorUrl: "https://pawcast.example/happy-paws/sponsor",
   status: "available",
+  tiers: [
+    { description: "Everyday care and treats", id: "tier-care", monthlyCents: 3250 },
+    { description: "Care plus veterinary support", id: "tier-vet", monthlyCents: 5000 },
+  ],
 };
 
 async function renderWidget({
@@ -78,7 +82,7 @@ test("serves a cacheable dependency-free script below the size limit", async () 
 
   assert.equal(response.headers.get("cache-control"), "public, max-age=3600");
   assert.equal(response.headers.get("content-type"), "text/javascript; charset=utf-8");
-  assert.ok(new TextEncoder().encode(await response.text()).byteLength < 12_000);
+  assert.ok(new TextEncoder().encode(await response.text()).byteLength < 16_000);
 });
 
 test("renders companion data and a checkout form using the public endpoints", async () => {
@@ -89,7 +93,6 @@ test("renders companion data and a checkout form using the public endpoints", as
     "https://pawcast.example/api/public/happy-paws/companion?source=https%3A%2F%2Frescue.example%2Fdogs%2Fbiscuit",
   );
   assert.equal(root.querySelector(".dogathon-sponsor-name")?.textContent, "Biscuit");
-  assert.equal(root.querySelector(".dogathon-sponsor-price")?.textContent, "$32.50 monthly");
   assert.equal(root.querySelector(".dogathon-sponsor-status")?.textContent, "Available for sponsorship");
   assert.equal(root.querySelector("img")?.getAttribute("src"), companion.photoUrl);
 
@@ -100,7 +103,43 @@ test("renders companion data and a checkout form using the public endpoints", as
   assert.equal(form?.querySelector<HTMLInputElement>('[name="returnTo"]')?.value, "https://rescue.example/dogs/biscuit#bio");
   assert.ok(form?.querySelector('[name="sponsorName"][required]'));
   assert.ok(form?.querySelector('[name="sponsorEmail"][required]'));
+  const tierInputs = form?.querySelectorAll<HTMLInputElement>('[name="tier"]');
+  assert.equal(tierInputs?.length, 2);
+  assert.equal(tierInputs?.[0]?.value, "tier-care");
+  assert.equal(tierInputs?.[0]?.checked, true);
+  assert.equal(tierInputs?.[1]?.value, "tier-vet");
+  assert.equal(tierInputs?.[1]?.checked, false);
+  assert.deepEqual(
+    Array.from(form?.querySelectorAll(".dogathon-sponsor-tier") ?? []).map((tier) => tier.textContent),
+    ["$32.50 monthlyEveryday care and treats", "$50.00 monthlyCare plus veterinary support"],
+  );
   assert.equal(root.innerHTML.includes(companion.name), true);
+});
+
+test("renders one tier as the price and description without radio controls", async () => {
+  const description = "<strong>Everyday care</strong>";
+  const { root } = await renderWidget({
+    response: {
+      ...companion,
+      tiers: [{ description, id: "tier-care", monthlyCents: 3250 }],
+    },
+  });
+
+  assert.equal(root.querySelector(".dogathon-sponsor-price")?.textContent, "$32.50 monthly");
+  const renderedDescription = root.querySelector(".dogathon-sponsor-tier-description");
+  assert.equal(renderedDescription?.textContent, description);
+  assert.equal(renderedDescription?.children.length, 0);
+  assert.equal(root.querySelector('[name="tier"]')?.getAttribute("value"), "tier-care");
+  assert.equal(root.querySelector('[name="tier"][type="radio"]'), null);
+});
+
+test("renders the default price and posts no tier when the organization has no tiers", async () => {
+  const { root } = await renderWidget({ response: { ...companion, tiers: [] } });
+
+  assert.equal(root.querySelector(".dogathon-sponsor-price")?.textContent, "$32.50 monthly");
+  assert.ok(root.querySelector("form"));
+  assert.equal(root.querySelector('[name="tier"]'), null);
+  assert.equal(root.querySelector(".dogathon-sponsor-tiers"), null);
 });
 
 test("cta mode renders only a sponsor link and preserves sponsorship-page query parameters", async () => {
@@ -273,6 +312,7 @@ for (const [query, expected] of [
   ["sponsored=1", "Thank you! Your sponsorship is confirmed."],
   ["checkout=canceled", "Checkout was canceled. No payment was made."],
   ["error=invalid", "Please check your details and try again."],
+  ["error=invalid-tier", "Please choose a sponsorship tier and try again."],
   ["error=rate-limited", "Too many checkout attempts. Please wait and try again."],
   ["error=unavailable", "This companion is not currently available for sponsorship."],
   ["error=billing", "Checkout is temporarily unavailable. Please try again later."],
@@ -291,6 +331,8 @@ for (const [status, expected] of [
 ] as const) {
   test(`renders a ${status} message and companion link`, async () => {
     const { root } = await renderWidget({ response: { ...companion, status } });
+
+    assert.equal(root.querySelector(".dogathon-sponsor-price")?.textContent, "$32.50 monthly");
 
     assert.equal(root.querySelector(".dogathon-sponsor-message")?.textContent, expected);
     assert.equal(root.querySelector("form"), null);

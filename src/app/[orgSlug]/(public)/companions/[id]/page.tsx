@@ -42,16 +42,18 @@ export default async function CompanionPage({ params, searchParams }: CompanionP
   if (!resident) notFound();
 
   const available = resident.status === "available";
-  const monthlyCents = organization.sponsorshipTiers[0]?.monthlyCents
-    ?? DEFAULT_SPONSORSHIP_MONTHLY_CENTS;
-  const monthlyAmount = formatMonthlyAmount(monthlyCents);
+  const tiers = organization.sponsorshipTiers;
+  const firstTier = tiers[0];
+  // An organization that has never saved its sponsorship settings has no tiers, and checkout
+  // falls back to the default price, so the page shows that price and posts no tier at all.
+  const monthlyAmount = formatMonthlyAmount(firstTier?.monthlyCents ?? DEFAULT_SPONSORSHIP_MONTHLY_CENTS);
   return (
     <PageViewTransition>
       <main className={`${styles.siteShell} ${styles.detailShell}`}>
         <Link className={styles.backLink} href={`/${orgSlug}`} transitionTypes={["nav-back"]}>← All residents</Link>
 
         <Suspense fallback={null}>
-          <CompanionBanner monthlyCents={monthlyCents} name={resident.name} />
+          <CompanionBanner name={resident.name} />
         </Suspense>
 
         <section className={styles.profile}>
@@ -120,7 +122,9 @@ export default async function CompanionPage({ params, searchParams }: CompanionP
               <div className={styles.sponsorPitch}>
                 <p className={styles.eyebrow}>A steady paw</p>
                 <h2>
-                  Sponsor {resident.name} for {monthlyAmount}/month until adopted
+                  {tiers.length < 2
+                    ? `Sponsor ${resident.name} for ${monthlyAmount}/month until adopted`
+                    : `Choose how you'd like to sponsor ${resident.name}`}
                 </h2>
                 <p>We&apos;ll send little email updates from the rescue as {resident.name} settles in.</p>
               </div>
@@ -130,6 +134,28 @@ export default async function CompanionPage({ params, searchParams }: CompanionP
               <form action={createSponsorship} className={styles.sponsorForm}>
                 <input name="orgSlug" type="hidden" value={orgSlug} />
                 <input name="residentId" type="hidden" value={resident.id} />
+
+                {tiers.length < 2 ? (
+                  firstTier ? (
+                    <div className={styles.singleTier}>
+                      <input name="tier" type="hidden" value={firstTier.id} />
+                      <p>{firstTier.description}</p>
+                    </div>
+                  ) : null
+                ) : (
+                  <fieldset className={styles.sponsorshipTiers}>
+                    <legend>Choose a monthly sponsorship</legend>
+                    {tiers.map((tier, index) => (
+                      <label className={styles.sponsorshipTier} key={tier.id}>
+                        <input defaultChecked={index === 0} name="tier" required type="radio" value={tier.id} />
+                        <span>
+                          <strong>{formatMonthlyAmount(tier.monthlyCents)}/month</strong>
+                          <small>{tier.description}</small>
+                        </span>
+                      </label>
+                    ))}
+                  </fieldset>
+                )}
 
                 <label htmlFor="sponsorName">Your name</label>
                 <FeltField>
@@ -142,7 +168,7 @@ export default async function CompanionPage({ params, searchParams }: CompanionP
                 </FeltField>
 
                 <PendingFeltSubmitButton className={styles.sponsorButton} pendingLabel="Opening checkout…" tone="mustard" type="submit">
-                  Sponsor for {monthlyAmount}/month until adopted
+                  Continue to checkout
                 </PendingFeltSubmitButton>
               </form>
             </FeltPanel>

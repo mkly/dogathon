@@ -4,11 +4,10 @@ import { useSearchParams } from "next/navigation";
 import type { ReactNode } from "react";
 
 import { FeltLink, FeltPanel, StitchBadge } from "@/components/felt";
-import { formatMonthlyAmount } from "@/lib/format";
 
 import styles from "../../../../public.module.css";
 
-export function CompanionBanner({ monthlyCents, name }: { monthlyCents: number; name: string }) {
+export function CompanionBanner({ name }: { name: string }) {
   const searchParams = useSearchParams();
   const error = searchParams.get("error");
   const sponsored = searchParams.get("sponsored") === "1" && !error;
@@ -20,9 +19,7 @@ export function CompanionBanner({ monthlyCents, name }: { monthlyCents: number; 
         <FeltPanel className={`${styles.confirmation} ${styles.confirmationTop}`} tone="moss">
           <StitchBadge tone="cream">You&apos;re a hero!</StitchBadge>
           <h2>Thank you for sponsoring {name}!</h2>
-          <p>
-            Your {formatMonthlyAmount(monthlyCents)} monthly sponsorship is active until {name} is adopted.
-          </p>
+          <p>Your monthly sponsorship is active until {name} is adopted.</p>
           <FeltLink className={styles.cardLink} href="/account/sign-in">
             Create your sponsor account
           </FeltLink>
@@ -46,6 +43,8 @@ export function CompanionFormError({ name }: { name: string }) {
     <p className={styles.formError} role="alert">
       {error === "unavailable"
         ? `${name} is no longer available to sponsor.`
+        : error === "invalid-tier"
+          ? "Please choose an available sponsorship tier."
         : error === "billing"
           ? "Online sponsorship is not ready for this rescue yet. Please try again later."
           : error === "rate-limited"
