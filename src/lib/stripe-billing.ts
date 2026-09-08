@@ -145,7 +145,7 @@ const prismaBillingStore: BillingStore = {
       where: {
         orgId: input.orgId,
         stripeSubscriptionId: input.stripeSubscriptionId,
-        status: "active",
+        status: { not: "ended" },
         organization: { stripeAccountId: input.stripeAccountId },
       },
       data: { status: "ended", endedAt: new Date(), endedReason: "canceled" },
@@ -322,14 +322,53 @@ export async function createBillingPortalSession(input: {
   );
 }
 
-export async function cancelStripeSubscription(input: {
-  accountId: string;
-  subscriptionId: string;
-}) {
+type StripeSubscriptionOperation = {
+  stripeAccountId: string | null | undefined;
+  subscriptionId: string | null | undefined;
+};
+
+function hasStripeSubscription(
+  operation: "pause" | "resume" | "cancel",
+  input: StripeSubscriptionOperation,
+): input is { stripeAccountId: string; subscriptionId: string } {
+  if (input.stripeAccountId && input.subscriptionId) return true;
+  console.info(`Skipping Stripe subscription ${operation}: subscription or connected account is missing`);
+  return false;
+}
+
+export async function pauseStripeCollection(input: StripeSubscriptionOperation) {
+  if (!hasStripeSubscription("pause", input)) return;
+
+  return stripe().subscriptions.update(
+    input.subscriptionId,
+    { pause_collection: { behavior: "void" } },
+    { stripeAccount: input.stripeAccountId },
+  );
+}
+
+export async function resumeStripeCollection(
+  input: StripeSubscriptionOperation & { now: Date },
+) {
+  if (!hasStripeSubscription("resume", input)) return;
+
+  return stripe().subscriptions.update(
+    input.subscriptionId,
+    {
+      pause_collection: "",
+      billing_cycle_anchor: "now",
+      proration_behavior: "none",
+    },
+    { stripeAccount: input.stripeAccountId },
+  );
+}
+
+export async function cancelStripeSubscription(input: StripeSubscriptionOperation) {
+  if (!hasStripeSubscription("cancel", input)) return;
+
   return stripe().subscriptions.cancel(
     input.subscriptionId,
     {},
-    { stripeAccount: input.accountId },
+    { stripeAccount: input.stripeAccountId },
   );
 }
 

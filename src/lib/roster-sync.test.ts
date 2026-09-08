@@ -299,7 +299,10 @@ test("adoption ends sponsorships at the adoption time and marks Stripe cancellat
 });
 
 test("pending adoption cancellations clear only after Stripe succeeds", async () => {
-  const cancellations: Array<{ accountId: string; subscriptionId: string }> = [];
+  const cancellations: Array<{
+    stripeAccountId: string | null | undefined;
+    subscriptionId: string | null | undefined;
+  }> = [];
   const cleared: string[] = [];
   const errors: string[] = [];
 
@@ -329,8 +332,8 @@ test("pending adoption cancellations clear only after Stripe succeeds", async ()
   });
 
   assert.deepEqual(cancellations, [
-    { accountId: "acct_rescue", subscriptionId: "sub_success" },
-    { accountId: "acct_rescue", subscriptionId: "sub_retry" },
+    { stripeAccountId: "acct_rescue", subscriptionId: "sub_success" },
+    { stripeAccountId: "acct_rescue", subscriptionId: "sub_retry" },
   ]);
   assert.deepEqual(cleared, ["sponsorship-success"]);
   assert.equal(errors.length, 1);

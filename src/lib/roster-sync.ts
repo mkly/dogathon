@@ -303,7 +303,7 @@ export async function cancelPendingStripeSubscriptions(
     }
 
     try {
-      await cancel({ accountId, subscriptionId: sponsorship.stripeSubscriptionId });
+      await cancel({ stripeAccountId: accountId, subscriptionId: sponsorship.stripeSubscriptionId });
       await markCancelled(sponsorship.id);
     } catch (error) {
       logError(
