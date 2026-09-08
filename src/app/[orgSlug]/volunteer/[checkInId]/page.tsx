@@ -3,8 +3,11 @@ import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
 
+import clsx from "clsx";
+
 import { AdminPage } from "@/components/admin-ui";
-import { FeltLink, FeltPanel, StitchBadge } from "@/components/felt";
+import { FeltLink, FeltPanel, PhotoPatch, Stitch, StitchBadge } from "@/components/felt";
+import felt from "@/components/felt.module.css";
 import { PageViewTransition } from "@/components/page-view-transition";
 import { getOrganizationAccessBySlug } from "@/lib/organization-access";
 import { prisma } from "@/lib/prisma";
@@ -51,25 +54,29 @@ export default async function CheckInPage({ params, searchParams }: CheckInPageP
         orderBy: { createdAt: "asc" },
         select: { id: true, url: true },
       },
-      resident: { select: { id: true, name: true } },
+      resident: { select: { id: true, name: true, photoUrls: true } },
       status: true,
       transcript: true,
     },
   });
   if (!checkIn) notFound();
 
+  const { id: residentId, name: residentName, photoUrls } = checkIn.resident;
+  const resident = { id: residentId, name: residentName };
+  const residentPhoto = photoUrls[0];
+
   if (checkIn.status === "completed") {
     return (
       <PageViewTransition>
-        <AdminPage variant="volunteer">
+        <AdminPage className={styles.chatPage} variant="volunteer">
           <FeltPanel className={styles.confirmation} tone="moss">
+            <PhotoPatch alt="" className={styles.confirmationPhoto} sizes="9rem" src={residentPhoto} />
             <StitchBadge tone="cream">Note tucked in</StitchBadge>
-            <div aria-hidden="true" className={styles.confirmationMark}>✓</div>
-            <h1>Thanks for checking in!</h1>
-            <p>{checkIn.resident.name}’s care team can see your note now.</p>
+            <h1>Thanks for checking in on {residentName}!</h1>
+            <p>The care team can see your note now, and it goes into the next sponsor update.</p>
             {checkIn.note ? <blockquote className={styles.savedNote}>{checkIn.note.note}</blockquote> : null}
             <FeltLink className={styles.againLink} href={`/${orgSlug}/volunteer`}>
-              Submit another
+              Check in on someone else
             </FeltLink>
           </FeltPanel>
         </AdminPage>
@@ -84,11 +91,15 @@ export default async function CheckInPage({ params, searchParams }: CheckInPageP
   return (
     <PageViewTransition>
       <AdminPage className={styles.chatPage} variant="volunteer">
-        <section className={styles.shell}>
+        <section className={clsx(felt["felt-panel"], "felt-cream", styles.shell)}>
+          <Stitch />
           <header className={styles.chatHeader}>
-            <StitchBadge tone="denim">Volunteer check-in</StitchBadge>
-            <h1>How’s {checkIn.resident.name} doing?</h1>
-            <p>This conversation is saved as you go.</p>
+            <PhotoPatch alt="" className={styles.headerPhoto} sizes="4rem" src={residentPhoto} />
+            <div className={styles.headerCopy}>
+              <StitchBadge tone="denim">Volunteer check-in</StitchBadge>
+              <h1>How’s {residentName} doing?</h1>
+              <p>Saved as you go, so you can come back to it.</p>
+            </div>
           </header>
           {error === "rate-limited" ? <p className={styles.chatError} role="alert">Please wait a little before trying again.</p> : null}
           {error === "invalid" ? <p className={styles.chatError} role="alert">The saved conversation is not ready to finish.</p> : null}
@@ -100,7 +111,7 @@ export default async function CheckInPage({ params, searchParams }: CheckInPageP
             initialMessages={textOnlyTranscript(transcript.data)}
             onFinish={finishCheckIn.bind(null, orgSlug)}
             orgSlug={orgSlug}
-            resident={checkIn.resident}
+            resident={resident}
           />
         </section>
       </AdminPage>

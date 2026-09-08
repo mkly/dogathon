@@ -6,7 +6,7 @@ import { DefaultChatTransport, type UIMessage } from "ai";
 import Image from "next/image";
 import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
-import { FeltButton } from "@/components/felt";
+import { FeltButton, Stitch } from "@/components/felt";
 import felt from "@/components/felt.module.css";
 import { messageText } from "@/lib/ui-message-text";
 
@@ -219,47 +219,59 @@ export function CheckInChat({
   }
 
   if (!hasAttachedPhoto) {
+    const pending = photos[photos.length - 1];
     return (
       <div className={`${styles.session} ${styles.photoStep}`}>
-        <div className={styles.photoStepIntro}>
-          <h2>Start with a photo</h2>
-          <p>Take a quick photo of {resident.name}, then the conversation will begin.</p>
+        <div className={clsx(felt["photo-patch"], styles.photoWell)}>
+          {pending ? (
+            <Image alt={`Check-in photo of ${resident.name}`} className={styles.photoWellImage} height={600} src={pending.previewUrl} unoptimized width={800} />
+          ) : (
+            <div className={styles.photoWellEmpty}>
+              <span aria-hidden="true">📷</span>
+              <strong>Start with a photo of {resident.name}</strong>
+              <small>Whatever they’re up to right now is perfect.</small>
+            </div>
+          )}
+          {pending ? (
+            <div className={styles.photoWellStatus}>
+              {pending.status === "uploading" ? "Uploading…" : "Upload failed"}
+            </div>
+          ) : null}
+          <Stitch fine />
         </div>
-
-        {photos.length > 0 ? (
-          <div aria-label="Photo upload" className={styles.photoThread} role="group">
-            {photos.map((photo) => (
-              <div className={styles.photoTile} key={photo.id}>
-                <Image alt={`Check-in photo of ${resident.name}`} height={96} src={photo.previewUrl} unoptimized width={96} />
-                <span className={styles.photoStatus}>
-                  {photo.status === "uploading" ? "Uploading…" : "Upload failed"}
-                </span>
-                {photo.status === "failed" ? (
-                  <button aria-label="Retry photo upload" onClick={() => void uploadPhoto(photo)} type="button">Retry</button>
-                ) : null}
-                {photo.status === "failed" ? (
-                  <button aria-label="Remove photo" onClick={() => removePhoto(photo)} type="button">×</button>
-                ) : null}
-              </div>
-            ))}
-          </div>
-        ) : null}
 
         {photoError ? <p className={styles.chatError} role="alert">{photoError}</p> : null}
 
-        <label className={clsx(felt["felt-button"], "felt-denim", styles.cameraButton)}>
-          Take a photo
-          <input
-            accept="image/*"
-            capture="environment"
-            onChange={choosePhotos}
-            type="file"
-          />
-        </label>
-        <label className={clsx(felt["felt-button"], "felt-cream", styles.choosePhotoButton)}>
-          Choose a photo
-          <input accept="image/*" onChange={choosePhotos} type="file" />
-        </label>
+        <div className={styles.photoActions}>
+          {pending?.status === "failed" ? (
+            <>
+              <FeltButton className={styles.cameraButton} onClick={() => void uploadPhoto(pending)} tone="denim">
+                Try the upload again
+              </FeltButton>
+              <FeltButton className={styles.choosePhotoButton} onClick={() => removePhoto(pending)} tone="cream">
+                Pick a different photo
+              </FeltButton>
+            </>
+          ) : (
+            <>
+              <label className={clsx(felt["felt-button"], "felt-denim", styles.cameraButton)}>
+                Take a photo
+                <input
+                  accept="image/*"
+                  capture="environment"
+                  disabled={pending?.status === "uploading"}
+                  onChange={choosePhotos}
+                  type="file"
+                />
+              </label>
+              <label className={clsx(felt["felt-button"], "felt-cream", styles.choosePhotoButton)}>
+                Choose from your photos
+                <input accept="image/*" disabled={pending?.status === "uploading"} onChange={choosePhotos} type="file" />
+              </label>
+            </>
+          )}
+        </div>
+        <p className={styles.photoHint}>The conversation starts as soon as your photo lands.</p>
       </div>
     );
   }
@@ -267,44 +279,53 @@ export function CheckInChat({
   return (
     <div className={styles.session}>
       <div className={styles.thread}>
-        <div aria-label="Photos for this check-in" className={`${styles.photoThread} ${styles.openingPhotos}`} role="group">
+        <div aria-label="Photos for this check-in" className={styles.photoThread} role="group">
           {initialPhotos.map((photo) => (
-            <div className={styles.photoTile} key={photo.id}>
-              <Image alt={`Check-in photo of ${resident.name}`} height={96} src={photo.url} unoptimized width={96} />
-            </div>
+            <figure className={clsx(felt["photo-patch"], styles.photoTile)} key={photo.id}>
+              <Image alt={`Check-in photo of ${resident.name}`} height={120} src={photo.url} unoptimized width={120} />
+              <Stitch fine />
+            </figure>
           ))}
           {photos.map((photo) => (
-            <div className={styles.photoTile} key={photo.id}>
-              <Image alt={`Check-in photo of ${resident.name}`} height={96} src={photo.previewUrl} unoptimized width={96} />
+            <figure className={clsx(felt["photo-patch"], styles.photoTile)} key={photo.id}>
+              <Image alt={`Check-in photo of ${resident.name}`} height={120} src={photo.previewUrl} unoptimized width={120} />
               {photo.status === "uploaded" ? null : (
                 <span className={styles.photoStatus}>
-                  {photo.status === "uploading" ? "Uploading…" : "Upload failed"}
+                  {photo.status === "uploading" ? "Uploading…" : "Failed"}
                 </span>
               )}
               {photo.status === "failed" ? (
-                <button aria-label="Retry photo upload" onClick={() => void uploadPhoto(photo)} type="button">Retry</button>
+                <span className={styles.photoTileActions}>
+                  <button aria-label="Retry photo upload" onClick={() => void uploadPhoto(photo)} type="button">Retry</button>
+                  <button aria-label="Remove photo" onClick={() => removePhoto(photo)} type="button">×</button>
+                </span>
               ) : null}
-              {photo.status === "failed" ? (
-                <button aria-label="Remove photo" onClick={() => removePhoto(photo)} type="button">×</button>
-              ) : null}
-            </div>
+              <Stitch fine />
+            </figure>
           ))}
         </div>
 
         {messages.map((message) => {
           const text = visibleMessageText(message);
           if (!text) return null;
-          return (
-            <div
-              className={`${styles.message} ${message.role === "user" ? styles.userMessage : styles.assistantMessage}`}
-              key={message.id}
-            >
-              {text}
+          return message.role === "user" ? (
+            <div className={`${styles.message} ${styles.userMessage}`} key={message.id}>{text}</div>
+          ) : (
+            <div className={styles.assistantRow} key={message.id}>
+              <span aria-hidden="true" className={styles.avatar}>🐾</span>
+              <div className={`${styles.message} ${styles.assistantMessage}`}>{text}</div>
             </div>
           );
         })}
 
-        {busy ? <div className={`${styles.message} ${styles.assistantMessage} ${styles.typing}`}>Thinking…</div> : null}
+        {busy ? (
+          <div className={styles.assistantRow}>
+            <span aria-hidden="true" className={styles.avatar}>🐾</span>
+            <div aria-label="The interviewer is typing" className={`${styles.message} ${styles.assistantMessage} ${styles.typing}`} role="status">
+              <span /><span /><span />
+            </div>
+          </div>
+        ) : null}
         {error ? <p className={styles.chatError} role="alert">The interviewer paused. Send your message again.</p> : null}
         <div ref={threadEndRef} />
       </div>
@@ -315,44 +336,53 @@ export function CheckInChat({
         ))}
       </div>
 
-      {canFinish ? (
-        <div className={styles.finishRow}>
-          <FeltButton
-            className={styles.finishButton}
-            disabled={finishing || photos.some((photo) => photo.status === "uploading")}
-            onClick={() => void finishCheckIn()}
-            tone="moss"
-          >
-            {finishing ? "Finishing…" : "Finish check-in"}
+      <div className={styles.dock}>
+        {canFinish ? (
+          <div className={styles.finishRow}>
+            <p>That’s plenty for a note. Add more if you like, or wrap up.</p>
+            <FeltButton
+              className={styles.finishButton}
+              disabled={finishing || photos.some((photo) => photo.status === "uploading")}
+              onClick={() => void finishCheckIn()}
+              stitched
+              tone="mustard"
+            >
+              {finishing ? "Finishing…" : "Finish check-in"}
+            </FeltButton>
+          </div>
+        ) : null}
+
+        {finishError ? <p className={styles.chatError} role="alert">{finishError}</p> : null}
+        {photoError ? <p className={styles.chatError} role="alert">{photoError}</p> : null}
+
+        <form className={styles.composer} onSubmit={submitMessage}>
+          <label className={clsx(felt["felt-button"], "felt-brick", styles.roundButton, styles.photoButton)}>
+            <span aria-hidden="true">＋</span>
+            <span className={styles.srOnly}>Add photos</span>
+            <input
+              accept="image/*"
+              multiple
+              onChange={choosePhotos}
+              type="file"
+            />
+          </label>
+          <div className={clsx(felt["felt-field"], felt["felt-inset"], "felt-cream", styles.composerField)}>
+            <Stitch fine />
+            <label className={styles.srOnly} htmlFor={`check-in-message-${resident.id}`}>Message</label>
+            <input
+              autoComplete="off"
+              id={`check-in-message-${resident.id}`}
+              maxLength={2000}
+              onChange={(event) => setInput(event.target.value)}
+              placeholder={`Tell me about ${resident.name}…`}
+              value={input}
+            />
+          </div>
+          <FeltButton aria-label="Send message" className={styles.roundButton} disabled={busy || !input.trim()} tone="denim" type="submit">
+            <span aria-hidden="true">↑</span>
           </FeltButton>
-        </div>
-      ) : null}
-
-      {finishError ? <p className={styles.chatError} role="alert">{finishError}</p> : null}
-      {photoError ? <p className={styles.chatError} role="alert">{photoError}</p> : null}
-
-      <form className={styles.composer} onSubmit={submitMessage}>
-        <label className={styles.photoButton}>
-          <span aria-hidden="true">＋</span>
-          <span className={styles.srOnly}>Add photos</span>
-          <input
-            accept="image/*"
-            multiple
-            onChange={choosePhotos}
-            type="file"
-          />
-        </label>
-        <label className={styles.srOnly} htmlFor={`check-in-message-${resident.id}`}>Message</label>
-        <input
-          autoComplete="off"
-          id={`check-in-message-${resident.id}`}
-          maxLength={2000}
-          onChange={(event) => setInput(event.target.value)}
-          placeholder={`Tell me about ${resident.name}…`}
-          value={input}
-        />
-        <button aria-label="Send message" disabled={busy || !input.trim()} type="submit">↑</button>
-      </form>
+        </form>
+      </div>
     </div>
   );
 }

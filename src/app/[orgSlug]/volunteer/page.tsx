@@ -1,5 +1,6 @@
 import clsx from "clsx";
 import type { Metadata } from "next";
+import Image from "next/image";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
@@ -11,6 +12,7 @@ import { PageViewTransition } from "@/components/page-view-transition";
 import { prisma } from "@/lib/prisma";
 import { getOrganizationAccessBySlug } from "@/lib/organization-access";
 
+import feltPup from "../../../../public/mascot/felt-pup-2.png";
 import { startCheckIn } from "./actions";
 import styles from "./volunteer.module.css";
 
@@ -52,35 +54,49 @@ export default async function VolunteerPage({ params, searchParams }: VolunteerP
         sponsorships: { some: { orgId: context.orgId, status: "active" } },
       },
       orderBy: { name: "asc" },
-      select: { id: true, name: true, photoUrls: true },
+      select: { id: true, name: true, breed: true, photoUrls: true },
       take: MAX_CHECK_IN_RESIDENTS,
     }),
   ]);
 
-  const checkInResidents = residents.map(({ id, name, photoUrls }) => ({
+  const checkInResidents = residents.map(({ id, name, breed, photoUrls }) => ({
     id,
     name,
+    breed,
     photoUrl: photoUrls[0],
   }));
 
   return (
     <PageViewTransition>
-      <AdminPage className={styles.chatPage} variant="volunteer">
-        <section className={clsx(styles.shell, styles.pickerShell)}>
-          <header className={styles.chatHeader}>
-            <StitchBadge tone="denim">Volunteer check-in</StitchBadge>
-            <h1>How’s a companion doing?</h1>
-            <p>Share the moments their care team and sponsor should know.</p>
-          </header>
-          {error === "unavailable" ? <p className={styles.chatError} role="alert">That companion is no longer available for check-ins.</p> : null}
+      <AdminPage className={styles.pickerPage} variant="volunteer">
+        <div className={styles.pickerShell}>
+          <FeltPanel className={styles.hero} tone="moss">
+            <div className={styles.heroCopy}>
+              <StitchBadge tone="cream">Volunteer check-in</StitchBadge>
+              <h1>Who did you spend time with today?</h1>
+              <p className={styles.heroLede}>
+                Snap a photo and answer a few questions. It becomes a note for the care team
+                and the next update to their sponsors.
+              </p>
+            </div>
+            <Image alt="" className={styles.heroMascot} preload src={feltPup} />
+          </FeltPanel>
+
+          {error === "unavailable" ? (
+            <p className={styles.chatError} role="alert">That companion is no longer available for check-ins.</p>
+          ) : null}
 
           {checkInResidents.length > 0 ? (
             <div aria-label="Choose a companion" className={styles.companionPicker}>
               {checkInResidents.map((resident) => (
                 <form action={startCheckIn.bind(null, orgSlug, resident.id)} key={resident.id}>
-                  <button className={clsx(felt["felt-button"], "felt-cream", styles.companionCard)} type="submit">
-                    <PhotoPatch alt="" className={styles.cardPhoto} sizes="(min-width: 42rem) 10rem, 40vw" src={resident.photoUrl} />
-                    <span>{resident.name}</span>
+                  <button className={clsx(felt["felt-button"], "felt-oatmeal", styles.companionCard)} type="submit">
+                    <PhotoPatch alt="" className={styles.cardPhoto} sizes="(min-width: 42rem) 14rem, 45vw" src={resident.photoUrl} />
+                    <span className={styles.cardCopy}>
+                      <span className={styles.cardName}>{resident.name}</span>
+                      <span className={styles.cardBreed}>{resident.breed}</span>
+                      <span className={styles.cardAction}>Check in →</span>
+                    </span>
                   </button>
                 </form>
               ))}
@@ -92,7 +108,7 @@ export default async function VolunteerPage({ params, searchParams }: VolunteerP
               </AdminEmptyState>
             </FeltPanel>
           )}
-        </section>
+        </div>
       </AdminPage>
     </PageViewTransition>
   );
