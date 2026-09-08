@@ -167,7 +167,7 @@ export function parseSettingsForm(formData: FormData): ParsedSettingsForm {
   if (!savesSourceUrl) {
     return {
       ok: true,
-      message: savesSponsorshipSettings ? "Sponsorship settings saved." : "Email postscript saved.",
+      message: "Email postscript saved.",
       settings,
     };
   }
