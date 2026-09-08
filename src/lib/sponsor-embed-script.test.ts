@@ -22,12 +22,14 @@ const companion = {
 
 async function renderWidget({
   details,
+  intro,
   name,
   photo,
   response = companion,
   url = "https://rescue.example/dogs/biscuit#bio",
 }: {
   details?: string;
+  intro?: string;
   name?: string;
   photo?: string;
   response?: typeof companion;
@@ -49,6 +51,7 @@ async function renderWidget({
   const root = dom.window.document.querySelector<HTMLElement>("[data-sponsor-org]");
   assert.ok(root);
   if (details !== undefined) root.setAttribute("data-sponsor-details", details);
+  if (intro !== undefined) root.setAttribute("data-sponsor-intro", intro);
   if (name !== undefined) root.setAttribute("data-sponsor-name", name);
   if (photo !== undefined) root.setAttribute("data-sponsor-photo", photo);
   dom.window.eval(sponsorEmbedScript);
@@ -87,6 +90,35 @@ test("renders companion data and a checkout form using the public endpoints", as
   assert.ok(form?.querySelector('[name="sponsorName"][required]'));
   assert.ok(form?.querySelector('[name="sponsorEmail"][required]'));
   assert.equal(root.innerHTML.includes(companion.name), true);
+});
+
+test("renders the default sponsor intro for an available companion", async () => {
+  const { root } = await renderWidget();
+
+  assert.equal(
+    root.querySelector(".dogathon-sponsor-intro")?.textContent,
+    "A monthly sponsorship helps cover Biscuit's care while they wait for a home.",
+  );
+});
+
+test("data-sponsor-intro can hide the sponsor intro", async () => {
+  const { root } = await renderWidget({ intro: "hide" });
+
+  assert.equal(root.querySelector(".dogathon-sponsor-intro"), null);
+});
+
+test("data-sponsor-intro can replace the default sponsor intro", async () => {
+  const { root } = await renderWidget({ intro: "Help Biscuit thrive." });
+
+  assert.equal(root.querySelector(".dogathon-sponsor-intro")?.textContent, "Help Biscuit thrive.");
+});
+
+test("data-sponsor-intro renders custom markup as text", async () => {
+  const { root } = await renderWidget({ intro: "<strong>Help Biscuit</strong>" });
+  const intro = root.querySelector(".dogathon-sponsor-intro");
+
+  assert.equal(intro?.textContent, "<strong>Help Biscuit</strong>");
+  assert.equal(intro?.children.length, 0);
 });
 
 for (const [photo, expected] of [
@@ -152,6 +184,7 @@ for (const [status, expected] of [
 
     assert.equal(root.querySelector(".dogathon-sponsor-message")?.textContent, expected);
     assert.equal(root.querySelector("form"), null);
+    assert.equal(root.querySelector(".dogathon-sponsor-intro"), null);
     assert.equal(root.querySelector<HTMLAnchorElement>("a")?.href, companion.companionUrl);
   });
 }

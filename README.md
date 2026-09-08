@@ -67,6 +67,7 @@ container for each companion and load the script once from the Dogathon deployme
   data-sponsor-photo="hide"
   data-sponsor-name="hide"
   data-sponsor-details="hide"
+  data-sponsor-intro="Help Biscuit thrive while they wait for a home."
 ></div>
 <script src="https://pawcast.example/embed.js"></script>
 ```
@@ -75,11 +76,14 @@ container for each companion and load the script once from the Dogathon deployme
 fragment removed, and `data-sponsor-return` defaults to the current page URL. Set
 `data-sponsor-photo="hide"`, `data-sponsor-name="hide"`, or `data-sponsor-details="hide"` to omit
 the companion photo, name, or breed / age / sex details respectively; a missing attribute or any
-other value shows that part. The script does not use cookies or dependencies. Its classes all begin with
+other value shows that part. Available companions also show a short explanation above the form. Set
+`data-sponsor-intro="hide"` to omit it, or set the attribute to any other non-empty text to replace
+the default explanation. Custom text is rendered as text, not HTML. The script does not use cookies or
+dependencies. Its classes all begin with
 `dogathon-sponsor-`, so a host site can override the bundled presentation without affecting
 unrelated elements. Run the app locally and open `/embed-demo.html`; its `org`, `source`,
-`photo=hide`, `name=hide`, and `details=hide` query parameters make it easy to exercise a synced
-companion and the display toggles.
+`photo=hide`, `name=hide`, `details=hide`, and `intro` query parameters make it easy to exercise a
+synced companion and the display controls.
 
 The embed depends on these public endpoint contracts:
 

@@ -29,6 +29,12 @@ export const sponsorEmbedScript = String.raw`(() => {
 
   const isHidden = (root, part) => root.getAttribute("data-sponsor-" + part) === "hide";
 
+  const sponsorIntro = (root, companionName) => {
+    const configured = root.getAttribute("data-sponsor-intro");
+    if (configured === "hide") return null;
+    return configured || "A monthly sponsorship helps cover " + companionName + "'s care while they wait for a home.";
+  };
+
   const sourceFor = (root) => {
     const configured = root.getAttribute("data-sponsor-source");
     if (configured) return new URL(configured, window.location.href).toString();
@@ -111,7 +117,7 @@ export const sponsorEmbedScript = String.raw`(() => {
 
   const styles = () => {
     const node = document.createElement("style");
-    node.textContent = ".dogathon-sponsor-root{box-sizing:border-box;max-width:32rem;padding:1.25rem;border:1px solid #d9d4ca;border-radius:1rem;background:#fff;color:#27231e;font:16px/1.45 system-ui,sans-serif}.dogathon-sponsor-root *{box-sizing:border-box}.dogathon-sponsor-photo{display:block;width:100%;max-height:22rem;object-fit:cover;border-radius:.7rem}.dogathon-sponsor-name{margin:.9rem 0 .2rem;font-size:1.5rem}.dogathon-sponsor-details,.dogathon-sponsor-status,.dogathon-sponsor-price{margin:.2rem 0;color:#5d554b}.dogathon-sponsor-price{font-weight:700;color:inherit}.dogathon-sponsor-message{padding:.75rem;border-radius:.5rem;background:#f3f0ea}.dogathon-sponsor-message-success{background:#e4f3e8}.dogathon-sponsor-message-error{background:#f8e5e2}.dogathon-sponsor-form{display:grid;gap:.8rem;margin-top:1rem}.dogathon-sponsor-field{display:grid;gap:.25rem}.dogathon-sponsor-label{font-weight:650}.dogathon-sponsor-input{width:100%;padding:.65rem;border:1px solid #9c9388;border-radius:.4rem;font:inherit}.dogathon-sponsor-button{padding:.75rem 1rem;border:0;border-radius:.5rem;background:#3c6442;color:#fff;font:inherit;font-weight:700;cursor:pointer}.dogathon-sponsor-link{color:#315c3a;text-decoration:underline;text-underline-offset:.15em}";
+    node.textContent = ".dogathon-sponsor-root{box-sizing:border-box;max-width:32rem;padding:1.25rem;border:1px solid #d9d4ca;border-radius:1rem;background:#fff;color:#27231e;font:16px/1.45 system-ui,sans-serif}.dogathon-sponsor-root *{box-sizing:border-box}.dogathon-sponsor-photo{display:block;width:100%;max-height:22rem;object-fit:cover;border-radius:.7rem}.dogathon-sponsor-name{margin:.9rem 0 .2rem;font-size:1.5rem}.dogathon-sponsor-details,.dogathon-sponsor-status,.dogathon-sponsor-price{margin:.2rem 0;color:#5d554b}.dogathon-sponsor-price{font-weight:700;color:inherit}.dogathon-sponsor-intro{margin:1rem 0 0}.dogathon-sponsor-message{padding:.75rem;border-radius:.5rem;background:#f3f0ea}.dogathon-sponsor-message-success{background:#e4f3e8}.dogathon-sponsor-message-error{background:#f8e5e2}.dogathon-sponsor-form{display:grid;gap:.8rem;margin-top:1rem}.dogathon-sponsor-field{display:grid;gap:.25rem}.dogathon-sponsor-label{font-weight:650}.dogathon-sponsor-input{width:100%;padding:.65rem;border:1px solid #9c9388;border-radius:.4rem;font:inherit}.dogathon-sponsor-button{padding:.75rem 1rem;border:0;border-radius:.5rem;background:#3c6442;color:#fff;font:inherit;font-weight:700;cursor:pointer}.dogathon-sponsor-link{color:#315c3a;text-decoration:underline;text-underline-offset:.15em}";
     return node;
   };
 
@@ -154,6 +160,8 @@ export const sponsorEmbedScript = String.raw`(() => {
       } else if (companion.status === "sponsored") {
         content.append(message("This companion already has an active sponsor.", "notice"));
       } else {
+        const intro = sponsorIntro(root, companion.name);
+        if (intro !== null) content.append(create("p", "intro", intro));
         content.append(sponsorForm(org, source, returnToFor(root)));
       }
       if (companion.status === "adopted" || companion.status === "sponsored") {
