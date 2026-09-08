@@ -11,8 +11,8 @@ const organization = {
     allowedOrigins: ["https://rescue.example"],
   },
   sponsorshipTiers: [
-    { id: "tier-supporter", monthlyCents: 3250, description: "Food and daily care" },
-    { id: "tier-champion", monthlyCents: 6000, description: "Food, care, and enrichment" },
+    { id: "tier-supporter", monthlyCents: 3250, description: "Food and daily care", isDefault: false },
+    { id: "tier-champion", monthlyCents: 6000, description: "Food, care, and enrichment", isDefault: true },
   ],
 };
 
@@ -74,7 +74,7 @@ test("returns the public companion contract and allows a configured origin", asy
     sex: "Female",
     photoUrl: "https://images.example/biscuit.jpg",
     tiers: organization.sponsorshipTiers,
-    monthlyCents: 3250,
+    monthlyCents: 6000,
     currency: "usd",
     status: "available",
     companionUrl: `https://pawcast.example/happy-paws/companions/${resident.id}`,

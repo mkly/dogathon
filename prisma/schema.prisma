@@ -334,6 +334,7 @@ model SponsorshipTier {
   monthlyCents Int
   description  String
   position     Int
+  isDefault    Boolean      @default(false)
   organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
 
   @@unique([orgId, position])

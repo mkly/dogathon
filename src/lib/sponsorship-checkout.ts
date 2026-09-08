@@ -31,7 +31,7 @@ export type SponsorshipCheckoutErrorCode =
 export type SponsorshipOrganization = {
   id: string;
   settings: { allowedOrigins: string[] } | null;
-  sponsorshipTiers: Array<{ id: string; monthlyCents: number }>;
+  sponsorshipTiers: Array<{ id: string; monthlyCents: number; isDefault: boolean }>;
 };
 
 type CheckoutDestination = {
@@ -85,7 +85,7 @@ const defaultDependencies: SponsorshipCheckoutDependencies = {
         settings: { select: { allowedOrigins: true } },
         sponsorshipTiers: {
           orderBy: { position: "asc" },
-          select: { id: true, monthlyCents: true },
+          select: { id: true, monthlyCents: true, isDefault: true },
         },
       },
     });
@@ -159,7 +159,9 @@ export async function startSponsorshipCheckout(
   // An organization that has never saved its sponsorship settings has no tiers, and every
   // other price read falls back to the default, so an unspecified tier does too.
   const monthlyCents = input.tier === undefined
-    ? organization.sponsorshipTiers[0]?.monthlyCents ?? DEFAULT_SPONSORSHIP_MONTHLY_CENTS
+    ? organization.sponsorshipTiers.find((tier) => tier.isDefault)?.monthlyCents
+      ?? organization.sponsorshipTiers[0]?.monthlyCents
+      ?? DEFAULT_SPONSORSHIP_MONTHLY_CENTS
     : typeof input.tier === "string"
       ? organization.sponsorshipTiers.find(({ id }) => id === input.tier)?.monthlyCents
       : undefined;

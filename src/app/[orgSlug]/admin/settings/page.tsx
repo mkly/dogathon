@@ -55,7 +55,7 @@ async function loadStripeConnection(orgId: string) {
       stripeAccountId: true,
       stripeDetailsSubmitted: true,
       stripeChargesEnabled: true,
-      sponsorshipTiers: { orderBy: { position: "asc" }, take: 1 },
+      sponsorshipTiers: { orderBy: { position: "asc" } },
     },
   });
   return stored;
@@ -73,7 +73,9 @@ async function StripeConnection({
   const organization = await loadStripeConnection(orgId);
   const stripeNotReady = stripeNotReadyReason(organization);
   const monthlyAmount = formatMonthlyAmount(
-    organization?.sponsorshipTiers[0]?.monthlyCents ?? DEFAULT_SPONSORSHIP_MONTHLY_CENTS,
+    organization?.sponsorshipTiers.find((tier) => tier.isDefault)?.monthlyCents
+      ?? organization?.sponsorshipTiers[0]?.monthlyCents
+      ?? DEFAULT_SPONSORSHIP_MONTHLY_CENTS,
   );
   const stripeBadge = stripeNotReady
     ? { tone: "brick" as const, label: "Not ready for payments" }
@@ -151,6 +153,7 @@ async function RescueSettings({ orgId, orgSlug }: { orgId: string; orgSlug: stri
     id: "default",
     monthlyCents: DEFAULT_SPONSORSHIP_MONTHLY_CENTS,
     description: "",
+    isDefault: true,
   }];
 
   return (
