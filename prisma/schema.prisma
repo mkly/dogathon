@@ -203,6 +203,7 @@ model Resident {
   id              String           @id @default(uuid(4)) @db.Uuid
   orgId           String           @db.Uuid
   name            String
+  slug            String
   sourceUrl       String           @default("")
   breed           String
   dobText         String
@@ -223,6 +224,7 @@ model Resident {
   organization    Organization     @relation(fields: [orgId], references: [id], onDelete: Cascade)
 
   @@unique([orgId, name])
+  @@unique([orgId, slug])
   @@unique([id, orgId])
   @@index([orgId, status])
 }

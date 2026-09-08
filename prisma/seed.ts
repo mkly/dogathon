@@ -46,6 +46,7 @@ async function main() {
     create: {
       orgId: organization.id,
       name: "Biscuit",
+      slug: "biscuit",
       sourceUrl: "",
       breed: "Mixed breed",
       dobText: "Unknown",
@@ -172,6 +173,7 @@ async function main() {
     create: {
       orgId: secondOrganization.id,
       name: "Juniper",
+      slug: "juniper",
       sourceUrl: "",
       breed: "Terrier mix",
       dobText: "2022",

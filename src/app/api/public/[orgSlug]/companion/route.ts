@@ -1,4 +1,8 @@
-import { getPublicOrganization, getPublicResidentBySource } from "@/lib/public-roster-cache";
+import {
+  getPublicOrganization,
+  getPublicResidentBySlug,
+  getPublicResidentBySource,
+} from "@/lib/public-roster-cache";
 import {
   anonymousRateLimitIdentity,
   checkRateLimit,
@@ -21,6 +25,8 @@ type PublicOrganization = {
 type PublicResident = {
   id: string;
   name: string;
+  slug: string;
+  sourceUrl: string;
   breed: string;
   ageText: string;
   sex: string;
@@ -31,6 +37,7 @@ type PublicResident = {
 
 type PublicCompanionDependencies = {
   getOrganization: (slug: string) => Promise<PublicOrganization | null>;
+  getResidentBySlug: (orgId: string, slug: string) => Promise<PublicResident | null>;
   getResidentBySource: (orgId: string, sourceUrl: string) => Promise<PublicResident | null>;
   rateLimit: (requestHeaders: Headers) => Promise<{ allowed: boolean; retryAfterSeconds: number }>;
 };
@@ -39,6 +46,7 @@ type RouteContext = { params: Promise<{ orgSlug: string }> };
 
 const dependencies: PublicCompanionDependencies = {
   getOrganization: getPublicOrganization,
+  getResidentBySlug: getPublicResidentBySlug,
   getResidentBySource: getPublicResidentBySource,
   async rateLimit(requestHeaders) {
     return checkRateLimit({
@@ -101,10 +109,18 @@ export function createPublicCompanionHandlers(
       return limited;
     }
 
-    const sourceUrl = normalizeSourceUrl(new URL(request.url).searchParams.get("source") ?? "");
-    if (!sourceUrl) return notFound(request, organization);
-
-    const resident = await publicDependencies.getResidentBySource(organization.id, sourceUrl);
+    const searchParams = new URL(request.url).searchParams;
+    const companionSlug = searchParams.get("companion");
+    const sourceUrl = companionSlug === null
+      ? normalizeSourceUrl(searchParams.get("source") ?? "")
+      : "";
+    const resident = companionSlug !== null
+      ? companionSlug
+        ? await publicDependencies.getResidentBySlug(organization.id, companionSlug)
+        : null
+      : sourceUrl
+        ? await publicDependencies.getResidentBySource(organization.id, sourceUrl)
+        : null;
     if (!resident) return notFound(request, organization);
 
     const routeBase = new URL(request.url);
@@ -114,7 +130,7 @@ export function createPublicCompanionHandlers(
       routeBase,
     );
     const sponsorUrl = new URL(`/${encodedSlug}/sponsor`, routeBase);
-    sponsorUrl.searchParams.set("source", sourceUrl);
+    sponsorUrl.searchParams.set("source", resident.sourceUrl);
 
     const status = resident.status === "adopted"
       ? "adopted"
@@ -122,6 +138,8 @@ export function createPublicCompanionHandlers(
     const response = Response.json({
       id: resident.id,
       name: resident.name,
+      slug: resident.slug,
+      sourceUrl: resident.sourceUrl,
       breed: resident.breed,
       ageText: resident.ageText,
       sex: resident.sex,

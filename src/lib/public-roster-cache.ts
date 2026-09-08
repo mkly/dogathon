@@ -51,6 +51,8 @@ export const getPublicResidentBySource = unstable_cache(
         select: {
           id: true,
           name: true,
+          slug: true,
+          sourceUrl: true,
           breed: true,
           ageText: true,
           sex: true,
@@ -61,6 +63,26 @@ export const getPublicResidentBySource = unstable_cache(
       })
     : null),
   ["public-resident-by-source"],
+  PUBLIC_ROSTER_CACHE,
+);
+
+export const getPublicResidentBySlug = unstable_cache(
+  (orgId: string, slug: string) => prisma.resident.findFirst({
+    where: { orgId, slug },
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      sourceUrl: true,
+      breed: true,
+      ageText: true,
+      sex: true,
+      photoUrls: true,
+      status: true,
+      _count: { select: { sponsorships: { where: { status: "active" } } } },
+    },
+  }),
+  ["public-resident-by-slug"],
   PUBLIC_ROSTER_CACHE,
 );
 

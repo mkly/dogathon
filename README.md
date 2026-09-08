@@ -127,10 +127,11 @@ has already been sponsored or adopted.
 
 The embed depends on these public endpoint contracts:
 
-- `GET /api/public/{orgSlug}/companion?source={absolutePageUrl}` returns `{ id, name, breed,
-  ageText, sex, photoUrl, monthlyCents, currency, status, companionUrl, sponsorUrl }`. `status` is
-  `available`, `sponsored`, or `adopted`; an unknown organization or source returns `404` with
-  `{ error }`.
+- `GET /api/public/{orgSlug}/companion` accepts either `source={absolutePageUrl}` or
+  `companion={residentSlug}`; `companion` wins when both are present. It returns `{ id, name, slug,
+  sourceUrl, breed, ageText, sex, photoUrl, monthlyCents, currency, status, companionUrl,
+  sponsorUrl }`. `status` is `available`, `sponsored`, or `adopted`; an unknown organization,
+  source, or slug returns `404` with `{ error }`.
 - `POST /api/public/{orgSlug}/checkout` accepts either form-encoded or JSON `source`,
   `sponsorName`, `sponsorEmail`, and `returnTo`. `returnTo` must be an absolute URL on an origin
   configured for that organization. A form post redirects to Stripe with `303`; a JSON request

@@ -407,19 +407,67 @@ export async function upsertCompanions(
   liveSource: boolean,
   signal?: AbortSignal,
 ) {
-  for (let offset = 0; offset < companions.length; offset += RESIDENT_WRITE_BATCH_SIZE) {
+  const existingResidents = await tx.resident.findMany({
+    where: { orgId },
+    select: { name: true, slug: true, sourceUrl: true },
+  });
+  const existingSlugs = new Set(existingResidents.map((resident) => resident.slug));
+  const residentsByName = new Map(existingResidents.map((resident) => [resident.name, resident]));
+  const residentsBySource = new Map(existingResidents
+    .filter((resident) => resident.sourceUrl)
+    .map((resident) => [resident.sourceUrl, resident]));
+  const companionsWithSlugs = companions.map((companion) => {
+    const sourceUrl = normalizeSourceUrl(companion.sourceUrl ?? "");
+    const existing = (sourceUrl ? residentsBySource.get(sourceUrl) : undefined)
+      ?? residentsByName.get(companion.name);
+    if (existing) {
+      residentsByName.set(companion.name, existing);
+      if (sourceUrl) residentsBySource.set(sourceUrl, existing);
+      return { companion, slug: existing.slug };
+    }
+
+    const resident = {
+      name: companion.name,
+      slug: allocateResidentSlug(companion.name, existingSlugs),
+      sourceUrl,
+    };
+    residentsByName.set(companion.name, resident);
+    if (sourceUrl) residentsBySource.set(sourceUrl, resident);
+    return { companion, slug: resident.slug };
+  });
+
+  for (let offset = 0; offset < companionsWithSlugs.length; offset += RESIDENT_WRITE_BATCH_SIZE) {
     signal?.throwIfAborted();
     await Promise.all(
-      companions.slice(offset, offset + RESIDENT_WRITE_BATCH_SIZE)
-        .map((companion) => upsertCompanion(tx, orgId, companion, liveSource)),
+      companionsWithSlugs.slice(offset, offset + RESIDENT_WRITE_BATCH_SIZE)
+        .map(({ companion, slug }) => upsertCompanion(tx, orgId, companion, slug, liveSource)),
     );
   }
+}
+
+export function residentSlug(name: string) {
+  return name.toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "") || "resident";
+}
+
+export function allocateResidentSlug(name: string, usedSlugs: Set<string>) {
+  const base = residentSlug(name);
+  let slug = base;
+  let suffix = 2;
+  while (usedSlugs.has(slug)) {
+    slug = `${base}-${suffix}`;
+    suffix += 1;
+  }
+  usedSlugs.add(slug);
+  return slug;
 }
 
 async function upsertCompanion(
   tx: SyncTransaction,
   orgId: string,
   companion: CompanionRecord,
+  slug: string,
   liveSource: boolean,
 ) {
   const sourceUrl = normalizeSourceUrl(companion.sourceUrl ?? "");
@@ -459,6 +507,7 @@ async function upsertCompanion(
     create: {
       orgId,
       name: companion.name,
+      slug,
       ...profile,
       status: companion.adopted ? "adopted" : "available",
       adoptedAt: companion.adopted ? new Date() : null,

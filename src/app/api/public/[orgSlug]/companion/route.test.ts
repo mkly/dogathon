@@ -16,6 +16,8 @@ const organization = {
 const resident = {
   id: "5af589d8-dc5f-4bc7-9ce3-2ca9f06833c8",
   name: "Biscuit",
+  slug: "biscuit",
+  sourceUrl: "https://rescue.example/dogs/biscuit",
   breed: "Corgi mix",
   ageText: "Adult",
   sex: "Female",
@@ -40,6 +42,7 @@ function request(origin?: string) {
 function dependencies(overrides: Record<string, unknown> = {}) {
   return {
     async getOrganization() { return organization; },
+    async getResidentBySlug() { return resident; },
     async getResidentBySource(orgId: string, sourceUrl: string) {
       assert.equal(orgId, "org-1");
       assert.equal(sourceUrl, "https://rescue.example/dogs/biscuit");
@@ -61,6 +64,8 @@ test("returns the public companion contract and allows a configured origin", asy
   assert.deepEqual(await response.json(), {
     id: resident.id,
     name: "Biscuit",
+    slug: "biscuit",
+    sourceUrl: "https://rescue.example/dogs/biscuit",
     breed: "Corgi mix",
     ageText: "Adult",
     sex: "Female",
@@ -71,6 +76,29 @@ test("returns the public companion contract and allows a configured origin", asy
     companionUrl: `https://pawcast.example/happy-paws/companions/${resident.id}`,
     sponsorUrl: "https://pawcast.example/happy-paws/sponsor?source=https%3A%2F%2Frescue.example%2Fdogs%2Fbiscuit",
   });
+});
+
+test("looks up by companion slug and gives it precedence over source", async () => {
+  let sourceLookedUp = false;
+  const { GET } = createPublicCompanionHandlers(dependencies({
+    async getResidentBySlug(orgId: string, slug: string) {
+      assert.equal(orgId, "org-1");
+      assert.equal(slug, "biscuit");
+      return resident;
+    },
+    async getResidentBySource() {
+      sourceLookedUp = true;
+      return null;
+    },
+  }));
+  const response = await GET(new Request(
+    "https://pawcast.example/api/public/happy-paws/companion?companion=biscuit&source=https%3A%2F%2Fwrong.example%2Fdog",
+    { headers: { "x-real-ip": "192.0.2.10" } },
+  ), context());
+
+  assert.equal(response.status, 200);
+  assert.equal(sourceLookedUp, false);
+  assert.equal((await response.json()).slug, "biscuit");
 });
 
 test("omits CORS permission for a disallowed origin while still serving the response", async () => {

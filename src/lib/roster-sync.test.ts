@@ -5,6 +5,7 @@ import { MockLanguageModelV3 } from "ai/test";
 
 import {
   assertPlausibleAdoptionCount,
+  allocateResidentSlug,
   assertRelatedUrl,
   cancelPendingStripeSubscriptions,
   closeAdoptedSponsorships,
@@ -18,6 +19,7 @@ import {
   onlyIdentifyingSourceUrls,
   planRosterStatusChanges,
   requestFirecrawl,
+  residentSlug,
   RosterSyncRefusal,
   saveRosterSyncNote,
   upsertCompanions,
@@ -117,10 +119,24 @@ test("only a page that yielded one companion names it", () => {
   assert.deepEqual(companions.map((companion) => companion.sourceUrl), ["", "", detail, ""]);
 });
 
+test("resident slugs normalize names and suffix collisions inside an organization", () => {
+  const usedSlugs = new Set(["chex", "chex-2"]);
+
+  assert.equal(residentSlug("  Miss Piggy!  "), "miss-piggy");
+  assert.equal(residentSlug("🐕"), "resident");
+  assert.equal(allocateResidentSlug("Chex", usedSlugs), "chex-3");
+  assert.equal(allocateResidentSlug("CHEX!", usedSlugs), "chex-4");
+});
+
 test("a source URL match updates a renamed companion", async () => {
   const writes: unknown[] = [];
   const tx = {
     resident: {
+      findMany: async () => [{
+        name: "Biscuit",
+        slug: "biscuit",
+        sourceUrl: "https://rescue.example/dogs/biscuit",
+      }],
       findFirst: async () => ({ id: "resident-1" }),
       update: async (input: unknown) => { writes.push(input); },
       upsert: async () => { throw new Error("name fallback should not run"); },
@@ -149,6 +165,7 @@ test("resident writes run in bounded batches", async () => {
   let writes = 0;
   const tx = {
     resident: {
+      findMany: async () => [],
       upsert: async () => {
         writes += 1;
         active += 1;
