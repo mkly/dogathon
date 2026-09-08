@@ -81,8 +81,8 @@
   outline-offset: 2px;
 }
 
-/* The chip photo is a miniature of the hero photo patch: a square cut into
-   the felt with its fine stitch ring, instead of the 4:3 crop. */
+/* The chip photo is a plain square cut into the felt; at this size only the
+   patch itself carries stitching. */
 .chipPhoto {
   width: 2.6rem;
   height: 2.6rem;
@@ -100,6 +100,11 @@
 
 .chipPhoto [role="img"] {
   font-size: 1.1rem;
+}
+
+.chipPhoto > svg,
+.chipPhoto::after {
+  display: none;
 }
 
 .chipPhoto [role="img"] small {
