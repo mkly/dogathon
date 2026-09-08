@@ -12,8 +12,8 @@ const organization = {
   id: "org_rescue",
   settings: { allowedOrigins: [] },
   sponsorshipTiers: [
-    { id: "tier-supporter", monthlyCents: 2500 },
-    { id: "tier-champion", monthlyCents: 5000 },
+    { id: "tier-supporter", monthlyCents: 2500, isDefault: false },
+    { id: "tier-champion", monthlyCents: 5000, isDefault: true },
   ],
 };
 
@@ -61,8 +61,8 @@ function destination() {
   };
 }
 
-test("the existing resident-id checkout path creates a Stripe session", async () => {
-  const deps = dependencies();
+test("the existing resident-id checkout path creates a Stripe session at the default tier", async () => {
+  const deps = dependencies(5000);
   const result = await startSponsorshipCheckout(input(), destination, {
     dependencies: deps.value,
   });
@@ -72,9 +72,9 @@ test("the existing resident-id checkout path creates a Stripe session", async ()
 });
 
 test("checkout uses the selected organization tier", async () => {
-  const deps = dependencies(5000);
+  const deps = dependencies(2500);
   const result = await startSponsorshipCheckout(
-    input({ tier: "tier-champion" }),
+    input({ tier: "tier-supporter" }),
     destination,
     { dependencies: deps.value },
   );

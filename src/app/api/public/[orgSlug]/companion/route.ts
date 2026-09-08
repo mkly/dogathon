@@ -19,7 +19,12 @@ type PublicOrganization = {
   settings: {
     allowedOrigins: string[];
   } | null;
-  sponsorshipTiers: Array<{ id: string; monthlyCents: number; description: string }>;
+  sponsorshipTiers: Array<{
+    id: string;
+    monthlyCents: number;
+    description: string;
+    isDefault: boolean;
+  }>;
 };
 
 type PublicResident = {
@@ -135,6 +140,8 @@ export function createPublicCompanionHandlers(
     const status = resident.status === "adopted"
       ? "adopted"
       : resident._count.sponsorships > 0 ? "sponsored" : "available";
+    const defaultTier = organization.sponsorshipTiers.find((tier) => tier.isDefault)
+      ?? organization.sponsorshipTiers[0];
     const response = Response.json({
       id: resident.id,
       name: resident.name,
@@ -144,13 +151,13 @@ export function createPublicCompanionHandlers(
       ageText: resident.ageText,
       sex: resident.sex,
       photoUrl: resident.photoUrls[0] ?? null,
-      tiers: organization.sponsorshipTiers.map(({ id, monthlyCents, description }) => ({
+      tiers: organization.sponsorshipTiers.map(({ id, monthlyCents, description, isDefault }) => ({
         id,
         monthlyCents,
         description,
+        isDefault,
       })),
-      monthlyCents: organization.sponsorshipTiers[0]?.monthlyCents
-        ?? DEFAULT_SPONSORSHIP_MONTHLY_CENTS,
+      monthlyCents: defaultTier?.monthlyCents ?? DEFAULT_SPONSORSHIP_MONTHLY_CENTS,
       currency: "usd",
       status,
       companionUrl: companionUrl.toString(),

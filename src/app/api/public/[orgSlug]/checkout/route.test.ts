@@ -16,8 +16,8 @@ const organization = {
   id: "org_rescue",
   settings: { allowedOrigins: ["https://rescue.example"] },
   sponsorshipTiers: [
-    { id: "tier-supporter", monthlyCents: 2500 },
-    { id: "tier-champion", monthlyCents: 5000 },
+    { id: "tier-supporter", monthlyCents: 2500, isDefault: false },
+    { id: "tier-champion", monthlyCents: 5000, isDefault: true },
   ],
 };
 const source = "https://rescue.example/dogs/mabel?utm_source=mail";
@@ -92,7 +92,7 @@ test("JSON checkout returns the Stripe URL, applies CORS, and preserves return q
   assert.equal(response.headers.get("vary"), "Origin");
   assert.deepEqual(await response.json(), { url: "https://checkout.stripe.test/session" });
   assert.equal(deps.checkoutInput?.residentId, "resident_mabel");
-  assert.equal(deps.checkoutInput?.monthlyCents, 2500);
+  assert.equal(deps.checkoutInput?.monthlyCents, 5000);
   assert.equal(
     deps.checkoutInput?.successUrl,
     "https://rescue.example/dogs/mabel?campaign=spring&sponsored=1&session_id={CHECKOUT_SESSION_ID}#sponsor",

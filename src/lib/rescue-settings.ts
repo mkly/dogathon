@@ -19,6 +19,7 @@ export const MAX_SPONSORSHIP_TIERS = 6;
 export type SponsorshipTierInput = {
   monthlyCents: number;
   description: string;
+  isDefault: boolean;
 };
 
 export type OriginSettings = { allowedOrigins: string[] };
@@ -101,6 +102,7 @@ export function parseSettingsForm(formData: FormData): ParsedSettingsForm {
   const savesSourceUrl = parsed.data.sourceUrl !== undefined;
   const tierAmounts = formData.getAll("tierMonthlyDollars");
   const tierDescriptions = formData.getAll("tierDescription");
+  const tierDefault = formData.get("tierDefault");
   const savesSponsorshipSettings = tierAmounts.length > 0
     || tierDescriptions.length > 0
     || parsed.data.allowedOrigins !== undefined;
@@ -149,8 +151,15 @@ export function parseSettingsForm(formData: FormData): ParsedSettingsForm {
       if (/[<>]/u.test(description)) {
         return { ok: false, message: "Tier descriptions must be plain text without markup." };
       }
-      sponsorshipTiers.push({ monthlyCents, description });
+      sponsorshipTiers.push({ monthlyCents, description, isDefault: false });
     }
+    const parsedDefault = typeof tierDefault === "string" && /^\d+$/u.test(tierDefault)
+      ? Number(tierDefault)
+      : 0;
+    const defaultIndex = parsedDefault >= 0 && parsedDefault < sponsorshipTiers.length
+      ? parsedDefault
+      : 0;
+    sponsorshipTiers[defaultIndex].isDefault = true;
     const allowedOrigins = parseAllowedOrigins(parsed.data.allowedOrigins);
     if (allowedOrigins === null) {
       return { ok: false, message: "Enter one HTTPS origin per line with no path, query, or wildcard." };

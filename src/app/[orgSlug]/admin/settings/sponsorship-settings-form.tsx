@@ -17,7 +17,12 @@ export function SponsorshipSettingsForm({
 }: {
   allowedOrigins: string[];
   orgSlug: string;
-  sponsorshipTiers: Array<{ id: string; monthlyCents: number; description: string }>;
+  sponsorshipTiers: Array<{
+    id: string;
+    monthlyCents: number;
+    description: string;
+    isDefault: boolean;
+  }>;
 }) {
   const [state, formAction, pending] = useActionState(saveSettings, initialSettingsState);
   // Controlled fields: React resets uncontrolled inputs when the form action
@@ -26,6 +31,7 @@ export function SponsorshipSettingsForm({
     key: tier.id,
     monthlyDollars: (tier.monthlyCents / 100).toFixed(2),
     description: tier.description,
+    isDefault: tier.isDefault,
   })));
   const [origins, setOrigins] = useState(() => allowedOrigins.join("\n"));
   const updateTier = (key: string, patch: { monthlyDollars?: string; description?: string }) =>
@@ -42,6 +48,20 @@ export function SponsorshipSettingsForm({
         {tiers.map((tier, index) => (
           <fieldset className={styles.tier} key={tier.key}>
             <legend>Tier {index + 1}</legend>
+            <label>
+              <input
+                checked={tier.isDefault}
+                disabled={pending}
+                name="tierDefault"
+                onChange={() => setTiers((current) => current.map((item) => ({
+                  ...item,
+                  isDefault: item.key === tier.key,
+                })))}
+                type="radio"
+                value={index}
+              />
+              Default
+            </label>
             <label htmlFor={`tier-monthly-${tier.key}`}>Monthly price in dollars</label>
             <AdminField>
               <input
@@ -87,7 +107,11 @@ export function SponsorshipSettingsForm({
               >Move down</AdminButton>
               <AdminButton
                 disabled={pending || tiers.length === 1}
-                onClick={() => setTiers((current) => current.filter((_, itemIndex) => itemIndex !== index))}
+                onClick={() => setTiers((current) => {
+                  const remaining = current.filter((_, itemIndex) => itemIndex !== index);
+                  if (remaining.some((item) => item.isDefault)) return remaining;
+                  return remaining.map((item, itemIndex) => ({ ...item, isDefault: itemIndex === 0 }));
+                })}
                 tone="brick"
                 type="button"
               >Remove</AdminButton>
@@ -102,6 +126,7 @@ export function SponsorshipSettingsForm({
             key: crypto.randomUUID(),
             monthlyDollars: "25.00",
             description: "",
+            isDefault: false,
           }])}
           tone="oatmeal"
           type="button"
