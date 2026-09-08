@@ -2,6 +2,7 @@ import { getInterviewRouteContext, parseInterviewRouteRequest } from "../route-u
 import { interviewTurn } from "@/lib/volunteer-interview";
 import { checkRateLimit, getRateLimitIdentity, RATE_LIMITS, rateLimitResponse } from "@/lib/rate-limit";
 import { prisma } from "@/lib/prisma";
+import { getPhoto } from "@/lib/photo-storage";
 import { interviewTranscriptSchema, textOnlyTranscript } from "@/lib/volunteer-interview-request";
 
 export async function POST(request: Request) {
@@ -15,7 +16,15 @@ export async function POST(request: Request) {
   if (!rateLimit.allowed) return rateLimitResponse(rateLimit.retryAfterSeconds);
 
   try {
-    return await interviewTurn(route.context, {
+    let photo;
+    if (route.context.messages.length === 0 && route.context.photoStorageKey) {
+      try {
+        photo = await getPhoto(route.context.photoStorageKey) ?? undefined;
+      } catch (error) {
+        console.error("Volunteer interview photo could not be read; opening without it", error);
+      }
+    }
+    return await interviewTurn({ ...route.context, photo }, {
       async onFinish(messages) {
         const parsed = interviewTranscriptSchema.safeParse(messages);
         if (!parsed.success) throw new Error("Generated check-in transcript was invalid");

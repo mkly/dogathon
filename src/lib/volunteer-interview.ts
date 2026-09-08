@@ -23,6 +23,10 @@ export type InterviewInput = {
   companion: InterviewCompanion;
   orgName?: string;
   messages: UIMessage[];
+  photo?: {
+    data: Uint8Array;
+    mime: string;
+  };
 };
 
 type InterviewTurnOptions = {
@@ -93,6 +97,8 @@ export function buildInterviewSystemPrompt({
     "Ask one short question at a time and ask no more than five questions total.",
     "Gather only facts the volunteer knows: what they did together, mood and energy, eating and drinking, bathroom habits, anything staff should know, and a nice moment for sponsors.",
     "Never invent facts, give medical advice, or use dog-specific wording; call the animal a companion.",
+    "When opening the conversation with a photo, first describe one concrete visible detail about the setting, posture, expression, or what the companion is doing in one short sentence, then ask the first question.",
+    "Never infer health, breed, or identity from a photo. If no photo is provided, skip the description and ask the first question.",
     "When you have enough information, respond with one short wrap-up whose final text is exactly [[READY]].",
   ].join(" ");
 }
@@ -102,8 +108,48 @@ export function buildInterviewSystemPrompt({
 const MAX_INTERVIEW_TURN_OUTPUT_TOKENS = 1200;
 const MAX_INTERVIEW_SUMMARY_OUTPUT_TOKENS = 1500;
 
+async function generateOpening(input: InterviewInput, includePhoto: boolean): Promise<string> {
+  const content = includePhoto && input.photo
+    ? [
+        {
+          type: "text" as const,
+          text: "Open the volunteer check-in from this photo, following the opening-message rules.",
+        },
+        {
+          type: "file" as const,
+          data: input.photo.data,
+          mediaType: input.photo.mime,
+        },
+      ]
+    : "Open the volunteer check-in now. No photo is available to you, so ask the first question without describing one.";
+  const { text } = await generateText({
+    model: createAiModel(),
+    instructions: buildInterviewSystemPrompt(input),
+    messages: [{ role: "user", content }],
+    maxOutputTokens: MAX_INTERVIEW_TURN_OUTPUT_TOKENS,
+  });
+  if (!text.trim()) throw new Error("The interviewer returned an empty opening turn");
+  return text;
+}
+
 export async function interviewTurn(input: InterviewInput, options: InterviewTurnOptions = {}): Promise<Response> {
   if (!hasAiCredentials()) return textStreamResponse(scriptedReply(input), input, options);
+
+  if (input.messages.length === 0) {
+    if (input.photo) {
+      try {
+        return textStreamResponse(await generateOpening(input, true), input, options);
+      } catch (error) {
+        console.error("Volunteer interview vision opening failed; retrying without the photo", error);
+      }
+    }
+    try {
+      return textStreamResponse(await generateOpening(input, false), input, options);
+    } catch (error) {
+      console.error("Volunteer interview text opening failed; using the scripted opening", error);
+      return textStreamResponse(scriptedReply(input), input, options);
+    }
+  }
 
   const result = streamText({
     model: createAiModel(),
