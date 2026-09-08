@@ -1,10 +1,17 @@
-import { getPublicResidentBySource } from "@/lib/public-roster-cache";
+import {
+  getPublicResidentBySource,
+  isPublicResidentSponsorable,
+} from "@/lib/public-roster-cache";
 import { normalizeSourceUrl } from "@/lib/source-url";
 
 const MAX_SOURCE_URL_LENGTH = 2048;
 
 type SourceSearchParam = string | string[] | undefined;
-type SourceResident = { id: string; available: boolean };
+type SourceResident = {
+  id: string;
+  available: boolean;
+  _count: { sponsorships: number };
+};
 type FindResidentBySource = (
   orgId: string,
   sourceUrl: string,
@@ -33,7 +40,7 @@ export async function resolveSponsorDestination(
   if (!normalizedSource) return { kind: "unknown" };
 
   const resident = await findResidentBySource(orgId, normalizedSource);
-  return resident
+  return resident && isPublicResidentSponsorable(resident)
     ? { href: `/${orgSlug}/companions/${resident.id}`, kind: "redirect" }
     : { kind: "unknown" };
 }

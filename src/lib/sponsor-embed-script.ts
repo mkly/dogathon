@@ -88,10 +88,6 @@ export const sponsorEmbedScript = String.raw`(() => {
     }
   };
 
-  const statusText = (status) => status === "unavailable"
-    ? "Not available for sponsorship"
-    : status === "sponsored" ? "Sponsored" : "Available for sponsorship";
-
   const returnMessage = () => {
     if (returnState === "sponsored") {
       return message("Thank you! Your sponsorship is confirmed.", "success");
@@ -205,7 +201,9 @@ export const sponsorEmbedScript = String.raw`(() => {
       if (!response.ok) {
         root.classList.remove(PREFIX + "root");
         root.classList.add(PREFIX + "root-cta");
-        const notice = message("We could not find this companion.", "notice");
+        // A sponsored companion leaves the public endpoint, so the sponsor coming
+        // back from checkout lands on a 404 and still has to be thanked.
+        const notice = returnMessage() || message("We could not find this companion.", "notice");
         const rosterUrl = rosterUrlFor(root);
         if (rosterUrl) {
           const roster = create("a", "cta", "See all adoptable companions");
@@ -219,20 +217,14 @@ export const sponsorEmbedScript = String.raw`(() => {
 
       const companion = await response.json();
       if (ctaMode) {
-        if (companion.status === "unavailable") {
-          root.replaceChildren(styles(), message("This companion is not accepting sponsorships right now.", "notice"));
-        } else if (companion.status === "sponsored") {
-          root.replaceChildren(styles(), message("This companion already has an active sponsor.", "notice"));
+        const infoUrl = sponsorInfoUrl(root, source);
+        if (infoUrl) {
+          const cta = create("a", "cta", "Sponsor " + companion.name);
+          cta.setAttribute("href", infoUrl);
+          root.replaceChildren(styles(), cta);
         } else {
-          const infoUrl = sponsorInfoUrl(root, source);
-          if (infoUrl) {
-            const cta = create("a", "cta", "Sponsor " + companion.name);
-            cta.setAttribute("href", infoUrl);
-            root.replaceChildren(styles(), cta);
-          } else {
-            console.warn("Dogathon sponsor CTA requires data-sponsor-info-url.");
-            root.replaceChildren();
-          }
+          console.warn("Dogathon sponsor CTA requires data-sponsor-info-url.");
+          root.replaceChildren();
         }
         return;
       }
@@ -251,26 +243,19 @@ export const sponsorEmbedScript = String.raw`(() => {
         content.append(create("p", "details", [companion.breed, companion.ageText, companion.sex].filter(Boolean).join(" · ")));
       }
       const returned = returnMessage();
-      // The price otherwise only appears inside the sponsorship form, which these states replace.
-      const showsForm = !returned && companion.status !== "unavailable" && companion.status !== "sponsored";
-      if (!showsForm) {
+      // The price otherwise only appears inside the sponsorship form, which a return state replaces.
+      if (returned) {
         content.append(create("p", "price", price(companion.monthlyCents, companion.currency)));
       }
-      content.append(create("p", "status", statusText(companion.status)));
+      content.append(create("p", "status", "Available for sponsorship"));
 
       if (returned) {
         content.append(returned);
-      } else if (companion.status === "unavailable") {
-        content.append(message("This companion is not accepting sponsorships right now.", "notice"));
-      } else if (companion.status === "sponsored") {
-        content.append(message("This companion already has an active sponsor.", "notice"));
+        content.append(link(companion.companionUrl, "View companion details"));
       } else {
         const intro = sponsorIntro(root, companion.name);
         if (intro !== null) content.append(create("p", "intro", intro));
         content.append(sponsorForm(org, source, returnToFor(root), companion.tiers || [], companion.monthlyCents, companion.currency));
-      }
-      if (companion.status === "unavailable" || companion.status === "sponsored") {
-        content.append(link(companion.companionUrl, "View companion details"));
       }
       root.replaceChildren(content);
     } catch {

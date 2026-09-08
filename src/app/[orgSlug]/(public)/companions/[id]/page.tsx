@@ -3,19 +3,20 @@ import { notFound } from "next/navigation";
 import { Suspense, ViewTransition } from "react";
 
 import { createSponsorship } from "@/app/actions";
-import { FeltField, FeltLink, FeltPanel, PhotoPatch, Stitch, StitchBadge } from "@/components/felt";
+import { FeltField, FeltPanel, PhotoPatch, Stitch, StitchBadge } from "@/components/felt";
 import { PageViewTransition } from "@/components/page-view-transition";
 import { formatMonthlyAmount } from "@/lib/format";
 import {
   getPublicCompanionParams,
   getPublicOrganization,
   getPublicResident,
+  isPublicResidentSponsorable,
 } from "@/lib/public-roster-cache";
 import { DEFAULT_SPONSORSHIP_MONTHLY_CENTS } from "@/lib/rescue-settings";
 import { uuidSchema } from "@/lib/uuid";
 
 import { CompanionBanner, CompanionFormError, CompanionSponsorState } from "./companion-banner";
-import { companionFacts, sponsorshipSucceeded } from "./companion-page";
+import { companionFacts, isCheckoutReturn, sponsorshipSucceeded } from "./companion-page";
 import { SponsorSubmitButton } from "./sponsor-submit-button";
 import styles from "../../../../public.module.css";
 
@@ -33,15 +34,17 @@ export async function generateStaticParams() {
 
 export default async function CompanionPage({ params, searchParams }: CompanionPageProps) {
   const { id, orgSlug } = await params;
-  const sponsored = sponsorshipSucceeded(await searchParams);
+  const companionSearchParams = await searchParams;
+  const sponsored = sponsorshipSucceeded(companionSearchParams);
   if (!uuidSchema.safeParse(id).success) notFound();
   const organization = await getPublicOrganization(orgSlug);
   if (!organization) notFound();
   const resident = await getPublicResident(organization.id, id);
 
   if (!resident) notFound();
+  const sponsorable = isPublicResidentSponsorable(resident);
+  if (!sponsorable && !isCheckoutReturn(companionSearchParams)) notFound();
 
-  const available = resident.available;
   const tiers = organization.sponsorshipTiers;
   const firstTier = tiers[0];
   const defaultTier = tiers.find((tier) => "isDefault" in tier && tier.isDefault === true) ?? firstTier;
@@ -96,9 +99,7 @@ export default async function CompanionPage({ params, searchParams }: CompanionP
           </div>
 
           <div className={styles.profileCopy}>
-            <StitchBadge tone={available ? "moss" : "brick"}>
-              {available ? "Available" : "Not available"}
-            </StitchBadge>
+            {sponsorable && <StitchBadge tone="moss">Available</StitchBadge>}
             <h1>{resident.name}</h1>
             <p className={styles.companionFacts}>
               {companionFacts(resident)}
@@ -117,7 +118,7 @@ export default async function CompanionPage({ params, searchParams }: CompanionP
           </div>
         </section>
 
-        {available ? (
+        {sponsorable && (
           <CompanionSponsorState sponsored={sponsored}>
             <FeltPanel className={styles.sponsorPanel} tone="oatmeal">
               <div className={styles.sponsorPitch}>
@@ -179,19 +180,6 @@ export default async function CompanionPage({ params, searchParams }: CompanionP
               </form>
             </FeltPanel>
           </CompanionSponsorState>
-        ) : (
-          <FeltPanel className={styles.confirmation} tone="brick">
-            <h2>{resident.name} isn&apos;t taking sponsors right now</h2>
-            <p>Sponsorships for {resident.name} have ended. Another resident is still waiting for one.</p>
-            <FeltLink
-              className={styles.cardLink}
-              href={`/${orgSlug}`}
-              tone="cream"
-              transitionTypes={["nav-back"]}
-            >
-              Meet the companions
-            </FeltLink>
-          </FeltPanel>
         )}
       </main>
     </PageViewTransition>
