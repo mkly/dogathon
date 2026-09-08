@@ -4,14 +4,12 @@ import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
 
 import { AdminEmptyState, AdminPage } from "@/components/admin-ui";
-import { FeltLink, FeltPanel, StitchBadge } from "@/components/felt";
+import { FeltPanel, PhotoPatch, StitchBadge } from "@/components/felt";
 import { PageViewTransition } from "@/components/page-view-transition";
 import { prisma } from "@/lib/prisma";
 import { getOrganizationAccessBySlug } from "@/lib/organization-access";
-import { uuidSchema } from "@/lib/uuid";
 
-import { finishCheckIn } from "./actions";
-import { CheckInChat } from "./check-in-chat";
+import { startCheckIn } from "./actions";
 import styles from "./volunteer.module.css";
 
 export const dynamic = "force-dynamic";
@@ -26,9 +24,7 @@ type VolunteerPageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 const volunteerQuerySchema = z.object({
-  companion: uuidSchema.optional().catch(undefined),
-  submitted: z.literal("1").optional().catch(undefined),
-  error: z.enum(["invalid", "rate-limited", "save", "summary", "unavailable"]).optional().catch(undefined),
+  error: z.enum(["unavailable"]).optional().catch(undefined),
 });
 
 const MAX_CHECK_IN_RESIDENTS = 100;
@@ -45,7 +41,7 @@ export default async function VolunteerPage({ params, searchParams }: VolunteerP
   }
   const { context } = access;
 
-  const [{ companion, error, submitted }, residents] = await Promise.all([
+  const [{ error }, residents] = await Promise.all([
     searchParams.then((query) => volunteerQuerySchema.parse(query)),
     prisma.resident.findMany({
       where: {
@@ -65,30 +61,6 @@ export default async function VolunteerPage({ params, searchParams }: VolunteerP
     photoUrl: photoUrls[0],
   }));
 
-  const submittedCompanion = residents.find((resident) => resident.id === companion);
-
-  if (submitted === "1") {
-    return (
-      <PageViewTransition>
-        <AdminPage variant="volunteer">
-          <FeltPanel className={styles.confirmation} tone="moss">
-            <StitchBadge tone="cream">Note tucked in</StitchBadge>
-            <div aria-hidden="true" className={styles.confirmationMark}>✓</div>
-            <h1>Thanks for checking in!</h1>
-            <p>
-              {submittedCompanion
-                ? `${submittedCompanion.name}’s care team can see your note now.`
-                : "The care team can see your note now."}
-            </p>
-            <FeltLink className={styles.againLink} href={`/${orgSlug}/volunteer`}>
-              Submit another
-            </FeltLink>
-          </FeltPanel>
-        </AdminPage>
-      </PageViewTransition>
-    );
-  }
-
   return (
     <PageViewTransition>
       <AdminPage className={styles.chatPage} variant="volunteer">
@@ -98,18 +70,19 @@ export default async function VolunteerPage({ params, searchParams }: VolunteerP
             <h1>How’s a companion doing?</h1>
             <p>Share the moments their care team and sponsor should know.</p>
           </header>
-          {error === "rate-limited" ? <p className={styles.chatError} role="alert">Please wait a little before trying again.</p> : null}
-          {error === "invalid" ? <p className={styles.chatError} role="alert">The check-in details were invalid. Please try again.</p> : null}
           {error === "unavailable" ? <p className={styles.chatError} role="alert">That companion is no longer available for check-ins.</p> : null}
-          {error === "summary" ? <p className={styles.chatError} role="alert">We could not write the care note from that conversation. Please try again.</p> : null}
-          {error === "save" ? <p className={styles.chatError} role="alert">The care note was written but could not be saved. Please try again.</p> : null}
 
           {checkInResidents.length > 0 ? (
-            <CheckInChat
-              onFinish={finishCheckIn.bind(null, orgSlug)}
-              orgSlug={orgSlug}
-              residents={checkInResidents}
-            />
+            <div aria-label="Choose a companion" className={styles.companionPicker}>
+              {checkInResidents.map((resident) => (
+                <form action={startCheckIn.bind(null, orgSlug, resident.id)} key={resident.id}>
+                  <button className={styles.companionChip} type="submit">
+                    <PhotoPatch alt="" className={styles.chipPhoto} sizes="40px" src={resident.photoUrl} />
+                    <span>{resident.name}</span>
+                  </button>
+                </form>
+              ))}
+            </div>
           ) : (
             <FeltPanel className={styles.emptyPanel} tone="oatmeal">
               <AdminEmptyState variant="volunteer">

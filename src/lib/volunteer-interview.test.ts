@@ -9,6 +9,7 @@ import {
   summarizeInterview,
 } from "./volunteer-interview.ts";
 import { interviewRequestSchema } from "./volunteer-interview-request.ts";
+import { messageText } from "./ui-message-text.ts";
 import { env } from "./env.ts";
 
 const companion = { name: "Biscuit", breed: "Corgi mix", sex: "Female", ageText: "Adult" };
@@ -77,6 +78,21 @@ test("uses the deterministic three-question script and then marks the interview 
 
   const ready = await interviewTurn({ companion, orgName: "Happy Tails", messages: turns });
   assert.match(await ready.text(), /\[\[READY\]\]/u);
+});
+
+test("passes the complete text-only turn to the persistence callback", async () => {
+  const original = [message("u1", "user", "We walked around the garden")];
+  let persisted: UIMessage[] | undefined;
+  const response = await interviewTurn(
+    { companion, orgName: "Happy Tails", messages: original },
+    { onFinish(messages) { persisted = messages; } },
+  );
+  await response.text();
+
+  assert.equal(persisted?.length, 2);
+  assert.deepEqual(persisted?.[0], original[0]);
+  assert.equal(persisted?.[1].role, "assistant");
+  assert.match(persisted ? messageText(persisted[1]) : "", /do together today/u);
 });
 
 test("summarizes fallback answers deterministically", async () => {
@@ -152,7 +168,7 @@ test("uses structured model output for a grounded summary", async () => {
 test("keeps assistant messages that carry step boundary parts", () => {
   const parsed = interviewRequestSchema.safeParse({
     orgSlug: "happy-tails",
-    residentId: "3ba9b90a-8b0c-4aeb-9a65-2ea2787fc932",
+    checkInId: "3ba9b90a-8b0c-4aeb-9a65-2ea2787fc932",
     messages: [
       message("u1", "user", "We had a calm garden walk"),
       {
@@ -168,7 +184,7 @@ test("keeps assistant messages that carry step boundary parts", () => {
 });
 
 test("rejects oversized message lists and text parts", () => {
-  const valid = { orgSlug: "happy-tails", residentId: "3ba9b90a-8b0c-4aeb-9a65-2ea2787fc932" };
+  const valid = { orgSlug: "happy-tails", checkInId: "3ba9b90a-8b0c-4aeb-9a65-2ea2787fc932" };
 
   assert.equal(interviewRequestSchema.safeParse({
     ...valid,

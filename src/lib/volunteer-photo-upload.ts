@@ -4,7 +4,7 @@ import { uuidSchema } from "./uuid.ts";
 
 const uploadSchema = z.object({
   orgSlug: z.string().trim().min(1),
-  residentId: uuidSchema,
+  checkInId: uuidSchema,
   photo: z.file(),
 });
 

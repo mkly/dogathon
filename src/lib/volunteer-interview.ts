@@ -25,6 +25,10 @@ export type InterviewInput = {
   messages: UIMessage[];
 };
 
+type InterviewTurnOptions = {
+  onFinish?: (messages: UIMessage[]) => Promise<void> | void;
+};
+
 const SCRIPTED_QUESTIONS = [
   (name: string) => `What did you and ${name} do together today?`,
   (name: string) => `How was ${name}'s mood and energy?`,
@@ -54,7 +58,7 @@ function scriptedReply(input: InterviewInput): string {
   return `Thanks — that gives the ${input.orgName ?? "rescue"} team what they need. [[READY]]`;
 }
 
-function textStreamResponse(text: string): Response {
+function textStreamResponse(text: string, input: InterviewInput, options: InterviewTurnOptions): Response {
   const stream = createUIMessageStream({
     execute: ({ writer }) => {
       const id = "scripted-response";
@@ -64,6 +68,8 @@ function textStreamResponse(text: string): Response {
       writer.write({ type: "text-end", id });
       writer.write({ type: "finish", finishReason: "stop" });
     },
+    originalMessages: input.messages,
+    onFinish: ({ messages }) => options.onFinish?.(messages),
   });
   return createUIMessageStreamResponse({ stream });
 }
@@ -96,8 +102,8 @@ export function buildInterviewSystemPrompt({
 const MAX_INTERVIEW_TURN_OUTPUT_TOKENS = 1200;
 const MAX_INTERVIEW_SUMMARY_OUTPUT_TOKENS = 1500;
 
-export async function interviewTurn(input: InterviewInput): Promise<Response> {
-  if (!hasAiCredentials()) return textStreamResponse(scriptedReply(input));
+export async function interviewTurn(input: InterviewInput, options: InterviewTurnOptions = {}): Promise<Response> {
+  if (!hasAiCredentials()) return textStreamResponse(scriptedReply(input), input, options);
 
   const result = streamText({
     model: createAiModel(),
@@ -106,7 +112,10 @@ export async function interviewTurn(input: InterviewInput): Promise<Response> {
     maxOutputTokens: MAX_INTERVIEW_TURN_OUTPUT_TOKENS,
   });
 
-  return result.toUIMessageStreamResponse();
+  return result.toUIMessageStreamResponse({
+    originalMessages: input.messages,
+    onFinish: ({ messages }) => options.onFinish?.(messages),
+  });
 }
 
 export async function summarizeInterview(input: InterviewInput): Promise<{ note: string }> {

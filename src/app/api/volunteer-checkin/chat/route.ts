@@ -1,6 +1,8 @@
 import { getInterviewRouteContext, parseInterviewRouteRequest } from "../route-utils";
 import { interviewTurn } from "@/lib/volunteer-interview";
 import { checkRateLimit, getRateLimitIdentity, RATE_LIMITS, rateLimitResponse } from "@/lib/rate-limit";
+import { prisma } from "@/lib/prisma";
+import { interviewTranscriptSchema, textOnlyTranscript } from "@/lib/volunteer-interview-request";
 
 export async function POST(request: Request) {
   const parsed = await parseInterviewRouteRequest(request);
@@ -13,7 +15,21 @@ export async function POST(request: Request) {
   if (!rateLimit.allowed) return rateLimitResponse(rateLimit.retryAfterSeconds);
 
   try {
-    return await interviewTurn(route.context);
+    return await interviewTurn(route.context, {
+      async onFinish(messages) {
+        const parsed = interviewTranscriptSchema.safeParse(messages);
+        if (!parsed.success) throw new Error("Generated check-in transcript was invalid");
+        await prisma.checkIn.updateMany({
+          where: {
+            id: route.context.checkInId,
+            orgId: route.context.orgId,
+            status: "in_progress",
+            userId: route.context.userId,
+          },
+          data: { transcript: textOnlyTranscript(parsed.data) },
+        });
+      },
+    });
   } catch (error) {
     console.error("Volunteer interview failed", error);
     return Response.json({ error: "The interviewer is unavailable. Please try again." }, { status: 502 });

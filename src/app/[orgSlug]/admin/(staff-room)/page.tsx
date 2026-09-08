@@ -183,7 +183,11 @@ async function ComposeSection({ orgId, orgSlug }: { orgId: string; orgSlug: stri
                   src={latestNote?.photoUrl ?? resident.photoUrls[0]}
                 />
                 <div className={styles.composeCopy}>
-                  <h3>{resident.name}</h3>
+                  <h3>
+                    <AdminLink href={`/${orgSlug}/admin/companions/${resident.id}`}>
+                      {resident.name}
+                    </AdminLink>
+                  </h3>
                   <p className={styles.composeBreed}>{resident.breed}</p>
                   <p>
                     {resident._count.volunteerNotes} {pluralize("volunteer note", resident._count.volunteerNotes)}

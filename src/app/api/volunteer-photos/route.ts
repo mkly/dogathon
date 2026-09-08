@@ -15,6 +15,7 @@ function uploadError(error: "photo-size" | "photo-type") {
 type UploadDependencies = {
   createPhoto: (input: {
     id: string;
+    checkInId: string;
     orgId: string;
     residentId: string;
     storageKey: string;
@@ -23,7 +24,7 @@ type UploadDependencies = {
     byteSize: number;
   }) => Promise<void>;
   deletePhoto: typeof deletePhoto;
-  findResident: (orgId: string, residentId: string) => Promise<boolean>;
+  findCheckIn: (orgId: string, userId: string, checkInId: string) => Promise<string | null>;
   getAccess: typeof getOrganizationAccessBySlug;
   newId: () => string;
   processPhoto: typeof processVolunteerPhoto;
@@ -36,17 +37,17 @@ const uploadDependencies: UploadDependencies = {
     await prisma.volunteerPhoto.create({ data: input });
   },
   deletePhoto,
-  async findResident(orgId, residentId) {
-    const resident = await prisma.resident.findFirst({
+  async findCheckIn(orgId, userId, checkInId) {
+    const checkIn = await prisma.checkIn.findFirst({
       where: {
-        id: residentId,
+        id: checkInId,
         orgId,
-        available: true,
-        sponsorships: { some: { status: "active" } },
+        status: "in_progress",
+        userId,
       },
-      select: { id: true },
+      select: { residentId: true },
     });
-    return Boolean(resident);
+    return checkIn?.residentId ?? null;
   },
   getAccess: getOrganizationAccessBySlug,
   newId: randomUUID,
@@ -72,7 +73,7 @@ export function createVolunteerPhotoPostHandler(dependencies: UploadDependencies
 
     const parsed = parseVolunteerPhotoUpload(formData);
     if (!parsed.success) return Response.json({ error: "photo-type" }, { status: 400 });
-    const { orgSlug, residentId, photo } = parsed.data;
+    const { orgSlug, checkInId, photo } = parsed.data;
 
     const access = await dependencies.getAccess(request.headers, orgSlug, {
       roster: ["contribute"],
@@ -88,9 +89,12 @@ export function createVolunteerPhotoPostHandler(dependencies: UploadDependencies
     const rateLimit = await dependencies.rateLimit(request.headers);
     if (!rateLimit.allowed) return rateLimitResponse(rateLimit.retryAfterSeconds);
 
-    if (!await dependencies.findResident(access.context.orgId, residentId)) {
-      return Response.json({ error: "Companion not found" }, { status: 404 });
-    }
+    const residentId = await dependencies.findCheckIn(
+      access.context.orgId,
+      access.context.userId,
+      checkInId,
+    );
+    if (!residentId) return Response.json({ error: "Check-in not found" }, { status: 404 });
     if (photo.size > MAX_PHOTO_BYTES) return uploadError("photo-size");
 
     const processed = await dependencies.processPhoto(new Uint8Array(await photo.arrayBuffer()));
@@ -106,6 +110,7 @@ export function createVolunteerPhotoPostHandler(dependencies: UploadDependencies
     try {
       await dependencies.createPhoto({
         id,
+        checkInId,
         orgId: access.context.orgId,
         residentId,
         storageKey,
