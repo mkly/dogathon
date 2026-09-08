@@ -215,11 +215,9 @@ function ChatSession({
   return (
     <div className={styles.session}>
       <div className={styles.thread}>
-        {messages.length === 0 ? (
-          <div className={`${styles.message} ${styles.assistantMessage}`}>
-            Start with what you and {resident.name} did together today.
-          </div>
-        ) : null}
+        <div className={`${styles.message} ${styles.assistantMessage}`}>
+          Start with what you and {resident.name} did together today.
+        </div>
 
         {messages.map((message) => {
           const text = visibleMessageText(message);

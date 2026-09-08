@@ -91,7 +91,9 @@ export function buildInterviewSystemPrompt({
   ].join(" ");
 }
 
-const MAX_INTERVIEW_TURN_OUTPUT_TOKENS = 240;
+// Reasoning models spend their thinking inside this budget before any visible
+// text; a small cap leaves the volunteer with an empty reply.
+const MAX_INTERVIEW_TURN_OUTPUT_TOKENS = 1200;
 const MAX_INTERVIEW_SUMMARY_OUTPUT_TOKENS = 600;
 
 export async function interviewTurn(input: InterviewInput): Promise<Response> {
