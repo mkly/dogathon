@@ -43,7 +43,8 @@ https://pawcast.example/happy-paws/sponsor?source=https%3A%2F%2Frescue.example%2
 The app normalizes the source URL and looks it up in that organization's synced public roster. A
 match redirects to the companion's sponsor page, including when the companion has since been
 adopted. A missing or unknown source shows a rescue-branded message with a link to the public
-roster instead of a 404.
+roster instead of a 404. The embedded sponsor card behaves differently: it keeps visitors on the
+host site by showing only a notice when it cannot find the companion.
 
 For a CMS template, URL-encode the current page's canonical absolute URL and substitute it for
 `ENCODED_PAGE_URL` in this framework-independent link:

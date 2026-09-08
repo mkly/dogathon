@@ -26,6 +26,7 @@ async function renderWidget({
   intro,
   mode,
   name,
+  ok = true,
   photo,
   response = companion,
   source,
@@ -36,6 +37,7 @@ async function renderWidget({
   intro?: string;
   mode?: string;
   name?: string;
+  ok?: boolean;
   photo?: string;
   response?: typeof companion;
   source?: string;
@@ -50,7 +52,7 @@ async function renderWidget({
     configurable: true,
     value: async (input: string) => {
       requested = String(input);
-      return { json: async () => response, ok: true, status: 200 };
+      return { json: async () => response, ok, status: ok ? 200 : 404 };
     },
   });
 
@@ -189,6 +191,13 @@ test("card mode ignores a source query parameter that is not an absolute http UR
     requested,
     "https://pawcast.example/api/public/happy-paws/companion?source=https%3A%2F%2Frescue.example%2Fsponsor%3Fsource%3D%252Fdogs%252Fbiscuit",
   );
+});
+
+test("renders only a notice when the companion cannot be found", async () => {
+  const { root } = await renderWidget({ ok: false });
+
+  assert.equal(root.querySelector(".dogathon-sponsor-message")?.textContent, "We could not find this companion.");
+  assert.equal(root.querySelector("a"), null);
 });
 
 test("renders the default sponsor intro for an available companion", async () => {
