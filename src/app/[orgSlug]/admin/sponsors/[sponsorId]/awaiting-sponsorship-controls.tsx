@@ -41,7 +41,7 @@ export function AwaitingSponsorshipControls({
           residentId,
           sponsorshipId,
         });
-        if (result.ok) await refreshAdminPage();
+        await refreshAdminPage();
         pushToast(result.ok ? "success" : "error", result.message);
       } catch {
         pushToast("error", "The transfer could not reach the server. Try again.");
@@ -56,7 +56,7 @@ export function AwaitingSponsorshipControls({
     startTransition(async () => {
       try {
         const result = await endStaffAwaitingSponsorship({ orgSlug, sponsorshipId });
-        if (result.ok) await refreshAdminPage();
+        await refreshAdminPage();
         pushToast(result.ok ? "success" : "error", result.message);
       } catch {
         pushToast("error", "The sponsorship could not be ended. Try again.");

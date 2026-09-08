@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
+import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import pluralize from "pluralize";
 
@@ -160,9 +161,12 @@ export default async function CompanionsCoveredPage({ params, searchParams }: Co
                     return (
                       <tr key={sponsorship.id}>
                         <td>
-                          <a href={`/${orgSlug}/admin/sponsors/${sponsorship.sponsor.id}`}>
+                          <Link
+                            href={`/${orgSlug}/admin/sponsors/${sponsorship.sponsor.id}`}
+                            transitionTypes={["nav-forward"]}
+                          >
                             {sponsorship.sponsor.name}
-                          </a>
+                          </Link>
                         </td>
                         <td>{sponsorship.resident.name}</td>
                         <td>{waitingDays} {pluralize("day", waitingDays)}</td>
