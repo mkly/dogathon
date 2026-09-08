@@ -8,13 +8,15 @@ import { startSponsorshipCheckout } from "@/lib/sponsorship-checkout";
 
 export async function createSponsorship(formData: FormData) {
   const input = Object.fromEntries(formData);
-  const result = await startSponsorshipCheckout({
+  const checkoutInput = {
     headers: await headers(),
     orgSlug: input.orgSlug,
     sponsorEmail: input.sponsorEmail,
     sponsorName: input.sponsorName,
-    target: { kind: "resident-id", value: input.residentId },
-  }, ({ orgSlug }) => {
+    target: { kind: "resident-id" as const, value: input.residentId },
+    tier: input.tier,
+  };
+  const result = await startSponsorshipCheckout(checkoutInput, ({ orgSlug }) => {
     const residentId = String(input.residentId);
     const companionPath = `/${encodeURIComponent(orgSlug)}/companions/${encodeURIComponent(residentId)}`;
     return {
