@@ -306,10 +306,8 @@ async function ApprovalQueue({
         ) : (
           drafts.map((draft) => {
             const graduation = draft.type === "graduation";
-            const recipientCount = graduation
-              ? Number(Boolean(draft.sponsorship))
-              : draft.resident.sponsorships.filter((sponsorship) =>
-                isRegularSponsorUpdateRecipient(sponsorship, draft.resident.available)).length;
+            const recipientCount = draft.resident.sponsorships.filter((sponsorship) =>
+              isRegularSponsorUpdateRecipient(sponsorship, draft.resident.available)).length;
             const waitingDays = Math.max(
               0,
               Math.floor((currentTime - draft.createdAt.getTime()) / (24 * 60 * 60 * 1000)),
