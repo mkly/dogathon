@@ -20,10 +20,16 @@ export function SponsorshipSettingsForm({
   sponsorshipTiers: Array<{ id: string; monthlyCents: number; description: string }>;
 }) {
   const [state, formAction, pending] = useActionState(saveSettings, initialSettingsState);
+  // Controlled fields: React resets uncontrolled inputs when the form action
+  // settles, which would wipe the values the staff member just saved.
   const [tiers, setTiers] = useState(() => sponsorshipTiers.map((tier) => ({
-    ...tier,
     key: tier.id,
+    monthlyDollars: (tier.monthlyCents / 100).toFixed(2),
+    description: tier.description,
   })));
+  const [origins, setOrigins] = useState(() => allowedOrigins.join("\n"));
+  const updateTier = (key: string, patch: { monthlyDollars?: string; description?: string }) =>
+    setTiers((current) => current.map((tier) => (tier.key === key ? { ...tier, ...patch } : tier)));
 
   useEffect(() => {
     if (state.status !== "idle") pushToast(state.status, state.message);
@@ -39,27 +45,29 @@ export function SponsorshipSettingsForm({
             <label htmlFor={`tier-monthly-${tier.key}`}>Monthly price in dollars</label>
             <AdminField>
               <input
-                defaultValue={(tier.monthlyCents / 100).toFixed(2)}
                 disabled={pending}
                 id={`tier-monthly-${tier.key}`}
                 inputMode="decimal"
                 max="10000"
                 min="1"
                 name="tierMonthlyDollars"
+                onChange={(event) => updateTier(tier.key, { monthlyDollars: event.target.value })}
                 required
                 step="0.01"
                 type="number"
+                value={tier.monthlyDollars}
               />
             </AdminField>
             <label htmlFor={`tier-description-${tier.key}`}>Short description</label>
             <AdminField>
               <input
-                defaultValue={tier.description}
                 disabled={pending}
                 id={`tier-description-${tier.key}`}
                 maxLength={200}
                 name="tierDescription"
+                onChange={(event) => updateTier(tier.key, { description: event.target.value })}
                 type="text"
+                value={tier.description}
               />
             </AdminField>
             <div className={styles.tierActions}>
@@ -91,9 +99,8 @@ export function SponsorshipSettingsForm({
         <AdminButton
           disabled={pending || tiers.length >= 6}
           onClick={() => setTiers((current) => [...current, {
-            id: "",
             key: crypto.randomUUID(),
-            monthlyCents: 2500,
+            monthlyDollars: "25.00",
             description: "",
           }])}
           tone="oatmeal"
@@ -104,12 +111,13 @@ export function SponsorshipSettingsForm({
       <AdminField>
         <textarea
           className={styles.originsTextarea}
-          defaultValue={allowedOrigins.join("\n")}
           disabled={pending}
           id="allowedOrigins"
           name="allowedOrigins"
+          onChange={(event) => setOrigins(event.target.value)}
           placeholder={"https://www.example-rescue.org\nhttp://localhost:3001"}
           rows={5}
+          value={origins}
         />
       </AdminField>
       <p className={styles.fieldHint}>
