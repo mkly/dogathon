@@ -189,16 +189,20 @@ async function ComposeSection({ orgId, orgSlug }: { orgId: string; orgSlug: stri
                 />
                 <div className={styles.composeCopy}>
                   <h3>
-                    <AdminLink href={`/${orgSlug}/admin/companions/${resident.id}`}>
+                    <Link
+                      className={styles.composeName}
+                      href={`/${orgSlug}/admin/companions/${resident.id}`}
+                      transitionTypes={["nav-forward"]}
+                    >
                       {resident.name}
-                    </AdminLink>
+                    </Link>
                   </h3>
                   <p className={styles.composeBreed}>{resident.breed}</p>
-                  <p>
+                  {latestNote ? <p className={styles.composeNote}>{latestNote.note}</p> : null}
+                  <p className={styles.composeMeta}>
                     {resident._count.volunteerNotes} {pluralize("volunteer note", resident._count.volunteerNotes)}
+                    {latestNote && <> · Latest {formatDateTime(latestNote.createdAt)} UTC</>}
                   </p>
-                  {latestNote ? <p>{latestNote.note}</p> : null}
-                  {latestNote && <small>Latest {formatDateTime(latestNote.createdAt)} UTC</small>}
                 </div>
                 <ComposeButton orgSlug={orgSlug} residentId={resident.id} residentName={resident.name} />
               </AdminSurface>

@@ -73,22 +73,37 @@
 .composeItem {
   display: grid;
   grid-template-columns: 84px minmax(0, 1fr);
-  align-content: center;
-  align-items: center;
-  min-height: 132px;
+  grid-template-rows: auto 1fr auto;
+  align-items: start;
   gap: 12px 16px;
-  padding: 16px;
+  padding: 18px;
 }
 
-.composePhoto { width: 84px; }
+.composePhoto { width: 84px; grid-row: 1 / -1; }
 .composePhoto img { aspect-ratio: 1; }
-.composeCopy { min-width: 0; }
+.composeCopy { grid-column: 2; grid-row: 1 / 3; min-width: 0; }
 
-.composeItem h3 { margin: 0 0 2px; font-size: 1.15rem; font-weight: 900; }
-.composeItem .composeBreed { margin: 0 0 6px; font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; opacity: 0.6; }
-.composeItem p { margin: 0; font-size: 0.8rem; font-weight: 800; }
-.composeItem small { display: block; margin-top: 5px; font-size: 0.7rem; font-weight: 700; opacity: 0.66; }
-.composeItem .actionStack { grid-column: 2; justify-items: start; }
+.composeItem h3 { margin: 0 0 3px; font-size: 1.2rem; font-weight: 900; line-height: 1.15; }
+.composeName {
+  color: inherit;
+  text-decoration: none;
+  transition: color var(--motion-duration-base) var(--motion-ease-standard);
+}
+.composeName:hover { color: var(--felt-denim); text-decoration: underline; text-underline-offset: 0.16em; }
+.composeItem .composeBreed { margin: 0 0 10px; font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; opacity: 0.6; }
+.composeItem .composeNote {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  font-size: 0.86rem;
+  font-weight: 600;
+  line-height: 1.5;
+  opacity: 0.86;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+}
+.composeItem .composeMeta { margin: 8px 0 0; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.02em; opacity: 0.6; }
+.composeItem .actionStack { grid-column: 2; grid-row: 3; justify-items: start; margin-top: 4px; }
 .composeItem .actionStack > * { white-space: nowrap; }
 .composeEmpty { padding: 26px; text-align: center; font-weight: 800; }
 .listLimitNotice { margin: -8px 0 20px; font-size: 0.78rem; font-weight: 800; opacity: 0.72; }
@@ -505,7 +520,7 @@
   .stats { grid-template-columns: 1fr 1fr; gap: 12px; }
   .stat { min-height: 112px; padding: 17px; }
   .composeItem { grid-template-columns: 72px minmax(0, 1fr); }
-  .composePhoto { width: 72px; }
+  .composePhoto { width: 72px; grid-row: 1 / 3; }
   .composeItem .actionStack { grid-column: 1 / -1; justify-items: stretch; }
   .composeItem .actionStack > * { text-align: center; }
   .queueItem { padding: 19px; }
