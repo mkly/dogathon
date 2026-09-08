@@ -1,7 +1,7 @@
 import { generateText, Output } from "ai";
 import { z } from "zod";
 
-import { createAiModel, hasAiCredentials } from "./ai-model.ts";
+import { createAiModel, hasAiCredentials, reasoning } from "./ai-model.ts";
 
 export type SponsorUpdateType = "regular" | "graduation";
 
@@ -87,6 +87,7 @@ async function composeWithModel(input: ComposeSponsorUpdateInput): Promise<Compo
   const { output } = await generateText({
     model: createAiModel(),
     maxOutputTokens: MAX_SPONSOR_UPDATE_OUTPUT_TOKENS,
+    providerOptions: reasoning("medium"),
     output: Output.object({ schema: composedSponsorUpdateSchema }),
     instructions:
       `You write warm, short email updates in an animal shelter's voice. Use only facts in the supplied JSON; never invent details. Where a note carries a conversation, that is the volunteer's own account of the visit and the note is only a digest of it: draw the specifics from the conversation, and prefer the volunteer's wording over the interviewer's.${regularUpdateGuidance} Format the notes section with the literal Markdown heading "## Recent notes".`,

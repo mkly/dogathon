@@ -10,7 +10,7 @@ import {
 } from "ai";
 import { z } from "zod";
 
-import { createAiModel, hasAiCredentials } from "./ai-model.ts";
+import { createAiModel, hasAiCredentials, reasoning } from "./ai-model.ts";
 import { messageText } from "./ui-message-text.ts";
 
 export type InterviewCompanion = {
@@ -132,6 +132,7 @@ async function generateOpening(input: InterviewInput, includePhoto: boolean): Pr
     instructions: buildInterviewSystemPrompt(input),
     messages: [{ role: "user", content }],
     maxOutputTokens: MAX_INTERVIEW_TURN_OUTPUT_TOKENS,
+    providerOptions: reasoning("low"),
   });
   if (!text.trim()) throw new Error("The interviewer returned an empty opening turn");
   return text;
@@ -161,6 +162,7 @@ export async function interviewTurn(input: InterviewInput, options: InterviewTur
     instructions: buildInterviewSystemPrompt(input),
     messages: await convertToModelMessages(input.messages),
     maxOutputTokens: MAX_INTERVIEW_TURN_OUTPUT_TOKENS,
+    providerOptions: reasoning("low"),
   });
 
   return result.toUIMessageStreamResponse({
@@ -183,6 +185,7 @@ export async function summarizeInterview(input: InterviewInput): Promise<{ note:
       model: createAiModel(),
       output: Output.object({ schema: interviewSummarySchema }),
       maxOutputTokens: MAX_INTERVIEW_SUMMARY_OUTPUT_TOKENS,
+      providerOptions: reasoning("medium"),
       instructions: [
         "Turn the volunteer interview into one concise plain-text note that a writer will later draw on for a cheerful email update to the companion's sponsors.",
         "Keep the vivid specifics: activities, personality, funny or sweet moments, and the volunteer's own wording. Use only facts in the transcript, do not invent details, and leave out anything that reads like a medical or care report.",
