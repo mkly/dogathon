@@ -95,7 +95,6 @@ export default async function CheckInPage({ params, searchParams }: CheckInPageP
             <div className={styles.headerCopy}>
               <StitchBadge tone="denim">Volunteer check-in</StitchBadge>
               <h1>How’s {residentName} doing?</h1>
-              <p>Saved as you go, so you can come back to it.</p>
             </div>
           </header>
           {error === "rate-limited" ? <p className={styles.chatError} role="alert">Please wait a little before trying again.</p> : null}

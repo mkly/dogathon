@@ -6,7 +6,7 @@ import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
 
 import { AdminEmptyState, AdminPage } from "@/components/admin-ui";
-import { FeltPanel, PhotoPatch, StitchBadge } from "@/components/felt";
+import { FeltLink, FeltPanel, PhotoPatch, StitchBadge } from "@/components/felt";
 import felt from "@/components/felt.module.css";
 import { PageViewTransition } from "@/components/page-view-transition";
 import { prisma } from "@/lib/prisma";
@@ -45,8 +45,17 @@ export default async function VolunteerPage({ params, searchParams }: VolunteerP
   }
   const { context } = access;
 
-  const [{ error }, residents] = await Promise.all([
+  const [{ error }, openCheckIns, residents] = await Promise.all([
     searchParams.then((query) => volunteerQuerySchema.parse(query)),
+    prisma.checkIn.findMany({
+      where: { orgId: context.orgId, userId: context.userId, status: "in_progress" },
+      orderBy: { updatedAt: "desc" },
+      select: {
+        id: true,
+        resident: { select: { name: true, breed: true, photoUrls: true } },
+      },
+      take: MAX_CHECK_IN_RESIDENTS,
+    }),
     prisma.resident.findMany({
       where: {
         orgId: context.orgId,
@@ -84,6 +93,25 @@ export default async function VolunteerPage({ params, searchParams }: VolunteerP
 
           {error === "unavailable" ? (
             <p className={styles.chatError} role="alert">That companion is no longer available for check-ins.</p>
+          ) : null}
+
+          {openCheckIns.length > 0 ? (
+            <>
+              <h2 className={styles.pickerHeading}>Pick up where you left off</h2>
+              <div aria-label="Unfinished check-ins" className={styles.companionPicker}>
+                {openCheckIns.map(({ id, resident }) => (
+                  <FeltLink className={styles.companionCard} href={`/${orgSlug}/volunteer/${id}`} key={id} tone="oatmeal">
+                    <PhotoPatch alt="" className={styles.cardPhoto} sizes="(min-width: 42rem) 14rem, 45vw" src={resident.photoUrls[0]} />
+                    <span className={styles.cardCopy}>
+                      <span className={styles.cardName}>{resident.name}</span>
+                      <span className={styles.cardBreed}>{resident.breed}</span>
+                      <span className={clsx(felt["felt-button"], "felt-moss", styles.cardAction)}>Continue</span>
+                    </span>
+                  </FeltLink>
+                ))}
+              </div>
+              <h2 className={styles.pickerHeading}>Start a new check-in</h2>
+            </>
           ) : null}
 
           {checkInResidents.length > 0 ? (

@@ -64,6 +64,17 @@
   display: contents;
 }
 
+.pickerHeading {
+  margin: 0 0 0.9rem;
+  color: var(--felt-ink);
+  font-size: 1.15rem;
+  font-weight: 900;
+}
+
+.companionPicker + .pickerHeading {
+  margin-top: 0.25rem;
+}
+
 /* Each companion is the same oatmeal patch as the public roster card, with
    the photo cut into it and a stitch ring around the photo. */
 .companionCard {
