@@ -1,7 +1,11 @@
 "use client";
 
+import clsx from "clsx";
 import type { KeyboardEvent, ReactNode } from "react";
 import { useRef, useState } from "react";
+
+import { Stitch } from "@/components/felt";
+import felt from "@/components/felt.module.css";
 
 export type CheckInResident = {
   id: string;
@@ -72,7 +76,7 @@ export function CheckInChatView({
           return (
             <button
               aria-checked={selected}
-              className={classNames.companionChip}
+              className={clsx(felt["felt-button"], selected ? "felt-denim" : "felt-cream", classNames.companionChip)}
               key={resident.id}
               onClick={() => setResidentId(resident.id)}
               onKeyDown={handlePickerKeyDown}
@@ -83,6 +87,7 @@ export function CheckInChatView({
               tabIndex={selected ? 0 : -1}
               type="button"
             >
+              <Stitch fine />
               {renderPhoto(resident)}
               <span>{resident.name}</span>
             </button>
