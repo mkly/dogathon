@@ -75,8 +75,8 @@ export default async function VolunteerPage({ params, searchParams }: VolunteerP
               <StitchBadge tone="cream">Volunteer check-in</StitchBadge>
               <h1>Who did you spend time with today?</h1>
               <p className={styles.heroLede}>
-                Snap a photo and answer a few questions. It becomes a note for the care team
-                and the next update to their sponsors.
+                Snap a photo and answer a few questions. It becomes the next update for
+                their sponsors.
               </p>
             </div>
             <Image alt="" className={styles.heroMascot} preload src={feltPup} />
@@ -95,7 +95,7 @@ export default async function VolunteerPage({ params, searchParams }: VolunteerP
                     <span className={styles.cardCopy}>
                       <span className={styles.cardName}>{resident.name}</span>
                       <span className={styles.cardBreed}>{resident.breed}</span>
-                      <span className={styles.cardAction}>Check in →</span>
+                      <span className={clsx(felt["felt-button"], "felt-mustard", styles.cardAction)}>Check in</span>
                     </span>
                   </button>
                 </form>

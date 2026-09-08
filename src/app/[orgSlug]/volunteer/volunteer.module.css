@@ -126,10 +126,13 @@
 }
 
 .cardAction {
-  margin-top: 0.5rem;
-  color: var(--felt-denim);
+  display: inline-flex;
+  min-height: 2.1rem;
+  margin-top: 0.6rem;
+  padding: 0.4rem 0.9rem;
+  justify-self: start;
+  align-items: center;
   font-size: 0.82rem;
-  font-weight: 900;
 }
 
 .emptyPanel {
