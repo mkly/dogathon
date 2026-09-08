@@ -90,19 +90,41 @@ test("private and IP-literal roster sources are rejected", () => {
   }
 });
 
-test("parses the sponsorship price and canonical allowed origins", () => {
+test("parses sponsorship tiers and canonical allowed origins", () => {
   const formData = new FormData();
-  formData.set("sponsorshipMonthlyDollars", "32.50");
+  formData.append("tierMonthlyDollars", "32.50");
+  formData.append("tierDescription", "  Everyday care\n and treats  ");
+  formData.append("tierMonthlyDollars", "50");
+  formData.append("tierDescription", "Vet care");
   formData.set("allowedOrigins", "https://rescue.example/\nhttps://rescue.example\nhttps://embed.example:8443");
 
   assert.deepEqual(parseSettingsForm(formData), {
     ok: true,
     message: "Sponsorship settings saved.",
     settings: {
-      sponsorshipMonthlyCents: 3250,
       allowedOrigins: ["https://rescue.example", "https://embed.example:8443"],
     },
+    sponsorshipTiers: [
+      { monthlyCents: 3250, description: "Everyday care and treats" },
+      { monthlyCents: 5000, description: "Vet care" },
+    ],
   });
+});
+
+test("rejects markup and more than six sponsorship tiers", () => {
+  const markup = new FormData();
+  markup.set("allowedOrigins", "");
+  markup.append("tierMonthlyDollars", "25");
+  markup.append("tierDescription", "<strong>Care</strong>");
+  assert.equal(parseSettingsForm(markup).ok, false);
+
+  const tooMany = new FormData();
+  tooMany.set("allowedOrigins", "");
+  for (let index = 0; index < 7; index += 1) {
+    tooMany.append("tierMonthlyDollars", "25");
+    tooMany.append("tierDescription", "Care");
+  }
+  assert.equal(parseSettingsForm(tooMany).ok, false);
 });
 
 test("allowed origins are exact, scheme-sensitive, and port-sensitive", () => {

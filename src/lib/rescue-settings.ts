@@ -11,10 +11,15 @@ export type RescueSettingsPatch = {
   allowedOrigins?: string[];
   pinnedPostscript?: string;
   sourceUrl?: string;
-  sponsorshipMonthlyCents?: number;
 };
 
 export const DEFAULT_SPONSORSHIP_MONTHLY_CENTS = 2500;
+export const MAX_SPONSORSHIP_TIERS = 6;
+
+export type SponsorshipTierInput = {
+  monthlyCents: number;
+  description: string;
+};
 
 export type OriginSettings = { allowedOrigins: string[] };
 
@@ -35,6 +40,7 @@ type ParsedSettingsForm =
       message: string;
       savedSourceInput?: string;
       settings: RescueSettingsPatch;
+      sponsorshipTiers?: SponsorshipTierInput[];
     };
 
 const httpSourceSchema = z.url({ protocol: /^https?$/ })
@@ -49,7 +55,6 @@ const settingsFormSchema = z.object({
   allowedOrigins: z.string().optional(),
   pinnedPostscript: z.string().optional(),
   sourceUrl: z.string().optional(),
-  sponsorshipMonthlyDollars: z.string().optional(),
 });
 
 function parseMonthlyCents(value: string): number | null {
@@ -94,7 +99,10 @@ export function parseSettingsForm(formData: FormData): ParsedSettingsForm {
   }
   const savesPinnedPostscript = parsed.data.pinnedPostscript !== undefined;
   const savesSourceUrl = parsed.data.sourceUrl !== undefined;
-  const savesSponsorshipSettings = parsed.data.sponsorshipMonthlyDollars !== undefined
+  const tierAmounts = formData.getAll("tierMonthlyDollars");
+  const tierDescriptions = formData.getAll("tierDescription");
+  const savesSponsorshipSettings = tierAmounts.length > 0
+    || tierDescriptions.length > 0
     || parsed.data.allowedOrigins !== undefined;
 
   if (!savesPinnedPostscript && !savesSourceUrl && !savesSponsorshipSettings) {
@@ -114,27 +122,52 @@ export function parseSettingsForm(formData: FormData): ParsedSettingsForm {
 
   if (savesSponsorshipSettings) {
     if (
-      parsed.data.sponsorshipMonthlyDollars === undefined
+      tierAmounts.length === 0
+      || tierAmounts.length !== tierDescriptions.length
       || parsed.data.allowedOrigins === undefined
     ) {
-      return { ok: false, message: "Enter both a monthly price and the allowed origins." };
+      return { ok: false, message: "Enter at least one sponsorship tier and the allowed origins." };
     }
-    const sponsorshipMonthlyCents = parseMonthlyCents(parsed.data.sponsorshipMonthlyDollars);
-    if (sponsorshipMonthlyCents === null) {
-      return { ok: false, message: "Enter a monthly price from $1 to $10,000 with at most two decimal places." };
+    if (tierAmounts.length > MAX_SPONSORSHIP_TIERS) {
+      return { ok: false, message: `Enter no more than ${MAX_SPONSORSHIP_TIERS} sponsorship tiers.` };
+    }
+    const sponsorshipTiers: SponsorshipTierInput[] = [];
+    for (let index = 0; index < tierAmounts.length; index += 1) {
+      const amount = tierAmounts[index];
+      const rawDescription = tierDescriptions[index];
+      if (typeof amount !== "string" || typeof rawDescription !== "string") {
+        return { ok: false, message: "Enter valid sponsorship tier values." };
+      }
+      const monthlyCents = parseMonthlyCents(amount);
+      if (monthlyCents === null) {
+        return { ok: false, message: "Enter tier prices from $1 to $10,000 with at most two decimal places." };
+      }
+      const description = rawDescription.replace(/\s*(?:\r\n?|\n)\s*/gu, " ").trim();
+      if (description.length > 200) {
+        return { ok: false, message: "Keep each tier description to 200 characters or fewer." };
+      }
+      if (/[<>]/u.test(description)) {
+        return { ok: false, message: "Tier descriptions must be plain text without markup." };
+      }
+      sponsorshipTiers.push({ monthlyCents, description });
     }
     const allowedOrigins = parseAllowedOrigins(parsed.data.allowedOrigins);
     if (allowedOrigins === null) {
       return { ok: false, message: "Enter one HTTPS origin per line with no path, query, or wildcard." };
     }
-    settings.sponsorshipMonthlyCents = sponsorshipMonthlyCents;
     settings.allowedOrigins = allowedOrigins;
+    return {
+      ok: true,
+      message: "Sponsorship settings saved.",
+      settings,
+      sponsorshipTiers,
+    };
   }
 
   if (!savesSourceUrl) {
     return {
       ok: true,
-      message: savesSponsorshipSettings ? "Sponsorship settings saved." : "Email postscript saved.",
+      message: "Email postscript saved.",
       settings,
     };
   }

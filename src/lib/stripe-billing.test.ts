@@ -99,7 +99,7 @@ class MemoryBillingStore implements BillingStore {
     stripeAccountId: null as string | null,
     stripeDetailsSubmitted: false,
     stripeChargesEnabled: false,
-    settings: { sponsorshipMonthlyCents: 3750 },
+    sponsorshipTiers: [{ monthlyCents: 3750 }],
   };
 
   resident = { id: "companion_mabel", name: "Mabel", orgId: "org_rescue" };

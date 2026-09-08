@@ -85,10 +85,22 @@ export async function saveSettings(
     };
   }
 
-  await prisma.rescueSettings.upsert({
-    where: { orgId: context.orgId },
-    update: parsed.settings,
-    create: { orgId: context.orgId, ...parsed.settings },
+  await prisma.$transaction(async (tx) => {
+    await tx.rescueSettings.upsert({
+      where: { orgId: context.orgId },
+      update: parsed.settings,
+      create: { orgId: context.orgId, ...parsed.settings },
+    });
+    if (parsed.sponsorshipTiers) {
+      await tx.sponsorshipTier.deleteMany({ where: { orgId: context.orgId } });
+      await tx.sponsorshipTier.createMany({
+        data: parsed.sponsorshipTiers.map((tier, position) => ({
+          ...tier,
+          orgId: context.orgId,
+          position,
+        })),
+      });
+    }
   });
 
   revalidatePublicRoster();

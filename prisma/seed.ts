@@ -133,16 +133,18 @@ async function main() {
     update: {
       sourceUrl: "seed/dogs-page-B.html",
       pinnedPostscript: "Come meet the companions at our next adoption fair!",
-      sponsorshipMonthlyCents: 2500,
       allowedOrigins: ["https://example-rescue.org"],
     },
     create: {
       orgId: organization.id,
       sourceUrl: "seed/dogs-page-B.html",
       pinnedPostscript: "Come meet the companions at our next adoption fair!",
-      sponsorshipMonthlyCents: 2500,
       allowedOrigins: ["https://example-rescue.org"],
     },
+  });
+  await prisma.sponsorshipTier.deleteMany({ where: { orgId: organization.id } });
+  await prisma.sponsorshipTier.create({
+    data: { orgId: organization.id, monthlyCents: 2500, description: "", position: 0 },
   });
 
   const secondOrganization = await prisma.organization.upsert({
@@ -250,16 +252,18 @@ async function main() {
     update: {
       sourceUrl: "seed/dogs-page-A.html",
       pinnedPostscript: "Happy Tails adoption hours are Saturday afternoons.",
-      sponsorshipMonthlyCents: 3000,
       allowedOrigins: ["https://happy-tails.example"],
     },
     create: {
       orgId: secondOrganization.id,
       sourceUrl: "seed/dogs-page-A.html",
       pinnedPostscript: "Happy Tails adoption hours are Saturday afternoons.",
-      sponsorshipMonthlyCents: 3000,
       allowedOrigins: ["https://happy-tails.example"],
     },
+  });
+  await prisma.sponsorshipTier.deleteMany({ where: { orgId: secondOrganization.id } });
+  await prisma.sponsorshipTier.create({
+    data: { orgId: secondOrganization.id, monthlyCents: 3000, description: "", position: 0 },
   });
 
   console.log("Seeded two organizations with distinct rosters, care history, sponsorships, and settings.");

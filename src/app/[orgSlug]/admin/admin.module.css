@@ -286,6 +286,10 @@
 .settingsIntro > p:last-child { margin: 16px 0 0; font-size: 0.88rem; font-weight: 700; line-height: 1.55; opacity: 0.88; }
 .settingsForm { display: grid; gap: 14px; }
 .settingsForm label { margin: 6px 0 0; font-size: 0.7rem; font-weight: 900; letter-spacing: 0.08em; text-transform: uppercase; }
+.tierList { display: grid; gap: 12px; }
+.tier { display: grid; gap: 10px; margin: 0; padding: 14px; border: 1px solid rgb(61 51 43 / 24%); }
+.tier legend { padding: 0 6px; font-size: 0.78rem; font-weight: 900; }
+.tierActions { display: flex; flex-wrap: wrap; gap: 8px; }
 .originsTextarea { min-height: 7rem; resize: vertical; }
 .fieldHint { margin: -4px 0 0; font-size: 0.75rem; font-weight: 700; line-height: 1.45; opacity: 0.75; }
 
