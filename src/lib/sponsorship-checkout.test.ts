@@ -7,9 +7,16 @@ import {
 } from "./sponsorship-checkout.ts";
 
 const residentId = "5af589d8-dc5f-4bc7-9ce3-2ca9f06833c8";
-const organization = { id: "org_rescue", settings: { allowedOrigins: [] } };
+const organization = {
+  id: "org_rescue",
+  settings: { allowedOrigins: [] },
+  sponsorshipTiers: [
+    { id: "tier-supporter", monthlyCents: 2500 },
+    { id: "tier-champion", monthlyCents: 5000 },
+  ],
+};
 
-function dependencies() {
+function dependencies(expectedMonthlyCents = 2500) {
   let checkoutCalled = false;
   const value: SponsorshipCheckoutDependencies = {
     async createCheckout(input) {
@@ -18,6 +25,7 @@ function dependencies() {
       assert.equal(input.residentId, residentId);
       assert.equal(input.sponsorName, "Avery Sponsor");
       assert.equal(input.sponsorEmail, "avery@example.com");
+      assert.equal(input.monthlyCents, expectedMonthlyCents);
       return { url: "https://checkout.stripe.test/session" };
     },
     async findOrganization(slug) {
@@ -60,6 +68,33 @@ test("the existing resident-id checkout path creates a Stripe session", async ()
 
   assert.deepEqual(result, { ok: true, url: "https://checkout.stripe.test/session" });
   assert.equal(deps.checkoutCalled, true);
+});
+
+test("checkout uses the selected organization tier", async () => {
+  const deps = dependencies(5000);
+  const result = await startSponsorshipCheckout(
+    input({ tier: "tier-champion" }),
+    destination,
+    { dependencies: deps.value },
+  );
+
+  assert.deepEqual(result, { ok: true, url: "https://checkout.stripe.test/session" });
+  assert.equal(deps.checkoutCalled, true);
+});
+
+test("checkout rejects a tier outside the organization", async () => {
+  const deps = dependencies();
+  const result = await startSponsorshipCheckout(
+    input({ tier: "tier-from-another-rescue" }),
+    destination,
+    { dependencies: deps.value },
+  );
+
+  assert.equal(result.ok, false);
+  if (result.ok || result.reason !== "checkout-error") assert.fail("expected checkout error");
+  assert.equal(result.code, "invalid-tier");
+  assert.equal(result.errorUrl, "https://app.test/companion?error=invalid-tier");
+  assert.equal(deps.checkoutCalled, false);
 });
 
 test("invalid sponsor details retain the companion context for the server action", async () => {

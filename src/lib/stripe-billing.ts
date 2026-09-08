@@ -1,7 +1,6 @@
 import Stripe from "stripe";
 
 import { env } from "./env.ts";
-import { DEFAULT_SPONSORSHIP_MONTHLY_CENTS } from "./rescue-settings.ts";
 
 import { prisma } from "@/lib/prisma";
 
@@ -19,7 +18,6 @@ type ConnectedOrganization = {
   stripeAccountId: string | null;
   stripeDetailsSubmitted: boolean;
   stripeChargesEnabled: boolean;
-  sponsorshipTiers: Array<{ monthlyCents: number }>;
 };
 
 type AvailableResident = {
@@ -33,6 +31,7 @@ export type SponsorshipCheckout = {
   residentId: string;
   sponsorName: string;
   sponsorEmail: string;
+  monthlyCents: number;
   successUrl: string;
   cancelUrl: string;
 };
@@ -75,7 +74,6 @@ const prismaBillingStore: BillingStore = {
         stripeAccountId: true,
         stripeDetailsSubmitted: true,
         stripeChargesEnabled: true,
-        sponsorshipTiers: { orderBy: { position: "asc" }, select: { monthlyCents: true }, take: 1 },
       },
     });
   },
@@ -271,8 +269,6 @@ export async function createStripeCheckout(
     throw new Error("This organization is not ready to accept sponsorship payments");
   }
   if (!resident) throw new ResidentUnavailableError();
-  const monthlyCents = organization.sponsorshipTiers[0]?.monthlyCents
-    ?? DEFAULT_SPONSORSHIP_MONTHLY_CENTS;
 
   const session = await stripe().checkout.sessions.create(
     {
@@ -282,7 +278,7 @@ export async function createStripeCheckout(
         {
           price_data: {
             currency: "usd",
-            unit_amount: monthlyCents,
+            unit_amount: input.monthlyCents,
             recurring: { interval: "month" },
             product_data: { name: `Sponsor ${resident.name}` },
           },
@@ -294,13 +290,13 @@ export async function createStripeCheckout(
         residentId: input.residentId,
         sponsorName: input.sponsorName,
         sponsorEmail: input.sponsorEmail,
-        monthlyCents: String(monthlyCents),
+        monthlyCents: String(input.monthlyCents),
       },
       subscription_data: {
         metadata: {
           orgId: input.orgId,
           residentId: input.residentId,
-          monthlyCents: String(monthlyCents),
+          monthlyCents: String(input.monthlyCents),
         },
       },
       success_url: input.successUrl,

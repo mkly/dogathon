@@ -10,7 +10,10 @@ const organization = {
   settings: {
     allowedOrigins: ["https://rescue.example"],
   },
-  sponsorshipTiers: [{ monthlyCents: 3250 }],
+  sponsorshipTiers: [
+    { id: "tier-supporter", monthlyCents: 3250, description: "Food and daily care" },
+    { id: "tier-champion", monthlyCents: 6000, description: "Food, care, and enrichment" },
+  ],
 };
 
 const resident = {
@@ -70,6 +73,7 @@ test("returns the public companion contract and allows a configured origin", asy
     ageText: "Adult",
     sex: "Female",
     photoUrl: "https://images.example/biscuit.jpg",
+    tiers: organization.sponsorshipTiers,
     monthlyCents: 3250,
     currency: "usd",
     status: "available",

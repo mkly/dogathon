@@ -20,11 +20,17 @@ const detailsSchema = z.object({
   sponsorEmail: z.string().trim().email().max(254),
 });
 
-export type SponsorshipCheckoutErrorCode = "invalid" | "rate-limited" | "unavailable" | "billing";
+export type SponsorshipCheckoutErrorCode =
+  | "invalid"
+  | "invalid-tier"
+  | "rate-limited"
+  | "unavailable"
+  | "billing";
 
 export type SponsorshipOrganization = {
   id: string;
   settings: { allowedOrigins: string[] } | null;
+  sponsorshipTiers: Array<{ id: string; monthlyCents: number }>;
 };
 
 type CheckoutDestination = {
@@ -44,6 +50,7 @@ export type SponsorshipCheckoutInput = {
   sponsorEmail: unknown;
   sponsorName: unknown;
   target: unknown;
+  tier?: unknown;
 };
 
 export type SponsorshipCheckoutResult =
@@ -72,7 +79,14 @@ const defaultDependencies: SponsorshipCheckoutDependencies = {
   findOrganization(slug) {
     return prisma.organization.findUnique({
       where: { slug },
-      select: { id: true, settings: { select: { allowedOrigins: true } } },
+      select: {
+        id: true,
+        settings: { select: { allowedOrigins: true } },
+        sponsorshipTiers: {
+          orderBy: { position: "asc" },
+          select: { id: true, monthlyCents: true },
+        },
+      },
     });
   },
   findResidentBySource: getPublicResidentBySource,
@@ -141,6 +155,19 @@ export async function startSponsorshipCheckout(
     });
   }
 
+  const tier = input.tier === undefined
+    ? organization.sponsorshipTiers[0]
+    : typeof input.tier === "string"
+      ? organization.sponsorshipTiers.find(({ id }) => id === input.tier)
+      : undefined;
+  if (!tier) {
+    return checkoutError("invalid-tier", {
+      destination,
+      orgSlug,
+      residentId: target.kind === "resident-id" ? target.value : undefined,
+    });
+  }
+
   const rateLimit = await dependencies.rateLimit(input.headers);
   if (!rateLimit.allowed) {
     return checkoutError("rate-limited", {
@@ -165,6 +192,7 @@ export async function startSponsorshipCheckout(
   try {
     const session = await dependencies.createCheckout({
       orgId: organization.id,
+      monthlyCents: tier.monthlyCents,
       residentId,
       sponsorName: details.data.sponsorName,
       sponsorEmail: details.data.sponsorEmail,

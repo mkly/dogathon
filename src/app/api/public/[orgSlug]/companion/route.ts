@@ -19,7 +19,7 @@ type PublicOrganization = {
   settings: {
     allowedOrigins: string[];
   } | null;
-  sponsorshipTiers: Array<{ monthlyCents: number }>;
+  sponsorshipTiers: Array<{ id: string; monthlyCents: number; description: string }>;
 };
 
 type PublicResident = {
@@ -144,6 +144,11 @@ export function createPublicCompanionHandlers(
       ageText: resident.ageText,
       sex: resident.sex,
       photoUrl: resident.photoUrls[0] ?? null,
+      tiers: organization.sponsorshipTiers.map(({ id, monthlyCents, description }) => ({
+        id,
+        monthlyCents,
+        description,
+      })),
       monthlyCents: organization.sponsorshipTiers[0]?.monthlyCents
         ?? DEFAULT_SPONSORSHIP_MONTHLY_CENTS,
       currency: "usd",

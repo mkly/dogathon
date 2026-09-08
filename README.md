@@ -129,17 +129,20 @@ The embed depends on these public endpoint contracts:
 
 - `GET /api/public/{orgSlug}/companion` accepts either `source={absolutePageUrl}` or
   `companion={residentSlug}`; `companion` wins when both are present. It returns `{ id, name, slug,
-  sourceUrl, breed, ageText, sex, photoUrl, monthlyCents, currency, status, companionUrl,
-  sponsorUrl }`. `status` is `available`, `sponsored`, or `adopted`; an unknown organization,
-  source, or slug returns `404` with `{ error }`.
+  sourceUrl, breed, ageText, sex, photoUrl, tiers, monthlyCents, currency, status, companionUrl,
+  sponsorUrl }`, where `tiers` is the ordered array of `{ id, monthlyCents, description }` and
+  `monthlyCents` matches its first entry. `status` is `available`, `sponsored`, or `adopted`; an
+  unknown organization, source, or slug returns `404` with `{ error }`.
 - `POST /api/public/{orgSlug}/checkout` accepts either form-encoded or JSON `source`,
-  `sponsorName`, `sponsorEmail`, and `returnTo`. `returnTo` must be an absolute URL on an origin
-  configured for that organization. A form post redirects to Stripe with `303`; a JSON request
-  returns `{ url }`.
+  `sponsorName`, `sponsorEmail`, `returnTo`, and an optional `tier` containing a tier ID. A missing
+  `tier` uses the first configured tier; an ID that does not belong to the organization returns
+  `invalid-tier`. `returnTo` must be an absolute URL on an origin configured for that organization.
+  A form post redirects to Stripe with `303`; a JSON request returns `{ url }`.
 - Successful and canceled checkout redirects add `sponsored=1` (plus `session_id`) or
   `checkout=canceled` to `returnTo`. Checkout errors add `error=invalid`, `error=rate-limited`,
-  `error=unavailable`, or `error=billing`. JSON errors return the same code in `{ error }` with
-  status `400`, `429`, `409`, or `502`, respectively.
+  `error=invalid-tier`, `error=unavailable`, or `error=billing`. JSON errors return the same code in
+  `{ error }`: invalid requests and tiers use status `400`, rate limits use `429`, unavailable
+  companions use `409`, and billing failures use `502`.
 - Cross-origin reads and JSON checkout calls require the page origin in the organization's allowed
   origins. Normal HTML form navigation does not require CORS, but its `returnTo` origin is still
   validated.

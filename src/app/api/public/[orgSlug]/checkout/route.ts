@@ -12,6 +12,7 @@ type CheckoutPayload = {
   source?: unknown;
   sponsorEmail?: unknown;
   sponsorName?: unknown;
+  tier?: unknown;
 };
 
 type HandlerDependencies = {
@@ -116,6 +117,7 @@ export function createPublicCheckoutPostHandler(dependencies: HandlerDependencie
       sponsorEmail: parsed.payload.sponsorEmail,
       sponsorName: parsed.payload.sponsorName,
       target: { kind: "source", value: parsed.payload.source },
+      tier: parsed.payload.tier,
     }, () => urls, {
       dependencies: dependencies.checkoutDependencies,
       organization,

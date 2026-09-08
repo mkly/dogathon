@@ -183,18 +183,19 @@ function signedEvent(object: Record<string, unknown>, type: string) {
   return constructStripeEvent(payload, signature, secret);
 }
 
-test("Stripe SDK checkout uses the organization's monthly price on the connected account", async () => {
+test("Stripe SDK checkout uses the selected tier amount on the connected account", async () => {
   server.use(http.post(`${stripeApi}/v1/checkout/sessions`, async ({ request }) => {
     const body = await formData(request);
     assert.equal(body.get("mode"), "subscription");
     assert.equal(
       body.get("line_items[0][price_data][unit_amount]"),
-      "3750",
+      "5200",
     );
     assert.equal(body.get("line_items[0][price_data][recurring][interval]"), "month");
     assert.equal(body.get("line_items[0][price_data][product_data][name]"), "Sponsor Mabel");
     assert.equal(body.get("subscription_data[metadata][orgId]"), "org_rescue");
-    assert.equal(body.get("subscription_data[metadata][monthlyCents]"), "3750");
+    assert.equal(body.get("metadata[monthlyCents]"), "5200");
+    assert.equal(body.get("subscription_data[metadata][monthlyCents]"), "5200");
     assert.equal(request.headers.get("stripe-account"), "acct_fixture_rescue");
     return HttpResponse.json({
       id: "cs_sdk_fixture",
@@ -211,6 +212,7 @@ test("Stripe SDK checkout uses the organization's monthly price on the connected
     residentId: "companion_mabel",
     sponsorName: "Avery Sponsor",
     sponsorEmail: "avery@example.com",
+    monthlyCents: 5200,
     successUrl: "https://app.test/success",
     cancelUrl: "https://app.test/cancel",
   }, store);
@@ -332,6 +334,7 @@ test("Stripe Connect onboarding, checkout, and signed webhooks maintain sponsors
       residentId: "companion_mabel",
       sponsorName: "Avery Sponsor",
       sponsorEmail: "avery@example.com",
+      monthlyCents: 3750,
       successUrl: "https://app.test/companions/companion_mabel?sponsored=1",
       cancelUrl: "https://app.test/companions/companion_mabel?checkout=canceled",
     },
@@ -425,6 +428,7 @@ test("checkout refuses an unavailable resident with a distinguishable error", as
         residentId: "companion_mabel",
         sponsorName: "Avery Sponsor",
         sponsorEmail: "avery@example.com",
+        monthlyCents: 3750,
         successUrl: "https://app.test/success",
         cancelUrl: "https://app.test/cancel",
       },
