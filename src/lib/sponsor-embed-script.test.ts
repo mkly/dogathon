@@ -114,6 +114,8 @@ test("cta mode renders only a sponsor link and preserves sponsorship-page query 
   });
 
   const cta = root.querySelector<HTMLAnchorElement>("a.dogathon-sponsor-cta");
+  assert.equal(root.classList.contains("dogathon-sponsor-root-cta"), true);
+  assert.equal(root.classList.contains("dogathon-sponsor-root"), false);
   assert.equal(cta?.textContent, "Sponsor Biscuit");
   assert.equal(
     cta?.href,

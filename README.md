@@ -103,8 +103,10 @@ Put the CTA embed on the animal-page template and set `data-sponsor-info-url` to
 ```
 
 The script resolves the animal from the current page (or `data-sponsor-source`) and renders a
-`Sponsor <name>` link whose URL includes the encoded source. On the shared sponsorship page, use
-card mode without `data-sponsor-source`:
+`Sponsor <name>` link whose URL includes the encoded source. CTA mode renders an unstyled link so it
+inherits the host site's link and text styles. Target `.dogathon-sponsor-cta` in the host stylesheet
+to customize its presentation. On the shared sponsorship page, use card mode without
+`data-sponsor-source`:
 
 ```html
 <div data-sponsor-org="happy-paws" data-sponsor-mode="card"></div>
