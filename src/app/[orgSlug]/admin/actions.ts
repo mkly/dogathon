@@ -9,7 +9,11 @@ import { getOrganizationAccessBySlug } from "@/lib/organization-access";
 import { env } from "@/lib/env";
 import { prisma } from "@/lib/prisma";
 import { revalidatePublicRoster } from "@/lib/public-roster-cache";
-import { parseSettingsForm } from "@/lib/rescue-settings";
+import {
+  parseAllowedOriginsForm,
+  parseSettingsForm,
+  parseSponsorshipTiersForm,
+} from "@/lib/rescue-settings";
 import {
   markResidentAdopted as retireAdoptedResident,
 } from "@/lib/roster-sync";
@@ -101,20 +105,23 @@ export async function refreshStripeConnection(formData: FormData) {
   revalidatePath(`/${orgSlug}/admin/settings`);
 }
 
-export async function saveSettings(
-  previousState: SettingsState,
-  formData: FormData,
-): Promise<SettingsState> {
+async function requireSettingsAccess(formData: FormData) {
   const input = organizationFormSchema.safeParse(Object.fromEntries(formData));
   if (!input.success) notFound();
   const { orgSlug } = input.data;
   const access = await getOrganizationAccessBySlug(await headers(), orgSlug, {
     settings: ["manage"],
   });
-
   if (!access) notFound();
   if (!access.context) redirect("/staff/organizations");
-  const { context } = access;
+  return { orgSlug, orgId: access.context.orgId };
+}
+
+export async function saveSettings(
+  previousState: SettingsState,
+  formData: FormData,
+): Promise<SettingsState> {
+  const { orgId, orgSlug } = await requireSettingsAccess(formData);
 
   const parsed = parseSettingsForm(formData);
   if (!parsed.ok) {
@@ -127,22 +134,10 @@ export async function saveSettings(
     };
   }
 
-  await prisma.$transaction(async (tx) => {
-    await tx.rescueSettings.upsert({
-      where: { orgId: context.orgId },
-      update: parsed.settings,
-      create: { orgId: context.orgId, ...parsed.settings },
-    });
-    if (parsed.sponsorshipTiers) {
-      await tx.sponsorshipTier.deleteMany({ where: { orgId: context.orgId } });
-      await tx.sponsorshipTier.createMany({
-        data: parsed.sponsorshipTiers.map((tier, position) => ({
-          ...tier,
-          orgId: context.orgId,
-          position,
-        })),
-      });
-    }
+  await prisma.rescueSettings.upsert({
+    where: { orgId },
+    update: parsed.settings,
+    create: { orgId, ...parsed.settings },
   });
 
   revalidatePublicRoster();
@@ -152,4 +147,41 @@ export async function saveSettings(
     message: parsed.message,
     ...(parsed.savedSourceInput ? { savedSourceInput: parsed.savedSourceInput } : {}),
   };
+}
+
+export async function saveSponsorshipTiers(
+  _previousState: SettingsState,
+  formData: FormData,
+): Promise<SettingsState> {
+  const { orgId, orgSlug } = await requireSettingsAccess(formData);
+  const parsed = parseSponsorshipTiersForm(formData);
+  if (!parsed.ok) return { status: "error", message: parsed.message };
+
+  await prisma.$transaction(async (tx) => {
+    await tx.sponsorshipTier.deleteMany({ where: { orgId } });
+    await tx.sponsorshipTier.createMany({
+      data: parsed.sponsorshipTiers.map((tier, position) => ({ ...tier, orgId, position })),
+    });
+  });
+  revalidatePublicRoster();
+  revalidatePath(`/${orgSlug}/admin/settings`);
+  return { status: "success", message: parsed.message };
+}
+
+export async function saveAllowedOrigins(
+  _previousState: SettingsState,
+  formData: FormData,
+): Promise<SettingsState> {
+  const { orgId, orgSlug } = await requireSettingsAccess(formData);
+  const parsed = parseAllowedOriginsForm(formData);
+  if (!parsed.ok) return { status: "error", message: parsed.message };
+
+  await prisma.rescueSettings.upsert({
+    where: { orgId },
+    update: { allowedOrigins: parsed.allowedOrigins },
+    create: { orgId, allowedOrigins: parsed.allowedOrigins },
+  });
+  revalidatePublicRoster();
+  revalidatePath(`/${orgSlug}/admin/settings`);
+  return { status: "success", message: parsed.message };
 }
