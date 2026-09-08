@@ -60,8 +60,8 @@ export function MarkAdoptedButton({
               <h2>Mark {residentName} adopted?</h2>
             </AlertDialog.Title>
             <AlertDialog.Description className={styles.dialogDescription}>
-              {residentName} leaves the public roster and every active sponsorship ends.
-              An adoption notice is drafted for each sponsor so you can edit it before it goes out.
+              {residentName} leaves the public roster and an adoption notice is drafted for each
+              active sponsorship. Nothing is billed, paused, or ended until staff approve a notice.
             </AlertDialog.Description>
             <div className={styles.modalActions}>
               <AlertDialog.Cancel asChild>

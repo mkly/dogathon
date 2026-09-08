@@ -39,6 +39,7 @@ export async function GET(request: Request, { params }: RouteContext) {
       resident: {
         select: {
           name: true,
+          available: true,
           photoUrls: true,
           sponsorships: {
             orderBy: { createdAt: "asc" },
@@ -60,7 +61,7 @@ export async function GET(request: Request, { params }: RouteContext) {
     bodyText: sponsorUpdate.bodyText,
     companionUrl: companionPageUrl(origin, sponsorUpdate.organization.slug, sponsorUpdate.residentId),
     monthlyCents: sponsorUpdate.resident.sponsorships.find((sponsorship) =>
-      isSponsorUpdateRecipient(sponsorUpdate.type, sponsorship))?.monthlyCents
+      isSponsorUpdateRecipient(sponsorUpdate.type, sponsorship, sponsorUpdate.resident.available))?.monthlyCents
       ?? DEFAULT_SPONSORSHIP_MONTHLY_CENTS,
     origin,
     photoUrl: sponsorUpdate.photoUrl ?? sponsorUpdate.resident.photoUrls[0] ?? null,

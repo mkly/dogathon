@@ -18,6 +18,7 @@ const baseUpdate = {
   organization: { slug: "huffy-puff" },
   resident: {
     name: "Biscuit",
+    available: false,
     photoUrls: [],
     sponsorships: [
       {

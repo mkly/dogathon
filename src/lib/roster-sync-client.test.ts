@@ -13,7 +13,6 @@ const summary = {
   adopted: 0,
     madeUnavailable: 0,
   madeAvailable: 0,
-  sponsorshipsClosed: 0,
   usedFallbackCapture: false,
   rosterComplete: true,
   rosterCompleteness: {

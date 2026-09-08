@@ -20,7 +20,7 @@ type RouteContext = { params: Promise<{ id: string }> };
 
 type ApprovalSponsorship = DeliverySponsorship & {
   monthlyCents: number;
-  status: "active" | "ended";
+  status: "active" | "awaiting" | "ended";
   endedReason: "adopted" | "unavailable" | "canceled" | null;
 };
 
@@ -32,12 +32,13 @@ type ApprovalUpdate = {
   subject: string;
   bodyText: string;
   photoUrl: string | null;
-  status: "draft" | "approved" | "sent";
+  status: "draft" | "approved" | "sent" | "dismissed";
   organization: {
     slug: string;
   };
   resident: {
     name: string;
+    available: boolean;
     photoUrls: string[];
     sponsorships: ApprovalSponsorship[];
   };
@@ -165,7 +166,7 @@ export function createApproveSponsorUpdateHandler(dependencies: ApprovalDependen
 
     try {
       const sponsorships = sponsorUpdate.resident.sponsorships.filter((sponsorship) =>
-        isSponsorUpdateRecipient(sponsorUpdate.type, sponsorship));
+        isSponsorUpdateRecipient(sponsorUpdate.type, sponsorship, sponsorUpdate.resident.available));
       const groups = Map.groupBy(sponsorships, ({ monthlyCents }) => monthlyCents);
       const deliveries = (await Promise.all([...groups].map(async ([monthlyCents, recipients]) => {
         const message = await dependencies.renderMessage(
