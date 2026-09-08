@@ -14,8 +14,10 @@ import {
   connectAccountStatus,
   createConnectOnboardingLink,
   createStripeCheckout,
+  pauseStripeCollection,
   processStripeEvent,
   refreshConnectStatus,
+  resumeStripeCollection,
 } from "./stripe-billing";
 import { env } from "./env.ts";
 
@@ -82,7 +84,7 @@ after(() => server.close());
 
 type SponsorshipRecord = Parameters<BillingStore["activateSponsorship"]>[0] & {
   sponsorId: string;
-  status: "active" | "ended";
+  status: "active" | "awaiting" | "ended";
 };
 
 type SponsorRecord = {
@@ -254,11 +256,81 @@ test("Stripe SDK cancels a subscription on the rescue's connected account", asyn
   }));
 
   const subscription = await cancelStripeSubscription({
-    accountId: "acct_fixture_rescue",
+    stripeAccountId: "acct_fixture_rescue",
     subscriptionId: "sub_adopted",
   });
 
-  assert.equal(subscription.status, "canceled");
+  assert.equal(subscription?.status, "canceled");
+});
+
+test("Stripe SDK pauses collection by voiding renewal invoices on the connected account", async () => {
+  server.use(http.post(`${stripeApi}/v1/subscriptions/:subscriptionId`, async ({ params, request }) => {
+    const body = await formData(request);
+    assert.equal(params.subscriptionId, "sub_adopted");
+    assert.equal(body.get("pause_collection[behavior]"), "void");
+    assert.equal(request.headers.get("stripe-account"), "acct_fixture_rescue");
+    return HttpResponse.json({
+      id: "sub_adopted",
+      object: "subscription",
+      pause_collection: { behavior: "void" },
+    });
+  }));
+
+  const subscription = await pauseStripeCollection({
+    stripeAccountId: "acct_fixture_rescue",
+    subscriptionId: "sub_adopted",
+  });
+
+  assert.equal(subscription?.pause_collection?.behavior, "void");
+});
+
+test("Stripe SDK resumes collection with a fresh billing anchor and no proration", async () => {
+  const now = new Date("2026-09-08T15:30:00.000Z");
+  server.use(http.post(`${stripeApi}/v1/subscriptions/:subscriptionId`, async ({ params, request }) => {
+    const body = await formData(request);
+    assert.equal(params.subscriptionId, "sub_transferred");
+    assert.equal(body.get("pause_collection"), "");
+    assert.equal(body.get("billing_cycle_anchor"), "now");
+    assert.equal(body.get("proration_behavior"), "none");
+    assert.equal(request.headers.get("stripe-account"), "acct_fixture_rescue");
+    return HttpResponse.json({
+      id: "sub_transferred",
+      object: "subscription",
+      pause_collection: null,
+    });
+  }));
+
+  const subscription = await resumeStripeCollection({
+    stripeAccountId: "acct_fixture_rescue",
+    subscriptionId: "sub_transferred",
+    now,
+  });
+
+  assert.equal(subscription?.pause_collection, null);
+});
+
+test("Stripe subscription helpers log and do nothing when billing identifiers are missing", async () => {
+  const messages: string[] = [];
+  const originalInfo = console.info;
+  console.info = (message: string) => { messages.push(message); };
+
+  try {
+    assert.equal(await pauseStripeCollection({ stripeAccountId: null, subscriptionId: "sub_1" }), undefined);
+    assert.equal(await resumeStripeCollection({
+      stripeAccountId: "acct_1",
+      subscriptionId: null,
+      now: new Date(),
+    }), undefined);
+    assert.equal(await cancelStripeSubscription({ stripeAccountId: null, subscriptionId: null }), undefined);
+  } finally {
+    console.info = originalInfo;
+  }
+
+  assert.deepEqual(messages, [
+    "Skipping Stripe subscription pause: subscription or connected account is missing",
+    "Skipping Stripe subscription resume: subscription or connected account is missing",
+    "Skipping Stripe subscription cancel: subscription or connected account is missing",
+  ]);
 });
 
 test("resuming onboarding re-requests card payments on an existing connected account", async () => {
@@ -377,6 +449,7 @@ test("Stripe Connect onboarding, checkout, and signed webhooks maintain sponsors
     userId: null,
   });
 
+  store.sponsorships.get("cs_fixture")!.status = "awaiting";
   await processStripeEvent(signedEvent({
     id: "sub_fixture",
     object: "subscription",
