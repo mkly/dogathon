@@ -1,4 +1,5 @@
 import { getInterviewRouteContext, parseInterviewRouteRequest } from "../route-utils";
+import { shrinkPhotoForInterview } from "@/app/[orgSlug]/volunteer/photo";
 import { interviewTurn } from "@/lib/volunteer-interview";
 import { checkRateLimit, getRateLimitIdentity, RATE_LIMITS, rateLimitResponse } from "@/lib/rate-limit";
 import { prisma } from "@/lib/prisma";
@@ -19,7 +20,8 @@ export async function POST(request: Request) {
     let photo;
     if (route.context.messages.length === 0 && route.context.photoStorageKey) {
       try {
-        photo = await getPhoto(route.context.photoStorageKey) ?? undefined;
+        const stored = await getPhoto(route.context.photoStorageKey);
+        photo = stored ? await shrinkPhotoForInterview(stored.data) : undefined;
       } catch (error) {
         console.error("Volunteer interview photo could not be read; opening without it", error);
       }

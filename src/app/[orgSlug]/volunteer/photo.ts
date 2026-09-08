@@ -52,3 +52,20 @@ export async function processVolunteerPhoto(
     return undefined;
   }
 }
+
+// The interview model only needs enough of the photo to describe the scene,
+// and the vision endpoint fails on larger images, so a small copy goes to it.
+export const INTERVIEW_PHOTO_DIMENSION = 512;
+
+export async function shrinkPhotoForInterview(input: Uint8Array): Promise<{ data: Uint8Array; mime: "image/jpeg" }> {
+  const data = await sharp(input)
+    .resize({
+      width: INTERVIEW_PHOTO_DIMENSION,
+      height: INTERVIEW_PHOTO_DIMENSION,
+      fit: "inside",
+      withoutEnlargement: true,
+    })
+    .jpeg({ quality: 80 })
+    .toBuffer();
+  return { data: new Uint8Array(data), mime: "image/jpeg" };
+}
