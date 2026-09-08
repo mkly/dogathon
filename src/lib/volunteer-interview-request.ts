@@ -4,7 +4,7 @@ import { uuidSchema } from "./uuid.ts";
 
 const textPartSchema = z.object({
   type: z.literal("text"),
-  text: z.string().min(1).max(2000),
+  text: z.string().min(1).max(10_000),
 });
 
 /**
