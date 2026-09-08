@@ -187,9 +187,9 @@ export async function summarizeInterview(input: InterviewInput): Promise<{ note:
       maxOutputTokens: MAX_INTERVIEW_SUMMARY_OUTPUT_TOKENS,
       providerOptions: reasoning("medium"),
       instructions: [
-        "Turn the volunteer interview into one concise plain-text note that a writer will later draw on for a cheerful email update to the companion's sponsors.",
-        "Keep the vivid specifics: activities, personality, funny or sweet moments, and the volunteer's own wording. Use only facts in the transcript, do not invent details, and leave out anything that reads like a medical or care report.",
-        "First person is allowed. The note must be no longer than 2000 characters.",
+        "Condense the volunteer interview into a short plain-text note, two to four sentences, that a writer will later draw on for a cheerful email update to the companion's sponsors.",
+        "Keep only the vivid specifics: activities, personality, funny or sweet moments, and the volunteer's own wording. Use only facts in the transcript, do not invent details, and leave out anything that reads like a medical or care report.",
+        "Write the facts directly. No heading, no preamble, no commentary about what the note is for or what was not mentioned, and no remarks about the photo unless the volunteer described it.",
       ].join(" "),
       prompt: JSON.stringify({ companion: input.companion, transcript }),
     }));

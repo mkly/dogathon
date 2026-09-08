@@ -49,7 +49,6 @@ export default async function CheckInPage({ params, searchParams }: CheckInPageP
   const checkIn = await prisma.checkIn.findFirst({
     where: { id: checkInId, orgId: access.context.orgId, userId: access.context.userId },
     select: {
-      note: { select: { note: true } },
       photos: {
         orderBy: { createdAt: "asc" },
         select: { id: true, url: true },
@@ -73,8 +72,7 @@ export default async function CheckInPage({ params, searchParams }: CheckInPageP
             <PhotoPatch alt="" className={styles.confirmationPhoto} sizes="9rem" src={residentPhoto} />
             <StitchBadge tone="cream">Note tucked in</StitchBadge>
             <h1>Thanks for checking in on {residentName}!</h1>
-            <p>The care team can see your note now, and it goes into the next sponsor update.</p>
-            {checkIn.note ? <blockquote className={styles.savedNote}>{checkIn.note.note}</blockquote> : null}
+            <p>It goes into the next update for {residentName}’s sponsors.</p>
             <FeltLink className={styles.againLink} href={`/${orgSlug}/volunteer`}>
               Check in on someone else
             </FeltLink>

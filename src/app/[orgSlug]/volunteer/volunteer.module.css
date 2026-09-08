@@ -641,16 +641,6 @@
   line-height: 1.5;
 }
 
-.savedNote {
-  margin: 0 0 1.5rem;
-  padding: 0.85rem 1rem;
-  border: 2px dashed rgb(255 255 255 / 40%);
-  border-radius: 12px;
-  font-weight: 700;
-  line-height: 1.5;
-  text-align: left;
-}
-
 .againLink {
   display: inline-flex;
   min-height: 3rem;
