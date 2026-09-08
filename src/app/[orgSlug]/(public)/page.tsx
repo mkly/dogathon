@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import { FeltLink, FeltPanel, PhotoPatch } from "@/components/felt";
 import { PageViewTransition } from "@/components/page-view-transition";
+import { PublicHeader } from "@/components/public-header";
 import { ViewTransition } from "react";
 import { formatMonthlyAmount } from "@/lib/format";
 import {
@@ -16,7 +17,6 @@ import {
 import { DEFAULT_SPONSORSHIP_MONTHLY_CENTS } from "@/lib/rescue-settings";
 import { normalizeSpecies, speciesLabel } from "@/lib/species";
 
-import pawcastWordmark from "../../../../public/brand/pawcast-wordmark.png";
 import feltPup from "../../../../public/mascot/felt-pup-2.png";
 
 import styles from "../../public.module.css";
@@ -56,11 +56,10 @@ export default async function OrganizationHome({ params, searchParams }: Organiz
   return (
     <PageViewTransition>
       <main className={styles.siteShell}>
-        <Image alt="Pawcast" className={styles.wordmark} src={pawcastWordmark} />
+        <PublicHeader organizationName={organization.name} orgSlug={orgSlug} />
 
         <FeltPanel className={styles.hero} tone="moss">
           <div className={styles.heroCopy}>
-            <p className={styles.eyebrow}>{organization.name}</p>
             <h1>
               Put a little love behind a{" "}
               <span className={styles.noOrphan}>

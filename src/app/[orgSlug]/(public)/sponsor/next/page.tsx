@@ -1,14 +1,15 @@
-import Image from "next/image";
+import { notFound } from "next/navigation";
 
 import { FeltPanel, PhotoPatch } from "@/components/felt";
 import { PageViewTransition } from "@/components/page-view-transition";
+import { PublicHeader } from "@/components/public-header";
 import { PendingFeltSubmitButton } from "@/components/pending-submit-button";
 import { env } from "@/lib/env";
 import { formatMonthlyAmount } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
+import { getPublicOrganization } from "@/lib/public-roster-cache";
 import { verifySponsorshipSelectionToken } from "@/lib/sponsorship-selection-token";
 
-import pawcastWordmark from "../../../../../../public/brand/pawcast-wordmark.png";
 import styles from "../../../../public.module.css";
 import { endSponsorshipAction, transferSponsorshipAction } from "./actions";
 
@@ -28,6 +29,8 @@ export default async function NextCompanionPage({ params, searchParams }: NextCo
   const verified = env.BETTER_AUTH_SECRET
     ? verifySponsorshipSelectionToken(token, env.BETTER_AUTH_SECRET)
     : null;
+  const organization = await getPublicOrganization(orgSlug);
+  if (!organization) notFound();
   const sponsorship = verified ? await prisma.sponsorship.findFirst({
     where: { id: verified.sponsorshipId, organization: { slug: orgSlug } },
     include: {
@@ -48,7 +51,7 @@ export default async function NextCompanionPage({ params, searchParams }: NextCo
   return (
     <PageViewTransition>
       <main className={styles.siteShell}>
-        <Image alt="Pawcast" className={styles.wordmark} src={pawcastWordmark} />
+        <PublicHeader organizationName={organization.name} orgSlug={orgSlug} />
         {!sponsorship ? (
           <Notice>
             <h1>This link no longer applies</h1>

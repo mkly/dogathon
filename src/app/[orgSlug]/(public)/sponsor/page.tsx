@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 
 import { FeltLink, FeltPanel } from "@/components/felt";
 import { PageViewTransition } from "@/components/page-view-transition";
+import { PublicHeader } from "@/components/public-header";
 import { getPublicOrganization } from "@/lib/public-roster-cache";
 
 import styles from "../../../public.module.css";
@@ -31,8 +32,8 @@ export default async function SponsorResolverPage({
   return (
     <PageViewTransition>
       <main className={styles.siteShell}>
+        <PublicHeader organizationName={organization.name} orgSlug={orgSlug} />
         <FeltPanel className={styles.emptyState} tone="oatmeal">
-          <p className={styles.eyebrow}>{organization.name}</p>
           <h1>This companion is not available to sponsor yet.</h1>
           <p>
             Their page may not be in the rescue&apos;s current roster. Meet the companions who are

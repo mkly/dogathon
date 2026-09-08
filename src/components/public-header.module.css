@@ -1,0 +1,26 @@
+.header {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.25rem;
+}
+
+.home {
+  display: block;
+  width: min(320px, 62%);
+}
+
+/* the wordmark is a cut felt object like everything else, not a flat logo */
+.wordmark {
+  display: block;
+  width: 100%;
+  height: auto;
+  filter: drop-shadow(0 5px 5px rgb(61 51 43 / 26%));
+}
+
+/* a sewn-on name tag: sits on the wordmark's baseline, wraps below on phones */
+.rescue {
+  margin-bottom: 0.4rem;
+  font-size: 12px;
+  letter-spacing: 0.1em;
+}
