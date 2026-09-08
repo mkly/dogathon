@@ -130,7 +130,7 @@ export const sponsorEmbedScript = String.raw`(() => {
       const endpoint = appOrigin + "/api/public/" + encodeURIComponent(org) + "/companion?source=" + encodeURIComponent(source);
       const response = await fetch(endpoint, { headers: { Accept: "application/json" } });
       if (!response.ok) {
-        root.replaceChildren(styles(), message("We could not find this companion.", "notice"), link(appOrigin + "/" + encodeURIComponent(org), "View all companions"));
+        root.replaceChildren(styles(), message("We could not find this companion.", "notice"));
         return;
       }
 

@@ -24,6 +24,7 @@ async function renderWidget({
   details,
   intro,
   name,
+  ok = true,
   photo,
   response = companion,
   url = "https://rescue.example/dogs/biscuit#bio",
@@ -31,6 +32,7 @@ async function renderWidget({
   details?: string;
   intro?: string;
   name?: string;
+  ok?: boolean;
   photo?: string;
   response?: typeof companion;
   url?: string;
@@ -44,7 +46,7 @@ async function renderWidget({
     configurable: true,
     value: async (input: string) => {
       requested = String(input);
-      return { json: async () => response, ok: true, status: 200 };
+      return { json: async () => response, ok, status: ok ? 200 : 404 };
     },
   });
 
@@ -90,6 +92,13 @@ test("renders companion data and a checkout form using the public endpoints", as
   assert.ok(form?.querySelector('[name="sponsorName"][required]'));
   assert.ok(form?.querySelector('[name="sponsorEmail"][required]'));
   assert.equal(root.innerHTML.includes(companion.name), true);
+});
+
+test("renders only a notice when the companion cannot be found", async () => {
+  const { root } = await renderWidget({ ok: false });
+
+  assert.equal(root.querySelector(".dogathon-sponsor-message")?.textContent, "We could not find this companion.");
+  assert.equal(root.querySelector("a"), null);
 });
 
 test("renders the default sponsor intro for an available companion", async () => {
