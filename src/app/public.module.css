@@ -302,17 +302,39 @@
 }
 
 .sponsorshipTier {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.75rem;
+  position: relative;
+  display: block;
   margin: 0;
-  padding: 0.75rem;
+  padding: 0.85rem 1rem;
   border: 2px dashed var(--felt-ink);
   cursor: pointer;
+  transition: background-color var(--motion-duration-fast) var(--motion-ease-standard),
+    color var(--motion-duration-fast) var(--motion-ease-standard);
+}
+
+.sponsorshipTier:hover {
+  background: rgb(61 51 43 / 0.08);
+}
+
+.sponsorshipTier:has(input:checked) {
+  border-style: solid;
+  background: var(--felt-ink);
+  color: var(--felt-cream, #f4efe6);
+}
+
+.sponsorshipTier:has(input:focus-visible) {
+  outline: 3px solid var(--felt-mustard, #d8a33b);
+  outline-offset: 3px;
 }
 
 .sponsorshipTier input {
-  margin-top: 0.2rem;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }
 
 .sponsorshipTier span {
