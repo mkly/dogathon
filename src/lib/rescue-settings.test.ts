@@ -4,7 +4,9 @@ import test from "node:test";
 import {
   isAllowedOrigin,
   parseAllowedOrigins,
+  parseAllowedOriginsForm,
   parseSettingsForm,
+  parseSponsorshipTiersForm,
 } from "./rescue-settings";
 import { POSTSCRIPT_MAX_LENGTH, postscriptOverLimitMessage } from "./postscript";
 
@@ -90,21 +92,18 @@ test("private and IP-literal roster sources are rejected", () => {
   }
 });
 
-test("parses sponsorship tiers and canonical allowed origins", () => {
+test("parses sponsorship tiers without reading allowed origins", () => {
   const formData = new FormData();
   formData.append("tierMonthlyDollars", "32.50");
   formData.append("tierDescription", "  Everyday care\n and treats  ");
   formData.append("tierMonthlyDollars", "50");
   formData.append("tierDescription", "Vet care");
   formData.set("tierDefault", "1");
-  formData.set("allowedOrigins", "https://rescue.example/\nhttps://rescue.example\nhttps://embed.example:8443");
+  formData.set("allowedOrigins", "not an origin");
 
-  assert.deepEqual(parseSettingsForm(formData), {
+  assert.deepEqual(parseSponsorshipTiersForm(formData), {
     ok: true,
-    message: "Sponsorship settings saved.",
-    settings: {
-      allowedOrigins: ["https://rescue.example", "https://embed.example:8443"],
-    },
+    message: "Sponsorship tiers saved.",
     sponsorshipTiers: [
       { monthlyCents: 3250, description: "Everyday care and treats", isDefault: false },
       { monthlyCents: 5000, description: "Vet care", isDefault: true },
@@ -114,14 +113,13 @@ test("parses sponsorship tiers and canonical allowed origins", () => {
 
 test("uses the first sponsorship tier when no valid default is submitted", () => {
   const formData = new FormData();
-  formData.set("allowedOrigins", "");
   formData.append("tierMonthlyDollars", "25");
   formData.append("tierDescription", "Everyday care");
   formData.append("tierMonthlyDollars", "50");
   formData.append("tierDescription", "Vet care");
   formData.set("tierDefault", "99");
 
-  const parsed = parseSettingsForm(formData);
+  const parsed = parseSponsorshipTiersForm(formData);
   assert.equal(parsed.ok, true);
   if (!parsed.ok) assert.fail("expected sponsorship settings to parse");
   assert.deepEqual(parsed.sponsorshipTiers?.map((tier) => tier.isDefault), [true, false]);
@@ -129,18 +127,28 @@ test("uses the first sponsorship tier when no valid default is submitted", () =>
 
 test("rejects markup and more than six sponsorship tiers", () => {
   const markup = new FormData();
-  markup.set("allowedOrigins", "");
   markup.append("tierMonthlyDollars", "25");
   markup.append("tierDescription", "<strong>Care</strong>");
-  assert.equal(parseSettingsForm(markup).ok, false);
+  assert.equal(parseSponsorshipTiersForm(markup).ok, false);
 
   const tooMany = new FormData();
-  tooMany.set("allowedOrigins", "");
   for (let index = 0; index < 7; index += 1) {
     tooMany.append("tierMonthlyDollars", "25");
     tooMany.append("tierDescription", "Care");
   }
-  assert.equal(parseSettingsForm(tooMany).ok, false);
+  assert.equal(parseSponsorshipTiersForm(tooMany).ok, false);
+});
+
+test("parses allowed origins without reading sponsorship tiers", () => {
+  const formData = new FormData();
+  formData.set("allowedOrigins", "https://rescue.example/\nhttps://rescue.example\nhttps://embed.example:8443");
+  formData.append("tierMonthlyDollars", "invalid");
+
+  assert.deepEqual(parseAllowedOriginsForm(formData), {
+    ok: true,
+    message: "Trusted rescue sites saved.",
+    allowedOrigins: ["https://rescue.example", "https://embed.example:8443"],
+  });
 });
 
 test("allowed origins are exact, scheme-sensitive, and port-sensitive", () => {

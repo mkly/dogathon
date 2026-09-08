@@ -23,19 +23,17 @@ import { useActionState, useEffect, useRef, useState } from "react";
 import { AdminBadge, AdminButton, AdminField } from "@/components/admin-ui";
 import { pushToast } from "@/lib/toast";
 
-import { saveSettings, type SettingsState } from "../actions";
+import { saveSponsorshipTiers, type SettingsState } from "../actions";
 import styles from "../admin.module.css";
 
 const MAX_TIERS = 6;
 const DESCRIPTION_MAX = 200;
 const initialSettingsState: SettingsState = { status: "idle", message: "" };
 
-export function SponsorshipSettingsForm({
-  allowedOrigins,
+export function SponsorshipTiersForm({
   orgSlug,
   sponsorshipTiers,
 }: {
-  allowedOrigins: string[];
   orgSlug: string;
   sponsorshipTiers: Array<{
     id: string;
@@ -44,7 +42,7 @@ export function SponsorshipSettingsForm({
     isDefault: boolean;
   }>;
 }) {
-  const [state, formAction, pending] = useActionState(saveSettings, initialSettingsState);
+  const [state, formAction, pending] = useActionState(saveSponsorshipTiers, initialSettingsState);
   // Controlled fields: React resets uncontrolled inputs when the form action
   // settles, which would wipe the values the staff member just saved.
   const [tiers, setTiers] = useState(() => sponsorshipTiers.map((tier) => ({
@@ -53,7 +51,6 @@ export function SponsorshipSettingsForm({
     description: tier.description,
     isDefault: tier.isDefault,
   })));
-  const [origins, setOrigins] = useState(() => allowedOrigins.join("\n"));
   const focusKeyRef = useRef<string | null>(null);
   const updateTier = (key: string, patch: { monthlyDollars?: string; description?: string }) =>
     setTiers((current) => current.map((tier) => (tier.key === key ? { ...tier, ...patch } : tier)));
@@ -135,26 +132,9 @@ export function SponsorshipSettingsForm({
         <span aria-hidden="true">+</span>
         {tiers.length >= MAX_TIERS ? `Up to ${MAX_TIERS} tiers` : "Add a tier"}
       </button>
-      <label htmlFor="allowedOrigins">Allowed origins</label>
-      <AdminField>
-        <textarea
-          className={styles.originsTextarea}
-          disabled={pending}
-          id="allowedOrigins"
-          name="allowedOrigins"
-          onChange={(event) => setOrigins(event.target.value)}
-          placeholder={"https://www.example-rescue.org\nhttp://localhost:3001"}
-          rows={5}
-          value={origins}
-        />
-      </AdminField>
-      <p className={styles.fieldHint}>
-        One HTTPS origin per line, including any non-default port. Localhost is accepted only
-        outside production.
-      </p>
       <div className={styles.saveRow}>
         <AdminButton disabled={pending} tone="mustard" type="submit">
-          {pending ? "Saving…" : "Save sponsorship settings"}
+          {pending ? "Saving…" : "Save sponsorship tiers"}
         </AdminButton>
       </div>
     </form>

@@ -39,7 +39,8 @@ import { STRIPE_CONNECT_NOTICE_ID, stripeNotReadyReason } from "../stripe-notice
 import styles from "../admin.module.css";
 import { ConnectorResultNotice } from "./connector-result-notice";
 import { PostscriptSettingsForm } from "./postscript-settings-form";
-import { SponsorshipSettingsForm } from "./sponsorship-settings-form";
+import { SponsorshipTiersForm } from "./sponsorship-tiers-form";
+import { TrustedOriginsForm } from "./trusted-origins-form";
 
 export const dynamic = "force-dynamic";
 
@@ -184,18 +185,29 @@ async function RescueSettings({ orgId, orgSlug }: { orgId: string; orgSlug: stri
 
       <AdminSurface className={styles.settings} tone="brick">
         <div className={styles.settingsIntro}>
-          <AdminEyebrow tone="brick">Sponsorship embeds</AdminEyebrow>
-          <h2>Tiers and trusted rescue sites</h2>
+          <AdminEyebrow tone="brick">Sponsorship options</AdminEyebrow>
+          <h2>Sponsorship tiers</h2>
           <p>
-            Offer up to six monthly sponsorship tiers, pick the one sponsors see selected first, and
-            list the exact rescue-site origins allowed to use public embeds and checkout.
+            Offer up to six monthly sponsorship tiers, choose their order, and pick the option
+            sponsors see selected first.
           </p>
         </div>
-        <SponsorshipSettingsForm
-          allowedOrigins={settings.allowedOrigins}
+        <SponsorshipTiersForm
           orgSlug={orgSlug}
           sponsorshipTiers={sponsorshipTiers}
         />
+      </AdminSurface>
+
+      <AdminSurface className={styles.settings} tone="oatmeal">
+        <div className={styles.settingsIntro}>
+          <AdminEyebrow>Public embeds</AdminEyebrow>
+          <h2>Trusted rescue sites</h2>
+          <p>
+            List the exact rescue-site origins allowed to show public sponsorship embeds and start
+            checkout.
+          </p>
+        </div>
+        <TrustedOriginsForm allowedOrigins={settings.allowedOrigins} orgSlug={orgSlug} />
       </AdminSurface>
     </>
   );
@@ -250,7 +262,7 @@ export default async function AdminSettingsPage({ params, searchParams }: AdminS
             <SuspenseReveal><EmailSettings orgId={context.orgId} orgSlug={orgSlug} /></SuspenseReveal>
           </Suspense>
 
-          <Suspense fallback={<SuspenseFallback><><SettingsCardLoading tone="denim" /><SettingsCardLoading tone="moss" /><SettingsCardLoading tone="brick" /></></SuspenseFallback>}>
+          <Suspense fallback={<SuspenseFallback><><SettingsCardLoading tone="denim" /><SettingsCardLoading tone="moss" /><SettingsCardLoading tone="brick" /><SettingsCardLoading tone="oatmeal" /></></SuspenseFallback>}>
             <SuspenseReveal><RescueSettings orgId={context.orgId} orgSlug={orgSlug} /></SuspenseReveal>
           </Suspense>
         </div>

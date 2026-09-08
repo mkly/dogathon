@@ -41,7 +41,6 @@ type ParsedSettingsForm =
       message: string;
       savedSourceInput?: string;
       settings: RescueSettingsPatch;
-      sponsorshipTiers?: SponsorshipTierInput[];
     };
 
 const httpSourceSchema = z.url({ protocol: /^https?$/ })
@@ -53,7 +52,6 @@ const localSourceSchema = z.string()
   .refine((value) => !value.startsWith("/") && !value.includes("..") && /\.html?$/i.test(value));
 const sourceSchema = z.union([httpSourceSchema, localSourceSchema]);
 const settingsFormSchema = z.object({
-  allowedOrigins: z.string().optional(),
   pinnedPostscript: z.string().optional(),
   sourceUrl: z.string().optional(),
 });
@@ -100,14 +98,7 @@ export function parseSettingsForm(formData: FormData): ParsedSettingsForm {
   }
   const savesPinnedPostscript = parsed.data.pinnedPostscript !== undefined;
   const savesSourceUrl = parsed.data.sourceUrl !== undefined;
-  const tierAmounts = formData.getAll("tierMonthlyDollars");
-  const tierDescriptions = formData.getAll("tierDescription");
-  const tierDefault = formData.get("tierDefault");
-  const savesSponsorshipSettings = tierAmounts.length > 0
-    || tierDescriptions.length > 0
-    || parsed.data.allowedOrigins !== undefined;
-
-  if (!savesPinnedPostscript && !savesSourceUrl && !savesSponsorshipSettings) {
+  if (!savesPinnedPostscript && !savesSourceUrl) {
     return { ok: false, message: "No staff setting was provided." };
   }
 
@@ -120,57 +111,6 @@ export function parseSettingsForm(formData: FormData): ParsedSettingsForm {
       return { ok: false, message: postscriptOverLimitMessage() };
     }
     settings.pinnedPostscript = neutralizeUnsafeMarkdownDestinations(pinnedPostscript);
-  }
-
-  if (savesSponsorshipSettings) {
-    if (
-      tierAmounts.length === 0
-      || tierAmounts.length !== tierDescriptions.length
-      || parsed.data.allowedOrigins === undefined
-    ) {
-      return { ok: false, message: "Enter at least one sponsorship tier and the allowed origins." };
-    }
-    if (tierAmounts.length > MAX_SPONSORSHIP_TIERS) {
-      return { ok: false, message: `Enter no more than ${MAX_SPONSORSHIP_TIERS} sponsorship tiers.` };
-    }
-    const sponsorshipTiers: SponsorshipTierInput[] = [];
-    for (let index = 0; index < tierAmounts.length; index += 1) {
-      const amount = tierAmounts[index];
-      const rawDescription = tierDescriptions[index];
-      if (typeof amount !== "string" || typeof rawDescription !== "string") {
-        return { ok: false, message: "Enter valid sponsorship tier values." };
-      }
-      const monthlyCents = parseMonthlyCents(amount);
-      if (monthlyCents === null) {
-        return { ok: false, message: "Enter tier prices from $1 to $10,000 with at most two decimal places." };
-      }
-      const description = rawDescription.replace(/\s*(?:\r\n?|\n)\s*/gu, " ").trim();
-      if (description.length > 200) {
-        return { ok: false, message: "Keep each tier description to 200 characters or fewer." };
-      }
-      if (/[<>]/u.test(description)) {
-        return { ok: false, message: "Tier descriptions must be plain text without markup." };
-      }
-      sponsorshipTiers.push({ monthlyCents, description, isDefault: false });
-    }
-    const parsedDefault = typeof tierDefault === "string" && /^\d+$/u.test(tierDefault)
-      ? Number(tierDefault)
-      : 0;
-    const defaultIndex = parsedDefault >= 0 && parsedDefault < sponsorshipTiers.length
-      ? parsedDefault
-      : 0;
-    sponsorshipTiers[defaultIndex].isDefault = true;
-    const allowedOrigins = parseAllowedOrigins(parsed.data.allowedOrigins);
-    if (allowedOrigins === null) {
-      return { ok: false, message: "Enter one HTTPS origin per line with no path, query, or wildcard." };
-    }
-    settings.allowedOrigins = allowedOrigins;
-    return {
-      ok: true,
-      message: "Sponsorship settings saved.",
-      settings,
-      sponsorshipTiers,
-    };
   }
 
   if (!savesSourceUrl) {
@@ -197,4 +137,63 @@ export function parseSettingsForm(formData: FormData): ParsedSettingsForm {
     savedSourceInput: sourceInput,
     settings,
   };
+}
+
+export function parseSponsorshipTiersForm(formData: FormData):
+  | { ok: false; message: string }
+  | { ok: true; message: string; sponsorshipTiers: SponsorshipTierInput[] } {
+  const tierAmounts = formData.getAll("tierMonthlyDollars");
+  const tierDescriptions = formData.getAll("tierDescription");
+  const tierDefault = formData.get("tierDefault");
+
+  if (tierAmounts.length === 0 || tierAmounts.length !== tierDescriptions.length) {
+    return { ok: false, message: "Enter at least one sponsorship tier." };
+  }
+  if (tierAmounts.length > MAX_SPONSORSHIP_TIERS) {
+    return { ok: false, message: `Enter no more than ${MAX_SPONSORSHIP_TIERS} sponsorship tiers.` };
+  }
+
+  const sponsorshipTiers: SponsorshipTierInput[] = [];
+  for (let index = 0; index < tierAmounts.length; index += 1) {
+    const amount = tierAmounts[index];
+    const rawDescription = tierDescriptions[index];
+    if (typeof amount !== "string" || typeof rawDescription !== "string") {
+      return { ok: false, message: "Enter valid sponsorship tier values." };
+    }
+    const monthlyCents = parseMonthlyCents(amount);
+    if (monthlyCents === null) {
+      return { ok: false, message: "Enter tier prices from $1 to $10,000 with at most two decimal places." };
+    }
+    const description = rawDescription.replace(/\s*(?:\r\n?|\n)\s*/gu, " ").trim();
+    if (description.length > 200) {
+      return { ok: false, message: "Keep each tier description to 200 characters or fewer." };
+    }
+    if (/[<>]/u.test(description)) {
+      return { ok: false, message: "Tier descriptions must be plain text without markup." };
+    }
+    sponsorshipTiers.push({ monthlyCents, description, isDefault: false });
+  }
+
+  const parsedDefault = typeof tierDefault === "string" && /^\d+$/u.test(tierDefault)
+    ? Number(tierDefault)
+    : 0;
+  const defaultIndex = parsedDefault >= 0 && parsedDefault < sponsorshipTiers.length
+    ? parsedDefault
+    : 0;
+  sponsorshipTiers[defaultIndex].isDefault = true;
+  return { ok: true, message: "Sponsorship tiers saved.", sponsorshipTiers };
+}
+
+export function parseAllowedOriginsForm(formData: FormData):
+  | { ok: false; message: string }
+  | { ok: true; message: string; allowedOrigins: string[] } {
+  const value = formData.get("allowedOrigins");
+  if (typeof value !== "string") {
+    return { ok: false, message: "Enter the allowed origins." };
+  }
+  const allowedOrigins = parseAllowedOrigins(value);
+  if (allowedOrigins === null) {
+    return { ok: false, message: "Enter one HTTPS origin per line with no path, query, or wildcard." };
+  }
+  return { ok: true, message: "Trusted rescue sites saved.", allowedOrigins };
 }
