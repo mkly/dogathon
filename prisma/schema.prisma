@@ -170,6 +170,7 @@ model Verification {
 
 enum SponsorshipStatus {
   active
+  awaiting
   ended
 }
 
@@ -199,30 +200,37 @@ enum SponsorUpdateStatus {
   draft
   approved
   sent
+  dismissed
+}
+
+enum ResidentUnavailabilityReason {
+  adopted
+  unavailable
 }
 
 model Resident {
-  id              String           @id @default(uuid(4)) @db.Uuid
-  orgId           String           @db.Uuid
-  name            String
-  slug            String
-  sourceUrl       String           @default("")
-  breed           String
-  dobText         String
-  ageText         String
-  sex             String
-  weightText      String
-  personality     String
-  careNotes       String[]
-  photoUrls       String[]
-  available       Boolean          @default(true)
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-  sponsorships    Sponsorship[]
-  volunteerNotes  VolunteerNote[]
-  volunteerPhotos VolunteerPhoto[]
-  sponsorUpdates  SponsorUpdate[]
-  organization    Organization     @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  id                   String                        @id @default(uuid(4)) @db.Uuid
+  orgId                String                        @db.Uuid
+  name                 String
+  slug                 String
+  sourceUrl            String                        @default("")
+  breed                String
+  dobText              String
+  ageText              String
+  sex                  String
+  weightText           String
+  personality          String
+  careNotes            String[]
+  photoUrls            String[]
+  available            Boolean                       @default(true)
+  unavailabilityReason ResidentUnavailabilityReason?
+  createdAt            DateTime                      @default(now())
+  updatedAt            DateTime                      @updatedAt
+  sponsorships         Sponsorship[]
+  volunteerNotes       VolunteerNote[]
+  volunteerPhotos      VolunteerPhoto[]
+  sponsorUpdates       SponsorUpdate[]
+  organization         Organization                  @relation(fields: [orgId], references: [id], onDelete: Cascade)
 
   @@unique([orgId, name])
   @@unique([orgId, slug])
@@ -231,23 +239,24 @@ model Resident {
 }
 
 model Sponsorship {
-  id                          String            @id @default(uuid(4)) @db.Uuid
-  orgId                       String            @db.Uuid
-  residentId                  String            @db.Uuid
-  sponsorId                   String            @db.Uuid
-  monthlyCents                Int               @default(2500)
-  status                      SponsorshipStatus @default(active)
-  endedReason                 SponsorshipEndedReason?
-  endedAt                     DateTime?
-  stripeCancellationPendingAt DateTime?
-  stripeCheckoutSessionId     String?           @unique
-  stripeSubscriptionId        String?           @unique
-  stripeCustomerId            String?
-  createdAt                   DateTime          @default(now())
-  updatedAt                   DateTime          @updatedAt
-  organization                Organization      @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  resident                    Resident          @relation(fields: [residentId, orgId], references: [id, orgId], onDelete: Cascade)
-  sponsor                     Sponsor           @relation(fields: [sponsorId], references: [id], onDelete: Restrict)
+  id                      String                  @id @default(uuid(4)) @db.Uuid
+  orgId                   String                  @db.Uuid
+  residentId              String                  @db.Uuid
+  sponsorId               String                  @db.Uuid
+  monthlyCents            Int                     @default(2500)
+  status                  SponsorshipStatus       @default(active)
+  endedReason             SponsorshipEndedReason?
+  endedAt                 DateTime?
+  awaitingSince           DateTime?
+  stripeCheckoutSessionId String?                 @unique
+  stripeSubscriptionId    String?                 @unique
+  stripeCustomerId        String?
+  createdAt               DateTime                @default(now())
+  updatedAt               DateTime                @updatedAt
+  organization            Organization            @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  resident                Resident                @relation(fields: [residentId, orgId], references: [id, orgId], onDelete: Cascade)
+  sponsor                 Sponsor                 @relation(fields: [sponsorId], references: [id], onDelete: Restrict)
+  sponsorUpdates          SponsorUpdate[]
 
   @@unique([id, orgId])
   @@index([orgId, status])
@@ -297,26 +306,29 @@ model StripeWebhookEvent {
 }
 
 model SponsorUpdate {
-  id           String              @id @default(uuid(4)) @db.Uuid
-  orgId        String              @db.Uuid
-  residentId   String              @db.Uuid
-  type         SponsorUpdateType   @default(regular)
-  subject      String
-  bodyText     String
+  id            String              @id @default(uuid(4)) @db.Uuid
+  orgId         String              @db.Uuid
+  residentId    String              @db.Uuid
+  sponsorshipId String?             @db.Uuid
+  type          SponsorUpdateType   @default(regular)
+  subject       String
+  bodyText      String
   /// The volunteer-note photo this update was written from, captured at compose
   /// time so the email never falls back to the roster's profile shot.
-  photoUrl     String?
-  status       SponsorUpdateStatus @default(draft)
-  sentAt       DateTime?
-  createdAt    DateTime            @default(now())
-  updatedAt    DateTime            @updatedAt
-  organization Organization        @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  resident     Resident            @relation(fields: [residentId, orgId], references: [id, orgId], onDelete: Cascade)
+  photoUrl      String?
+  status        SponsorUpdateStatus @default(draft)
+  sentAt        DateTime?
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+  organization  Organization        @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  resident      Resident            @relation(fields: [residentId, orgId], references: [id, orgId], onDelete: Cascade)
+  sponsorship   Sponsorship?        @relation(fields: [sponsorshipId], references: [id], onDelete: SetNull)
 
   @@unique([id, orgId])
   @@index([orgId, status])
   @@index([orgId, sentAt])
   @@index([residentId, orgId, status])
+  @@index([sponsorshipId])
 }
 
 model RescueSettings {

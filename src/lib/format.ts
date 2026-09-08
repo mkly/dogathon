@@ -35,8 +35,12 @@ export function formatMonthlyAmount(monthlyCents: number) {
   return formatter.format(monthlyCents / 100);
 }
 
-export function sponsorshipStatusLabel(status: "active" | "ended") {
-  return status === "active" ? "Active" : "Ended";
+export function sponsorshipStatusLabel(status: "active" | "awaiting" | "ended") {
+  switch (status) {
+    case "active": return "Active";
+    case "awaiting": return "Awaiting a new companion";
+    case "ended": return "Ended";
+  }
 }
 
 export function sponsorshipEndedReasonLabel(

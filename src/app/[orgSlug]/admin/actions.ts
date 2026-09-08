@@ -11,8 +11,6 @@ import { prisma } from "@/lib/prisma";
 import { revalidatePublicRoster } from "@/lib/public-roster-cache";
 import { parseSettingsForm } from "@/lib/rescue-settings";
 import {
-  cancelPendingStripeSubscriptions,
-  findPendingStripeCancellations,
   markResidentAdopted as retireAdoptedResident,
 } from "@/lib/roster-sync";
 import { createConnectOnboardingLink, refreshConnectStatus } from "@/lib/stripe-billing";
@@ -52,9 +50,8 @@ export async function beginStripeOnboarding(formData: FormData) {
 
 /**
  * Staff mark a companion adopted by hand when the roster never carried the
- * marker. Every active sponsorship ends as adopted and each sponsor gets an
- * adoption notice draft in the staff room queue, where it can be edited and
- * approved like any other update.
+ * marker. Each active sponsorship gets an adoption notice draft in the staff
+ * room queue; sponsorship and billing state remain unchanged until approval.
  */
 export async function markResidentAdopted(formData: FormData) {
   const input = residentFormSchema.safeParse(Object.fromEntries(formData));
@@ -68,7 +65,7 @@ export async function markResidentAdopted(formData: FormData) {
   if (!access.context) redirect("/staff/organizations");
   const { orgId } = access.context;
 
-  const { name, drafted, pendingStripeCancellations } = await prisma.$transaction(async (tx) => {
+  const { name, drafted } = await prisma.$transaction(async (tx) => {
     const resident = await tx.resident.findUnique({
       where: { id_orgId: { id: residentId, orgId } },
       select: { id: true, name: true, available: true },
@@ -77,14 +74,12 @@ export async function markResidentAdopted(formData: FormData) {
     if (!resident.available) {
       throw new Error(`${resident.name} is already marked unavailable.`);
     }
-    const drafted = await retireAdoptedResident(tx, orgId, resident, new Date());
+    const drafted = await retireAdoptedResident(tx, orgId, resident);
     return {
       name: resident.name,
       drafted,
-      pendingStripeCancellations: await findPendingStripeCancellations(tx, orgId),
     };
   });
-  await cancelPendingStripeSubscriptions(pendingStripeCancellations);
   revalidatePublicRoster();
   revalidatePath(`/${orgSlug}/admin`);
   revalidatePath(`/${orgSlug}/admin/companions-covered`);

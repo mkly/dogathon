@@ -7,7 +7,6 @@ import {
   assertPlausibleUnavailableCount,
   allocateResidentSlug,
   assertRelatedUrl,
-  cancelPendingStripeSubscriptions,
   markResidentAdopted,
   discoverRoster,
   discoverRosterWithCompleteness,
@@ -137,9 +136,9 @@ test("a source URL match updates a renamed companion", async () => {
         slug: "biscuit",
         sourceUrl: "https://rescue.example/dogs/biscuit",
       }],
-      findFirst: async () => ({ id: "resident-1" }),
+      findFirst: async () => ({ id: "resident-1", unavailabilityReason: null }),
       update: async (input: unknown) => { writes.push(input); },
-      upsert: async () => { throw new Error("name fallback should not run"); },
+      create: async () => { throw new Error("existing companion should not be created"); },
     },
   } as unknown as SyncTransaction;
 
@@ -154,9 +153,40 @@ test("a source URL match updates a renamed companion", async () => {
       name: "Renamed Biscuit",
       breed: "", dobText: "", ageText: "", sex: "", weightText: "", personality: "",
       careNotes: [], photoUrls: [], sourceUrl: "https://rescue.example/dogs/biscuit",
-      available: true,
+      available: true, unavailabilityReason: null,
     },
   }]);
+});
+
+test("live upserts restore unavailable residents but preserve adopted residents", async () => {
+  const writes: unknown[] = [];
+  const tx = {
+    resident: {
+      findMany: async () => [],
+      findFirst: async (input: { where: { OR: Array<{ name?: string }> } }) => {
+        const name = input.where.OR.find((candidate) => candidate.name)?.name;
+        return name === "Hattie"
+          ? { id: "resident-unavailable", unavailabilityReason: "unavailable" }
+          : { id: "resident-adopted", unavailabilityReason: "adopted" };
+      },
+      update: async (input: unknown) => { writes.push(input); },
+    },
+  } as unknown as SyncTransaction;
+
+  await upsertCompanions(
+    tx,
+    "org-rescue",
+    [rosterCompanion("Hattie", false), rosterCompanion("Walnut", false)],
+    true,
+  );
+
+  const updates = writes as Array<{ where: { id_orgId: { id: string } }; data: Record<string, unknown> }>;
+  const restored = updates.find((update) => update.where.id_orgId.id === "resident-unavailable")?.data ?? {};
+  const preserved = updates.find((update) => update.where.id_orgId.id === "resident-adopted")?.data ?? {};
+  assert.equal(restored.available, true);
+  assert.equal(restored.unavailabilityReason, null);
+  assert.equal("available" in preserved, false);
+  assert.equal("unavailabilityReason" in preserved, false);
 });
 
 test("resident writes run in bounded batches", async () => {
@@ -166,7 +196,8 @@ test("resident writes run in bounded batches", async () => {
   const tx = {
     resident: {
       findMany: async () => [],
-      upsert: async () => {
+      findFirst: async () => null,
+      create: async () => {
         writes += 1;
         active += 1;
         peak = Math.max(peak, active);
@@ -236,10 +267,8 @@ test("related roster URLs still reject private and IP-literal hosts", () => {
   }
 });
 
-test("adoption ends sponsorships at the adoption time and marks Stripe cancellations pending", async () => {
-  const endedAt = new Date("2026-09-06T21:00:00.000Z");
+test("adoption changes only resident availability and drafts one notice per active sponsorship", async () => {
   const residentUpdates: unknown[] = [];
-  const sponsorshipUpdates: unknown[] = [];
   const drafts: unknown[] = [];
   const tx = {
     resident: {
@@ -249,12 +278,9 @@ test("adoption ends sponsorships at the adoption time and marks Stripe cancellat
     },
     sponsorship: {
       findMany: async () => [
-        { id: "sponsorship-1", stripeSubscriptionId: "sub_adopted", sponsor: { name: "Sam" } },
-        { id: "sponsorship-2", stripeSubscriptionId: null, sponsor: { name: "Lee" } },
+        { id: "sponsorship-1", sponsor: { name: "Sam" } },
+        { id: "sponsorship-2", sponsor: { name: "Lee" } },
       ],
-      update: async (input: unknown) => {
-        sponsorshipUpdates.push(input);
-      },
     },
     sponsorUpdate: {
       create: async (input: unknown) => {
@@ -267,74 +293,18 @@ test("adoption ends sponsorships at the adoption time and marks Stripe cancellat
     tx,
     "org-rescue",
     { id: "resident-1", name: "Hattie" },
-    endedAt,
   );
 
   assert.equal(closed, 2);
   assert.deepEqual(residentUpdates, [{
     where: { id_orgId: { id: "resident-1", orgId: "org-rescue" } },
-    data: { available: false },
+    data: { available: false, unavailabilityReason: "adopted" },
   }]);
-  assert.deepEqual(sponsorshipUpdates, [
-    {
-      where: { id_orgId: { id: "sponsorship-1", orgId: "org-rescue" } },
-      data: {
-        status: "ended",
-        endedAt,
-        endedReason: "adopted",
-        stripeCancellationPendingAt: endedAt,
-      },
-    },
-    {
-      where: { id_orgId: { id: "sponsorship-2", orgId: "org-rescue" } },
-      data: {
-        status: "ended",
-        endedAt,
-        endedReason: "adopted",
-        stripeCancellationPendingAt: null,
-      },
-    },
-  ]);
   assert.equal(drafts.length, 2);
-});
-
-test("pending adoption cancellations clear only after Stripe succeeds", async () => {
-  const cancellations: Array<{ accountId: string; subscriptionId: string }> = [];
-  const cleared: string[] = [];
-  const errors: string[] = [];
-
-  await cancelPendingStripeSubscriptions([
-    {
-      id: "sponsorship-success",
-      stripeSubscriptionId: "sub_success",
-      organization: { stripeAccountId: "acct_rescue" },
-    },
-    {
-      id: "sponsorship-retry",
-      stripeSubscriptionId: "sub_retry",
-      organization: { stripeAccountId: "acct_rescue" },
-    },
-  ], {
-    cancel: async (input) => {
-      cancellations.push(input);
-      if (input.subscriptionId === "sub_retry") throw new Error("Stripe unavailable");
-      return {} as never;
-    },
-    markCancelled: async (id) => {
-      cleared.push(id);
-    },
-    logError: (message) => {
-      errors.push(message);
-    },
-  });
-
-  assert.deepEqual(cancellations, [
-    { accountId: "acct_rescue", subscriptionId: "sub_success" },
-    { accountId: "acct_rescue", subscriptionId: "sub_retry" },
+  assert.deepEqual(drafts, [
+    { data: { ...adoptionDraft("resident-1", "sponsorship-1", "Hattie", "Sam", "adopted"), orgId: "org-rescue" } },
+    { data: { ...adoptionDraft("resident-1", "sponsorship-2", "Hattie", "Lee", "adopted"), orgId: "org-rescue" } },
   ]);
-  assert.deepEqual(cleared, ["sponsorship-success"]);
-  assert.equal(errors.length, 1);
-  assert.match(errors[0] ?? "", /remains marked for retry/);
 });
 
 test("loads a checked-in roster path without requiring the network", async () => {
@@ -1077,20 +1047,30 @@ test("stops roster discovery after ten model steps", async () => {
   assert.equal(modelCalls, 10);
 });
 
-test("graduation drafts are queued and sponsor-specific", () => {
-  const draft = adoptionDraft("companion-1", "Hattie", "Sam");
+test("adoption drafts are queued and sponsor-specific", () => {
+  const draft = adoptionDraft("companion-1", "sponsorship-1", "Hattie", "Sam", "adopted");
 
   assert.equal(draft.type, "graduation");
   assert.equal(draft.status, "draft");
+  assert.equal(draft.sponsorshipId, "sponsorship-1");
   assert.match(draft.bodyText, /Sam/);
-  assert.match(draft.bodyText, /sponsorship has ended/i);
+  assert.match(draft.bodyText, /sponsorship will pause/i);
+  assert.doesNotMatch(draft.bodyText, /sponsorship has ended/i);
+});
+
+test("unavailability drafts say the companion is no longer at the rescue", () => {
+  const draft = adoptionDraft("companion-1", "sponsorship-1", "Hattie", "Sam", "unavailable");
+
+  assert.match(draft.bodyText, /no longer at the rescue/i);
+  assert.match(draft.subject, /no longer at the rescue/i);
+  assert.doesNotMatch(draft.bodyText, /has been adopted/i);
 });
 
 test("refuses a live sync that would mark most available residents unavailable", () => {
   assert.throws(
     () => assertPlausibleUnavailableCount(10, 6, false),
     (error) => error instanceof RosterSyncRefusal
-      && /adopt 6 of 10 available residents/.test(error.reason),
+      && /mark 6 of 10 available residents unavailable/.test(error.reason),
   );
 });
 
@@ -1144,6 +1124,22 @@ test("an incomplete crawl does not restore an unavailable resident", () => {
   );
 
   assert.deepEqual(changes.availableCandidates, []);
+});
+
+test("a complete live roster restores an unavailable resident and not an adopted resident", () => {
+  const unavailable = {
+    id: "resident-1", name: "Hattie", available: false, unavailabilityReason: "unavailable" as const,
+  };
+  const adopted = {
+    id: "resident-2", name: "Walnut", available: false, unavailabilityReason: "adopted" as const,
+  };
+  const changes = planRosterAvailabilityChanges(
+    [unavailable, adopted],
+    [rosterCompanion("Hattie", false), rosterCompanion("Walnut", false)],
+    { usedFallbackCapture: false, rosterComplete: true },
+  );
+
+  assert.deepEqual(changes.availableCandidates, [unavailable]);
 });
 
 test("a configured local capture is the real source, not a scrape fallback", async () => {

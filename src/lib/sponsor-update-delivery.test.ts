@@ -169,9 +169,10 @@ test("selects active recipients for regular updates and adopted-ended recipients
   const unavailable = { status: "ended" as const, endedReason: "unavailable" as const };
   const cancelled = { status: "ended" as const, endedReason: "canceled" as const };
 
-  assert.equal(isSponsorUpdateRecipient("regular", active), true);
-  assert.equal(isSponsorUpdateRecipient("regular", adopted), false);
-  assert.equal(isSponsorUpdateRecipient("graduation", adopted), true);
-  assert.equal(isSponsorUpdateRecipient("graduation", unavailable), false);
-  assert.equal(isSponsorUpdateRecipient("graduation", cancelled), false);
+  assert.equal(isSponsorUpdateRecipient("regular", active, true), true);
+  assert.equal(isSponsorUpdateRecipient("regular", active, false), false);
+  assert.equal(isSponsorUpdateRecipient("regular", adopted, true), false);
+  assert.equal(isSponsorUpdateRecipient("graduation", adopted, false), true);
+  assert.equal(isSponsorUpdateRecipient("graduation", unavailable, false), false);
+  assert.equal(isSponsorUpdateRecipient("graduation", cancelled, false), false);
 });

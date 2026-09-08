@@ -7,6 +7,7 @@ export type SponsorUpdateType = "regular" | "graduation";
 
 export interface SponsorUpdateCompanion {
   name: string;
+  available: boolean;
   breed?: string;
   sex?: string;
   ageText?: string;
@@ -100,6 +101,9 @@ export async function composeSponsorUpdate(input: ComposeSponsorUpdateInput): Pr
   if (!name) throw new Error("companion.name is required");
   if (input.type !== "regular" && input.type !== "graduation") {
     throw new Error("type must be regular or graduation");
+  }
+  if (input.type === "regular" && !input.companion.available) {
+    throw new Error("regular updates require an available companion");
   }
 
   return hasAiCredentials() ? composeWithModel(input) : deterministicCompose(input);

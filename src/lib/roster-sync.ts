@@ -13,7 +13,6 @@ import { prisma } from "./prisma.ts";
 import { isPublicHttpUrl } from "./public-http-url.ts";
 import { revalidatePublicRoster } from "./public-roster-cache.ts";
 import { normalizeSourceUrl } from "./source-url.ts";
-import { cancelStripeSubscription } from "./stripe-billing.ts";
 
 export type SyncSummary = {
   created: number;
@@ -21,7 +20,6 @@ export type SyncSummary = {
   adopted: number;
   madeUnavailable: number;
   madeAvailable: number;
-  sponsorshipsClosed: number;
   usedFallbackCapture: boolean;
   rosterComplete: boolean;
   rosterCompleteness: RosterCompleteness;
@@ -76,12 +74,6 @@ type SyncRosterOptions = {
   signal?: AbortSignal;
 };
 
-type PendingStripeCancellation = {
-  id: string;
-  stripeSubscriptionId: string;
-  organization: { stripeAccountId: string | null };
-};
-
 type RetiredResident = { id: string; name: string };
 
 export async function syncRoster(
@@ -132,7 +124,7 @@ export async function syncRoster(
     options.signal?.throwIfAborted();
     const before = await tx.resident.findMany({
       where: { orgId },
-      select: { id: true, name: true, sourceUrl: true, available: true },
+      select: { id: true, name: true, sourceUrl: true, available: true, unavailabilityReason: true },
     });
     const existingNames = new Set(before.map((resident) => resident.name));
     const existingSourceUrls = new Set(before.map((resident) => resident.sourceUrl).filter(Boolean));
@@ -156,19 +148,14 @@ export async function syncRoster(
       options.signal,
     );
 
-    let sponsorshipsClosed = 0;
-
-    const endedAt = new Date();
     for (const resident of adoptedCandidates) {
       options.signal?.throwIfAborted();
-      sponsorshipsClosed += await markResidentAdopted(tx, orgId, resident, endedAt);
+      await markResidentAdopted(tx, orgId, resident);
     }
     for (const resident of unavailableCandidates) {
       options.signal?.throwIfAborted();
-      sponsorshipsClosed += await markResidentUnavailable(tx, orgId, resident, endedAt);
+      await markResidentUnavailable(tx, orgId, resident);
     }
-
-    const pendingStripeCancellations = await findPendingStripeCancellations(tx, orgId);
 
     return {
       created: companions.filter((companion) => !existingNames.has(companion.name)
@@ -178,140 +165,76 @@ export async function syncRoster(
       adopted: adoptedCandidates.length,
       madeUnavailable: unavailableCandidates.length,
       madeAvailable: availableCandidates.length,
-      sponsorshipsClosed,
       usedFallbackCapture,
       rosterComplete,
       rosterCompleteness,
       source,
-      pendingStripeCancellations,
     };
   }, { maxWait: 10_000, timeout: 60_000 });
-  const { pendingStripeCancellations, ...publicSummary } = summary;
-  await cancelPendingStripeSubscriptions(pendingStripeCancellations);
   revalidatePublicRoster();
-  return publicSummary;
+  return summary;
 }
 
 /**
  * An explicit Adopted marker or a staff decision: the resident leaves the
- * roster, every active sponsorship ends as adopted, and each sponsor gets an
- * editable adoption notice draft in the approval queue.
+ * roster and each active sponsorship gets an editable adoption notice draft.
+ * Sponsorship state and billing do not change until staff approve the notice.
  */
 export async function markResidentAdopted(
   tx: SyncTransaction,
   orgId: string,
   resident: RetiredResident,
-  endedAt: Date,
 ) {
-  return retireResident(tx, orgId, resident, endedAt, "adopted");
+  return retireResident(tx, orgId, resident, "adopted");
 }
 
 /**
- * Absence from a complete live roster: the resident leaves the roster and
- * sponsorships end, but nothing is drafted because nobody knows why they left.
+ * Absence from a complete live roster: the resident leaves the roster and each
+ * active sponsorship gets a notice explaining that the companion left.
  */
 export async function markResidentUnavailable(
   tx: SyncTransaction,
   orgId: string,
   resident: RetiredResident,
-  endedAt: Date,
 ) {
-  return retireResident(tx, orgId, resident, endedAt, "unavailable");
+  return retireResident(tx, orgId, resident, "unavailable");
 }
 
 async function retireResident(
   tx: SyncTransaction,
   orgId: string,
   resident: RetiredResident,
-  endedAt: Date,
-  endedReason: "adopted" | "unavailable",
+  unavailabilityReason: "adopted" | "unavailable",
 ) {
   await tx.resident.update({
     where: { id_orgId: { id: resident.id, orgId } },
-    data: { available: false },
+    data: { available: false, unavailabilityReason },
   });
 
   const sponsorships = await tx.sponsorship.findMany({
     where: { residentId: resident.id, orgId, status: "active" },
     select: {
       id: true,
-      stripeSubscriptionId: true,
       sponsor: { select: { name: true } },
     },
   });
 
   for (const sponsorship of sponsorships) {
-    await tx.sponsorship.update({
-      where: { id_orgId: { id: sponsorship.id, orgId } },
+    await tx.sponsorUpdate.create({
       data: {
-        status: "ended",
-        endedAt,
-        endedReason,
-        stripeCancellationPendingAt: sponsorship.stripeSubscriptionId ? endedAt : null,
+        ...adoptionDraft(
+          resident.id,
+          sponsorship.id,
+          resident.name,
+          sponsorship.sponsor.name,
+          unavailabilityReason,
+        ),
+        orgId,
       },
     });
-    if (endedReason === "adopted") {
-      await tx.sponsorUpdate.create({
-        data: { ...adoptionDraft(resident.id, resident.name, sponsorship.sponsor.name), orgId },
-      });
-    }
   }
 
   return sponsorships.length;
-}
-
-export async function findPendingStripeCancellations(tx: SyncTransaction, orgId: string) {
-  return await tx.sponsorship.findMany({
-    where: {
-      orgId,
-      stripeCancellationPendingAt: { not: null },
-      stripeSubscriptionId: { not: null },
-    },
-    select: {
-      id: true,
-      stripeSubscriptionId: true,
-      organization: { select: { stripeAccountId: true } },
-    },
-  }) as PendingStripeCancellation[];
-}
-
-export async function cancelPendingStripeSubscriptions(
-  sponsorships: PendingStripeCancellation[],
-  dependencies: {
-    cancel?: typeof cancelStripeSubscription;
-    markCancelled?: (id: string) => Promise<void>;
-    logError?: (message: string, error: unknown) => void;
-  } = {},
-) {
-  const cancel = dependencies.cancel ?? cancelStripeSubscription;
-  const markCancelled = dependencies.markCancelled ?? (async (id: string) => {
-    await prisma.sponsorship.update({
-      where: { id },
-      data: { stripeCancellationPendingAt: null },
-    });
-  });
-  const logError = dependencies.logError ?? console.error;
-
-  for (const sponsorship of sponsorships) {
-    const accountId = sponsorship.organization.stripeAccountId;
-    if (!accountId) {
-      logError(
-        `Could not cancel Stripe subscription for ended sponsorship ${sponsorship.id}: connected account is missing`,
-        null,
-      );
-      continue;
-    }
-
-    try {
-      await cancel({ accountId, subscriptionId: sponsorship.stripeSubscriptionId });
-      await markCancelled(sponsorship.id);
-    } catch (error) {
-      logError(
-        `Could not cancel Stripe subscription for ended sponsorship ${sponsorship.id}; it remains marked for retry`,
-        error,
-      );
-    }
-  }
 }
 
 type ResidentAvailabilitySnapshot = {
@@ -319,6 +242,7 @@ type ResidentAvailabilitySnapshot = {
   name: string;
   sourceUrl?: string;
   available: boolean;
+  unavailabilityReason?: "adopted" | "unavailable" | null;
 };
 
 export function planRosterAvailabilityChanges<T extends ResidentAvailabilitySnapshot>(
@@ -351,6 +275,7 @@ export function planRosterAvailabilityChanges<T extends ResidentAvailabilitySnap
   // proves that an unmarked resident should be available again.
   const availableCandidates = absenceIsReliable ? before.filter(
     (resident) => !resident.available
+      && resident.unavailabilityReason !== "adopted"
       && onRoster(resident)
       && !explicitlyMarked(resident),
   ) : [];
@@ -530,38 +455,40 @@ async function upsertCompanion(
     sourceUrl,
   };
 
-  const existingBySource = sourceUrl ? await tx.resident.findFirst({
-    where: { orgId, sourceUrl },
-    select: { id: true },
-  }) : null;
+  const existing = await tx.resident.findFirst({
+    where: {
+      orgId,
+      OR: [
+        ...(sourceUrl ? [{ sourceUrl }] : []),
+        { name: companion.name },
+      ],
+    },
+    select: { id: true, unavailabilityReason: true },
+  });
 
-  if (existingBySource) {
+  if (existing) {
+    const restoreAvailability = liveSource
+      && !companion.adopted
+      && existing.unavailabilityReason !== "adopted";
     await tx.resident.update({
-      where: { id_orgId: { id: existingBySource.id, orgId } },
+      where: { id_orgId: { id: existing.id, orgId } },
       data: {
         name: companion.name,
         ...profile,
-        ...(liveSource && !companion.adopted ? { available: true } : {}),
+        ...(restoreAvailability ? { available: true, unavailabilityReason: null } : {}),
       },
     });
     return;
   }
 
-  await tx.resident.upsert({
-    where: { orgId_name: { orgId, name: companion.name } },
-    create: {
+  await tx.resident.create({
+    data: {
       orgId,
       name: companion.name,
       slug,
       ...profile,
       available: !companion.adopted,
-    },
-    update: {
-      ...profile,
-      // Presence on the live source without an Adopted marker makes a resident
-      // available again. Explicit markers stay with the unavailability pass
-      // above, which owns the sponsorship-ending side effects.
-      ...(liveSource && !companion.adopted ? { available: true } : {}),
+      unavailabilityReason: companion.adopted ? "adopted" : null,
     },
   });
 }
@@ -1475,12 +1402,25 @@ function seedCapturePath(capture: string): string {
   return path.join(process.cwd(), "seed", capture);
 }
 
-export function adoptionDraft(residentId: string, companionName: string, sponsorName: string) {
+export function adoptionDraft(
+  residentId: string,
+  sponsorshipId: string,
+  companionName: string,
+  sponsorName: string,
+  reason: "adopted" | "unavailable",
+) {
+  const departure = reason === "adopted"
+    ? `${companionName} has been adopted!`
+    : `${companionName} is no longer at the rescue.`;
+  const subject = reason === "adopted"
+    ? `${companionName} found a home!`
+    : `${companionName} is no longer at the rescue`;
   return {
     residentId,
+    sponsorshipId,
     type: "graduation" as const,
     status: "draft" as const,
-    subject: `${companionName} found a home!`,
-    bodyText: `${sponsorName}, ${companionName} has been adopted! Your monthly sponsorship has ended now that ${companionName} has a family of their own. Thank you for everything you gave ${companionName} along the way.`,
+    subject,
+    bodyText: `${sponsorName}, ${departure} Once this notice is approved, your sponsorship will pause and no further charges will be made while you choose what comes next. Thank you for everything you gave ${companionName} along the way.`,
   };
 }

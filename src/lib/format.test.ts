@@ -12,5 +12,6 @@ test("formats monthly sponsorship amounts stored in cents", () => {
 
 test("formats sponsorship statuses for display", () => {
   assert.equal(sponsorshipStatusLabel("active"), "Active");
+  assert.equal(sponsorshipStatusLabel("awaiting"), "Awaiting a new companion");
   assert.equal(sponsorshipStatusLabel("ended"), "Ended");
 });

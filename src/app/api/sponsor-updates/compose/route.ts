@@ -51,11 +51,18 @@ export async function POST(request: Request) {
   }
 
   const type = input.data.type ?? "regular";
+  if (type === "regular" && !resident.available) {
+    return Response.json(
+      { error: "Regular updates can only be drafted for available companions" },
+      { status: 409 },
+    );
+  }
   let composed;
   try {
     composed = await composeSponsorUpdate({
       companion: {
         name: resident.name,
+        available: resident.available,
         breed: resident.breed,
         sex: resident.sex,
         ageText: resident.ageText,

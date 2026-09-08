@@ -109,7 +109,6 @@ test("success and refusal outputs map back to the polling view", async () => {
     adopted: 0,
     madeUnavailable: 0,
     madeAvailable: 0,
-    sponsorshipsClosed: 0,
     usedFallbackCapture: false,
     rosterComplete: true,
     rosterCompleteness: {
@@ -181,7 +180,6 @@ test("the HTTP-invocation drainer fetches and settles a real pg-boss job", async
         adopted: 0,
     madeUnavailable: 0,
         madeAvailable: 0,
-        sponsorshipsClosed: 0,
         usedFallbackCapture: false,
         rosterComplete: true,
         rosterCompleteness: {

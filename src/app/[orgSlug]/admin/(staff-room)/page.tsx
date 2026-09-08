@@ -293,7 +293,7 @@ async function ApprovalQueue({
         ) : (
           drafts.map((draft) => {
             const recipientCount = draft.resident.sponsorships.filter((sponsorship) =>
-              isSponsorUpdateRecipient(draft.type, sponsorship)).length;
+              isSponsorUpdateRecipient(draft.type, sponsorship, draft.resident.available)).length;
             return <DraftEditor
               bodyText={draft.bodyText}
               emailConnected={emailConnector.connected}
