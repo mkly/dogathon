@@ -19,7 +19,7 @@ type ConnectedOrganization = {
   stripeAccountId: string | null;
   stripeDetailsSubmitted: boolean;
   stripeChargesEnabled: boolean;
-  settings: { sponsorshipMonthlyCents: number } | null;
+  sponsorshipTiers: Array<{ monthlyCents: number }>;
 };
 
 type AvailableResident = {
@@ -75,7 +75,7 @@ const prismaBillingStore: BillingStore = {
         stripeAccountId: true,
         stripeDetailsSubmitted: true,
         stripeChargesEnabled: true,
-        settings: { select: { sponsorshipMonthlyCents: true } },
+        sponsorshipTiers: { orderBy: { position: "asc" }, select: { monthlyCents: true }, take: 1 },
       },
     });
   },
@@ -271,7 +271,7 @@ export async function createStripeCheckout(
     throw new Error("This organization is not ready to accept sponsorship payments");
   }
   if (!resident) throw new ResidentUnavailableError();
-  const monthlyCents = organization.settings?.sponsorshipMonthlyCents
+  const monthlyCents = organization.sponsorshipTiers[0]?.monthlyCents
     ?? DEFAULT_SPONSORSHIP_MONTHLY_CENTS;
 
   const session = await stripe().checkout.sessions.create(

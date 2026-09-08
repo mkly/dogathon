@@ -42,7 +42,7 @@ export default async function CompanionPage({ params, searchParams }: CompanionP
   if (!resident) notFound();
 
   const available = resident.status === "available";
-  const monthlyCents = organization.settings?.sponsorshipMonthlyCents
+  const monthlyCents = organization.sponsorshipTiers[0]?.monthlyCents
     ?? DEFAULT_SPONSORSHIP_MONTHLY_CENTS;
   const monthlyAmount = formatMonthlyAmount(monthlyCents);
   return (

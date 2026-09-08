@@ -55,7 +55,7 @@ async function loadStripeConnection(orgId: string) {
       stripeAccountId: true,
       stripeDetailsSubmitted: true,
       stripeChargesEnabled: true,
-      settings: { select: { sponsorshipMonthlyCents: true } },
+      sponsorshipTiers: { orderBy: { position: "asc" }, take: 1 },
     },
   });
   return stored;
@@ -73,7 +73,7 @@ async function StripeConnection({
   const organization = await loadStripeConnection(orgId);
   const stripeNotReady = stripeNotReadyReason(organization);
   const monthlyAmount = formatMonthlyAmount(
-    organization?.settings?.sponsorshipMonthlyCents ?? DEFAULT_SPONSORSHIP_MONTHLY_CENTS,
+    organization?.sponsorshipTiers[0]?.monthlyCents ?? DEFAULT_SPONSORSHIP_MONTHLY_CENTS,
   );
   const stripeBadge = stripeNotReady
     ? { tone: "brick" as const, label: "Not ready for payments" }
@@ -138,13 +138,20 @@ async function EmailSettings({ orgId, orgSlug }: { orgId: string; orgSlug: strin
 }
 
 async function RescueSettings({ orgId, orgSlug }: { orgId: string; orgSlug: string }) {
-  const storedSettings = await prisma.rescueSettings.findUnique({ where: { orgId } });
+  const [storedSettings, storedTiers] = await Promise.all([
+    prisma.rescueSettings.findUnique({ where: { orgId } }),
+    prisma.sponsorshipTier.findMany({ where: { orgId }, orderBy: { position: "asc" } }),
+  ]);
   const settings = storedSettings ?? {
     allowedOrigins: [],
     pinnedPostscript: "",
     sourceUrl: "",
-    sponsorshipMonthlyCents: DEFAULT_SPONSORSHIP_MONTHLY_CENTS,
   };
+  const sponsorshipTiers = storedTiers.length > 0 ? storedTiers : [{
+    id: "default",
+    monthlyCents: DEFAULT_SPONSORSHIP_MONTHLY_CENTS,
+    description: "",
+  }];
 
   return (
     <>
@@ -184,7 +191,7 @@ async function RescueSettings({ orgId, orgSlug }: { orgId: string; orgSlug: stri
         <SponsorshipSettingsForm
           allowedOrigins={settings.allowedOrigins}
           orgSlug={orgSlug}
-          sponsorshipMonthlyCents={settings.sponsorshipMonthlyCents}
+          sponsorshipTiers={sponsorshipTiers}
         />
       </AdminSurface>
     </>

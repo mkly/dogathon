@@ -19,6 +19,7 @@ import { createElement } from "react";
 type RouteContext = { params: Promise<{ id: string }> };
 
 type ApprovalSponsorship = DeliverySponsorship & {
+  monthlyCents: number;
   status: "active" | "ended";
   endedReason: string | null;
 };
@@ -34,7 +35,6 @@ type ApprovalUpdate = {
   status: "draft" | "approved" | "sent";
   organization: {
     slug: string;
-    settings: { sponsorshipMonthlyCents: number } | null;
   };
   resident: {
     name: string;
@@ -50,7 +50,7 @@ type ApprovalDependencies = {
   getConnectorStatus: typeof getEmailConnectorStatus;
   markSent: (id: string, orgId: string, sentAt: Date) => Promise<unknown>;
   now: () => Date;
-  renderMessage: (update: ApprovalUpdate) => Promise<{ bodyHtml: string; bodyText: string }>;
+  renderMessage: (update: ApprovalUpdate, monthlyCents: number) => Promise<{ bodyHtml: string; bodyText: string }>;
   requireOrganization: typeof requireApiOrganization;
   resetDraft: (id: string, orgId: string) => Promise<void>;
 };
@@ -71,7 +71,6 @@ const approvalDependencies: ApprovalDependencies = {
         organization: {
           select: {
             slug: true,
-            settings: { select: { sponsorshipMonthlyCents: true } },
           },
         },
         resident: {
@@ -97,15 +96,14 @@ const approvalDependencies: ApprovalDependencies = {
     });
   },
   now: () => new Date(),
-  async renderMessage(update) {
+  async renderMessage(update, monthlyCents) {
     const origin = env.BETTER_AUTH_URL;
     const email = createElement(SponsorUpdateEmail, {
       companionName: update.resident.name,
       subject: update.subject,
       bodyText: update.bodyText,
       companionUrl: companionPageUrl(origin, update.organization.slug, update.residentId),
-      monthlyCents: update.organization.settings?.sponsorshipMonthlyCents
-        ?? DEFAULT_SPONSORSHIP_MONTHLY_CENTS,
+      monthlyCents,
       origin,
       photoUrl: update.photoUrl ?? update.resident.photoUrls[0] ?? null,
       type: update.type,
@@ -168,12 +166,14 @@ export function createApproveSponsorUpdateHandler(dependencies: ApprovalDependen
     try {
       const sponsorships = sponsorUpdate.resident.sponsorships.filter((sponsorship) =>
         isSponsorUpdateRecipient(sponsorUpdate.type, sponsorship));
-      const message = await dependencies.renderMessage(sponsorUpdate);
-      const deliveries = await dependencies.deliver(
-        orgId,
-        { ...sponsorUpdate, ...message },
-        sponsorships,
-      );
+      const groups = Map.groupBy(sponsorships, ({ monthlyCents }) => monthlyCents);
+      const deliveries = (await Promise.all([...groups].map(async ([monthlyCents, recipients]) => {
+        const message = await dependencies.renderMessage(
+          sponsorUpdate,
+          monthlyCents ?? DEFAULT_SPONSORSHIP_MONTHLY_CENTS,
+        );
+        return dependencies.deliver(orgId, { ...sponsorUpdate, ...message }, recipients);
+      }))).flat();
       const counts = deliveryCounts(deliveries);
       console.info("Sponsor update delivery completed", { id, orgId, ...counts });
 

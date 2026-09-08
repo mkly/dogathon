@@ -22,12 +22,14 @@ const baseUpdate = {
     sponsorships: [
       {
         id: "active",
+        monthlyCents: 2500,
         status: "active" as const,
         endedReason: null,
         sponsor: { email: "active@example.com" },
       },
       {
         id: "adopted",
+        monthlyCents: 4000,
         status: "ended" as const,
         endedReason: "adopted",
         sponsor: { email: "adopted@example.com" },
@@ -65,11 +67,16 @@ function context() {
 
 test("graduation approval delivers to adopted sponsorships and marks sent after success", async () => {
   let recipientIds: string[] = [];
+  let renderedMonthlyCents = 0;
   let markedSent = false;
   const handler = createApproveSponsorUpdateHandler(dependencies({
     async deliver(_orgId: string, _update: unknown, sponsorships: Array<{ id: string }>) {
       recipientIds = sponsorships.map(({ id }) => id);
       return [{ sponsorshipId: "adopted", channel: "email", status: "sent" }];
+    },
+    async renderMessage(_update: unknown, monthlyCents: number) {
+      renderedMonthlyCents = monthlyCents;
+      return { bodyHtml: "<p>Adopted</p>", bodyText: "Adopted" };
     },
     async markSent() {
       markedSent = true;
@@ -80,6 +87,7 @@ test("graduation approval delivers to adopted sponsorships and marks sent after 
   const response = await handler(request(), context());
   assert.equal(response.status, 200);
   assert.deepEqual(recipientIds, ["adopted"]);
+  assert.equal(renderedMonthlyCents, 4000);
   assert.equal(markedSent, true);
   assert.deepEqual((await response.json()).counts, { sent: 1, failed: 0 });
 });

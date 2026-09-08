@@ -33,7 +33,7 @@ export default async function OrganizationHome({ params }: OrganizationHomeProps
   if (!organization) notFound();
   const residents = await getPublicResidents(organization.id);
   const monthlyAmount = formatMonthlyAmount(
-    organization.settings?.sponsorshipMonthlyCents ?? DEFAULT_SPONSORSHIP_MONTHLY_CENTS,
+    organization.sponsorshipTiers[0]?.monthlyCents ?? DEFAULT_SPONSORSHIP_MONTHLY_CENTS,
   );
 
   return (

@@ -9,8 +9,8 @@ const organization = {
   id: "org-1",
   settings: {
     allowedOrigins: ["https://rescue.example"],
-    sponsorshipMonthlyCents: 3250,
   },
+  sponsorshipTiers: [{ monthlyCents: 3250 }],
 };
 
 const resident = {
