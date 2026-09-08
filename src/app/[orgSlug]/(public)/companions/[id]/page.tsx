@@ -12,6 +12,7 @@ import {
   getPublicOrganization,
   getPublicResident,
 } from "@/lib/public-roster-cache";
+import { DEFAULT_SPONSORSHIP_MONTHLY_CENTS } from "@/lib/rescue-settings";
 import { uuidSchema } from "@/lib/uuid";
 
 import { CompanionBanner, CompanionFormError, CompanionSponsorState } from "./companion-banner";
@@ -43,8 +44,9 @@ export default async function CompanionPage({ params, searchParams }: CompanionP
   const available = resident.status === "available";
   const tiers = organization.sponsorshipTiers;
   const firstTier = tiers[0];
-  if (!firstTier) notFound();
-  const monthlyAmount = formatMonthlyAmount(firstTier.monthlyCents);
+  // An organization that has never saved its sponsorship settings has no tiers, and checkout
+  // falls back to the default price, so the page shows that price and posts no tier at all.
+  const monthlyAmount = formatMonthlyAmount(firstTier?.monthlyCents ?? DEFAULT_SPONSORSHIP_MONTHLY_CENTS);
   return (
     <PageViewTransition>
       <main className={`${styles.siteShell} ${styles.detailShell}`}>
@@ -120,7 +122,7 @@ export default async function CompanionPage({ params, searchParams }: CompanionP
               <div className={styles.sponsorPitch}>
                 <p className={styles.eyebrow}>A steady paw</p>
                 <h2>
-                  {tiers.length === 1
+                  {tiers.length < 2
                     ? `Sponsor ${resident.name} for ${monthlyAmount}/month until adopted`
                     : `Choose how you'd like to sponsor ${resident.name}`}
                 </h2>
@@ -133,11 +135,13 @@ export default async function CompanionPage({ params, searchParams }: CompanionP
                 <input name="orgSlug" type="hidden" value={orgSlug} />
                 <input name="residentId" type="hidden" value={resident.id} />
 
-                {tiers.length === 1 ? (
-                  <div className={styles.singleTier}>
-                    <input name="tier" type="hidden" value={firstTier.id} />
-                    <p>{firstTier.description}</p>
-                  </div>
+                {tiers.length < 2 ? (
+                  firstTier ? (
+                    <div className={styles.singleTier}>
+                      <input name="tier" type="hidden" value={firstTier.id} />
+                      <p>{firstTier.description}</p>
+                    </div>
+                  ) : null
                 ) : (
                   <fieldset className={styles.sponsorshipTiers}>
                     <legend>Choose a monthly sponsorship</legend>

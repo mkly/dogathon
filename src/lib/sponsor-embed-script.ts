@@ -112,18 +112,23 @@ export const sponsorEmbedScript = String.raw`(() => {
     return null;
   };
 
-  const tierFields = (tiers, currency) => {
-    if (tiers.length === 1) {
+  const tierFields = (tiers, monthlyCents, currency) => {
+    // An organization that has never saved its sponsorship settings has no tiers, and checkout
+    // falls back to the default price, so the card shows that price and posts no tier at all.
+    if (tiers.length < 2) {
       const tier = tiers[0];
       const fields = document.createDocumentFragment();
-      const selectedTier = create("input");
-      selectedTier.setAttribute("type", "hidden");
-      selectedTier.setAttribute("name", "tier");
-      selectedTier.setAttribute("value", tier.id);
+      if (tier) {
+        const selectedTier = create("input");
+        selectedTier.setAttribute("type", "hidden");
+        selectedTier.setAttribute("name", "tier");
+        selectedTier.setAttribute("value", tier.id);
+        fields.append(selectedTier);
+      }
       const summary = create("div", "single-tier");
-      summary.append(create("p", "price", price(tier.monthlyCents, currency)));
-      summary.append(create("p", "tier-description", tier.description));
-      fields.append(selectedTier, summary);
+      summary.append(create("p", "price", price(tier ? tier.monthlyCents : monthlyCents, currency)));
+      if (tier) summary.append(create("p", "tier-description", tier.description));
+      fields.append(summary);
       return fields;
     }
 
@@ -146,12 +151,12 @@ export const sponsorEmbedScript = String.raw`(() => {
     return choices;
   };
 
-  const sponsorForm = (org, source, returnTo, tiers, currency) => {
+  const sponsorForm = (org, source, returnTo, tiers, monthlyCents, currency) => {
     const form = create("form", "form");
     form.setAttribute("method", "post");
     form.setAttribute("action", appOrigin + "/api/public/" + encodeURIComponent(org) + "/checkout");
 
-    form.append(tierFields(tiers, currency));
+    form.append(tierFields(tiers, monthlyCents, currency));
 
     [["sponsorName", "Your name", "text"], ["sponsorEmail", "Email address", "email"]].forEach(([name, labelText, type]) => {
       const label = create("label", "field");
@@ -244,9 +249,14 @@ export const sponsorEmbedScript = String.raw`(() => {
       if (!isHidden(root, "details")) {
         content.append(create("p", "details", [companion.breed, companion.ageText, companion.sex].filter(Boolean).join(" · ")));
       }
+      const returned = returnMessage();
+      // The price otherwise only appears inside the sponsorship form, which these states replace.
+      const showsForm = !returned && companion.status !== "adopted" && companion.status !== "sponsored";
+      if (!showsForm) {
+        content.append(create("p", "price", price(companion.monthlyCents, companion.currency)));
+      }
       content.append(create("p", "status", statusText(companion.status)));
 
-      const returned = returnMessage();
       if (returned) {
         content.append(returned);
       } else if (companion.status === "adopted") {
@@ -256,7 +266,7 @@ export const sponsorEmbedScript = String.raw`(() => {
       } else {
         const intro = sponsorIntro(root, companion.name);
         if (intro !== null) content.append(create("p", "intro", intro));
-        content.append(sponsorForm(org, source, returnToFor(root), companion.tiers, companion.currency));
+        content.append(sponsorForm(org, source, returnToFor(root), companion.tiers || [], companion.monthlyCents, companion.currency));
       }
       if (companion.status === "adopted" || companion.status === "sponsored") {
         content.append(link(companion.companionUrl, "View companion details"));
@@ -279,4 +289,4 @@ export const sponsorEmbedScript = String.raw`(() => {
   } else {
     renderAll();
   }
-})();`.replace(/\n[ ]+/gu, "\n");
+})();`;

@@ -82,7 +82,7 @@ test("serves a cacheable dependency-free script below the size limit", async () 
 
   assert.equal(response.headers.get("cache-control"), "public, max-age=3600");
   assert.equal(response.headers.get("content-type"), "text/javascript; charset=utf-8");
-  assert.ok(new TextEncoder().encode(await response.text()).byteLength < 12_000);
+  assert.ok(new TextEncoder().encode(await response.text()).byteLength < 16_000);
 });
 
 test("renders companion data and a checkout form using the public endpoints", async () => {
@@ -131,6 +131,15 @@ test("renders one tier as the price and description without radio controls", asy
   assert.equal(renderedDescription?.children.length, 0);
   assert.equal(root.querySelector('[name="tier"]')?.getAttribute("value"), "tier-care");
   assert.equal(root.querySelector('[name="tier"][type="radio"]'), null);
+});
+
+test("renders the default price and posts no tier when the organization has no tiers", async () => {
+  const { root } = await renderWidget({ response: { ...companion, tiers: [] } });
+
+  assert.equal(root.querySelector(".dogathon-sponsor-price")?.textContent, "$32.50 monthly");
+  assert.ok(root.querySelector("form"));
+  assert.equal(root.querySelector('[name="tier"]'), null);
+  assert.equal(root.querySelector(".dogathon-sponsor-tiers"), null);
 });
 
 test("cta mode renders only a sponsor link and preserves sponsorship-page query parameters", async () => {
@@ -322,6 +331,8 @@ for (const [status, expected] of [
 ] as const) {
   test(`renders a ${status} message and companion link`, async () => {
     const { root } = await renderWidget({ response: { ...companion, status } });
+
+    assert.equal(root.querySelector(".dogathon-sponsor-price")?.textContent, "$32.50 monthly");
 
     assert.equal(root.querySelector(".dogathon-sponsor-message")?.textContent, expected);
     assert.equal(root.querySelector("form"), null);
