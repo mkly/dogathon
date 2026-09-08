@@ -78,7 +78,6 @@ export default async function NextCompanionPage({ params, searchParams }: NextCo
                   <FeltPanel className={styles.companionCard} key={resident.id} stitched={false} tone="oatmeal">
                     <PhotoPatch alt={`${resident.name}, ${resident.breed}`} className={styles.gridPhoto} src={resident.photoUrls[0]} />
                     <div className={styles.cardCopy}>
-                      <span className={styles.cardStatus}>Available</span>
                       <h2>{resident.name}</h2>
                       <p>{resident.breed} · {resident.ageText}</p>
                       <form action={transferSponsorshipAction.bind(null, orgSlug, token)} className={styles.selectionForm}>

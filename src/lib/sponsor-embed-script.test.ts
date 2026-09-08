@@ -95,7 +95,6 @@ test("renders companion data and a checkout form using the public endpoints", as
     "https://pawcast.example/api/public/happy-paws/companion?source=https%3A%2F%2Frescue.example%2Fdogs%2Fbiscuit",
   );
   assert.equal(root.querySelector(".dogathon-sponsor-name")?.textContent, "Biscuit");
-  assert.equal(root.querySelector(".dogathon-sponsor-status")?.textContent, "Available for sponsorship");
   assert.equal(root.querySelector("img")?.getAttribute("src"), companion.photoUrl);
 
   const form = root.querySelector("form");

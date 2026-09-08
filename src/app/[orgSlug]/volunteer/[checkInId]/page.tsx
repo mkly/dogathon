@@ -6,7 +6,7 @@ import { z } from "zod";
 import clsx from "clsx";
 
 import { AdminPage } from "@/components/admin-ui";
-import { FeltLink, FeltPanel, PhotoPatch, Stitch, StitchBadge } from "@/components/felt";
+import { FeltLink, FeltPanel, PhotoPatch, StitchBadge } from "@/components/felt";
 import felt from "@/components/felt.module.css";
 import { PageViewTransition } from "@/components/page-view-transition";
 import { getOrganizationAccessBySlug } from "@/lib/organization-access";
@@ -92,7 +92,6 @@ export default async function CheckInPage({ params, searchParams }: CheckInPageP
     <PageViewTransition>
       <AdminPage className={styles.chatPage} variant="volunteer">
         <section className={clsx(felt["felt-panel"], "felt-cream", styles.shell)}>
-          <Stitch />
           <header className={styles.chatHeader}>
             <PhotoPatch alt="" className={styles.headerPhoto} sizes="4rem" src={residentPhoto} />
             <div className={styles.headerCopy}>

@@ -146,11 +146,13 @@
   flex-direction: column;
 }
 
-/* A cream felt sheet with the stitch ring just inside the edge; the header
-   and dock rest on the felt, the conversation sits in a hole cut into it. */
+/* A cream felt sheet that fills the screen: no stitch ring or drop shadow,
+   only a light bevel, so the edge stays quiet. The header and dock rest on
+   the felt, the conversation sits in a hole cut into it. */
 .shell {
-  --pil: 2.2;
+  --pil: 1;
   --bw: 0.3;
+  --drop: 0;
   display: flex;
   width: min(100%, 42rem);
   min-width: 0;

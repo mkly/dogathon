@@ -58,10 +58,9 @@ export default async function OrganizationHome({ params, searchParams }: Organiz
       <main className={styles.siteShell}>
         <Image alt="Pawcast" className={styles.wordmark} src={pawcastWordmark} />
 
-        <p>{organization.name}</p>
-
         <FeltPanel className={styles.hero} tone="moss">
           <div className={styles.heroCopy}>
+            <p className={styles.eyebrow}>{organization.name}</p>
             <h1>
               Put a little love behind a{" "}
               <span className={styles.noOrphan}>
@@ -117,7 +116,6 @@ export default async function OrganizationHome({ params, searchParams }: Organiz
                   />
                 </ViewTransition>
                 <div className={styles.cardCopy}>
-                  <span className={styles.cardStatus}>Available</span>
                   <h2>{resident.name}</h2>
                   <p>{resident.breed} · {resident.ageText}</p>
                   <FeltLink

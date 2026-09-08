@@ -32,7 +32,7 @@ export default async function SponsorResolverPage({
     <PageViewTransition>
       <main className={styles.siteShell}>
         <FeltPanel className={styles.emptyState} tone="oatmeal">
-          <p>{organization.name}</p>
+          <p className={styles.eyebrow}>{organization.name}</p>
           <h1>This companion is not available to sponsor yet.</h1>
           <p>
             Their page may not be in the rescue&apos;s current roster. Meet the companions who are
