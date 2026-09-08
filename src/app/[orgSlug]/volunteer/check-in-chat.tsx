@@ -276,11 +276,11 @@ export function CheckInChat({
           {photos.map((photo) => (
             <div className={styles.photoTile} key={photo.id}>
               <Image alt={`Check-in photo of ${resident.name}`} height={96} src={photo.previewUrl} unoptimized width={96} />
-              <span className={styles.photoStatus}>
-                {photo.status === "uploading" ? "Uploading…" : null}
-                {photo.status === "uploaded" ? "Ready" : null}
-                {photo.status === "failed" ? "Upload failed" : null}
-              </span>
+              {photo.status === "uploaded" ? null : (
+                <span className={styles.photoStatus}>
+                  {photo.status === "uploading" ? "Uploading…" : "Upload failed"}
+                </span>
+              )}
               {photo.status === "failed" ? (
                 <button aria-label="Retry photo upload" onClick={() => void uploadPhoto(photo)} type="button">Retry</button>
               ) : null}

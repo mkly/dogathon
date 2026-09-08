@@ -186,15 +186,12 @@
 }
 
 .photoStatus {
-  position: absolute;
-  right: 0.25rem;
-  bottom: 2.35rem;
-  padding: 0.2rem 0.35rem;
-  border-radius: 6px;
-  color: var(--felt-cream);
-  background: rgb(61 51 43 / 82%);
-  font-size: 0.65rem;
-  font-weight: 900;
+  display: block;
+  margin-top: 0.4rem;
+  color: var(--felt-ink-soft);
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-align: center;
 }
 
 .photoStep {
