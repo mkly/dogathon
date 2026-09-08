@@ -20,7 +20,7 @@ type FeltTone =
 
 // Dashed hand-stitch ring from the sirius-proto mockups: an SVG rect pair
 // (dark offset "shadow" under a thread-colored dash) sized entirely in CSS.
-function Stitch({ fine = false }: { fine?: boolean }) {
+export function Stitch({ fine = false }: { fine?: boolean }) {
   return (
     <svg
       aria-hidden="true"

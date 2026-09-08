@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { Suspense, ViewTransition } from "react";
 
 import { createSponsorship } from "@/app/actions";
-import { FeltField, FeltLink, FeltPanel, PhotoPatch, StitchBadge } from "@/components/felt";
+import { FeltField, FeltLink, FeltPanel, PhotoPatch, Stitch, StitchBadge } from "@/components/felt";
 import { PageViewTransition } from "@/components/page-view-transition";
 import { PendingFeltSubmitButton } from "@/components/pending-submit-button";
 import { formatMonthlyAmount } from "@/lib/format";
@@ -148,6 +148,7 @@ export default async function CompanionPage({ params, searchParams }: CompanionP
                     {tiers.map((tier, index) => (
                       <label className={styles.sponsorshipTier} key={tier.id}>
                         <input defaultChecked={index === 0} name="tier" required type="radio" value={tier.id} />
+                        <Stitch fine />
                         <span>
                           <strong>{formatMonthlyAmount(tier.monthlyCents)}/month</strong>
                           <small>{tier.description}</small>

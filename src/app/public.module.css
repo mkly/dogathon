@@ -307,23 +307,41 @@
   margin: 0;
   padding: 0.85rem 1rem;
   border: 2px dashed var(--felt-ink);
+  border-radius: 14px;
   cursor: pointer;
   transition: background-color var(--motion-duration-fast) var(--motion-ease-standard),
-    color var(--motion-duration-fast) var(--motion-ease-standard);
+    box-shadow var(--motion-duration-fast) var(--motion-ease-standard);
 }
 
 .sponsorshipTier:hover {
   background: rgb(61 51 43 / 0.08);
 }
 
+/* the chosen tier becomes a stitched mustard felt patch, like the inline highlight */
 .sponsorshipTier:has(input:checked) {
-  border-style: solid;
-  background: var(--felt-ink);
-  color: var(--felt-cream, #f4efe6);
+  --felt-color: var(--felt-mustard);
+  border-color: transparent;
+  background-color: var(--felt-color);
+  background-image: url("/textures/fabric-tile.webp");
+  background-size: 200px;
+  background-blend-mode: soft-light;
+  box-shadow:
+    0 2px 4px rgb(0 0 0 / 25%),
+    inset 0 0.5px 0.5px rgb(255 255 255 / 35%),
+    inset 0 -1px 0.8px rgb(0 0 0 / 14%);
+  color: var(--felt-ink);
+}
+
+.sponsorshipTier > svg {
+  visibility: hidden;
+}
+
+.sponsorshipTier:has(input:checked) > svg {
+  visibility: visible;
 }
 
 .sponsorshipTier:has(input:focus-visible) {
-  outline: 3px solid var(--felt-mustard, #d8a33b);
+  outline: 3px solid var(--felt-mustard);
   outline-offset: 3px;
 }
 
