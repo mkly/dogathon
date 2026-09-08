@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
+import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import pluralize from "pluralize";
 
@@ -35,10 +36,16 @@ type CompanionsCoveredPageProps = {
 
 const DIRECTORY_PAGE_SIZE = 50;
 const SPONSORSHIPS_PER_COMPANION_LIMIT = 100;
+const DAY_IN_MS = 24 * 60 * 60 * 1000;
 
 function pageFromQuery(value: string | string[] | undefined) {
   const parsed = Number(Array.isArray(value) ? value[0] : value);
   return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : 1;
+}
+
+function daysWaiting(awaitingSince: Date | null) {
+  if (!awaitingSince) return 0;
+  return Math.max(0, Math.floor((Date.now() - awaitingSince.getTime()) / DAY_IN_MS));
 }
 
 export default async function CompanionsCoveredPage({ params, searchParams }: CompanionsCoveredPageProps) {
@@ -63,7 +70,7 @@ export default async function CompanionsCoveredPage({ params, searchParams }: Co
     orgId: context.orgId,
     sponsorships: { some: { orgId: context.orgId } },
   };
-  const [residentCount, sponsorshipCount, activelyCoveredCount, residents] = await Promise.all([
+  const [residentCount, sponsorshipCount, activelyCoveredCount, residents, awaitingSponsorships] = await Promise.all([
     prisma.resident.count({ where: residentWhere }),
     prisma.sponsorship.count({ where: { orgId: context.orgId } }),
     prisma.resident.count({
@@ -94,6 +101,16 @@ export default async function CompanionsCoveredPage({ params, searchParams }: Co
       skip: (page - 1) * DIRECTORY_PAGE_SIZE,
       take: DIRECTORY_PAGE_SIZE,
     }),
+    prisma.sponsorship.findMany({
+      where: { orgId: context.orgId, status: "awaiting" },
+      select: {
+        id: true,
+        awaitingSince: true,
+        resident: { select: { name: true } },
+        sponsor: { select: { id: true, name: true } },
+      },
+      orderBy: [{ awaitingSince: "asc" }, { id: "asc" }],
+    }),
   ]);
   const hasPreviousPage = page > 1;
   const hasNextPage = page * DIRECTORY_PAGE_SIZE < residentCount;
@@ -119,6 +136,48 @@ export default async function CompanionsCoveredPage({ params, searchParams }: Co
           </p>
           <AdminBadge tone="moss">staff only</AdminBadge>
         </div>
+
+        {awaitingSponsorships.length > 0 ? (
+          <section aria-labelledby="awaiting-heading" className={styles.awaitingSection}>
+            <div className={styles.awaitingTitle}>
+              <div>
+                <h2 id="awaiting-heading">Awaiting a new companion</h2>
+                <p>Sponsorships paused while their sponsors choose who to support next.</p>
+              </div>
+              <AdminBadge tone="brick">{awaitingSponsorships.length} awaiting</AdminBadge>
+            </div>
+            <AdminSurface className={styles.awaitingPanel} tone="mustard">
+              <AdminTable>
+                <thead>
+                  <tr>
+                    <th scope="col">Sponsor</th>
+                    <th scope="col">Former companion</th>
+                    <th scope="col">Waiting</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {awaitingSponsorships.map((sponsorship) => {
+                    const waitingDays = daysWaiting(sponsorship.awaitingSince);
+                    return (
+                      <tr key={sponsorship.id}>
+                        <td>
+                          <Link
+                            href={`/${orgSlug}/admin/sponsors/${sponsorship.sponsor.id}`}
+                            transitionTypes={["nav-forward"]}
+                          >
+                            {sponsorship.sponsor.name}
+                          </Link>
+                        </td>
+                        <td>{sponsorship.resident.name}</td>
+                        <td>{waitingDays} {pluralize("day", waitingDays)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </AdminTable>
+            </AdminSurface>
+          </section>
+        ) : null}
 
         {residents.length === 0 ? (
           <AdminSurface tone="oatmeal">

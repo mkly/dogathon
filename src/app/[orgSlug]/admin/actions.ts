@@ -18,6 +18,12 @@ import {
   markResidentAdopted as retireAdoptedResident,
 } from "@/lib/roster-sync";
 import { createConnectOnboardingLink, refreshConnectStatus } from "@/lib/stripe-billing";
+import {
+  endAwaitingSponsorship,
+  SponsorshipTransferError,
+  transferSponsorship,
+} from "@/lib/sponsorship-transfer";
+import { uuidSchema } from "@/lib/uuid";
 
 export type SettingsState = {
   message: string;
@@ -26,9 +32,102 @@ export type SettingsState = {
 };
 const organizationFormSchema = z.object({ orgSlug: z.string().trim().min(1) });
 const residentFormSchema = organizationFormSchema.extend({ residentId: z.string().trim().min(1) });
+const awaitingSponsorshipSchema = z.object({
+  orgSlug: z.string().trim().min(1),
+  sponsorshipId: uuidSchema,
+});
+const transferAwaitingSponsorshipSchema = awaitingSponsorshipSchema.extend({
+  residentId: uuidSchema,
+});
+
+export type AwaitingSponsorshipActionResult = {
+  message: string;
+  ok: boolean;
+};
 
 export async function refreshAdminPage() {
   refresh();
+}
+
+async function requireAwaitingSponsorshipAccess(orgSlug: string) {
+  const access = await getOrganizationAccessBySlug(await headers(), orgSlug, {
+    sponsorUpdate: ["manage"],
+  });
+  if (!access) notFound();
+  if (!access.context) redirect("/staff/organizations");
+  return access.context.orgId;
+}
+
+function refreshSponsorshipDirectories(orgSlug: string, sponsorId: string) {
+  revalidatePath(`/${orgSlug}/admin`);
+  revalidatePath(`/${orgSlug}/admin/companions-covered`);
+  revalidatePath(`/${orgSlug}/admin/sponsors/${sponsorId}`);
+}
+
+export async function transferAwaitingSponsorship(
+  input: z.infer<typeof transferAwaitingSponsorshipSchema>,
+): Promise<AwaitingSponsorshipActionResult> {
+  const parsed = transferAwaitingSponsorshipSchema.safeParse(input);
+  if (!parsed.success) notFound();
+  const { orgSlug, residentId, sponsorshipId } = parsed.data;
+  const orgId = await requireAwaitingSponsorshipAccess(orgSlug);
+  const sponsorship = await prisma.sponsorship.findFirst({
+    where: { id: sponsorshipId, orgId, status: "awaiting" },
+    select: { sponsorId: true },
+  });
+  if (!sponsorship) {
+    return { ok: false, message: "This sponsorship is no longer awaiting a companion." };
+  }
+
+  try {
+    const result = await transferSponsorship(sponsorshipId, residentId);
+    refreshSponsorshipDirectories(orgSlug, sponsorship.sponsorId);
+    return {
+      ok: true,
+      message: `Sponsorship transferred to ${result.companionName}. A confirmation was emailed to the sponsor.`,
+    };
+  } catch (error) {
+    if (error instanceof SponsorshipTransferError) {
+      return { ok: false, message: `${error.message}.` };
+    }
+    throw error;
+  }
+}
+
+export async function endStaffAwaitingSponsorship(
+  input: z.infer<typeof awaitingSponsorshipSchema>,
+): Promise<AwaitingSponsorshipActionResult> {
+  const parsed = awaitingSponsorshipSchema.safeParse(input);
+  if (!parsed.success) notFound();
+  const { orgSlug, sponsorshipId } = parsed.data;
+  const orgId = await requireAwaitingSponsorshipAccess(orgSlug);
+  const sponsorship = await prisma.sponsorship.findFirst({
+    where: { id: sponsorshipId, orgId, status: "awaiting" },
+    select: {
+      sponsorId: true,
+      resident: { select: { unavailabilityReason: true } },
+    },
+  });
+  if (!sponsorship) {
+    return { ok: false, message: "This sponsorship is no longer awaiting a companion." };
+  }
+
+  try {
+    await endAwaitingSponsorship(
+      sponsorshipId,
+      sponsorship.resident.unavailabilityReason ?? "unavailable",
+    );
+    refreshSponsorshipDirectories(orgSlug, sponsorship.sponsorId);
+    return {
+      ok: true,
+      message: "Sponsorship ended. Its recurring charge was canceled and the sponsor was emailed.",
+    };
+  } catch (error) {
+    if (error instanceof SponsorshipTransferError) {
+      return { ok: false, message: `${error.message}.` };
+    }
+    throw error;
+  }
 }
 
 export async function beginStripeOnboarding(formData: FormData) {

@@ -14,10 +14,11 @@ import {
 } from "@/components/admin-ui";
 import { formatDate, sponsorshipEndedReasonLabel, sponsorshipStatusLabel } from "@/lib/format";
 import { PageViewTransition } from "@/components/page-view-transition";
-import { getOrganizationAccessBySlug } from "@/lib/organization-access";
+import { checkOrganizationPermission, getOrganizationAccessBySlug } from "@/lib/organization-access";
 import { prisma } from "@/lib/prisma";
 import { uuidSchema } from "@/lib/uuid";
 
+import { AwaitingSponsorshipControls } from "./awaiting-sponsorship-controls";
 import styles from "../sponsors.module.css";
 
 export const dynamic = "force-dynamic";
@@ -36,7 +37,8 @@ const SPONSORSHIP_HISTORY_LIMIT = 100;
 export default async function SponsorDetailPage({ params }: SponsorDetailPageProps) {
   const { sponsorId, orgSlug } = await params;
   if (!uuidSchema.safeParse(sponsorId).success) notFound();
-  const access = await getOrganizationAccessBySlug(await headers(), orgSlug, {
+  const requestHeaders = await headers();
+  const access = await getOrganizationAccessBySlug(requestHeaders, orgSlug, {
     sponsors: ["read"],
   });
 
@@ -46,28 +48,51 @@ export default async function SponsorDetailPage({ params }: SponsorDetailPagePro
     redirect(access.authenticated ? "/staff/organizations" : `/staff/sign-in?next=${next}`);
   }
   const { context } = access;
-
-  const sponsor = await prisma.sponsor.findFirst({
-    where: { id: sponsorId, sponsorships: { some: { orgId: context.orgId } } },
-    select: {
-      email: true,
-      name: true,
-      _count: { select: { sponsorships: { where: { orgId: context.orgId } } } },
-      sponsorships: {
-        where: { orgId: context.orgId },
-        select: {
-          id: true,
-          status: true,
-          createdAt: true,
-          endedAt: true,
-          endedReason: true,
-          resident: { select: { name: true } },
-        },
-        orderBy: { createdAt: "asc" },
-        take: SPONSORSHIP_HISTORY_LIMIT,
-      },
-    },
+  const canManageAwaiting = await checkOrganizationPermission(requestHeaders, context.orgId, {
+    sponsorUpdate: ["manage"],
   });
+
+  const [sponsor, awaitingSponsorships, availableResidents] = await Promise.all([
+    prisma.sponsor.findFirst({
+      where: { id: sponsorId, sponsorships: { some: { orgId: context.orgId } } },
+      select: {
+        email: true,
+        name: true,
+        _count: { select: { sponsorships: { where: { orgId: context.orgId } } } },
+        sponsorships: {
+          where: { orgId: context.orgId },
+          select: {
+            id: true,
+            status: true,
+            createdAt: true,
+            endedAt: true,
+            endedReason: true,
+            resident: { select: { name: true } },
+          },
+          orderBy: { createdAt: "asc" },
+          take: SPONSORSHIP_HISTORY_LIMIT,
+        },
+      },
+    }),
+    prisma.sponsorship.findMany({
+      where: { orgId: context.orgId, sponsorId, status: "awaiting" },
+      select: {
+        id: true,
+        awaitingSince: true,
+        resident: { select: { name: true } },
+      },
+      orderBy: [{ awaitingSince: "asc" }, { id: "asc" }],
+    }),
+    canManageAwaiting ? prisma.resident.findMany({
+      where: {
+        orgId: context.orgId,
+        available: true,
+        sponsorships: { none: { status: "active" } },
+      },
+      select: { id: true, name: true },
+      orderBy: [{ name: "asc" }, { id: "asc" }],
+    }) : Promise.resolve([]),
+  ]);
 
   if (!sponsor) notFound();
 
@@ -90,6 +115,44 @@ export default async function SponsorDetailPage({ params }: SponsorDetailPagePro
             <a href={`mailto:${sponsor.email}`}>{sponsor.email}</a>
           </div>
         </AdminSurface>
+
+        {awaitingSponsorships.length > 0 ? (
+          <section aria-labelledby="awaiting-heading" className={styles.awaitingSection}>
+            <div className={styles.historyTitle}>
+              <h2 id="awaiting-heading">Awaiting a new companion</h2>
+              <AdminBadge tone="brick">{awaitingSponsorships.length} awaiting</AdminBadge>
+            </div>
+            <AdminSurface className={styles.historyPanel} tone="mustard">
+              <AdminTable>
+                <thead>
+                  <tr>
+                    <th scope="col">Former companion</th>
+                    <th scope="col">Awaiting since</th>
+                    {canManageAwaiting ? <th scope="col">Resolution</th> : null}
+                  </tr>
+                </thead>
+                <tbody>
+                  {awaitingSponsorships.map((sponsorship) => (
+                    <tr key={sponsorship.id}>
+                      <td>{sponsorship.resident.name}</td>
+                      <td>{sponsorship.awaitingSince ? formatDate(sponsorship.awaitingSince) : "—"}</td>
+                      {canManageAwaiting ? (
+                        <td>
+                          <AwaitingSponsorshipControls
+                            availableResidents={availableResidents}
+                            formerCompanionName={sponsorship.resident.name}
+                            orgSlug={orgSlug}
+                            sponsorshipId={sponsorship.id}
+                          />
+                        </td>
+                      ) : null}
+                    </tr>
+                  ))}
+                </tbody>
+              </AdminTable>
+            </AdminSurface>
+          </section>
+        ) : null}
 
         <section aria-labelledby="history-heading">
           <div className={styles.historyTitle}>

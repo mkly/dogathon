@@ -17,6 +17,13 @@
   font-weight: 750;
 }
 
+.awaitingSection { margin-bottom: 30px; }
+.awaitingTitle { display: flex; align-items: end; justify-content: space-between; gap: 18px; margin-bottom: 14px; }
+.awaitingTitle h2 { margin: 0 0 5px; font-size: 1.55rem; font-weight: 900; }
+.awaitingTitle p { margin: 0; font-size: 0.82rem; font-weight: 700; opacity: 0.72; }
+.awaitingPanel { padding: 12px; }
+.awaitingPanel a { color: inherit; font-weight: 850; }
+
 .companionList {
   display: grid;
   gap: 14px;
@@ -125,4 +132,6 @@
   .companionActions > * {
     flex: 1;
   }
+
+  .awaitingTitle { align-items: start; flex-direction: column; }
 }
