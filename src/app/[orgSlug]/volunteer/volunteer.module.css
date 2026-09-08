@@ -162,6 +162,10 @@
   overflow-x: auto;
 }
 
+.openingPhotos {
+  flex: 0 0 auto;
+}
+
 .photoTile {
   position: relative;
   width: 6rem;
@@ -203,6 +207,93 @@
   background: rgb(61 51 43 / 82%);
   font-size: 0.65rem;
   font-weight: 900;
+}
+
+.photoStep {
+  justify-content: center;
+  gap: 1rem;
+  padding: 1rem 1.25rem max(1.5rem, env(safe-area-inset-bottom));
+  text-align: center;
+}
+
+.photoStepIntro {
+  margin-bottom: 0.25rem;
+}
+
+.cameraMark {
+  display: grid;
+  width: 4.5rem;
+  height: 4.5rem;
+  margin: 0 auto 0.8rem;
+  border: 3px dashed rgb(61 51 43 / 25%);
+  border-radius: 50%;
+  place-items: center;
+  background: var(--felt-oatmeal);
+  font-size: 2rem;
+}
+
+.photoStepIntro h2 {
+  margin: 0;
+  font-size: clamp(1.55rem, 7vw, 2rem);
+}
+
+.photoStepIntro p {
+  max-width: 26rem;
+  margin: 0.55rem auto 0;
+  color: var(--felt-ink-soft);
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.cameraButton,
+.choosePhotoButton {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.cameraButton {
+  min-height: 9rem;
+  gap: 0.65rem;
+  border: 3px dashed rgb(255 255 255 / 48%);
+  border-radius: 22px;
+  color: var(--felt-cream);
+  background: var(--felt-denim);
+  box-shadow: 0 5px 0 rgb(61 51 43 / 18%);
+  font-size: 1.2rem;
+  font-weight: 900;
+}
+
+.cameraButton span[aria-hidden="true"] {
+  font-size: 2rem;
+}
+
+.choosePhotoButton {
+  min-height: 2.75rem;
+  color: var(--felt-denim);
+  font-weight: 900;
+  text-decoration: underline;
+  text-underline-offset: 0.2rem;
+}
+
+.cameraButton:focus-within,
+.choosePhotoButton:focus-within {
+  outline: 3px solid var(--felt-mustard);
+  outline-offset: 3px;
+}
+
+.cameraButton input,
+.choosePhotoButton input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.photoStep .photoThread {
+  justify-content: center;
 }
 
 .finishRow {
