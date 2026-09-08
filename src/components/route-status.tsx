@@ -90,7 +90,7 @@ export function AdminRouteLoading({ variant = "directory" }: AdminRouteLoadingPr
 
 export function VolunteerRouteLoading() {
   return (
-    <main aria-busy="true" aria-label="Loading volunteer check-in" className={styles.volunteer}>
+    <main aria-busy="true" aria-label="Loading volunteer update" className={styles.volunteer}>
       <Skeleton className={styles.volunteerHeader} />
       <div className={styles.companions}>{Array.from({ length: 4 }, (_, index) => <Skeleton className={styles.companion} key={index} />)}</div>
       <div className={styles.volunteerThread}>

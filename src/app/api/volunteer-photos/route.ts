@@ -94,7 +94,7 @@ export function createVolunteerPhotoPostHandler(dependencies: UploadDependencies
       access.context.userId,
       checkInId,
     );
-    if (!residentId) return Response.json({ error: "Check-in not found" }, { status: 404 });
+    if (!residentId) return Response.json({ error: "Update not found" }, { status: 404 });
     if (photo.size > MAX_PHOTO_BYTES) return uploadError("photo-size");
 
     const processed = await dependencies.processPhoto(new Uint8Array(await photo.arrayBuffer()));

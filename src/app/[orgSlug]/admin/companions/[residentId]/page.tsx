@@ -23,8 +23,8 @@ import styles from "./resident.module.css";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Companion check-ins | Dogathon staff",
-  description: "Private volunteer check-in history for a companion.",
+  title: "Companion updates | Dogathon staff",
+  description: "Private volunteer update history for a companion.",
 };
 
 type ResidentPageProps = { params: Promise<{ orgSlug: string; residentId: string }> };
@@ -60,13 +60,13 @@ export default async function ResidentPage({ params }: ResidentPageProps) {
         <AdminHeader
           actions={<AdminLink href={`/${orgSlug}/admin`} transitionTypes={["nav-back"]}>Back to staff room</AdminLink>}
           eyebrow="Companion record"
-          lede="Volunteer conversations are logged from their first message through the saved care note."
+          lede="Volunteer conversations are logged from their first message through the saved note."
           title={resident.name}
           variant="directory"
         />
-        <section aria-labelledby="check-ins-heading">
+        <section aria-labelledby="updates-heading">
           <div className={styles.title}>
-            <h2 id="check-ins-heading">Past check-ins</h2>
+            <h2 id="updates-heading">Past updates</h2>
             <AdminBadge tone="mustard">
               {resident._count.checkIns} {pluralize("session", resident._count.checkIns)}
             </AdminBadge>

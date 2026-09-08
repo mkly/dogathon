@@ -118,7 +118,7 @@ async function generateOpening(input: InterviewInput, includePhoto: boolean): Pr
     ? [
         {
           type: "text" as const,
-          text: "Open the volunteer check-in from this photo, following the opening-message rules.",
+          text: "Open the volunteer update from this photo, following the opening-message rules.",
         },
         {
           type: "file" as const,
@@ -126,7 +126,7 @@ async function generateOpening(input: InterviewInput, includePhoto: boolean): Pr
           mediaType: input.photo.mime,
         },
       ]
-    : "Open the volunteer check-in now. No photo is available to you, so ask the first question without describing one.";
+    : "Open the volunteer update now. No photo is available to you, so ask the first question without describing one.";
   const { text } = await generateText({
     model: createAiModel(),
     instructions: buildInterviewSystemPrompt(input),

@@ -20,7 +20,7 @@ import styles from "./volunteer.module.css";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Volunteer check-in | Dogathon",
+  title: "Volunteer update | Dogathon",
   description: "Snap a photo and answer a few questions about a rescue companion.",
 };
 
@@ -82,7 +82,7 @@ export default async function VolunteerPage({ params, searchParams }: VolunteerP
         <div className={styles.pickerShell}>
           <FeltPanel className={styles.hero} tone="moss">
             <div className={styles.heroCopy}>
-              <StitchBadge tone="cream">Volunteer check-in</StitchBadge>
+              <StitchBadge tone="cream">Volunteer update</StitchBadge>
               <h1>Who did you spend time with today?</h1>
               <p className={styles.heroLede}>
                 Snap a photo and answer a few questions. It becomes the next update for
@@ -93,7 +93,7 @@ export default async function VolunteerPage({ params, searchParams }: VolunteerP
           </FeltPanel>
 
           {error === "unavailable" ? (
-            <p className={styles.chatError} role="alert">That companion is no longer available for check-ins.</p>
+            <p className={styles.chatError} role="alert">That companion is no longer available for updates.</p>
           ) : null}
 
           <UnfinishedCheckIns checkIns={openCheckIns} orgSlug={orgSlug} />
@@ -107,7 +107,7 @@ export default async function VolunteerPage({ params, searchParams }: VolunteerP
                     <span className={styles.cardCopy}>
                       <span className={styles.cardName}>{resident.name}</span>
                       <span className={styles.cardBreed}>{resident.breed}</span>
-                      <span className={clsx(felt["felt-button"], "felt-mustard", styles.cardAction)}>Check in</span>
+                      <span className={clsx(felt["felt-button"], "felt-mustard", styles.cardAction)}>Share an update</span>
                     </span>
                   </button>
                 </form>
@@ -116,7 +116,7 @@ export default async function VolunteerPage({ params, searchParams }: VolunteerP
           ) : (
             <FeltPanel className={styles.emptyPanel} tone="oatmeal">
               <AdminEmptyState variant="volunteer">
-                No companions have active sponsors right now, so there’s no one to check in for yet.
+                No companions have active sponsors right now, so there’s no one to share an update about yet.
               </AdminEmptyState>
             </FeltPanel>
           )}

@@ -217,7 +217,7 @@ export function CheckInChat({
     try {
       await onFinish(checkInId, transcript);
     } catch {
-      setFinishError("We could not finish this check-in. Please try again.");
+      setFinishError("We could not finish this update. Please try again.");
       setFinishing(false);
     }
   }
@@ -228,7 +228,7 @@ export function CheckInChat({
       <div className={`${styles.session} ${styles.photoStep}`}>
         <div className={clsx(felt["photo-patch"], styles.photoWell)}>
           {pending ? (
-            <Image alt={`Check-in photo of ${resident.name}`} className={styles.photoWellImage} height={600} src={pending.previewUrl} unoptimized width={800} />
+            <Image alt={`Photo of ${resident.name}`} className={styles.photoWellImage} height={600} src={pending.previewUrl} unoptimized width={800} />
           ) : (
             <div className={styles.photoWellEmpty}>
               <span aria-hidden="true">📷</span>
@@ -283,15 +283,15 @@ export function CheckInChat({
   return (
     <div className={styles.session}>
       <div className={styles.thread}>
-        <div aria-label="Photos for this check-in" className={styles.photoThread} role="group">
+        <div aria-label="Photos for this update" className={styles.photoThread} role="group">
           {initialPhotos.map((photo) => (
             <figure className={clsx(felt["photo-patch"], styles.photoTile)} key={photo.id}>
-              <Image alt={`Check-in photo of ${resident.name}`} height={120} src={photo.url} unoptimized width={120} />
+              <Image alt={`Photo of ${resident.name}`} height={120} src={photo.url} unoptimized width={120} />
             </figure>
           ))}
           {photos.map((photo) => (
             <figure className={clsx(felt["photo-patch"], styles.photoTile)} key={photo.id}>
-              <Image alt={`Check-in photo of ${resident.name}`} height={120} src={photo.previewUrl} unoptimized width={120} />
+              <Image alt={`Photo of ${resident.name}`} height={120} src={photo.previewUrl} unoptimized width={120} />
               {photo.status === "uploaded" ? null : (
                 <span className={styles.photoStatus}>
                   {photo.status === "uploading" ? "Uploading…" : "Failed"}
@@ -349,7 +349,7 @@ export function CheckInChat({
               stitched
               tone="mustard"
             >
-              {finishing ? "Finishing…" : "Finish check-in"}
+              {finishing ? "Finishing…" : "Finish update"}
             </FeltButton>
           </div>
         ) : null}

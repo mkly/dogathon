@@ -21,8 +21,8 @@ import styles from "../volunteer.module.css";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Volunteer check-in | Dogathon",
-  description: "Continue a saved volunteer check-in.",
+  title: "Volunteer update | Dogathon",
+  description: "Continue a saved volunteer update.",
 };
 
 type CheckInPageProps = {
@@ -71,10 +71,10 @@ export default async function CheckInPage({ params, searchParams }: CheckInPageP
           <FeltPanel className={styles.confirmation} tone="moss">
             <PhotoPatch alt="" className={styles.confirmationPhoto} sizes="9rem" src={residentPhoto} />
             <StitchBadge tone="cream">Note tucked in</StitchBadge>
-            <h1>Thanks for checking in on {residentName}!</h1>
+            <h1>Thanks for the update on {residentName}!</h1>
             <p>It goes into the next update for {residentName}’s sponsors.</p>
             <FeltLink className={styles.againLink} href={`/${orgSlug}/volunteer`}>
-              Check in on someone else
+              Share another update
             </FeltLink>
           </FeltPanel>
         </AdminPage>
@@ -93,7 +93,7 @@ export default async function CheckInPage({ params, searchParams }: CheckInPageP
           <header className={styles.chatHeader}>
             <PhotoPatch alt="" className={styles.headerPhoto} sizes="4rem" src={residentPhoto} />
             <div className={styles.headerCopy}>
-              <StitchBadge tone="denim">Volunteer check-in</StitchBadge>
+              <StitchBadge tone="denim">Volunteer update</StitchBadge>
               <h1>How’s {residentName} doing?</h1>
             </div>
           </header>

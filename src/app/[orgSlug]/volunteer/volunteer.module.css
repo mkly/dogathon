@@ -64,7 +64,7 @@
   display: contents;
 }
 
-/* Unfinished check-ins are thin full-width rows: a small photo, the name,
+/* Unfinished updates are thin full-width rows: a small photo, the name,
    and a continue pill, with a discard button beside the row. */
 .resumeList {
   display: grid;
@@ -75,21 +75,14 @@
 }
 
 .resumeRow {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-}
-
-.resumeLink {
+  --drop: 0.6;
   display: flex;
   min-width: 0;
-  padding: 0.5rem 0.75rem 0.5rem 0.5rem;
+  padding: 0.5rem 0.9rem 0.5rem 0.5rem;
   border-radius: 14px;
-  flex: 1 1 auto;
   align-items: center;
   gap: 0.75rem;
-  text-align: left;
-  text-decoration: none;
+  cursor: default;
 }
 
 .resumePhoto {
@@ -127,9 +120,20 @@
   text-overflow: ellipsis;
 }
 
-.resumeAction {
-  margin-top: 0;
+.resumeActions {
+  position: relative;
+  z-index: 1;
+  display: flex;
   flex: 0 0 auto;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.resumeAction,
+.discardButton {
+  min-height: 2.6rem;
+  margin-top: 0;
+  padding-inline: 1rem;
 }
 
 .companionPicker + .pickerHeading,
@@ -137,11 +141,10 @@
   margin-top: 0.25rem;
 }
 
+/* Discard sits beside Continue as the quieter of two pills on the strip. */
 .discardButton {
-  --drop: 0.5;
-  margin-top: 0;
+  --drop: 0.45;
   border: 0;
-  flex: 0 0 auto;
   cursor: pointer;
 }
 
@@ -265,6 +268,25 @@
 @media (max-width: 41.99rem) {
   .chatPage {
     padding: 0;
+  }
+
+  /* On phones the two pills take a full-width row under the name so each
+     one is a comfortable thumb target. */
+  .resumeRow {
+    flex-wrap: wrap;
+    padding: 0.6rem;
+  }
+
+  .resumeActions {
+    width: 100%;
+    gap: 0.6rem;
+  }
+
+  .resumeAction,
+  .discardButton {
+    flex: 1 1 0;
+    min-height: 2.75rem;
+    justify-content: center;
   }
 
   .shell {
