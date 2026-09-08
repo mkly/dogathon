@@ -37,6 +37,8 @@ import {
   rosterSyncStatusLabel,
   type RosterSyncJobView,
 } from "@/lib/roster-sync-client";
+import { MarkdownEditor, type MarkdownEditorClassNames } from "@/components/markdown-editor";
+import { SPONSOR_UPDATE_BODY_MAX_LENGTH } from "@/lib/sponsor-update-body";
 import { pushToast } from "@/lib/toast";
 
 import {
@@ -90,6 +92,18 @@ function useApiFetch() {
   }, [router]);
 }
 
+export const richTextEditorClassNames: MarkdownEditorClassNames = {
+  counter: styles.richTextCounter,
+  counterOverLimit: styles.richTextCounterOverLimit,
+  editorContent: styles.richTextEditorContent,
+  editorSurface: styles.richTextEditorSurface,
+  loading: styles.richTextEditorLoading,
+  preview: styles.richTextPreview,
+  root: styles.richTextEditor,
+  toolbar: styles.richTextToolbar,
+  toolbarButton: styles.richTextToolbarButton,
+};
+
 export function DraftEditor({
   bodyText: initialBodyText,
   children,
@@ -116,6 +130,7 @@ export function DraftEditor({
   });
   const [subject, setSubject] = useState(initialSubject);
   const [bodyText, setBodyText] = useState(initialBodyText);
+  const [bodyOverLimit, setBodyOverLimit] = useState(false);
   const [editorOpen, setEditorOpen] = useState(false);
   const [denyConfirmOpen, setDenyConfirmOpen] = useState(false);
   const shouldRestoreFocus = useRef(false);
@@ -351,14 +366,17 @@ export function DraftEditor({
                                 value={subject}
                               />
                             </AdminField>
-                            <label htmlFor={`email-${id}`}>Email body</label>
-                            <AdminField>
-                              <textarea
+                            <label htmlFor={`email-${id}`} id={`email-label-${id}`}>Email body</label>
+                            <AdminField className={styles.richTextEditorField}>
+                              <MarkdownEditor
+                                classNames={richTextEditorClassNames}
+                                defaultValue={savedDraft.bodyText}
+                                disabled={pending !== null}
                                 id={`email-${id}`}
-                                onChange={(event) => setBodyText(event.target.value)}
-                                required
-                                rows={7}
-                                value={bodyText}
+                                labelledBy={`email-label-${id}`}
+                                maxLength={SPONSOR_UPDATE_BODY_MAX_LENGTH}
+                                onChange={setBodyText}
+                                onValidityChange={setBodyOverLimit}
                               />
                             </AdminField>
                             <div className={styles.modalActions}>
@@ -371,7 +389,7 @@ export function DraftEditor({
                               </AdminButton>
                               <AdminButton
                                 className={styles.saveDraftButton}
-                                disabled={pending !== null}
+                                disabled={pending !== null || bodyOverLimit || !bodyText.trim()}
                                 onClick={save}
                                 tone="mustard"
                               >

@@ -28,7 +28,7 @@ const { createElement } = await import("react");
 const { cleanup, render, screen, waitFor } = await import("@testing-library/react");
 const { render: renderEmail } = await import("@react-email/render");
 const { SponsorUpdateEmail } = await import("../emails/sponsor-update-email");
-const { PostscriptEditor } = await import("./postscript-editor");
+const { MarkdownEditor } = await import("./markdown-editor");
 
 const classNames = {
   counter: "counter",
@@ -47,7 +47,7 @@ afterEach(cleanup);
 test("loads Markdown into Tiptap and serializes an equivalent value", async () => {
   const markdown = "**bold** and [link](https://x.y)";
   const { container } = render(
-    createElement(PostscriptEditor, {
+    createElement(MarkdownEditor, {
       classNames,
       defaultValue: markdown,
       id: "postscript",
@@ -66,7 +66,7 @@ test("loads Markdown into Tiptap and serializes an equivalent value", async () =
 
 test("shows the editor content as plain text", async () => {
   render(
-    createElement(PostscriptEditor, {
+    createElement(MarkdownEditor, {
       classNames,
       defaultValue: "**bold** and [link](https://x.y)",
       id: "postscript",
@@ -85,7 +85,7 @@ test("shows the editor content as plain text", async () => {
 test("shows the configured organization-wide note placeholder", async () => {
   const placeholder = "Thank you for sponsoring. Our adoption fair is this Saturday.";
   const { container } = render(
-    createElement(PostscriptEditor, {
+    createElement(MarkdownEditor, {
       classNames,
       defaultValue: "",
       id: "postscript",
@@ -115,7 +115,7 @@ test("keeps the editor preview and sent email plain text in agreement", async ()
     "We hope to see you there.",
   ].join("\n");
   const { container } = render(
-    createElement(PostscriptEditor, {
+    createElement(MarkdownEditor, {
       classNames,
       defaultValue: postscript,
       id: "postscript",
@@ -162,7 +162,7 @@ test("keeps the editor preview and sent email plain text in agreement", async ()
 
 test("does not submit Markdown over the character limit", async () => {
   const { container } = render(
-    createElement(PostscriptEditor, {
+    createElement(MarkdownEditor, {
       classNames,
       defaultValue: "x".repeat(2001),
       id: "postscript",

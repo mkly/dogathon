@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { requireApiOrganization } from "@/lib/organization-access";
 import { prisma } from "@/lib/prisma";
+import { SPONSOR_UPDATE_BODY_MAX_LENGTH, sponsorUpdateBodyOverLimitMessage } from "@/lib/sponsor-update-body";
 import { uuidSchema } from "@/lib/uuid";
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -38,6 +39,9 @@ export async function PATCH(request: Request, { params }: RouteContext) {
   }
   if (!validated.data.subject || !validated.data.bodyText) {
     return Response.json({ error: "Subject and email body cannot be empty" }, { status: 400 });
+  }
+  if (validated.data.bodyText.length > SPONSOR_UPDATE_BODY_MAX_LENGTH) {
+    return Response.json({ error: sponsorUpdateBodyOverLimitMessage() }, { status: 400 });
   }
   const updated = await prisma.sponsorUpdate.updateMany({
     where: { id, orgId, status: "draft" },

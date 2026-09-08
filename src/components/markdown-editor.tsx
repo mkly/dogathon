@@ -8,7 +8,7 @@ import { StarterKit } from "@tiptap/starter-kit";
 import type { Editor } from "@tiptap/core";
 import { useEffect, useId, useMemo, useState } from "react";
 
-export type PostscriptEditorClassNames = {
+export type MarkdownEditorClassNames = {
   counter: string;
   counterOverLimit: string;
   editorContent: string;
@@ -20,14 +20,17 @@ export type PostscriptEditorClassNames = {
   toolbarButton: string;
 };
 
-type PostscriptEditorProps = {
-  classNames: PostscriptEditorClassNames;
+type MarkdownEditorProps = {
+  classNames: MarkdownEditorClassNames;
   defaultValue: string;
   disabled?: boolean;
   id: string;
   labelledBy?: string;
   maxLength: number;
-  name: string;
+  /** Submits the markdown through a form field when set. */
+  name?: string;
+  /** Reports the markdown on every edit for state-driven forms. */
+  onChange?: (markdown: string) => void;
   onValidityChange?: (overLimit: boolean) => void;
   placeholder?: string;
 };
@@ -44,7 +47,7 @@ const editorExtensions = [
   Markdown,
 ];
 
-export function PostscriptEditor({
+export function MarkdownEditor({
   classNames,
   defaultValue,
   disabled = false,
@@ -52,16 +55,17 @@ export function PostscriptEditor({
   labelledBy,
   maxLength,
   name,
+  onChange,
   onValidityChange,
   placeholder,
-}: PostscriptEditorProps) {
+}: MarkdownEditorProps) {
   const previewId = useId();
   // Keep the extension list identity stable: useEditor compares extensions
   // element by element and re-applies every option when one differs.
   const extensions = useMemo(
     () => [
       ...editorExtensions,
-      Placeholder.configure({ placeholder: placeholder ?? "Write an email postscript…" }),
+      Placeholder.configure({ placeholder: placeholder ?? "Write something…" }),
     ],
     [placeholder],
   );
@@ -69,7 +73,9 @@ export function PostscriptEditor({
   const [plainText, setPlainText] = useState("");
 
   const syncContent = (editorInstance: Editor) => {
-    setMarkdown(editorInstance.getMarkdown());
+    const nextMarkdown = editorInstance.getMarkdown();
+    setMarkdown(nextMarkdown);
+    onChange?.(nextMarkdown);
     setPlainText(
       editorInstance
         .getText({ blockSeparator: "\n\n" })
@@ -86,7 +92,7 @@ export function PostscriptEditor({
         // Prefer the visible field label so the accessible name matches it.
         ...(labelledBy
           ? { "aria-labelledby": labelledBy }
-          : { "aria-label": "Postscript content" }),
+          : { "aria-label": "Message content" }),
         class: classNames.editorSurface,
         id,
       },
@@ -145,7 +151,7 @@ export function PostscriptEditor({
 
   return (
     <div className={classNames.root}>
-      <div aria-label="Postscript formatting" className={classNames.toolbar} role="toolbar">
+      <div aria-label="Formatting" className={classNames.toolbar} role="toolbar">
         <button
           aria-label="Bold"
           aria-pressed={toolbarState?.bold ?? false}
@@ -229,7 +235,7 @@ export function PostscriptEditor({
       <div className={classNames.editorContent}>
         {editor ? <EditorContent editor={editor} /> : <p className={classNames.loading}>Loading editor…</p>}
       </div>
-      <input disabled={overLimit} name={name} type="hidden" value={markdown} />
+      {name ? <input disabled={overLimit} name={name} type="hidden" value={markdown} /> : null}
       <p
         className={`${classNames.counter} ${overLimit ? classNames.counterOverLimit : ""}`}
         role={overLimit ? "alert" : undefined}

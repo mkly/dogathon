@@ -3,29 +3,15 @@
 import { useActionState, useCallback, useEffect, useState } from "react";
 
 import { AdminButton, AdminField } from "@/components/admin-ui";
-import {
-  PostscriptEditor,
-  type PostscriptEditorClassNames,
-} from "@/components/postscript-editor";
+import { MarkdownEditor } from "@/components/markdown-editor";
 import { POSTSCRIPT_MAX_LENGTH } from "@/lib/postscript";
 import { pushToast } from "@/lib/toast";
 
 import { saveSettings, type SettingsState } from "../actions";
+import { richTextEditorClassNames } from "../admin-controls";
 import styles from "../admin.module.css";
 
 const initialSettingsState: SettingsState = { status: "idle", message: "" };
-
-const editorClassNames: PostscriptEditorClassNames = {
-  counter: styles.postscriptCounter,
-  counterOverLimit: styles.postscriptCounterOverLimit,
-  editorContent: styles.postscriptEditorContent,
-  editorSurface: styles.postscriptEditorSurface,
-  loading: styles.postscriptEditorLoading,
-  preview: styles.postscriptPreview,
-  root: styles.postscriptEditor,
-  toolbar: styles.postscriptToolbar,
-  toolbarButton: styles.postscriptToolbarButton,
-};
 
 export function PostscriptSettingsForm({
   orgSlug,
@@ -56,9 +42,9 @@ export function PostscriptSettingsForm({
       <label htmlFor="pinnedPostscript" id="pinnedPostscriptLabel">
         Email postscript
       </label>
-      <AdminField className={styles.postscriptEditorField}>
-        <PostscriptEditor
-          classNames={editorClassNames}
+      <AdminField className={styles.richTextEditorField}>
+        <MarkdownEditor
+          classNames={richTextEditorClassNames}
           defaultValue={pinnedPostscript}
           disabled={pending}
           id="pinnedPostscript"
