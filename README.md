@@ -135,8 +135,9 @@ The embed depends on these public endpoint contracts:
   unknown organization, source, or slug returns `404` with `{ error }`.
 - `POST /api/public/{orgSlug}/checkout` accepts either form-encoded or JSON `source`,
   `sponsorName`, `sponsorEmail`, `returnTo`, and an optional `tier` containing a tier ID. A missing
-  `tier` uses the first configured tier; an ID that does not belong to the organization returns
-  `invalid-tier`. `returnTo` must be an absolute URL on an origin configured for that organization.
+  `tier` uses the first configured tier, or the default price when none are configured; an ID that
+  does not belong to the organization returns `invalid-tier`. `returnTo` must be an absolute URL on
+  an origin configured for that organization.
   A form post redirects to Stripe with `303`; a JSON request returns `{ url }`.
 - Successful and canceled checkout redirects add `sponsored=1` (plus `session_id`) or
   `checkout=canceled` to `returnTo`. Checkout errors add `error=invalid`, `error=rate-limited`,

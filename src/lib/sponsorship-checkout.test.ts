@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import { DEFAULT_SPONSORSHIP_MONTHLY_CENTS } from "./rescue-settings.ts";
 import {
   startSponsorshipCheckout,
   type SponsorshipCheckoutDependencies,
@@ -77,6 +78,19 @@ test("checkout uses the selected organization tier", async () => {
     destination,
     { dependencies: deps.value },
   );
+
+  assert.deepEqual(result, { ok: true, url: "https://checkout.stripe.test/session" });
+  assert.equal(deps.checkoutCalled, true);
+});
+
+test("an organization with no tiers still checks out at the default price", async () => {
+  const deps = dependencies(DEFAULT_SPONSORSHIP_MONTHLY_CENTS);
+  deps.value.findOrganization = async (slug) => (slug === "fixture-rescue"
+    ? { ...organization, sponsorshipTiers: [] }
+    : null);
+  const result = await startSponsorshipCheckout(input(), destination, {
+    dependencies: deps.value,
+  });
 
   assert.deepEqual(result, { ok: true, url: "https://checkout.stripe.test/session" });
   assert.equal(deps.checkoutCalled, true);

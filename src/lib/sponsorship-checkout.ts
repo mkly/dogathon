@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { getPublicResidentBySource } from "@/lib/public-roster-cache";
 import { checkRateLimit, getRateLimitIdentity, RATE_LIMITS } from "@/lib/rate-limit";
+import { DEFAULT_SPONSORSHIP_MONTHLY_CENTS } from "@/lib/rescue-settings";
 import { normalizeSourceUrl } from "@/lib/source-url";
 import { createStripeCheckout, ResidentUnavailableError } from "@/lib/stripe-billing";
 import { uuidSchema } from "@/lib/uuid";
@@ -155,12 +156,14 @@ export async function startSponsorshipCheckout(
     });
   }
 
-  const tier = input.tier === undefined
-    ? organization.sponsorshipTiers[0]
+  // An organization that has never saved its sponsorship settings has no tiers, and every
+  // other price read falls back to the default, so an unspecified tier does too.
+  const monthlyCents = input.tier === undefined
+    ? organization.sponsorshipTiers[0]?.monthlyCents ?? DEFAULT_SPONSORSHIP_MONTHLY_CENTS
     : typeof input.tier === "string"
-      ? organization.sponsorshipTiers.find(({ id }) => id === input.tier)
+      ? organization.sponsorshipTiers.find(({ id }) => id === input.tier)?.monthlyCents
       : undefined;
-  if (!tier) {
+  if (monthlyCents === undefined) {
     return checkoutError("invalid-tier", {
       destination,
       orgSlug,
@@ -192,7 +195,7 @@ export async function startSponsorshipCheckout(
   try {
     const session = await dependencies.createCheckout({
       orgId: organization.id,
-      monthlyCents: tier.monthlyCents,
+      monthlyCents,
       residentId,
       sponsorName: details.data.sponsorName,
       sponsorEmail: details.data.sponsorEmail,
