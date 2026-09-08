@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { z } from "zod";
 
 import { FeltLink, FeltPanel, PhotoPatch } from "@/components/felt";
 import { PageViewTransition } from "@/components/page-view-transition";
@@ -10,8 +11,10 @@ import {
   getPublicOrganization,
   getPublicOrganizations,
   getPublicResidents,
+  getPublicSpeciesCounts,
 } from "@/lib/public-roster-cache";
 import { DEFAULT_SPONSORSHIP_MONTHLY_CENTS } from "@/lib/rescue-settings";
+import { normalizeSpecies, speciesLabel } from "@/lib/species";
 
 import pawcastWordmark from "../../../../public/brand/pawcast-wordmark.png";
 import feltPup from "../../../../public/mascot/felt-pup-2.png";
@@ -20,18 +23,30 @@ import styles from "../../public.module.css";
 
 export const revalidate = 86400;
 
-type OrganizationHomeProps = { params: Promise<{ orgSlug: string }> };
+type OrganizationHomeProps = {
+  params: Promise<{ orgSlug: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+};
+
+const rosterQuerySchema = z.object({
+  species: z.string().trim().min(1).max(100).transform(normalizeSpecies).optional().catch(undefined),
+});
 
 export async function generateStaticParams() {
   const organizations = await getPublicOrganizations();
   return organizations.map(({ slug }) => ({ orgSlug: slug }));
 }
 
-export default async function OrganizationHome({ params }: OrganizationHomeProps) {
+export default async function OrganizationHome({ params, searchParams }: OrganizationHomeProps) {
   const { orgSlug } = await params;
   const organization = await getPublicOrganization(orgSlug);
   if (!organization) notFound();
-  const residents = await getPublicResidents(organization.id);
+  const { species: requestedSpecies } = rosterQuerySchema.parse(await searchParams);
+  const speciesCounts = await getPublicSpeciesCounts(organization.id);
+  const activeSpecies = speciesCounts.some(({ species }) => species === requestedSpecies)
+    ? requestedSpecies
+    : undefined;
+  const residents = await getPublicResidents(organization.id, activeSpecies);
   const monthlyAmount = formatMonthlyAmount(
     organization.sponsorshipTiers.find((tier) => tier.isDefault)?.monthlyCents
       ?? organization.sponsorshipTiers[0]?.monthlyCents
@@ -62,6 +77,23 @@ export default async function OrganizationHome({ params }: OrganizationHomeProps
           {/* decorative: the heading and lede already carry the meaning */}
           <Image alt="" className={styles.mascot} preload src={feltPup} />
         </FeltPanel>
+
+        {speciesCounts.length > 1 && (
+          <nav aria-label="Filter companions by species" className={styles.speciesFilters}>
+            <Link aria-current={activeSpecies ? undefined : "page"} href={`/${orgSlug}`}>
+              All
+            </Link>
+            {speciesCounts.map(({ species, count }) => (
+              <Link
+                aria-current={activeSpecies === species ? "page" : undefined}
+                href={`/${orgSlug}?species=${encodeURIComponent(species)}`}
+                key={species}
+              >
+                {speciesLabel(species)} <span aria-hidden="true">{count}</span>
+              </Link>
+            ))}
+          </nav>
+        )}
 
         {residents.length ? (
           <section aria-label="Companions available to sponsor" className={styles.companionGrid}>

@@ -2,6 +2,7 @@ import { revalidateTag, unstable_cache } from "next/cache";
 
 import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
+import { speciesLabel } from "@/lib/species";
 
 const PUBLIC_ROSTER_TAG = "public-roster";
 const PUBLIC_ROSTER_CACHE = { tags: [PUBLIC_ROSTER_TAG], revalidate: 86400 };
@@ -47,12 +48,42 @@ export const getPublicOrganization = unstable_cache(
 );
 
 export const getPublicResidents = unstable_cache(
-  (orgId: string) => prisma.resident.findMany({
-    where: { orgId, ...PUBLIC_SPONSORABLE_RESIDENT_WHERE },
+  (orgId: string, species?: string) => prisma.resident.findMany({
+    where: {
+      orgId,
+      ...PUBLIC_SPONSORABLE_RESIDENT_WHERE,
+      ...(species ? { species } : {}),
+    },
     orderBy: { name: "asc" },
     take: PUBLIC_RESIDENT_LIMIT,
   }),
   ["public-residents"],
+  PUBLIC_ROSTER_CACHE,
+);
+
+export const getPublicSpeciesCounts = unstable_cache(
+  async (orgId: string) => {
+    const species = await prisma.resident.groupBy({
+      by: ["species"],
+      where: {
+        orgId,
+        ...PUBLIC_SPONSORABLE_RESIDENT_WHERE,
+        species: { not: "" },
+      },
+      _count: { _all: true },
+    });
+
+    return species
+      .map(({ species: value, _count }) => ({
+        species: value,
+        count: _count._all,
+      }))
+      .sort((left, right) => (
+        right.count - left.count
+        || speciesLabel(left.species).localeCompare(speciesLabel(right.species))
+      ));
+  },
+  ["public-species-counts"],
   PUBLIC_ROSTER_CACHE,
 );
 

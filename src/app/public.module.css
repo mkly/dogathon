@@ -89,6 +89,41 @@
   gap: 24px;
 }
 
+.speciesFilters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin: 0 0 1.5rem;
+}
+
+.speciesFilters a {
+  padding: 0.55rem 0.9rem;
+  border: 2px solid color-mix(in srgb, var(--felt-moss), var(--felt-ink) 20%);
+  border-radius: 999px;
+  background: var(--felt-cream);
+  color: var(--felt-ink);
+  font-size: 0.85rem;
+  font-weight: 900;
+  text-decoration: none;
+  box-shadow: 0 3px 0 rgb(61 51 43 / 18%);
+}
+
+.speciesFilters a[aria-current="page"] {
+  border-color: var(--felt-moss);
+  background: var(--felt-moss);
+  color: var(--felt-cream);
+}
+
+.speciesFilters a:focus-visible {
+  outline: 3px solid var(--felt-mustard);
+  outline-offset: 3px;
+}
+
+.speciesFilters span {
+  margin-left: 0.25rem;
+  opacity: 0.65;
+}
+
 .companionCard {
   display: flex;
   flex-direction: column;
