@@ -17,6 +17,7 @@ const baseUpdate = {
   status: "draft" as const,
   sponsorshipId: "active",
   awaitingTransitionedAt: null,
+  isAwaitingReminder: false,
   organization: { slug: "huffy-puff", stripeAccountId: "acct_rescue" },
   sponsorship: {
     id: "active",
@@ -179,6 +180,33 @@ test("allows the same draft to retry after it already performed the awaiting tra
   const response = await handler(request(), context());
   assert.equal(response.status, 200);
   assert.equal(paused, true);
+});
+
+test("an awaiting reminder sends without pausing collection or changing the sponsorship", async () => {
+  let paused = false;
+  let claimedUpdate = null as typeof baseUpdate | null;
+  const handler = createApproveSponsorUpdateHandler(dependencies({
+    async findUpdate() {
+      return {
+        ...baseUpdate,
+        isAwaitingReminder: true,
+        sponsorship: { ...baseUpdate.sponsorship, status: "awaiting" as const },
+      };
+    },
+    async claimUpdate(update: typeof baseUpdate) {
+      claimedUpdate = update;
+      return true;
+    },
+    async pauseCollection() { paused = true; },
+    async deliver() {
+      return [{ sponsorshipId: "active", channel: "email", status: "sent" }];
+    },
+  }));
+
+  const response = await handler(request(), context());
+  assert.equal(response.status, 200);
+  assert.equal(claimedUpdate?.isAwaitingReminder, true);
+  assert.equal(paused, false);
 });
 
 test("an exception after the approval claim reverts the update to draft", async () => {

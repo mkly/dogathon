@@ -38,6 +38,7 @@ type ApprovalUpdate = {
   status: "draft" | "approved" | "sent" | "dismissed";
   sponsorshipId: string | null;
   awaitingTransitionedAt: Date | null;
+  isAwaitingReminder: boolean;
   organization: {
     slug: string;
     stripeAccountId: string | null;
@@ -92,11 +93,17 @@ const approvalDependencies: ApprovalDependencies = {
           id: update.sponsorshipId!,
           orgId: update.orgId,
           residentId: update.residentId,
-          status: update.awaitingTransitionedAt ? "awaiting" : "active",
+          status: update.isAwaitingReminder || update.awaitingTransitionedAt
+            ? "awaiting"
+            : "active",
         },
-        data: update.awaitingTransitionedAt
+        data: update.isAwaitingReminder || update.awaitingTransitionedAt
           ? { status: "awaiting" }
-          : { status: "awaiting", awaitingSince: claimedAt },
+          : {
+            status: "awaiting",
+            awaitingSince: claimedAt,
+            awaitingReminderDraftedAt: null,
+          },
       });
       if (sponsorship.count !== 1) return false;
 
@@ -106,11 +113,14 @@ const approvalDependencies: ApprovalDependencies = {
           orgId: update.orgId,
           status: "draft",
           sponsorshipId: update.sponsorshipId,
+          isAwaitingReminder: update.isAwaitingReminder,
           awaitingTransitionedAt: update.awaitingTransitionedAt ? { not: null } : null,
         },
         data: {
           status: "approved",
-          ...(!update.awaitingTransitionedAt ? { awaitingTransitionedAt: claimedAt } : {}),
+          ...(!update.isAwaitingReminder && !update.awaitingTransitionedAt
+            ? { awaitingTransitionedAt: claimedAt }
+            : {}),
         },
       });
       if (claimed.count !== 1) throw new Error("Sponsor update approval claim was lost");
@@ -226,8 +236,12 @@ export function createApproveSponsorUpdateHandler(dependencies: ApprovalDependen
       && (!sponsorUpdate.sponsorshipId
         || !sponsorUpdate.sponsorship
         || sponsorUpdate.sponsorship.residentId !== sponsorUpdate.residentId
-        || (sponsorUpdate.sponsorship.status !== "active"
-          && !(sponsorUpdate.sponsorship.status === "awaiting" && sponsorUpdate.awaitingTransitionedAt)))
+        || (sponsorUpdate.isAwaitingReminder
+          ? sponsorUpdate.sponsorship.status !== "awaiting"
+          : (
+            sponsorUpdate.sponsorship.status !== "active"
+            && !(sponsorUpdate.sponsorship.status === "awaiting" && sponsorUpdate.awaitingTransitionedAt)
+          )))
     ) {
       return Response.json(
         { error: "This sponsorship is no longer active" },
@@ -253,7 +267,7 @@ export function createApproveSponsorUpdateHandler(dependencies: ApprovalDependen
         ? [sponsorUpdate.sponsorship!]
         : sponsorUpdate.resident.sponsorships.filter((sponsorship) =>
           isRegularSponsorUpdateRecipient(sponsorship, sponsorUpdate.resident.available));
-      if (sponsorUpdate.type === "graduation") {
+      if (sponsorUpdate.type === "graduation" && !sponsorUpdate.isAwaitingReminder) {
         await dependencies.pauseCollection({
           stripeAccountId: sponsorUpdate.organization.stripeAccountId,
           subscriptionId: sponsorUpdate.sponsorship!.stripeSubscriptionId,

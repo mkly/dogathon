@@ -3,12 +3,11 @@
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
 import Image from "next/image";
-import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
-import { FeltButton, PhotoPatch } from "@/components/felt";
+import { FeltButton } from "@/components/felt";
 import { messageText } from "@/lib/ui-message-text";
 
-import { CheckInChatView, type CheckInResident } from "./check-in-chat-view";
 import { MAX_PHOTO_BYTES } from "./photo-limits";
 import styles from "./volunteer.module.css";
 
@@ -20,19 +19,15 @@ type UploadedPhoto = {
   id: string;
   previewUrl: string;
   status: "uploading" | "uploaded" | "failed";
-  uploadedId?: string;
-};
-
-export type CheckInResult = {
-  residentId: string;
-  messages: UIMessage[];
-  photoIds: string[];
 };
 
 type CheckInChatProps = {
+  checkInId: string;
+  initialPhotos: { id: string; url: string }[];
+  initialMessages: UIMessage[];
   orgSlug: string;
-  residents: CheckInResident[];
-  onFinish: (result: CheckInResult) => Promise<void> | void;
+  resident: { id: string; name: string };
+  onFinish: (checkInId: string) => Promise<void> | void;
 };
 
 function visibleMessageText(message: UIMessage) {
@@ -45,58 +40,31 @@ function visibleMessageText(message: UIMessage) {
   return text.trim();
 }
 
-export function CheckInChat({ orgSlug, residents, onFinish }: CheckInChatProps) {
-  return (
-    <CheckInChatView
-      classNames={{
-        chatFrame: styles.chatFrame,
-        companionChip: styles.companionChip,
-        companionPicker: styles.companionPicker,
-      }}
-      renderPhoto={(resident) => (
-        <PhotoPatch
-          alt=""
-          className={styles.chipPhoto}
-          sizes="40px"
-          src={resident.photoUrl}
-        />
-      )}
-      renderSession={(resident) => (
-        <ChatSession
-          key={resident.id}
-          onFinish={onFinish}
-          orgSlug={orgSlug}
-          resident={resident}
-        />
-      )}
-      residents={residents}
-    />
-  );
-}
-
-function ChatSession({
+export function CheckInChat({
+  checkInId,
+  initialPhotos,
+  initialMessages,
   orgSlug,
   resident,
   onFinish,
-}: {
-  orgSlug: string;
-  resident: CheckInResident;
-  onFinish: CheckInChatProps["onFinish"];
-}) {
+}: CheckInChatProps) {
   const transport = useMemo(
     () => new DefaultChatTransport({
       api: "/api/volunteer-checkin/chat",
-      body: { orgSlug, residentId: resident.id },
+      body: { checkInId, orgSlug },
     }),
-    [orgSlug, resident.id],
+    [checkInId, orgSlug],
   );
-  const { error, messages, sendMessage, status } = useChat({ transport });
+  const { error, messages, sendMessage, status } = useChat({
+    id: checkInId,
+    messages: initialMessages,
+    transport,
+  });
   const [input, setInput] = useState("");
   const [photos, setPhotos] = useState<UploadedPhoto[]>([]);
   const [photoError, setPhotoError] = useState("");
   const [finishError, setFinishError] = useState("");
   const [finishing, setFinishing] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const threadEndRef = useRef<HTMLDivElement>(null);
   const previewUrlsRef = useRef(new Set<string>());
 
@@ -106,6 +74,8 @@ function ChatSession({
   );
   const canFinish = hasReadyMarker || userMessageCount >= 3;
   const busy = status === "submitted" || status === "streaming";
+  const uploadedPhotos = photos.filter((photo) => photo.status === "uploaded");
+  const hasAttachedPhoto = initialPhotos.length > 0 || uploadedPhotos.length > 0;
   const completedAssistantMessages = messages.filter((message, index) => (
     message.role === "assistant" && !(busy && index === messages.length - 1)
   ));
@@ -126,28 +96,49 @@ function ChatSession({
   }, []);
 
   async function uploadPhoto(photo: UploadedPhoto) {
+    const fallbackError = "The photo could not be uploaded. Please try again.";
+    setPhotoError("");
     setPhotos((current) => current.map((item) => (
       item.id === photo.id ? { ...item, status: "uploading" } : item
     )));
     const formData = new FormData();
     formData.set("photo", photo.file);
     formData.set("orgSlug", orgSlug);
-    formData.set("residentId", resident.id);
+    formData.set("checkInId", checkInId);
 
     try {
       const response = await fetch("/api/volunteer-photos", { body: formData, method: "POST" });
-      if (!response.ok) throw new Error("The photo could not be uploaded.");
-      const result = await response.json() as { id?: string };
-      if (!result.id) throw new Error("The photo upload returned no id.");
+      const result = await response.json() as { error?: string; id?: string; url?: string };
+      if (!response.ok || !result.id || !result.url) {
+        const message = result.error === "photo-size"
+          ? `Each photo must be smaller than ${MAX_PHOTO_MEGABYTES} MB.`
+          : result.error === "photo-type"
+            ? "Choose a JPEG, PNG, GIF, or WebP image."
+            : fallbackError;
+        throw new Error(message);
+      }
+      const uploadedId = result.id;
+      const uploadedUrl = result.url;
       setPhotos((current) => current.map((item) => (
         item.id === photo.id
-          ? { ...item, status: "uploaded", uploadedId: result.id }
+          ? { ...item, id: uploadedId, previewUrl: uploadedUrl, status: "uploaded" }
           : item
       )));
-    } catch {
+      URL.revokeObjectURL(photo.previewUrl);
+      previewUrlsRef.current.delete(photo.previewUrl);
+    } catch (error) {
       setPhotos((current) => current.map((item) => (
         item.id === photo.id ? { ...item, status: "failed" } : item
       )));
+      setPhotoError(
+        error instanceof Error && [
+          fallbackError,
+          `Each photo must be smaller than ${MAX_PHOTO_MEGABYTES} MB.`,
+          "Choose a JPEG, PNG, GIF, or WebP image.",
+        ].includes(error.message)
+          ? error.message
+          : fallbackError,
+      );
     }
   }
 
@@ -179,7 +170,11 @@ function ChatSession({
       setPhotos((current) => [...current, ...accepted]);
       accepted.forEach((photo) => void uploadPhoto(photo));
     }
-    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
+  function choosePhotos(event: ChangeEvent<HTMLInputElement>) {
+    selectPhotos(event.currentTarget.files);
+    event.currentTarget.value = "";
   }
 
   function removePhoto(photo: UploadedPhoto) {
@@ -201,22 +196,90 @@ function ChatSession({
     setFinishing(true);
     setFinishError("");
     try {
-      await onFinish({
-        messages,
-        photoIds: photos.flatMap((photo) => photo.uploadedId ? [photo.uploadedId] : []),
-        residentId: resident.id,
-      });
+      await onFinish(checkInId);
     } catch {
       setFinishError("We could not finish this check-in. Please try again.");
       setFinishing(false);
     }
   }
 
+  if (!hasAttachedPhoto) {
+    return (
+      <div className={`${styles.session} ${styles.photoStep}`}>
+        <div className={styles.photoStepIntro}>
+          <span aria-hidden="true" className={styles.cameraMark}>📷</span>
+          <h2>Start with a photo</h2>
+          <p>Take a quick photo of {resident.name}, then the conversation will begin.</p>
+        </div>
+
+        {photos.length > 0 ? (
+          <div aria-label="Photo upload" className={styles.photoThread} role="group">
+            {photos.map((photo) => (
+              <div className={styles.photoTile} key={photo.id}>
+                <Image alt={`Check-in photo of ${resident.name}`} height={96} src={photo.previewUrl} unoptimized width={96} />
+                <span className={styles.photoStatus}>
+                  {photo.status === "uploading" ? "Uploading…" : "Upload failed"}
+                </span>
+                {photo.status === "failed" ? (
+                  <button aria-label="Retry photo upload" onClick={() => void uploadPhoto(photo)} type="button">Retry</button>
+                ) : null}
+                {photo.status === "failed" ? (
+                  <button aria-label="Remove photo" onClick={() => removePhoto(photo)} type="button">×</button>
+                ) : null}
+              </div>
+            ))}
+          </div>
+        ) : null}
+
+        {photoError ? <p className={styles.chatError} role="alert">{photoError}</p> : null}
+
+        <label className={styles.cameraButton}>
+          <span aria-hidden="true">📷</span>
+          <span>Take a photo</span>
+          <input
+            accept="image/*"
+            capture="environment"
+            onChange={choosePhotos}
+            type="file"
+          />
+        </label>
+        <label className={styles.choosePhotoButton}>
+          Choose a photo
+          <input accept="image/*" onChange={choosePhotos} type="file" />
+        </label>
+      </div>
+    );
+  }
+
   return (
     <div className={styles.session}>
       <div className={styles.thread}>
+        <div aria-label="Photos for this check-in" className={`${styles.photoThread} ${styles.openingPhotos}`} role="group">
+          {initialPhotos.map((photo) => (
+            <div className={styles.photoTile} key={photo.id}>
+              <Image alt={`Check-in photo of ${resident.name}`} height={96} src={photo.url} unoptimized width={96} />
+            </div>
+          ))}
+          {photos.map((photo) => (
+            <div className={styles.photoTile} key={photo.id}>
+              <Image alt={`Check-in photo of ${resident.name}`} height={96} src={photo.previewUrl} unoptimized width={96} />
+              <span className={styles.photoStatus}>
+                {photo.status === "uploading" ? "Uploading…" : null}
+                {photo.status === "uploaded" ? "Ready" : null}
+                {photo.status === "failed" ? "Upload failed" : null}
+              </span>
+              {photo.status === "failed" ? (
+                <button aria-label="Retry photo upload" onClick={() => void uploadPhoto(photo)} type="button">Retry</button>
+              ) : null}
+              {photo.status === "failed" ? (
+                <button aria-label="Remove photo" onClick={() => removePhoto(photo)} type="button">×</button>
+              ) : null}
+            </div>
+          ))}
+        </div>
+
         <div className={`${styles.message} ${styles.assistantMessage}`}>
-          Start with what you and {resident.name} did together today.
+          Lovely photo of {resident.name}. What were you two up to?
         </div>
 
         {messages.map((message) => {
@@ -231,25 +294,6 @@ function ChatSession({
             </div>
           );
         })}
-
-        {photos.length > 0 ? (
-          <div aria-label="Photos for this check-in" className={styles.photoThread} role="group">
-            {photos.map((photo) => (
-              <div className={styles.photoTile} key={photo.id}>
-                <Image alt="Selected check-in photo" height={96} src={photo.previewUrl} unoptimized width={96} />
-                <span className={styles.photoStatus}>
-                  {photo.status === "uploading" ? "Uploading…" : null}
-                  {photo.status === "uploaded" ? "Ready" : null}
-                  {photo.status === "failed" ? "Upload failed" : null}
-                </span>
-                {photo.status === "failed" ? (
-                  <button aria-label="Retry photo upload" onClick={() => void uploadPhoto(photo)} type="button">Retry</button>
-                ) : null}
-                <button aria-label="Remove photo" onClick={() => removePhoto(photo)} type="button">×</button>
-              </div>
-            ))}
-          </div>
-        ) : null}
 
         {busy ? <div className={`${styles.message} ${styles.assistantMessage} ${styles.typing}`}>Thinking…</div> : null}
         {error ? <p className={styles.chatError} role="alert">The interviewer paused. Send your message again.</p> : null}
@@ -285,8 +329,7 @@ function ChatSession({
           <input
             accept="image/*"
             multiple
-            onChange={(event) => selectPhotos(event.target.files)}
-            ref={fileInputRef}
+            onChange={choosePhotos}
             type="file"
           />
         </label>

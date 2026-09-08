@@ -188,7 +188,11 @@ async function ComposeSection({ orgId, orgSlug }: { orgId: string; orgSlug: stri
                   src={latestNote?.photoUrl ?? resident.photoUrls[0]}
                 />
                 <div className={styles.composeCopy}>
-                  <h3>{resident.name}</h3>
+                  <h3>
+                    <AdminLink href={`/${orgSlug}/admin/companions/${resident.id}`}>
+                      {resident.name}
+                    </AdminLink>
+                  </h3>
                   <p className={styles.composeBreed}>{resident.breed}</p>
                   <p>
                     {resident._count.volunteerNotes} {pluralize("volunteer note", resident._count.volunteerNotes)}
@@ -247,6 +251,7 @@ async function ApprovalQueue({
           select: {
             id: true,
             status: true,
+            awaitingSince: true,
             sponsor: { select: { name: true } },
           },
         },
@@ -310,13 +315,18 @@ async function ApprovalQueue({
               isRegularSponsorUpdateRecipient(sponsorship, draft.resident.available)).length;
             const waitingDays = Math.max(
               0,
-              Math.floor((currentTime - draft.createdAt.getTime()) / (24 * 60 * 60 * 1000)),
+              Math.floor((currentTime - (
+                draft.isAwaitingReminder && draft.sponsorship?.awaitingSince
+                  ? draft.sponsorship.awaitingSince.getTime()
+                  : draft.createdAt.getTime()
+              )) / (24 * 60 * 60 * 1000)),
             );
             return <DraftEditor
               bodyText={draft.bodyText}
               emailConnected={emailConnector.connected}
               focusTargetId="draft-queue"
               id={draft.id}
+              isAwaitingReminder={draft.isAwaitingReminder}
               isGraduation={graduation}
               key={draft.id}
               orgSlug={orgSlug}
