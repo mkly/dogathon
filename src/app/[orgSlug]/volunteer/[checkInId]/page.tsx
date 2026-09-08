@@ -47,6 +47,10 @@ export default async function CheckInPage({ params, searchParams }: CheckInPageP
     where: { id: checkInId, orgId: access.context.orgId, userId: access.context.userId },
     select: {
       note: { select: { note: true } },
+      photos: {
+        orderBy: { createdAt: "asc" },
+        select: { id: true, url: true },
+      },
       resident: { select: { id: true, name: true } },
       status: true,
       transcript: true,
@@ -92,6 +96,7 @@ export default async function CheckInPage({ params, searchParams }: CheckInPageP
           {error === "save" ? <p className={styles.chatError} role="alert">The care note was written but could not be saved. Please try again.</p> : null}
           <CheckInChat
             checkInId={checkInId}
+            initialPhotos={checkIn.photos}
             initialMessages={textOnlyTranscript(transcript.data)}
             onFinish={finishCheckIn.bind(null, orgSlug)}
             orgSlug={orgSlug}
