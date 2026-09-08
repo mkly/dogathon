@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useState } from "react";
 
-import { AdminButton, AdminField } from "@/components/admin-ui";
+import { AdminBadge, AdminButton, AdminField } from "@/components/admin-ui";
 import { pushToast } from "@/lib/toast";
 
 import { saveSettings, type SettingsState } from "../actions";
@@ -47,21 +47,19 @@ export function SponsorshipSettingsForm({
       <div className={styles.tierList}>
         {tiers.map((tier, index) => (
           <fieldset className={styles.tier} key={tier.key}>
-            <legend>Tier {index + 1}</legend>
-            <label>
-              <input
-                checked={tier.isDefault}
-                disabled={pending}
-                name="tierDefault"
-                onChange={() => setTiers((current) => current.map((item) => ({
-                  ...item,
-                  isDefault: item.key === tier.key,
-                })))}
-                type="radio"
-                value={index}
-              />
-              Default
-            </label>
+            <legend>
+              Tier {index + 1}
+              {tier.isDefault && <AdminBadge tone="mustard">Default</AdminBadge>}
+            </legend>
+            <input
+              checked={tier.isDefault}
+              className={styles.tierDefaultInput}
+              name="tierDefault"
+              readOnly
+              tabIndex={-1}
+              type="radio"
+              value={index}
+            />
             <label htmlFor={`tier-monthly-${tier.key}`}>Monthly price in dollars</label>
             <AdminField>
               <input
@@ -91,6 +89,15 @@ export function SponsorshipSettingsForm({
               />
             </AdminField>
             <div className={styles.tierActions}>
+              <AdminButton
+                disabled={pending || tier.isDefault}
+                onClick={() => setTiers((current) => current.map((item) => ({
+                  ...item,
+                  isDefault: item.key === tier.key,
+                })))}
+                tone="mustard"
+                type="button"
+              >Make default</AdminButton>
               <AdminButton
                 disabled={pending || index === 0}
                 onClick={() => setTiers((current) => current.map((item, itemIndex) =>
