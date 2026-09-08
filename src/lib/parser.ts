@@ -9,6 +9,7 @@ import { createAiModel, hasAiCredentials } from "./ai-model.ts";
 
 export type CompanionRecord = {
   name: string;
+  species: string;
   breed: string;
   dobText: string;
   ageText: string;
@@ -31,7 +32,7 @@ export type ParseCompanionRosterOptions = {
 
 // The structured labels rescue sites attach to a companion's stats. Everything
 // else a section says about the companion is its description.
-const FIELD_NAMES = ["Breed", "Age", "Weight", "Sex", "Gender"];
+const FIELD_NAMES = ["Species", "Breed", "Age", "Weight", "Sex", "Gender"];
 // A model batch that fails is retried this many times before the sync fails;
 // the offline parser never stands in for the model on a live roster.
 const MODEL_BATCH_RETRIES = 1;
@@ -68,6 +69,7 @@ const proseString = z.string().catch("").transform((value) =>
 );
 const companionRecordSchema = z.object({
   name: trimmedString,
+  species: trimmedString,
   breed: trimmedString,
   dobText: trimmedString,
   ageText: trimmedString,
@@ -143,6 +145,7 @@ function parseCompanionRosterDeterministic(source: string): CompanionRecord[] {
   return sections.flatMap(({ heading, text, careNotes, photoUrls }) => {
     const adopted = /\badopted\b/i.test(heading);
     const name = cleanHeading(heading);
+    const species = extractField(text, "Species");
     const breed = extractField(text, "Breed");
     const ageText = extractField(text, "Age");
     const sex = extractField(text, "Sex") || extractField(text, "Gender");
@@ -151,12 +154,13 @@ function parseCompanionRosterDeterministic(source: string): CompanionRecord[] {
     const statusNotes = extractStatusNotes(text).filter((note) => !careNotes.includes(note));
 
     // Navigation and footer headings are not roster entries.
-    if (!name || !photoUrls.length || ![breed, ageText, sex, weightText, personality].some(Boolean)) {
+    if (!name || !photoUrls.length || ![species, breed, ageText, sex, weightText, personality].some(Boolean)) {
       return [];
     }
 
     return [{
       name,
+      species,
       breed,
       dobText: extractDob(ageText) ?? "",
       ageText,
@@ -178,7 +182,7 @@ async function parseWithModel(
     model: createAiModel(options),
     maxOutputTokens: 12_000,
     output: Output.array({ element: companionRecordSchema }),
-    prompt: `Extract the rescue companions from the page below. Each item must have exactly these fields: name, breed, dobText, ageText, sex, weightText, personality, careNotes (string array), photoUrls (string array), and adopted (boolean). Preserve the page's wording; personality is everything the page says about the companion beyond those stats, however the site labels or lays it out. A heading such as "Meet Stripe" names the companion Stripe. Labels such as Gender count as sex. A heading containing an Adopted marker means adopted is true; a companion described as in a foster home, a bonded pair, or adoption pending is still adoptable, so record that status in careNotes rather than marking it adopted. Photos appear as [photo: URL] markers; put the markers nearest a companion's heading, including the ones directly before it on a detail page, in that companion's photoUrls. Do not include navigation, footer, or courtesy-listing headings.\n\n${semanticPageText(source)}`,
+    prompt: `Extract the rescue companions from the page below. Each item must have exactly these fields: name, species, breed, dobText, ageText, sex, weightText, personality, careNotes (string array), photoUrls (string array), and adopted (boolean). Species is free text copied from the page; use an empty string when the page does not state it. Preserve the page's wording; personality is everything the page says about the companion beyond those stats, however the site labels or lays it out. A heading such as "Meet Stripe" names the companion Stripe. Labels such as Gender count as sex. A heading containing an Adopted marker means adopted is true; a companion described as in a foster home, a bonded pair, or adoption pending is still adoptable, so record that status in careNotes rather than marking it adopted. Photos appear as [photo: URL] markers; put the markers nearest a companion's heading, including the ones directly before it on a detail page, in that companion's photoUrls. Do not include navigation, footer, or courtesy-listing headings.\n\n${semanticPageText(source)}`,
   });
 
   // A batch of listing or navigation pages legitimately holds no companions; the

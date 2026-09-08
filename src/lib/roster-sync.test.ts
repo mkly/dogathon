@@ -94,6 +94,7 @@ function scriptedModel(
 function rosterCompanion(name: string, adopted: boolean) {
   return {
     name,
+    species: "",
     breed: "",
     dobText: "",
     ageText: "",
@@ -145,6 +146,7 @@ test("a source URL match updates a renamed companion", async () => {
 
   await upsertCompanions(tx, "org-rescue", [{
     ...rosterCompanion("Renamed Biscuit", false),
+    species: "Puppies",
     sourceUrl: "HTTPS://RESCUE.EXAMPLE/dogs/biscuit/?utm_source=newsletter",
   }], true);
 
@@ -152,7 +154,7 @@ test("a source URL match updates a renamed companion", async () => {
     where: { id_orgId: { id: "resident-1", orgId: "org-rescue" } },
     data: {
       name: "Renamed Biscuit",
-      breed: "", dobText: "", ageText: "", sex: "", weightText: "", personality: "",
+      species: "dog", breed: "", dobText: "", ageText: "", sex: "", weightText: "", personality: "",
       careNotes: [], photoUrls: [], sourceUrl: "https://rescue.example/dogs/biscuit",
       available: true,
     },

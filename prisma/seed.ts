@@ -32,6 +32,7 @@ async function main() {
     where: { orgId_name: { orgId: organization.id, name: "Biscuit" } },
     update: {
       sourceUrl: "",
+      species: "dog",
       breed: "Mixed breed",
       dobText: "Unknown",
       ageText: "Adult",
@@ -47,6 +48,7 @@ async function main() {
       name: "Biscuit",
       slug: "biscuit",
       sourceUrl: "",
+      species: "dog",
       breed: "Mixed breed",
       dobText: "Unknown",
       ageText: "Adult",
@@ -160,6 +162,7 @@ async function main() {
     where: { orgId_name: { orgId: secondOrganization.id, name: "Juniper" } },
     update: {
       sourceUrl: "",
+      species: "dog",
       breed: "Terrier mix",
       dobText: "2022",
       ageText: "Young adult",
@@ -175,6 +178,7 @@ async function main() {
       name: "Juniper",
       slug: "juniper",
       sourceUrl: "",
+      species: "dog",
       breed: "Terrier mix",
       dobText: "2022",
       ageText: "Young adult",
