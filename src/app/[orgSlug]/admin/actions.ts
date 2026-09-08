@@ -110,20 +110,23 @@ export async function refreshStripeConnection(formData: FormData) {
   revalidatePath(`/${orgSlug}/admin/settings`);
 }
 
-export async function saveSettings(
-  previousState: SettingsState,
-  formData: FormData,
-): Promise<SettingsState> {
+async function requireSettingsAccess(formData: FormData) {
   const input = organizationFormSchema.safeParse(Object.fromEntries(formData));
   if (!input.success) notFound();
   const { orgSlug } = input.data;
   const access = await getOrganizationAccessBySlug(await headers(), orgSlug, {
     settings: ["manage"],
   });
-
   if (!access) notFound();
   if (!access.context) redirect("/staff/organizations");
-  const { context } = access;
+  return { orgSlug, orgId: access.context.orgId };
+}
+
+export async function saveSettings(
+  previousState: SettingsState,
+  formData: FormData,
+): Promise<SettingsState> {
+  const { orgId, orgSlug } = await requireSettingsAccess(formData);
 
   const parsed = parseSettingsForm(formData);
   if (!parsed.ok) {
@@ -137,9 +140,9 @@ export async function saveSettings(
   }
 
   await prisma.rescueSettings.upsert({
-    where: { orgId: context.orgId },
+    where: { orgId },
     update: parsed.settings,
-    create: { orgId: context.orgId, ...parsed.settings },
+    create: { orgId, ...parsed.settings },
   });
 
   revalidatePublicRoster();
@@ -149,18 +152,6 @@ export async function saveSettings(
     message: parsed.message,
     ...(parsed.savedSourceInput ? { savedSourceInput: parsed.savedSourceInput } : {}),
   };
-}
-
-async function requireSettingsAccess(formData: FormData) {
-  const input = organizationFormSchema.safeParse(Object.fromEntries(formData));
-  if (!input.success) notFound();
-  const { orgSlug } = input.data;
-  const access = await getOrganizationAccessBySlug(await headers(), orgSlug, {
-    settings: ["manage"],
-  });
-  if (!access) notFound();
-  if (!access.context) redirect("/staff/organizations");
-  return { orgSlug, orgId: access.context.orgId };
 }
 
 export async function saveSponsorshipTiers(

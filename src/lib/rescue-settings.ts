@@ -8,7 +8,6 @@ import {
 import { isPublicHttpUrl } from "./public-http-url.ts";
 
 export type RescueSettingsPatch = {
-  allowedOrigins?: string[];
   pinnedPostscript?: string;
   sourceUrl?: string;
 };
