@@ -1092,7 +1092,7 @@ test("refuses a live sync that would mark most available residents unavailable",
   assert.throws(
     () => assertPlausibleUnavailableCount(10, 6, false),
     (error) => error instanceof RosterSyncRefusal
-      && /adopt 6 of 10 available residents/.test(error.reason),
+      && /mark 6 of 10 available residents unavailable/.test(error.reason),
   );
 });
 
