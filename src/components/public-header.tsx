@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 
-import { StitchBadge } from "@/components/felt";
+import { Stitch, StitchBadge } from "@/components/felt";
 
 import pawcastWordmark from "../../public/brand/pawcast-wordmark.png";
 
@@ -20,6 +20,7 @@ export function PublicHeader({ organizationName, orgSlug }: PublicHeaderProps) {
         <Image alt="Pawcast" className={styles.wordmark} src={pawcastWordmark} />
       </Link>
       <StitchBadge className={styles.rescue} tone="cream">
+        <Stitch fine />
         {organizationName}
       </StitchBadge>
     </header>

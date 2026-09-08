@@ -283,7 +283,6 @@ export function CheckInChat({
           {initialPhotos.map((photo) => (
             <figure className={clsx(felt["photo-patch"], styles.photoTile)} key={photo.id}>
               <Image alt={`Check-in photo of ${resident.name}`} height={120} src={photo.url} unoptimized width={120} />
-              <Stitch fine />
             </figure>
           ))}
           {photos.map((photo) => (
@@ -300,7 +299,6 @@ export function CheckInChat({
                   <button aria-label="Remove photo" onClick={() => removePhoto(photo)} type="button">×</button>
                 </span>
               ) : null}
-              <Stitch fine />
             </figure>
           ))}
         </div>
@@ -367,7 +365,6 @@ export function CheckInChat({
             />
           </label>
           <div className={clsx(felt["felt-field"], felt["felt-inset"], "felt-cream", styles.composerField)}>
-            <Stitch fine />
             <label className={styles.srOnly} htmlFor={`check-in-message-${resident.id}`}>Message</label>
             <input
               autoComplete="off"

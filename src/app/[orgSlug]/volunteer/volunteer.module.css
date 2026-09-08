@@ -164,6 +164,23 @@
   flex-direction: column;
 }
 
+/* on a phone the sheet is the screen: no frame, no corners, no bevel */
+@media (max-width: 41.99rem) {
+  .chatPage {
+    padding: 0;
+  }
+
+  .shell {
+    height: 100dvh;
+    padding-top: 0.75rem;
+    border-radius: 0;
+  }
+
+  .shell::after {
+    display: none;
+  }
+}
+
 .chatHeader {
   position: relative;
   z-index: 1;

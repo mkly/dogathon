@@ -1,13 +1,11 @@
 .header {
-  display: flex;
-  align-items: flex-end;
-  flex-wrap: wrap;
-  gap: 0.75rem 1.25rem;
+  position: relative;
+  margin-bottom: 1.6rem;
 }
 
 .home {
   display: block;
-  width: min(320px, 62%);
+  width: min(300px, 60%);
 }
 
 /* the wordmark is a cut felt object like everything else, not a flat logo */
@@ -18,9 +16,32 @@
   filter: drop-shadow(0 5px 5px rgb(61 51 43 / 26%));
 }
 
-/* a sewn-on name tag: sits on the wordmark's baseline, wraps below on phones */
+/* the rescue's name tag hangs off the header and straddles the top edge of
+   the panel below, like a label sewn onto it; the tilt keeps it hand-made */
 .rescue {
-  margin-bottom: 0.4rem;
-  font-size: 12px;
-  letter-spacing: 0.1em;
+  --drop: 0.7;
+  position: absolute;
+  z-index: 2;
+  bottom: -2.5rem;
+  left: 1.6rem;
+  padding: 0.55rem 1.05rem;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: 0;
+  line-height: 1.2;
+  text-transform: none;
+  transform: rotate(-2deg);
+}
+
+@media (max-width: 560px) {
+  .home {
+    width: min(240px, 64%);
+  }
+
+  .rescue {
+    left: 1rem;
+    padding: 0.45rem 0.85rem;
+    font-size: 14px;
+  }
 }
