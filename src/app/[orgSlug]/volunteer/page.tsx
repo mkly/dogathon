@@ -5,7 +5,7 @@ import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
 
 import { AdminEmptyState, AdminPage } from "@/components/admin-ui";
-import { FeltPanel, PhotoPatch, Stitch, StitchBadge } from "@/components/felt";
+import { FeltPanel, PhotoPatch, StitchBadge } from "@/components/felt";
 import felt from "@/components/felt.module.css";
 import { PageViewTransition } from "@/components/page-view-transition";
 import { prisma } from "@/lib/prisma";
@@ -66,7 +66,7 @@ export default async function VolunteerPage({ params, searchParams }: VolunteerP
   return (
     <PageViewTransition>
       <AdminPage className={styles.chatPage} variant="volunteer">
-        <section className={styles.shell}>
+        <section className={clsx(styles.shell, styles.pickerShell)}>
           <header className={styles.chatHeader}>
             <StitchBadge tone="denim">Volunteer check-in</StitchBadge>
             <h1>How’s a companion doing?</h1>
@@ -78,9 +78,8 @@ export default async function VolunteerPage({ params, searchParams }: VolunteerP
             <div aria-label="Choose a companion" className={styles.companionPicker}>
               {checkInResidents.map((resident) => (
                 <form action={startCheckIn.bind(null, orgSlug, resident.id)} key={resident.id}>
-                  <button className={clsx(felt["felt-button"], "felt-cream", styles.companionChip)} type="submit">
-                    <Stitch fine />
-                    <PhotoPatch alt="" className={styles.chipPhoto} sizes="40px" src={resident.photoUrl} />
+                  <button className={clsx(felt["felt-button"], "felt-cream", styles.companionCard)} type="submit">
+                    <PhotoPatch alt="" className={styles.cardPhoto} sizes="(min-width: 42rem) 10rem, 40vw" src={resident.photoUrl} />
                     <span>{resident.name}</span>
                   </button>
                 </form>

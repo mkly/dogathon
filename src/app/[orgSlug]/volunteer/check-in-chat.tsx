@@ -1,11 +1,13 @@
 "use client";
 
 import { useChat } from "@ai-sdk/react";
+import clsx from "clsx";
 import { DefaultChatTransport, type UIMessage } from "ai";
 import Image from "next/image";
 import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
 import { FeltButton } from "@/components/felt";
+import felt from "@/components/felt.module.css";
 import { messageText } from "@/lib/ui-message-text";
 
 import { MAX_PHOTO_BYTES } from "./photo-limits";
@@ -220,7 +222,6 @@ export function CheckInChat({
     return (
       <div className={`${styles.session} ${styles.photoStep}`}>
         <div className={styles.photoStepIntro}>
-          <span aria-hidden="true" className={styles.cameraMark}>📷</span>
           <h2>Start with a photo</h2>
           <p>Take a quick photo of {resident.name}, then the conversation will begin.</p>
         </div>
@@ -246,9 +247,8 @@ export function CheckInChat({
 
         {photoError ? <p className={styles.chatError} role="alert">{photoError}</p> : null}
 
-        <label className={styles.cameraButton}>
-          <span aria-hidden="true">📷</span>
-          <span>Take a photo</span>
+        <label className={clsx(felt["felt-button"], "felt-denim", styles.cameraButton)}>
+          Take a photo
           <input
             accept="image/*"
             capture="environment"
@@ -256,7 +256,7 @@ export function CheckInChat({
             type="file"
           />
         </label>
-        <label className={styles.choosePhotoButton}>
+        <label className={clsx(felt["felt-button"], "felt-cream", styles.choosePhotoButton)}>
           Choose a photo
           <input accept="image/*" onChange={choosePhotos} type="file" />
         </label>

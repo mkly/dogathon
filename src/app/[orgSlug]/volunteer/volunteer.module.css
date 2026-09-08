@@ -42,34 +42,39 @@
   flex-direction: column;
 }
 
+/* The picker page is only as tall as its roster; the chat shell below keeps
+   its full-height layout. */
+.pickerShell {
+  min-height: 0;
+}
+
 .companionPicker {
+  display: grid;
+  gap: 0.85rem;
+  padding: 0.5rem 1rem max(1.5rem, env(safe-area-inset-bottom));
+  grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr));
+}
+
+.companionPicker form {
+  display: contents;
+}
+
+/* Each companion is a felt patch with their photo sewn in and their name
+   underneath, the same primitive as every button on the site. */
+.companionCard {
   display: flex;
-  min-width: 0;
-  min-height: 4.9rem;
-  gap: 0.55rem;
-  padding: 0.45rem 1rem 0.8rem;
-  overflow-x: auto;
-  overscroll-behavior-inline: contain;
-  scrollbar-width: none;
-}
-
-.companionPicker::-webkit-scrollbar {
-  display: none;
-}
-
-/* Each companion is a small felt patch, the same primitive as every button on
-   the site; the chosen one is sewn in denim. */
-.companionChip {
-  display: inline-flex;
-  min-width: max-content;
-  min-height: 3.4rem;
-  gap: 0.6rem;
-  padding: 0.65rem 1rem 0.65rem 0.65rem;
+  width: 100%;
+  min-height: 0;
+  padding: 0.55rem 0.55rem 0.8rem;
   border-radius: 16px;
-  align-items: center;
+  flex-direction: column;
+  gap: 0.6rem;
+  align-items: stretch;
+  font-size: 1.05rem;
+  text-align: center;
 }
 
-.companionChip:focus-visible,
+.companionCard:focus-visible,
 .composer button:focus-visible,
 .photoButton:focus-within,
 .photoTile button:focus-visible {
@@ -77,39 +82,22 @@
   outline-offset: 2px;
 }
 
-/* The chip photo is a plain square cut into the felt; at this size only the
-   patch itself carries stitching. */
-.chipPhoto {
-  width: 2.25rem;
-  height: 2.25rem;
+.cardPhoto {
+  width: 100%;
   margin: 0;
-  border-radius: 6px;
-  flex: 0 0 2.25rem;
+  border-radius: 10px;
 }
 
-.chipPhoto img,
-.chipPhoto [role="img"] {
-  height: 100%;
+.cardPhoto img,
+.cardPhoto [role="img"] {
   aspect-ratio: 1;
-  border-radius: 6px;
 }
 
-.chipPhoto [role="img"] {
-  font-size: 1.1rem;
+.cardPhoto [role="img"] {
+  font-size: 2rem;
 }
 
-.chipPhoto > svg {
-  display: none;
-}
-
-.chipPhoto::after {
-  border-radius: 6px;
-  box-shadow:
-    inset 0 2px 4px rgb(0 0 0 / 40%),
-    inset 0 1px 1px rgb(0 0 0 / 30%);
-}
-
-.chipPhoto [role="img"] small {
+.cardPhoto [role="img"] small {
   display: none;
 }
 
@@ -211,35 +199,23 @@
 
 .photoStep {
   justify-content: center;
-  gap: 1rem;
-  padding: 1rem 1.25rem max(1.5rem, env(safe-area-inset-bottom));
+  gap: 0.75rem;
+  padding: 0.5rem 1.25rem max(2rem, env(safe-area-inset-bottom));
   text-align: center;
 }
 
 .photoStepIntro {
-  margin-bottom: 0.25rem;
-}
-
-.cameraMark {
-  display: grid;
-  width: 4.5rem;
-  height: 4.5rem;
-  margin: 0 auto 0.8rem;
-  border: 3px dashed rgb(61 51 43 / 25%);
-  border-radius: 50%;
-  place-items: center;
-  background: var(--felt-oatmeal);
-  font-size: 2rem;
+  margin-bottom: 0.75rem;
 }
 
 .photoStepIntro h2 {
   margin: 0;
-  font-size: clamp(1.55rem, 7vw, 2rem);
+  font-size: clamp(1.4rem, 6vw, 1.75rem);
 }
 
 .photoStepIntro p {
-  max-width: 26rem;
-  margin: 0.55rem auto 0;
+  max-width: 24rem;
+  margin: 0.5rem auto 0;
   color: var(--felt-ink-soft);
   font-weight: 700;
   line-height: 1.45;
@@ -249,33 +225,13 @@
 .choosePhotoButton {
   position: relative;
   display: flex;
+  width: min(100%, 18rem);
+  min-height: 3.25rem;
+  margin: 0 auto;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-}
-
-.cameraButton {
-  min-height: 9rem;
-  gap: 0.65rem;
-  border: 3px dashed rgb(255 255 255 / 48%);
-  border-radius: 22px;
-  color: var(--felt-cream);
-  background: var(--felt-denim);
-  box-shadow: 0 5px 0 rgb(61 51 43 / 18%);
-  font-size: 1.2rem;
-  font-weight: 900;
-}
-
-.cameraButton span[aria-hidden="true"] {
-  font-size: 2rem;
-}
-
-.choosePhotoButton {
-  min-height: 2.75rem;
-  color: var(--felt-denim);
-  font-weight: 900;
-  text-decoration: underline;
-  text-underline-offset: 0.2rem;
+  font-size: 1.05rem;
 }
 
 .cameraButton:focus-within,
@@ -451,13 +407,21 @@
     box-shadow: 0 10px 28px rgb(61 51 43 / 16%);
   }
 
+  .pickerShell {
+    min-height: 0;
+  }
+
+  .companionPicker {
+    padding: 0.5rem 1.5rem 1.75rem;
+    grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+  }
+
   .confirmation {
     padding: 2.5rem 2rem;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .companionChip,
   .message {
     scroll-behavior: auto;
     transition: none;
