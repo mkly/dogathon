@@ -60,6 +60,17 @@ export const sponsorEmbedScript = String.raw`(() => {
     return infoUrl.toString();
   };
 
+  const rosterUrlFor = (root) => {
+    const configured = root.getAttribute("data-sponsor-roster-url");
+    if (!configured) return null;
+    try {
+      const parsed = new URL(configured);
+      return parsed.protocol === "http:" || parsed.protocol === "https:" ? parsed.toString() : null;
+    } catch {
+      return null;
+    }
+  };
+
   const returnToFor = (root) => {
     const configured = root.getAttribute("data-sponsor-return");
     return configured ? new URL(configured, window.location.href).toString() : window.location.href;
@@ -134,7 +145,7 @@ export const sponsorEmbedScript = String.raw`(() => {
 
   const styles = () => {
     const node = document.createElement("style");
-    node.textContent = ".dogathon-sponsor-root{box-sizing:border-box;max-width:32rem}.dogathon-sponsor-root *{box-sizing:border-box}.dogathon-sponsor-photo{display:block;width:100%;max-height:22rem;object-fit:cover;border-radius:.7rem}.dogathon-sponsor-name{margin:.9rem 0 .2rem;font-size:1.5rem}.dogathon-sponsor-details,.dogathon-sponsor-status,.dogathon-sponsor-price{margin:.2rem 0;color:#5d554b}.dogathon-sponsor-price{font-weight:700;color:inherit}.dogathon-sponsor-intro{margin:1rem 0 0}.dogathon-sponsor-message{padding:.75rem;border-radius:.5rem;background:#f3f0ea}.dogathon-sponsor-message-success{background:#e4f3e8}.dogathon-sponsor-message-error{background:#f8e5e2}.dogathon-sponsor-form{display:grid;gap:.8rem;margin-top:1rem}.dogathon-sponsor-field{display:grid;gap:.25rem}.dogathon-sponsor-label{font-weight:650}.dogathon-sponsor-input{width:100%;padding:.65rem;border:1px solid #9c9388;border-radius:.4rem;font:inherit}.dogathon-sponsor-button,.dogathon-sponsor-cta{display:inline-block;padding:.6rem 1.2rem;border:1px solid currentColor;border-radius:.4rem;background:transparent;color:inherit;font:inherit;font-weight:600;line-height:1.2;text-decoration:none;cursor:pointer}.dogathon-sponsor-button:hover,.dogathon-sponsor-cta:hover{text-decoration:underline}.dogathon-sponsor-link{color:#315c3a;text-decoration:underline;text-underline-offset:.15em}";
+    node.textContent = ".dogathon-sponsor-root{box-sizing:border-box;max-width:32rem}.dogathon-sponsor-root *{box-sizing:border-box}.dogathon-sponsor-photo{display:block;width:100%;max-height:22rem;object-fit:cover;border-radius:.7rem}.dogathon-sponsor-name{margin:.9rem 0 .2rem;font-size:1.5rem}.dogathon-sponsor-details,.dogathon-sponsor-status,.dogathon-sponsor-price{margin:.2rem 0;color:#5d554b}.dogathon-sponsor-price{font-weight:700;color:inherit}.dogathon-sponsor-intro{margin:1rem 0 0}.dogathon-sponsor-message{padding:.75rem;border-radius:.5rem;background:#f3f0ea}.dogathon-sponsor-message-success{background:#e4f3e8}.dogathon-sponsor-message-error{background:#f8e5e2}.dogathon-sponsor-root-cta .dogathon-sponsor-message{padding:0;background:none}.dogathon-sponsor-form{display:grid;gap:.8rem;margin-top:1rem}.dogathon-sponsor-field{display:grid;gap:.25rem}.dogathon-sponsor-label{font-weight:650}.dogathon-sponsor-input{width:100%;padding:.65rem;border:1px solid #9c9388;border-radius:.4rem;font:inherit}.dogathon-sponsor-button,.dogathon-sponsor-cta{display:inline-block;padding:.6rem 1.2rem;border:1px solid currentColor;border-radius:.4rem;background:transparent;color:inherit;font:inherit;font-weight:600;line-height:1.2;text-decoration:none;cursor:pointer}.dogathon-sponsor-button:hover,.dogathon-sponsor-cta:hover{text-decoration:underline}.dogathon-sponsor-link{color:#315c3a;text-decoration:underline;text-underline-offset:.15em}";
     return node;
   };
 
@@ -149,7 +160,17 @@ export const sponsorEmbedScript = String.raw`(() => {
       const endpoint = appOrigin + "/api/public/" + encodeURIComponent(org) + "/companion?source=" + encodeURIComponent(source);
       const response = await fetch(endpoint, { headers: { Accept: "application/json" } });
       if (!response.ok) {
-        root.replaceChildren(styles(), message("We could not find this companion.", "notice"));
+        root.classList.remove(PREFIX + "root");
+        root.classList.add(PREFIX + "root-cta");
+        const notice = message("We could not find this companion.", "notice");
+        const rosterUrl = rosterUrlFor(root);
+        if (rosterUrl) {
+          const roster = create("a", "cta", "See all adoptable companions");
+          roster.setAttribute("href", rosterUrl);
+          root.replaceChildren(styles(), notice, roster);
+        } else {
+          root.replaceChildren(styles(), notice);
+        }
         return;
       }
 

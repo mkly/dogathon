@@ -85,7 +85,7 @@ the default explanation. Custom text is rendered as text, not HTML. The script d
 dependencies. Its classes all begin with
 `dogathon-sponsor-`, so a host site can override the bundled presentation without affecting
 unrelated elements. Run the app locally and open `/embed-demo.html`; its `org`, `source`,
-`photo=hide`, `name=hide`, `details=hide`, and `intro` query parameters make it easy to exercise a
+`photo=hide`, `name=hide`, `details=hide`, `intro`, and `roster` query parameters make it easy to exercise a
 synced companion and the display controls.
 
 ### Shared sponsorship page
@@ -112,6 +112,12 @@ to customize its presentation. On the shared sponsorship page, use card mode wit
 <div data-sponsor-org="happy-paws" data-sponsor-mode="card"></div>
 <script src="https://pawcast.example/embed.js"></script>
 ```
+
+When the source does not match a synced companion, the embed shows a short notice and stays on the
+host page. Set `data-sponsor-roster-url` to the absolute URL of the rescue site's own adoptable
+animals page to add a plain "See all adoptable companions" link under that notice; it is the only
+state that uses the attribute, and the link never points at a Dogathon-hosted page. The not-found
+state uses the same chrome-free root as CTA mode, so it reads as page text in the host theme.
 
 The card reads the companion from the incoming `source` query parameter. Its checkout return URL
 defaults to the full sponsorship-page URL, including that query parameter, so success, cancellation,
