@@ -75,6 +75,7 @@ test("transfers one awaiting sponsorship, resumes billing once, and sends confir
       residentId: "00000000-0000-4000-8000-000000000005",
       status: "active",
       awaitingSince: null,
+      awaitingReminderDraftedAt: null,
       endedAt: null,
       endedReason: null,
     },

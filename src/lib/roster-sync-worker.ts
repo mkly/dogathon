@@ -9,6 +9,9 @@ import {
   enqueueVolunteerPhotoCleanupJob,
   failVolunteerPhotoCleanupJob,
   fetchVolunteerPhotoCleanupJob,
+  completeSponsorshipGracePeriodJob,
+  failSponsorshipGracePeriodJob,
+  fetchSponsorshipGracePeriodJob,
 } from "./roster-sync-queue.ts";
 import type { RosterSyncJobView } from "./roster-sync-client.ts";
 import { RosterSyncRefusal, syncRoster, type SyncSummary } from "./roster-sync.ts";
@@ -16,6 +19,10 @@ import { isAuthorizedSchedulerRequest } from "./scheduler-auth.ts";
 import { env as appEnv } from "./env.ts";
 import type { SchedulerEnvironment } from "./scheduler-auth.ts";
 import { cleanupVolunteerPhotos } from "./volunteer-photo-cleanup.ts";
+import {
+  processSponsorshipGracePeriod,
+  type SponsorshipGracePeriodResult,
+} from "./sponsorship-grace-period.ts";
 
 const DEFAULT_ROSTER_SYNC_DRAIN_BUDGET_MS = 4 * 60 * 1000;
 
@@ -100,6 +107,39 @@ export function createVolunteerPhotoCleanupDrainer(dependencies: PhotoCleanupDep
       return { drained: true as const, ...result };
     } catch (error) {
       const message = error instanceof Error ? error.message : "Volunteer photo cleanup failed";
+      await services.fail(job.id, message);
+      throw error;
+    }
+  };
+}
+
+type SponsorshipGracePeriodDependencies = {
+  complete?: (jobId: string) => Promise<void>;
+  fail?: (jobId: string, error: string) => Promise<void>;
+  fetch?: () => Promise<{ id: string; data: { orgId: string } } | null>;
+  process?: (orgId: string) => Promise<SponsorshipGracePeriodResult>;
+};
+
+const sponsorshipGracePeriodDefaults: Required<SponsorshipGracePeriodDependencies> = {
+  complete: completeSponsorshipGracePeriodJob,
+  fail: failSponsorshipGracePeriodJob,
+  fetch: fetchSponsorshipGracePeriodJob,
+  process: processSponsorshipGracePeriod,
+};
+
+export function createSponsorshipGracePeriodDrainer(
+  dependencies: SponsorshipGracePeriodDependencies = {},
+) {
+  const services = { ...sponsorshipGracePeriodDefaults, ...dependencies };
+  return async function drain() {
+    const job = await services.fetch();
+    if (!job) return { drained: false as const };
+    try {
+      const result = await services.process(job.data.orgId);
+      await services.complete(job.id);
+      return { drained: true as const, ...result };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Sponsorship grace period failed";
       await services.fail(job.id, message);
       throw error;
     }

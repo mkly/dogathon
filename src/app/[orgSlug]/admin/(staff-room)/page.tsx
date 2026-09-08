@@ -251,6 +251,7 @@ async function ApprovalQueue({
           select: {
             id: true,
             status: true,
+            awaitingSince: true,
             sponsor: { select: { name: true } },
           },
         },
@@ -314,13 +315,18 @@ async function ApprovalQueue({
               isRegularSponsorUpdateRecipient(sponsorship, draft.resident.available)).length;
             const waitingDays = Math.max(
               0,
-              Math.floor((currentTime - draft.createdAt.getTime()) / (24 * 60 * 60 * 1000)),
+              Math.floor((currentTime - (
+                draft.isAwaitingReminder && draft.sponsorship?.awaitingSince
+                  ? draft.sponsorship.awaitingSince.getTime()
+                  : draft.createdAt.getTime()
+              )) / (24 * 60 * 60 * 1000)),
             );
             return <DraftEditor
               bodyText={draft.bodyText}
               emailConnected={emailConnector.connected}
               focusTargetId="draft-queue"
               id={draft.id}
+              isAwaitingReminder={draft.isAwaitingReminder}
               isGraduation={graduation}
               key={draft.id}
               orgSlug={orgSlug}

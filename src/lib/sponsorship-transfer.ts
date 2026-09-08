@@ -102,6 +102,7 @@ export async function transferSponsorship(
         residentId: resident.id,
         status: "active",
         awaitingSince: null,
+        awaitingReminderDraftedAt: null,
         endedAt: null,
         endedReason: null,
       },

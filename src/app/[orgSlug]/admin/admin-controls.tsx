@@ -110,6 +110,7 @@ export function DraftEditor({
   emailConnected,
   focusTargetId,
   id,
+  isAwaitingReminder,
   isGraduation,
   orgSlug,
   subject: initialSubject,
@@ -119,6 +120,7 @@ export function DraftEditor({
   emailConnected: boolean;
   focusTargetId: string;
   id: string;
+  isAwaitingReminder: boolean;
   isGraduation: boolean;
   orgSlug: string;
   subject: string;
@@ -140,6 +142,11 @@ export function DraftEditor({
     null,
   );
   const motionTransition = useMotionTiming();
+  const denyAction = isAwaitingReminder
+    ? "Dismiss reminder"
+    : isGraduation
+      ? "Deny adoption notice"
+      : "Discard draft";
 
   function openEditor() {
     setSubject(savedDraft.subject);
@@ -233,12 +240,14 @@ export function DraftEditor({
             method: "DELETE",
             headers: { "X-Organization-Slug": orgSlug },
           },
-          isGraduation ? "Deny adoption notice" : "Discard draft",
+          denyAction,
         );
         await refreshAdminPage();
         pushToast(
           "success",
-          isGraduation
+          isAwaitingReminder
+            ? "Reminder dismissed. The sponsorship remains paused."
+            : isGraduation
             ? "Adoption notice denied. The sponsorship keeps billing."
             : "Draft discarded.",
         );
@@ -247,7 +256,7 @@ export function DraftEditor({
           "error",
           error instanceof Error
             ? error.message
-            : `${isGraduation ? "Deny adoption notice" : "Discard draft"} could not reach the server.`,
+            : `${denyAction} could not reach the server.`,
         );
       } finally {
         setPending(null);
@@ -301,8 +310,8 @@ export function DraftEditor({
                 tone="brick"
               >
                 {pending === "deny"
-                  ? (isGraduation ? "Denying…" : "Discarding…")
-                  : (isGraduation ? "Deny & keep billing" : "Deny & discard")}
+                  ? (isAwaitingReminder ? "Dismissing…" : isGraduation ? "Denying…" : "Discarding…")
+                  : (isAwaitingReminder ? "Dismiss reminder" : isGraduation ? "Deny & keep billing" : "Deny & discard")}
               </AdminButton>
               {/* the themed email as the sponsor will see it, not the plain draft text */}
               <AdminLink
@@ -453,10 +462,12 @@ export function DraftEditor({
                       >
                         <AdminSurface className={styles.dialogPanel} tone="oatmeal">
                           <AlertDialog.Title asChild>
-                            <h2>{isGraduation ? "Deny this adoption notice?" : "Discard this draft?"}</h2>
+                            <h2>{isAwaitingReminder ? "Dismiss this reminder?" : isGraduation ? "Deny this adoption notice?" : "Discard this draft?"}</h2>
                           </AlertDialog.Title>
                           <AlertDialog.Description className={styles.dialogDescription}>
-                            {isGraduation
+                            {isAwaitingReminder
+                              ? "The reminder will be dismissed and the sponsorship will remain paused."
+                              : isGraduation
                               ? "The notice will be dismissed and this sponsorship will keep billing as normal."
                               : "This cannot be undone."}
                           </AlertDialog.Description>
@@ -472,7 +483,7 @@ export function DraftEditor({
                                 }}
                                 tone="brick"
                               >
-                                {isGraduation ? "Deny & keep billing" : "Discard draft"}
+                                {isAwaitingReminder ? "Dismiss reminder" : isGraduation ? "Deny & keep billing" : "Discard draft"}
                               </AdminButton>
                             </AlertDialog.Action>
                           </div>

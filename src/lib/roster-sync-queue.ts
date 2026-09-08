@@ -6,6 +6,7 @@ import type { SyncSummary } from "./roster-sync.ts";
 
 export const ROSTER_SYNC_QUEUE = "roster-sync";
 export const VOLUNTEER_PHOTO_CLEANUP_QUEUE = "volunteer-photo-cleanup";
+export const SPONSORSHIP_GRACE_PERIOD_QUEUE = "sponsorship-grace-period";
 export const ROSTER_SYNC_RETRY_LIMIT = 3;
 export const ROSTER_SYNC_EXPIRE_SECONDS = 5 * 60;
 
@@ -71,6 +72,11 @@ async function getRosterSyncBoss(): Promise<PgBoss> {
         expireInSeconds: ROSTER_SYNC_EXPIRE_SECONDS,
       });
       await boss.createQueue(VOLUNTEER_PHOTO_CLEANUP_QUEUE, {
+        retryLimit: ROSTER_SYNC_RETRY_LIMIT,
+        expireInSeconds: ROSTER_SYNC_EXPIRE_SECONDS,
+      });
+      await boss.createQueue(SPONSORSHIP_GRACE_PERIOD_QUEUE, {
+        policy: "singleton",
         retryLimit: ROSTER_SYNC_RETRY_LIMIT,
         expireInSeconds: ROSTER_SYNC_EXPIRE_SECONDS,
       });
@@ -234,4 +240,25 @@ export async function completeVolunteerPhotoCleanupJob(jobId: string) {
 
 export async function failVolunteerPhotoCleanupJob(jobId: string, error: string) {
   await (await getRosterSyncBoss()).fail(VOLUNTEER_PHOTO_CLEANUP_QUEUE, jobId, { error });
+}
+
+export async function enqueueSponsorshipGracePeriodJob(orgId: string) {
+  return (await getRosterSyncBoss()).send(SPONSORSHIP_GRACE_PERIOD_QUEUE, { orgId }, {
+    singletonKey: orgId,
+    retryLimit: ROSTER_SYNC_RETRY_LIMIT,
+    expireInSeconds: ROSTER_SYNC_EXPIRE_SECONDS,
+  });
+}
+
+export async function fetchSponsorshipGracePeriodJob() {
+  return (await getRosterSyncBoss()).fetch<{ orgId: string }>(SPONSORSHIP_GRACE_PERIOD_QUEUE)
+    .then((jobs) => jobs[0] ?? null);
+}
+
+export async function completeSponsorshipGracePeriodJob(jobId: string) {
+  await (await getRosterSyncBoss()).complete(SPONSORSHIP_GRACE_PERIOD_QUEUE, jobId);
+}
+
+export async function failSponsorshipGracePeriodJob(jobId: string, error: string) {
+  await (await getRosterSyncBoss()).fail(SPONSORSHIP_GRACE_PERIOD_QUEUE, jobId, { error });
 }

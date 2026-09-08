@@ -278,6 +278,7 @@ model Sponsorship {
   endedReason             SponsorshipEndedReason?
   endedAt                 DateTime?
   awaitingSince           DateTime?
+  awaitingReminderDraftedAt DateTime?
   stripeCheckoutSessionId String?                 @unique
   stripeSubscriptionId    String?                 @unique
   stripeCustomerId        String?
@@ -353,6 +354,7 @@ model SponsorUpdate {
   status                 SponsorUpdateStatus @default(draft)
   sentAt                 DateTime?
   awaitingTransitionedAt DateTime?
+  isAwaitingReminder     Boolean             @default(false)
   createdAt              DateTime            @default(now())
   updatedAt              DateTime            @updatedAt
   organization           Organization        @relation(fields: [orgId], references: [id], onDelete: Cascade)

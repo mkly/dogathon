@@ -9,6 +9,7 @@ import { parseEnvironment } from "./env.ts";
 import {
   createRosterSyncDrainHandler,
   createRosterSyncDrainer,
+  createSponsorshipGracePeriodDrainer,
   createVolunteerPhotoCleanupDrainer,
 } from "./roster-sync-worker.ts";
 
@@ -151,6 +152,22 @@ test("the photo cleanup job is enqueued, drained, and completed with the same wo
 
   assert.deepEqual(await drain(), { drained: true, deleted: 2 });
   assert.deepEqual(calls, ["enqueue", "fetch", "cleanup", "complete:job-2"]);
+});
+
+test("the sponsorship grace-period job is processed and completed in the drain worker", async () => {
+  const calls: string[] = [];
+  const drain = createSponsorshipGracePeriodDrainer({
+    fetch: async () => ({ id: "job-3", data: { orgId: "org-1" } }),
+    process: async (orgId) => {
+      calls.push(`process:${orgId}`);
+      return { drafted: 1, ended: 1, skipped: 0 };
+    },
+    complete: async (id) => { calls.push(`complete:${id}`); },
+    fail: async () => { calls.push("fail"); },
+  });
+
+  assert.deepEqual(await drain(), { drained: true, drafted: 1, ended: 1, skipped: 0 });
+  assert.deepEqual(calls, ["process:org-1", "complete:job-3"]);
 });
 
 test("a roster refusal is completed with a refused outcome", async () => {
