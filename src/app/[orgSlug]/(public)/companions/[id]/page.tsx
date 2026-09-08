@@ -41,7 +41,7 @@ export default async function CompanionPage({ params, searchParams }: CompanionP
 
   if (!resident) notFound();
 
-  const available = resident.status === "available";
+  const available = resident.available;
   const tiers = organization.sponsorshipTiers;
   const firstTier = tiers[0];
   const defaultTier = tiers.find((tier) => "isDefault" in tier && tier.isDefault === true) ?? firstTier;
@@ -97,7 +97,7 @@ export default async function CompanionPage({ params, searchParams }: CompanionP
 
           <div className={styles.profileCopy}>
             <StitchBadge tone={available ? "moss" : "brick"}>
-              {available ? "Available" : "Adopted"}
+              {available ? "Available" : "Not available"}
             </StitchBadge>
             <h1>{resident.name}</h1>
             <p className={styles.companionFacts}>
@@ -130,7 +130,7 @@ export default async function CompanionPage({ params, searchParams }: CompanionP
                 <p>
                   Your gift goes toward food, vet visits, and a warm bed while {resident.name} waits
                   for a home. You&apos;ll get updates from the rescue along the way, and your
-                  sponsorship ends the day {resident.name} is adopted.
+                  sponsorship ends on its own the day {resident.name} no longer needs one.
                 </p>
               </div>
 
@@ -181,7 +181,7 @@ export default async function CompanionPage({ params, searchParams }: CompanionP
           </CompanionSponsorState>
         ) : (
           <FeltPanel className={styles.confirmation} tone="brick">
-            <h2>{resident.name} has found a home</h2>
+            <h2>{resident.name} isn&apos;t taking sponsors right now</h2>
             <p>Sponsorships for {resident.name} have ended. Another resident is still waiting for one.</p>
             <FeltLink
               className={styles.cardLink}

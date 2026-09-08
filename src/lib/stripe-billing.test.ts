@@ -438,7 +438,7 @@ test("checkout refuses an unavailable resident with a distinguishable error", as
   );
 });
 
-test("a resident adopted mid-checkout still records the paid sponsorship", async () => {
+test("a resident made unavailable mid-checkout still records the paid sponsorship", async () => {
   const store = new MemoryBillingStore();
   store.organization.stripeAccountId = "acct_fixture_rescue";
   store.organization.stripeChargesEnabled = true;

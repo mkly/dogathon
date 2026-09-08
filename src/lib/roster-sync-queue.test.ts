@@ -106,8 +106,8 @@ test("success and refusal outputs map back to the polling view", async () => {
   const summary = {
     created: 0,
     updated: 1,
-    adopted: 0,
-    restored: 0,
+    madeUnavailable: 0,
+    madeAvailable: 0,
     sponsorshipsClosed: 0,
     usedFallbackCapture: false,
     rosterComplete: true,
@@ -177,8 +177,8 @@ test("the HTTP-invocation drainer fetches and settles a real pg-boss job", async
       return {
         created: 1,
         updated: 0,
-        adopted: 0,
-        restored: 0,
+        madeUnavailable: 0,
+        madeAvailable: 0,
         sponsorshipsClosed: 0,
         usedFallbackCapture: false,
         rosterComplete: true,

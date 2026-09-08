@@ -108,7 +108,7 @@ export function SponsorUpdateEmail(input: SponsorUpdateEmailProps) {
   const heroTile = absolute(input.origin, graduation ? TILE.mustard : TILE.moss);
   const photo = input.photoUrl ? absolute(input.origin, input.photoUrl) : null;
   const preheader = graduation
-    ? `${name} found a forever home — and you helped.`
+    ? `${name}'s sponsorship has come to an end — thank you for being there.`
     : `Fresh news from ${name}, straight off the volunteer notebook.`;
 
   return (
@@ -168,7 +168,7 @@ export function SponsorUpdateEmail(input: SponsorUpdateEmailProps) {
                   textTransform: "uppercase",
                 }}
               >
-                {graduation ? "Adoption day" : "A new update"}
+                {graduation ? "A farewell" : "A new update"}
               </Text>
               <Heading
                 as="h1"
@@ -252,8 +252,8 @@ export function SponsorUpdateEmail(input: SponsorUpdateEmailProps) {
           </Section>
 
           <Text style={{ color: INK, fontSize: "13px", fontWeight: 800, lineHeight: "1.6", margin: "0 8px 6px", opacity: 0.72, textAlign: "center" }}>
-            You get this because you sponsor {name} for {formatMonthlyAmount(input.monthlyCents)} a month until
-            adoption.
+            You get this because you sponsor {name} for {formatMonthlyAmount(input.monthlyCents)} a month for as long
+            as {name} needs a sponsor.
           </Text>
           <Text style={{ color: INK, fontSize: "12px", fontWeight: 700, lineHeight: "1.6", margin: "0 8px", opacity: 0.55, textAlign: "center" }}>
             Dogathon · the good news from the kennel, written by the people who scoop it

@@ -44,13 +44,13 @@ function deterministicCompose(input: ComposeSponsorUpdateInput): ComposedSponsor
   const notes = cleanNotes(input.notes);
   const intro =
     input.type === "graduation"
-      ? `${name} was adopted today. You helped get ${name} there.`
+      ? `${name} is no longer listed for sponsorship. You helped carry ${name} this far.`
       : `Here is the latest update from ${name}.`;
   const noteSection = notes.length > 0 ? `## Recent notes\n\n${notes.map((note) => `- ${note}`).join("\n")}` : "";
   const bodyText = appendPostscript([intro, noteSection].filter(Boolean).join("\n\n"), input.pinnedPostscript);
 
   return {
-    subject: input.type === "graduation" ? `${name} found a home!` : `An update from ${name}`,
+    subject: input.type === "graduation" ? `A farewell from ${name}` : `An update from ${name}`,
     bodyText,
   };
 }

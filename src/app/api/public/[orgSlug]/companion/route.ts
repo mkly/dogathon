@@ -36,7 +36,7 @@ type PublicResident = {
   ageText: string;
   sex: string;
   photoUrls: string[];
-  status: "available" | "adopted";
+  available: boolean;
   _count: { sponsorships: number };
 };
 
@@ -137,8 +137,8 @@ export function createPublicCompanionHandlers(
     const sponsorUrl = new URL(`/${encodedSlug}/sponsor`, routeBase);
     sponsorUrl.searchParams.set("source", resident.sourceUrl);
 
-    const status = resident.status === "adopted"
-      ? "adopted"
+    const status = !resident.available
+      ? "unavailable"
       : resident._count.sponsorships > 0 ? "sponsored" : "available";
     const defaultTier = organization.sponsorshipTiers.find((tier) => tier.isDefault)
       ?? organization.sponsorshipTiers[0];

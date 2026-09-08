@@ -44,7 +44,7 @@ export interface BillingStore {
     status: { detailsSubmitted: boolean; chargesEnabled: boolean },
   ): Promise<void>;
   getAvailableResident(orgId: string, residentId: string): Promise<AvailableResident | null>;
-  /** Org-scoped lookup that ignores status, so a resident adopted mid-checkout still records. */
+  /** Org-scoped lookup that ignores availability, so a resident that became unavailable mid-checkout still records. */
   getResident(orgId: string, residentId: string): Promise<AvailableResident | null>;
   activateSponsorship(input: {
     orgId: string;
@@ -94,7 +94,7 @@ const prismaBillingStore: BillingStore = {
 
   async getAvailableResident(orgId, residentId) {
     return prisma.resident.findFirst({
-      where: { id: residentId, orgId, status: "available" },
+      where: { id: residentId, orgId, available: true },
       select: { id: true, name: true, orgId: true },
     });
   },
@@ -148,7 +148,7 @@ const prismaBillingStore: BillingStore = {
         status: "active",
         organization: { stripeAccountId: input.stripeAccountId },
       },
-      data: { status: "ended", endedAt: new Date(), endedReason: "stripe_subscription_canceled" },
+      data: { status: "ended", endedAt: new Date(), endedReason: "canceled" },
     });
   },
 };

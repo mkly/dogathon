@@ -71,7 +71,7 @@ export default async function CompanionsCoveredPage({ params, searchParams }: Co
         name: true,
         breed: true,
         photoUrls: true,
-        status: true,
+        available: true,
         _count: { select: { sponsorships: { where: { orgId: context.orgId } } } },
         sponsorships: {
           where: { orgId: context.orgId },
@@ -143,8 +143,8 @@ export default async function CompanionsCoveredPage({ params, searchParams }: Co
                       <h2>{resident.name}</h2>
                       <p>{resident.breed}</p>
                       <div className={styles.badges}>
-                        <AdminBadge tone={resident.status === "available" ? "denim" : "brick"}>
-                          {resident.status}
+                        <AdminBadge tone={resident.available ? "denim" : "brick"}>
+                          {resident.available ? "Available" : "Not available"}
                         </AdminBadge>
                         <AdminBadge tone={hasActiveSponsor ? "moss" : "brick"}>
                           {resident._count.sponsorships}{" "}

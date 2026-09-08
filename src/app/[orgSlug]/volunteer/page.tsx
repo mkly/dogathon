@@ -50,7 +50,7 @@ export default async function VolunteerPage({ params, searchParams }: VolunteerP
     prisma.resident.findMany({
       where: {
         orgId: context.orgId,
-        status: "available",
+        available: true,
         sponsorships: { some: { orgId: context.orgId, status: "active" } },
       },
       orderBy: { name: "asc" },

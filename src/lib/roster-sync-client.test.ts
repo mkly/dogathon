@@ -10,8 +10,8 @@ import {
 const summary = {
   created: 1,
   updated: 2,
-  adopted: 0,
-  restored: 0,
+  madeUnavailable: 0,
+  madeAvailable: 0,
   sponsorshipsClosed: 0,
   usedFallbackCapture: false,
   rosterComplete: true,
@@ -69,11 +69,11 @@ test("a refused job is presented as a refusal with its reason", () => {
   assert.deepEqual(
     rosterSyncResultToast(job({
       status: "refused",
-      refusalReason: "The parsed roster would adopt most residents.",
+      refusalReason: "The parsed roster would mark most residents unavailable.",
     })),
     {
       tone: "error",
-      text: "Unable to sync at this time. The parsed roster would adopt most residents.",
+      text: "Unable to sync at this time. The parsed roster would mark most residents unavailable.",
     },
   );
 });

@@ -19,7 +19,7 @@ export function CompanionBanner({ name }: { name: string }) {
         <FeltPanel className={`${styles.confirmation} ${styles.confirmationTop}`} tone="moss">
           <StitchBadge tone="cream">You&apos;re a hero!</StitchBadge>
           <h2>Thank you for sponsoring {name}!</h2>
-          <p>Your monthly sponsorship is active until {name} is adopted.</p>
+          <p>Your monthly sponsorship stays active for as long as {name} needs a sponsor.</p>
           <FeltLink className={styles.cardLink} href="/account/sign-in">
             Create your sponsor account
           </FeltLink>

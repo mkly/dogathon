@@ -38,3 +38,7 @@ export function formatMonthlyAmount(monthlyCents: number) {
 export function sponsorshipStatusLabel(status: "active" | "ended") {
   return status === "active" ? "Active" : "Ended";
 }
+
+export function sponsorshipEndedReasonLabel(reason: "unavailable" | "canceled" | null) {
+  return reason === "unavailable" ? "No longer available" : reason === "canceled" ? "Canceled" : "—";
+}

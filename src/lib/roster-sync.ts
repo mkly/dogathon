@@ -18,8 +18,8 @@ import { cancelStripeSubscription } from "./stripe-billing.ts";
 export type SyncSummary = {
   created: number;
   updated: number;
-  adopted: number;
-  restored: number;
+  madeUnavailable: number;
+  madeAvailable: number;
   sponsorshipsClosed: number;
   usedFallbackCapture: boolean;
   rosterComplete: boolean;
@@ -57,8 +57,8 @@ const FIRECRAWL_LOAD_MORE_WAIT_MS = 500;
 const MAX_SYNC_NOTE_CHARS = 4_000;
 const MAX_CRAWL_SUMMARY_CHARS = 4_000;
 // A live scrape should never make most of the current roster disappear at once.
-// Require a human to investigate instead of treating that disappearance as adoption.
-const MAX_LIVE_ADOPTION_FRACTION = 0.5;
+// Require a human to investigate instead of marking all of them unavailable.
+const MAX_LIVE_UNAVAILABLE_FRACTION = 0.5;
 const RESIDENT_WRITE_BATCH_SIZE = 25;
 
 export class RosterSyncRefusal extends Error {
@@ -81,7 +81,7 @@ type PendingStripeCancellation = {
   organization: { stripeAccountId: string | null };
 };
 
-type AdoptionResident = { id: string; name: string };
+type UnavailableResident = { id: string; name: string };
 
 export async function syncRoster(
   orgId: string,
@@ -124,26 +124,26 @@ export async function syncRoster(
   options.signal?.throwIfAborted();
 
   if (companions.length === 0) {
-    throw new Error("Roster sync refused to adopt every resident after parsing an empty roster");
+    throw new Error("Roster sync refused to mark every resident unavailable after parsing an empty roster");
   }
 
   const summary = await prisma.$transaction(async (tx) => {
     options.signal?.throwIfAborted();
     const before = await tx.resident.findMany({
       where: { orgId },
-      select: { id: true, name: true, sourceUrl: true, status: true },
+      select: { id: true, name: true, sourceUrl: true, available: true },
     });
     const existingNames = new Set(before.map((resident) => resident.name));
     const existingSourceUrls = new Set(before.map((resident) => resident.sourceUrl).filter(Boolean));
-    const { adoptionCandidates, restoreCandidates } = planRosterStatusChanges(
+    const { unavailableCandidates, availableCandidates } = planRosterAvailabilityChanges(
       before,
       companions,
       { usedFallbackCapture, rosterComplete },
     );
 
-    assertPlausibleAdoptionCount(
-      before.filter((resident) => resident.status === "available").length,
-      adoptionCandidates.length,
+    assertPlausibleUnavailableCount(
+      before.filter((resident) => resident.available).length,
+      unavailableCandidates.length,
       usedFallbackCapture || !rosterComplete,
     );
 
@@ -157,10 +157,10 @@ export async function syncRoster(
 
     let sponsorshipsClosed = 0;
 
-    const adoptedAt = new Date();
-    for (const resident of adoptionCandidates) {
+    const endedAt = new Date();
+    for (const resident of unavailableCandidates) {
       options.signal?.throwIfAborted();
-      sponsorshipsClosed += await closeAdoptedSponsorships(tx, orgId, resident, adoptedAt);
+      sponsorshipsClosed += await markResidentUnavailable(tx, orgId, resident, endedAt);
     }
 
     const pendingStripeCancellations = await tx.sponsorship.findMany({
@@ -181,8 +181,8 @@ export async function syncRoster(
         && !existingSourceUrls.has(normalizeSourceUrl(companion.sourceUrl ?? ""))).length,
       updated: companions.filter((companion) => existingNames.has(companion.name)
         || existingSourceUrls.has(normalizeSourceUrl(companion.sourceUrl ?? ""))).length,
-      adopted: adoptionCandidates.length,
-      restored: restoreCandidates.length,
+      madeUnavailable: unavailableCandidates.length,
+      madeAvailable: availableCandidates.length,
       sponsorshipsClosed,
       usedFallbackCapture,
       rosterComplete,
@@ -197,15 +197,15 @@ export async function syncRoster(
   return publicSummary;
 }
 
-export async function closeAdoptedSponsorships(
+export async function markResidentUnavailable(
   tx: SyncTransaction,
   orgId: string,
-  resident: AdoptionResident,
-  adoptedAt: Date,
+  resident: UnavailableResident,
+  endedAt: Date,
 ) {
   await tx.resident.update({
     where: { id_orgId: { id: resident.id, orgId } },
-    data: { status: "adopted", adoptedAt },
+    data: { available: false },
   });
 
   const sponsorships = await tx.sponsorship.findMany({
@@ -222,9 +222,9 @@ export async function closeAdoptedSponsorships(
       where: { id_orgId: { id: sponsorship.id, orgId } },
       data: {
         status: "ended",
-        endedAt: adoptedAt,
-        endedReason: "adopted",
-        stripeCancellationPendingAt: sponsorship.stripeSubscriptionId ? adoptedAt : null,
+        endedAt,
+        endedReason: "unavailable",
+        stripeCancellationPendingAt: sponsorship.stripeSubscriptionId ? endedAt : null,
       },
     });
     await tx.sponsorUpdate.create({
@@ -256,7 +256,7 @@ export async function cancelPendingStripeSubscriptions(
     const accountId = sponsorship.organization.stripeAccountId;
     if (!accountId) {
       logError(
-        `Could not cancel Stripe subscription for adopted sponsorship ${sponsorship.id}: connected account is missing`,
+        `Could not cancel Stripe subscription for ended sponsorship ${sponsorship.id}: connected account is missing`,
         null,
       );
       continue;
@@ -267,69 +267,69 @@ export async function cancelPendingStripeSubscriptions(
       await markCancelled(sponsorship.id);
     } catch (error) {
       logError(
-        `Could not cancel Stripe subscription for adopted sponsorship ${sponsorship.id}; it remains marked for retry`,
+        `Could not cancel Stripe subscription for ended sponsorship ${sponsorship.id}; it remains marked for retry`,
         error,
       );
     }
   }
 }
 
-type ResidentStatusSnapshot = {
+type ResidentAvailabilitySnapshot = {
   id: string;
   name: string;
   sourceUrl?: string;
-  status: string;
+  available: boolean;
 };
 
-export function planRosterStatusChanges<T extends ResidentStatusSnapshot>(
+export function planRosterAvailabilityChanges<T extends ResidentAvailabilitySnapshot>(
   before: T[],
   companions: CompanionRecord[],
   source: Pick<RosterSource, "usedFallbackCapture" | "rosterComplete">,
 ) {
   const onRoster = (resident: T) => companions.some((companion) => companionMatchesResident(companion, resident));
-  const explicitlyAdopted = (resident: T) => companions.some(
+  const explicitlyMarked = (resident: T) => companions.some(
     (companion) => companion.adopted && companionMatchesResident(companion, resident),
   );
   const absenceIsReliable = !source.usedFallbackCapture && source.rosterComplete;
 
-  // Absence only proves adoption after a complete read of the configured
+  // Absence only proves unavailability after a complete read of the configured
   // source. Partial crawls and checked-in fallback captures still honor an
-  // explicit Adopted marker, but never infer a status from a missing companion.
-  const adoptionCandidates = before.filter(
-    (resident) => resident.status === "available"
-      && (explicitlyAdopted(resident) || (absenceIsReliable && !onRoster(resident))),
+  // explicit Adopted marker, but never infer anything from a missing companion.
+  const unavailableCandidates = before.filter(
+    (resident) => resident.available
+      && (explicitlyMarked(resident) || (absenceIsReliable && !onRoster(resident))),
   );
 
   // Restoration uses the same evidence standard: only a complete live roster
   // proves that an unmarked resident should be available again.
-  const restoreCandidates = absenceIsReliable ? before.filter(
-    (resident) => resident.status === "adopted"
+  const availableCandidates = absenceIsReliable ? before.filter(
+    (resident) => !resident.available
       && onRoster(resident)
-      && !explicitlyAdopted(resident),
+      && !explicitlyMarked(resident),
   ) : [];
 
-  return { adoptionCandidates, restoreCandidates };
+  return { unavailableCandidates, availableCandidates };
 }
 
-function companionMatchesResident(companion: CompanionRecord, resident: ResidentStatusSnapshot): boolean {
+function companionMatchesResident(companion: CompanionRecord, resident: ResidentAvailabilitySnapshot): boolean {
   const sourceUrl = normalizeSourceUrl(companion.sourceUrl ?? "");
   return sourceUrl && resident.sourceUrl
     ? sourceUrl === resident.sourceUrl
     : companion.name === resident.name;
 }
 
-export function assertPlausibleAdoptionCount(
+export function assertPlausibleUnavailableCount(
   availableResidents: number,
-  adoptionCandidates: number,
+  unavailableCandidates: number,
   usedFallbackCapture: boolean,
 ) {
-  // A bundled capture only adopts companions carrying an explicit adoption marker,
+  // A bundled capture only marks companions carrying an explicit Adopted marker,
   // so preserve that intentionally conservative fallback behavior.
   if (usedFallbackCapture || availableResidents === 0) return;
 
-  if (adoptionCandidates / availableResidents > MAX_LIVE_ADOPTION_FRACTION) {
+  if (unavailableCandidates / availableResidents > MAX_LIVE_UNAVAILABLE_FRACTION) {
     throw new RosterSyncRefusal(
-      `The parsed roster would adopt ${adoptionCandidates} of ${availableResidents} available residents. Please verify the roster source and try again.`,
+      `The parsed roster would mark ${unavailableCandidates} of ${availableResidents} available residents unavailable. Please verify the roster source and try again.`,
     );
   }
 }
@@ -494,9 +494,7 @@ async function upsertCompanion(
       data: {
         name: companion.name,
         ...profile,
-        ...(liveSource && !companion.adopted
-          ? { status: "available" as const, adoptedAt: null }
-          : {}),
+        ...(liveSource && !companion.adopted ? { available: true } : {}),
       },
     });
     return;
@@ -509,17 +507,14 @@ async function upsertCompanion(
       name: companion.name,
       slug,
       ...profile,
-      status: companion.adopted ? "adopted" : "available",
-      adoptedAt: companion.adopted ? new Date() : null,
+      available: !companion.adopted,
     },
     update: {
       ...profile,
-      // Presence on the live source without an Adopted marker restores an
-      // adopted resident to available. Explicit markers stay with the adoption
-      // pass above, which owns the sponsorship-ending side effects.
-      ...(liveSource && !companion.adopted
-        ? { status: "available" as const, adoptedAt: null }
-        : {}),
+      // Presence on the live source without an Adopted marker makes a resident
+      // available again. Explicit markers stay with the unavailability pass
+      // above, which owns the sponsorship-ending side effects.
+      ...(liveSource && !companion.adopted ? { available: true } : {}),
     },
   });
 }
@@ -1438,7 +1433,7 @@ export function graduationDraft(residentId: string, companionName: string, spons
     residentId,
     type: "graduation" as const,
     status: "draft" as const,
-    subject: `${companionName} has been adopted!`,
-    bodyText: `Great news, ${sponsorName} — ${companionName} has found a forever home. Your monthly sponsorship has ended automatically. Thank you for helping ${companionName} reach graduation day!`,
+    subject: `A farewell from ${companionName}`,
+    bodyText: `${sponsorName}, ${companionName} is no longer listed for sponsorship, so your monthly sponsorship has ended. Thank you for everything you gave ${companionName} along the way.`,
   };
 }

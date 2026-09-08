@@ -48,7 +48,7 @@ export async function finishCheckIn(orgSlug: string, rawInput: unknown) {
     where: {
       id: residentId,
       orgId: context.orgId,
-      status: "available",
+      available: true,
       sponsorships: { some: { status: "active" } },
     },
     select: { ageText: true, breed: true, id: true, name: true, sex: true },

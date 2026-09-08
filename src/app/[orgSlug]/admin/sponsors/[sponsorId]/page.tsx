@@ -12,7 +12,7 @@ import {
   AdminSurface,
   AdminTable,
 } from "@/components/admin-ui";
-import { formatDate, sponsorshipStatusLabel } from "@/lib/format";
+import { formatDate, sponsorshipEndedReasonLabel, sponsorshipStatusLabel } from "@/lib/format";
 import { PageViewTransition } from "@/components/page-view-transition";
 import { getOrganizationAccessBySlug } from "@/lib/organization-access";
 import { prisma } from "@/lib/prisma";
@@ -114,7 +114,7 @@ export default async function SponsorDetailPage({ params }: SponsorDetailPagePro
                     <td><AdminStatus>{sponsorshipStatusLabel(sponsorship.status)}</AdminStatus></td>
                     <td>{formatDate(sponsorship.createdAt)}</td>
                     <td>{sponsorship.endedAt ? formatDate(sponsorship.endedAt) : "—"}</td>
-                    <td className={styles.reason}>{sponsorship.endedReason ?? "—"}</td>
+                    <td className={styles.reason}>{sponsorshipEndedReasonLabel(sponsorship.endedReason)}</td>
                   </tr>
                 ))}
               </tbody>

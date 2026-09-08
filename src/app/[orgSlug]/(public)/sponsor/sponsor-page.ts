@@ -4,7 +4,7 @@ import { normalizeSourceUrl } from "@/lib/source-url";
 const MAX_SOURCE_URL_LENGTH = 2048;
 
 type SourceSearchParam = string | string[] | undefined;
-type SourceResident = { id: string; status: string };
+type SourceResident = { id: string; available: boolean };
 type FindResidentBySource = (
   orgId: string,
   sourceUrl: string,

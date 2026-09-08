@@ -4,11 +4,11 @@ import test from "node:test";
 import { MockLanguageModelV3 } from "ai/test";
 
 import {
-  assertPlausibleAdoptionCount,
+  assertPlausibleUnavailableCount,
   allocateResidentSlug,
   assertRelatedUrl,
   cancelPendingStripeSubscriptions,
-  closeAdoptedSponsorships,
+  markResidentUnavailable,
   discoverRoster,
   discoverRosterWithCompleteness,
   extractScrapedText,
@@ -17,7 +17,7 @@ import {
   loadRoster,
   loadRosterSource,
   onlyIdentifyingSourceUrls,
-  planRosterStatusChanges,
+  planRosterAvailabilityChanges,
   requestFirecrawl,
   residentSlug,
   RosterSyncRefusal,
@@ -154,7 +154,7 @@ test("a source URL match updates a renamed companion", async () => {
       name: "Renamed Biscuit",
       breed: "", dobText: "", ageText: "", sex: "", weightText: "", personality: "",
       careNotes: [], photoUrls: [], sourceUrl: "https://rescue.example/dogs/biscuit",
-      status: "available", adoptedAt: null,
+      available: true,
     },
   }]);
 });
@@ -237,7 +237,7 @@ test("related roster URLs still reject private and IP-literal hosts", () => {
 });
 
 test("adoption ends sponsorships at the adoption time and marks Stripe cancellations pending", async () => {
-  const adoptedAt = new Date("2026-09-06T21:00:00.000Z");
+  const endedAt = new Date("2026-09-06T21:00:00.000Z");
   const residentUpdates: unknown[] = [];
   const sponsorshipUpdates: unknown[] = [];
   const drafts: unknown[] = [];
@@ -263,34 +263,34 @@ test("adoption ends sponsorships at the adoption time and marks Stripe cancellat
     },
   } as unknown as SyncTransaction;
 
-  const closed = await closeAdoptedSponsorships(
+  const closed = await markResidentUnavailable(
     tx,
     "org-rescue",
     { id: "resident-1", name: "Hattie" },
-    adoptedAt,
+    endedAt,
   );
 
   assert.equal(closed, 2);
   assert.deepEqual(residentUpdates, [{
     where: { id_orgId: { id: "resident-1", orgId: "org-rescue" } },
-    data: { status: "adopted", adoptedAt },
+    data: { available: false },
   }]);
   assert.deepEqual(sponsorshipUpdates, [
     {
       where: { id_orgId: { id: "sponsorship-1", orgId: "org-rescue" } },
       data: {
         status: "ended",
-        endedAt: adoptedAt,
-        endedReason: "adopted",
-        stripeCancellationPendingAt: adoptedAt,
+        endedAt,
+        endedReason: "unavailable",
+        stripeCancellationPendingAt: endedAt,
       },
     },
     {
       where: { id_orgId: { id: "sponsorship-2", orgId: "org-rescue" } },
       data: {
         status: "ended",
-        endedAt: adoptedAt,
-        endedReason: "adopted",
+        endedAt,
+        endedReason: "unavailable",
         stripeCancellationPendingAt: null,
       },
     },
@@ -1086,62 +1086,62 @@ test("graduation drafts are queued and sponsor-specific", () => {
   assert.match(draft.bodyText, /sponsorship has ended/i);
 });
 
-test("refuses a live sync that would adopt most available residents", () => {
+test("refuses a live sync that would mark most available residents unavailable", () => {
   assert.throws(
-    () => assertPlausibleAdoptionCount(10, 6, false),
+    () => assertPlausibleUnavailableCount(10, 6, false),
     (error) => error instanceof RosterSyncRefusal
       && /adopt 6 of 10 available residents/.test(error.reason),
   );
 });
 
 test("allows a plausible live adoption count", () => {
-  assert.doesNotThrow(() => assertPlausibleAdoptionCount(10, 2, false));
+  assert.doesNotThrow(() => assertPlausibleUnavailableCount(10, 2, false));
 });
 
 test("preserves explicit adoption handling for fallback captures", () => {
-  assert.doesNotThrow(() => assertPlausibleAdoptionCount(10, 10, true));
+  assert.doesNotThrow(() => assertPlausibleUnavailableCount(10, 10, true));
 });
 
 test("an incomplete crawl does not adopt a resident missing from the partial roster", () => {
-  const changes = planRosterStatusChanges(
-    [{ id: "resident-1", name: "Hattie", status: "available" }],
+  const changes = planRosterAvailabilityChanges(
+    [{ id: "resident-1", name: "Hattie", available: true }],
     [rosterCompanion("Walnut", false)],
     { usedFallbackCapture: false, rosterComplete: false },
   );
 
-  assert.deepEqual(changes.adoptionCandidates, []);
+  assert.deepEqual(changes.unavailableCandidates, []);
 });
 
 test("an incomplete crawl still adopts a resident with an explicit Adopted marker", () => {
-  const resident = { id: "resident-1", name: "Hattie", status: "available" };
-  const changes = planRosterStatusChanges(
+  const resident = { id: "resident-1", name: "Hattie", available: true };
+  const changes = planRosterAvailabilityChanges(
     [resident],
     [rosterCompanion("Hattie", true)],
     { usedFallbackCapture: false, rosterComplete: false },
   );
 
-  assert.deepEqual(changes.adoptionCandidates, [resident]);
+  assert.deepEqual(changes.unavailableCandidates, [resident]);
 });
 
 test("a complete crawl still adopts an available resident missing from the roster", () => {
-  const resident = { id: "resident-1", name: "Hattie", status: "available" };
-  const changes = planRosterStatusChanges(
+  const resident = { id: "resident-1", name: "Hattie", available: true };
+  const changes = planRosterAvailabilityChanges(
     [resident],
     [rosterCompanion("Walnut", false)],
     { usedFallbackCapture: false, rosterComplete: true },
   );
 
-  assert.deepEqual(changes.adoptionCandidates, [resident]);
+  assert.deepEqual(changes.unavailableCandidates, [resident]);
 });
 
-test("an incomplete crawl does not restore an adopted resident", () => {
-  const changes = planRosterStatusChanges(
-    [{ id: "resident-1", name: "Hattie", status: "adopted" }],
+test("an incomplete crawl does not restore an unavailable resident", () => {
+  const changes = planRosterAvailabilityChanges(
+    [{ id: "resident-1", name: "Hattie", available: false }],
     [rosterCompanion("Hattie", false)],
     { usedFallbackCapture: false, rosterComplete: false },
   );
 
-  assert.deepEqual(changes.restoreCandidates, []);
+  assert.deepEqual(changes.availableCandidates, []);
 });
 
 test("a configured local capture is the real source, not a scrape fallback", async () => {

@@ -31,7 +31,7 @@ export const getPublicOrganization = unstable_cache(
 
 export const getPublicResidents = unstable_cache(
   (orgId: string) => prisma.resident.findMany({
-    where: { orgId, status: "available" },
+    where: { orgId, available: true },
     orderBy: { name: "asc" },
     take: PUBLIC_RESIDENT_LIMIT,
   }),
@@ -60,7 +60,7 @@ export const getPublicResidentBySource = unstable_cache(
           ageText: true,
           sex: true,
           photoUrls: true,
-          status: true,
+          available: true,
           _count: { select: { sponsorships: { where: { status: "active" } } } },
         },
       })
@@ -81,7 +81,7 @@ export const getPublicResidentBySlug = unstable_cache(
       ageText: true,
       sex: true,
       photoUrls: true,
-      status: true,
+      available: true,
       _count: { select: { sponsorships: { where: { status: "active" } } } },
     },
   }),
@@ -91,7 +91,7 @@ export const getPublicResidentBySlug = unstable_cache(
 
 export const getPublicCompanionParams = unstable_cache(
   () => prisma.resident.findMany({
-    where: { status: "available" },
+    where: { available: true },
     orderBy: { id: "asc" },
     select: { id: true, organization: { select: { slug: true } } },
     take: PUBLIC_RESIDENT_LIMIT,

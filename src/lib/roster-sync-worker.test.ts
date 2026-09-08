@@ -15,8 +15,8 @@ import {
 const summary: SyncSummary = {
   created: 1,
   updated: 0,
-  adopted: 0,
-  restored: 0,
+  madeUnavailable: 0,
+  madeAvailable: 0,
   sponsorshipsClosed: 0,
   usedFallbackCapture: false,
   rosterComplete: true,
@@ -157,7 +157,7 @@ test("a roster refusal is completed with a refused outcome", async () => {
   let recordedReason = "";
   const drain = createRosterSyncDrainer(dependencies({
     syncRoster: async () => {
-      throw new RosterSyncRefusal("Too many residents would be adopted");
+      throw new RosterSyncRefusal("Too many residents would become unavailable");
     },
     refuse: async (_jobId, reason) => {
       recordedReason = reason;
@@ -166,7 +166,7 @@ test("a roster refusal is completed with a refused outcome", async () => {
   }));
 
   assert.deepEqual(await drain(), { drained: true, job: job("refused") });
-  assert.equal(recordedReason, "Too many residents would be adopted");
+  assert.equal(recordedReason, "Too many residents would become unavailable");
 });
 
 test("a budget overrun aborts the sync and explicitly fails the job", async () => {

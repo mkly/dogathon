@@ -168,14 +168,14 @@ model Verification {
   @@map("verification")
 }
 
-enum ResidentStatus {
-  available
-  adopted
-}
-
 enum SponsorshipStatus {
   active
   ended
+}
+
+enum SponsorshipEndedReason {
+  unavailable
+  canceled
 }
 
 model Sponsor {
@@ -214,8 +214,7 @@ model Resident {
   personality     String
   careNotes       String[]
   photoUrls       String[]
-  status          ResidentStatus   @default(available)
-  adoptedAt       DateTime?
+  available       Boolean          @default(true)
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
   sponsorships    Sponsorship[]
@@ -227,7 +226,7 @@ model Resident {
   @@unique([orgId, name])
   @@unique([orgId, slug])
   @@unique([id, orgId])
-  @@index([orgId, status])
+  @@index([orgId, available])
 }
 
 model Sponsorship {
@@ -237,7 +236,7 @@ model Sponsorship {
   sponsorId                   String            @db.Uuid
   monthlyCents                Int               @default(2500)
   status                      SponsorshipStatus @default(active)
-  endedReason                 String?
+  endedReason                 SponsorshipEndedReason?
   endedAt                     DateTime?
   stripeCancellationPendingAt DateTime?
   stripeCheckoutSessionId     String?           @unique

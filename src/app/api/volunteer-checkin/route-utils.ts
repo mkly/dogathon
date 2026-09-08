@@ -27,7 +27,7 @@ const interviewRouteDependencies: InterviewRouteDependencies = {
       where: {
         id: residentId,
         orgId,
-        status: "available",
+        available: true,
         sponsorships: { some: { status: "active" } },
       },
       select: { name: true, breed: true, sex: true, ageText: true },

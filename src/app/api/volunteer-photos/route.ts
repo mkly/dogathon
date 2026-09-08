@@ -41,7 +41,7 @@ const uploadDependencies: UploadDependencies = {
       where: {
         id: residentId,
         orgId,
-        status: "available",
+        available: true,
         sponsorships: { some: { status: "active" } },
       },
       select: { id: true },

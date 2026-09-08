@@ -183,7 +183,7 @@ test("cta mode renders only a sponsor link and preserves sponsorship-page query 
 test("cta mode renders the existing status message for unavailable companions", async () => {
   for (const [status, expected] of [
     ["sponsored", "This companion already has an active sponsor."],
-    ["adopted", "This companion has been adopted and is no longer accepting sponsorships."],
+    ["unavailable", "This companion is not accepting sponsorships right now."],
   ] as const) {
     const { root } = await renderWidget({
       infoUrl: "https://rescue.example/sponsor",
@@ -341,7 +341,7 @@ for (const [query, expected] of [
 
 for (const [status, expected] of [
   ["sponsored", "This companion already has an active sponsor."],
-  ["adopted", "This companion has been adopted and is no longer accepting sponsorships."],
+  ["unavailable", "This companion is not accepting sponsorships right now."],
 ] as const) {
   test(`renders a ${status} message and companion link`, async () => {
     const { root } = await renderWidget({ response: { ...companion, status } });

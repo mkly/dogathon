@@ -25,7 +25,7 @@ const resident = {
   ageText: "Adult",
   sex: "Female",
   photoUrls: ["https://images.example/biscuit.jpg"],
-  status: "available" as const,
+  available: true,
   _count: { sponsorships: 0 },
 };
 
@@ -76,7 +76,7 @@ test("returns the public companion contract and allows a configured origin", asy
     tiers: organization.sponsorshipTiers,
     monthlyCents: 6000,
     currency: "usd",
-    status: "available",
+    available: true,
     companionUrl: `https://pawcast.example/happy-paws/companions/${resident.id}`,
     sponsorUrl: "https://pawcast.example/happy-paws/sponsor?source=https%3A%2F%2Frescue.example%2Fdogs%2Fbiscuit",
   });
@@ -164,13 +164,13 @@ test("rate limits reads before looking up a companion", async () => {
   assert.equal(lookedUp, false);
 });
 
-test("adopted companions take precedence over active sponsorships", async () => {
+test("unavailable companions take precedence over active sponsorships", async () => {
   const { GET } = createPublicCompanionHandlers(dependencies({
     async getResidentBySource() {
-      return { ...resident, status: "adopted", _count: { sponsorships: 1 } };
+      return { ...resident, available: false, _count: { sponsorships: 1 } };
     },
   }));
   const response = await GET(request(), context());
 
-  assert.equal((await response.json()).status, "adopted");
+  assert.equal((await response.json()).status, "unavailable");
 });

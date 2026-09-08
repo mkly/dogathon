@@ -13,7 +13,7 @@ test("a found source redirects to its companion page with a normalized identity"
     },
     async (orgId, sourceUrl) => {
       calls.push([orgId, sourceUrl]);
-      return { id: "resident-id", status: "available" };
+      return { id: "resident-id", available: true };
     },
   );
 
@@ -24,14 +24,14 @@ test("a found source redirects to its companion page with a normalized identity"
   });
 });
 
-test("an adopted resident still redirects to the companion page", async () => {
+test("an unavailable resident still redirects to the companion page", async () => {
   const result = await resolveSponsorDestination(
     { orgId: "rescue-id", orgSlug: "happy-paws", source: "https://rescue.example/dogs/fern" },
-    async () => ({ id: "adopted-id", status: "adopted" }),
+    async () => ({ id: "unavailable-id", available: false }),
   );
 
   assert.deepEqual(result, {
-    href: "/happy-paws/companions/adopted-id",
+    href: "/happy-paws/companions/unavailable-id",
     kind: "redirect",
   });
 });
@@ -49,7 +49,7 @@ test("missing, invalid, non-http, and oversized sources do not query the roster"
   let lookups = 0;
   const findResident = async () => {
     lookups += 1;
-    return { id: "unexpected", status: "available" };
+    return { id: "unexpected", available: true };
   };
 
   for (const source of [

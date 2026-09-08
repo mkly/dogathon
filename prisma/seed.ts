@@ -40,8 +40,7 @@ async function main() {
       personality: "Sweet, curious, and always ready for a new friend.",
       careNotes: ["Keep snacks safely out of reach."],
       photoUrls: [photoUrls[0]],
-      status: "available",
-      adoptedAt: null,
+      available: true,
     },
     create: {
       orgId: organization.id,
@@ -169,8 +168,7 @@ async function main() {
       personality: "Bright, bouncy, and happiest with a tennis ball.",
       careNotes: ["Prefers a quiet spot for meals."],
       photoUrls: [photoUrls[1] ?? photoUrls[0]],
-      status: "available",
-      adoptedAt: null,
+      available: true,
     },
     create: {
       orgId: secondOrganization.id,
