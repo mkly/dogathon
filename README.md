@@ -73,7 +73,9 @@ container for each companion and load the script once from the Dogathon deployme
 ```
 
 `data-sponsor-org` is required. `data-sponsor-source` defaults to the current page URL with its
-fragment removed, and `data-sponsor-return` defaults to the current page URL. Set
+fragment removed. On a shared sponsorship page, an absolute HTTP(S) `source` query parameter takes
+precedence over that default. `data-sponsor-return` defaults to the current page URL, including its
+query string. Set
 `data-sponsor-photo="hide"`, `data-sponsor-name="hide"`, or `data-sponsor-details="hide"` to omit
 the companion photo, name, or breed / age / sex details respectively; a missing attribute or any
 other value shows that part. Available companions also show a short explanation above the form. Set
@@ -84,6 +86,35 @@ dependencies. Its classes all begin with
 unrelated elements. Run the app locally and open `/embed-demo.html`; its `org`, `source`,
 `photo=hide`, `name=hide`, `details=hide`, and `intro` query parameters make it easy to exercise a
 synced companion and the display controls.
+
+### Shared sponsorship page
+
+A call-to-action on each animal page can link to one sponsorship page shared by every companion.
+Put the CTA embed on the animal-page template and set `data-sponsor-info-url` to that shared page:
+
+```html
+<div
+  data-sponsor-org="happy-paws"
+  data-sponsor-mode="cta"
+  data-sponsor-info-url="https://rescue.example/sponsor"
+></div>
+<script src="https://pawcast.example/embed.js"></script>
+```
+
+The script resolves the animal from the current page (or `data-sponsor-source`) and renders a
+`Sponsor <name>` link whose URL includes the encoded source. On the shared sponsorship page, use
+card mode without `data-sponsor-source`:
+
+```html
+<div data-sponsor-org="happy-paws" data-sponsor-mode="card"></div>
+<script src="https://pawcast.example/embed.js"></script>
+```
+
+The card reads the companion from the incoming `source` query parameter. Its checkout return URL
+defaults to the full sponsorship-page URL, including that query parameter, so success, cancellation,
+and error states return to the same companion view. Photo, name, details, and intro attributes apply
+only to card mode; CTA mode shows only its link, or the existing status message when the companion
+has already been sponsored or adopted.
 
 The embed depends on these public endpoint contracts:
 

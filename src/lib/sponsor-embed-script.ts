@@ -38,9 +38,26 @@ export const sponsorEmbedScript = String.raw`(() => {
   const sourceFor = (root) => {
     const configured = root.getAttribute("data-sponsor-source");
     if (configured) return new URL(configured, window.location.href).toString();
+    const querySource = root.getAttribute("data-sponsor-mode") === "cta" ? null : pageUrl.searchParams.get("source");
+    if (querySource) {
+      try {
+        const parsed = new URL(querySource);
+        if (parsed.protocol === "http:" || parsed.protocol === "https:") return parsed.toString();
+      } catch {
+        // Ignore malformed query values and fall back to the current page URL.
+      }
+    }
     const source = new URL(window.location.href);
     source.hash = "";
     return source.toString();
+  };
+
+  const sponsorInfoUrl = (root, source) => {
+    const configured = root.getAttribute("data-sponsor-info-url");
+    if (!configured) return null;
+    const infoUrl = new URL(configured, window.location.href);
+    infoUrl.searchParams.set("source", source);
+    return infoUrl.toString();
   };
 
   const returnToFor = (root) => {
@@ -117,13 +134,14 @@ export const sponsorEmbedScript = String.raw`(() => {
 
   const styles = () => {
     const node = document.createElement("style");
-    node.textContent = ".dogathon-sponsor-root{box-sizing:border-box;max-width:32rem;padding:1.25rem;border:1px solid #d9d4ca;border-radius:1rem;background:#fff;color:#27231e;font:16px/1.45 system-ui,sans-serif}.dogathon-sponsor-root *{box-sizing:border-box}.dogathon-sponsor-photo{display:block;width:100%;max-height:22rem;object-fit:cover;border-radius:.7rem}.dogathon-sponsor-name{margin:.9rem 0 .2rem;font-size:1.5rem}.dogathon-sponsor-details,.dogathon-sponsor-status,.dogathon-sponsor-price{margin:.2rem 0;color:#5d554b}.dogathon-sponsor-price{font-weight:700;color:inherit}.dogathon-sponsor-intro{margin:1rem 0 0}.dogathon-sponsor-message{padding:.75rem;border-radius:.5rem;background:#f3f0ea}.dogathon-sponsor-message-success{background:#e4f3e8}.dogathon-sponsor-message-error{background:#f8e5e2}.dogathon-sponsor-form{display:grid;gap:.8rem;margin-top:1rem}.dogathon-sponsor-field{display:grid;gap:.25rem}.dogathon-sponsor-label{font-weight:650}.dogathon-sponsor-input{width:100%;padding:.65rem;border:1px solid #9c9388;border-radius:.4rem;font:inherit}.dogathon-sponsor-button{padding:.75rem 1rem;border:0;border-radius:.5rem;background:#3c6442;color:#fff;font:inherit;font-weight:700;cursor:pointer}.dogathon-sponsor-link{color:#315c3a;text-decoration:underline;text-underline-offset:.15em}";
+    node.textContent = ".dogathon-sponsor-root{box-sizing:border-box;max-width:32rem;padding:1.25rem;border:1px solid #d9d4ca;border-radius:1rem;background:#fff;color:#27231e;font:16px/1.45 system-ui,sans-serif}.dogathon-sponsor-root *{box-sizing:border-box}.dogathon-sponsor-photo{display:block;width:100%;max-height:22rem;object-fit:cover;border-radius:.7rem}.dogathon-sponsor-name{margin:.9rem 0 .2rem;font-size:1.5rem}.dogathon-sponsor-details,.dogathon-sponsor-status,.dogathon-sponsor-price{margin:.2rem 0;color:#5d554b}.dogathon-sponsor-price{font-weight:700;color:inherit}.dogathon-sponsor-intro{margin:1rem 0 0}.dogathon-sponsor-message{padding:.75rem;border-radius:.5rem;background:#f3f0ea}.dogathon-sponsor-message-success{background:#e4f3e8}.dogathon-sponsor-message-error{background:#f8e5e2}.dogathon-sponsor-form{display:grid;gap:.8rem;margin-top:1rem}.dogathon-sponsor-field{display:grid;gap:.25rem}.dogathon-sponsor-label{font-weight:650}.dogathon-sponsor-input{width:100%;padding:.65rem;border:1px solid #9c9388;border-radius:.4rem;font:inherit}.dogathon-sponsor-button,.dogathon-sponsor-cta{display:inline-block;padding:.75rem 1rem;border:0;border-radius:.5rem;background:#3c6442;color:#fff;font:inherit;font-weight:700;cursor:pointer;text-decoration:none}.dogathon-sponsor-link{color:#315c3a;text-decoration:underline;text-underline-offset:.15em}";
     return node;
   };
 
   const render = async (root) => {
     const org = (root.getAttribute("data-sponsor-org") || "").trim();
-    root.classList.add(PREFIX + "root");
+    const ctaMode = root.getAttribute("data-sponsor-mode") === "cta";
+    root.classList.toggle(PREFIX + "root", !ctaMode);
     root.replaceChildren(styles(), message("Loading companion…", "notice"));
     try {
       const source = sourceFor(root);
@@ -135,6 +153,24 @@ export const sponsorEmbedScript = String.raw`(() => {
       }
 
       const companion = await response.json();
+      if (ctaMode) {
+        if (companion.status === "adopted") {
+          root.replaceChildren(styles(), message("This companion has been adopted and is no longer accepting sponsorships.", "notice"));
+        } else if (companion.status === "sponsored") {
+          root.replaceChildren(styles(), message("This companion already has an active sponsor.", "notice"));
+        } else {
+          const infoUrl = sponsorInfoUrl(root, source);
+          if (infoUrl) {
+            const cta = create("a", "cta", "Sponsor " + companion.name);
+            cta.setAttribute("href", infoUrl);
+            root.replaceChildren(styles(), cta);
+          } else {
+            console.warn("Dogathon sponsor CTA requires data-sponsor-info-url.");
+            root.replaceChildren();
+          }
+        }
+        return;
+      }
       const content = document.createDocumentFragment();
       content.append(styles());
       if (companion.photoUrl && !isHidden(root, "photo")) {

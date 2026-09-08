@@ -22,17 +22,23 @@ const companion = {
 
 async function renderWidget({
   details,
+  infoUrl,
   intro,
+  mode,
   name,
   photo,
   response = companion,
+  source,
   url = "https://rescue.example/dogs/biscuit#bio",
 }: {
   details?: string;
+  infoUrl?: string;
   intro?: string;
+  mode?: string;
   name?: string;
   photo?: string;
   response?: typeof companion;
+  source?: string;
   url?: string;
 } = {}) {
   const dom = new JSDOM(`<!doctype html><body>
@@ -51,9 +57,12 @@ async function renderWidget({
   const root = dom.window.document.querySelector<HTMLElement>("[data-sponsor-org]");
   assert.ok(root);
   if (details !== undefined) root.setAttribute("data-sponsor-details", details);
+  if (infoUrl !== undefined) root.setAttribute("data-sponsor-info-url", infoUrl);
   if (intro !== undefined) root.setAttribute("data-sponsor-intro", intro);
+  if (mode !== undefined) root.setAttribute("data-sponsor-mode", mode);
   if (name !== undefined) root.setAttribute("data-sponsor-name", name);
   if (photo !== undefined) root.setAttribute("data-sponsor-photo", photo);
+  if (source !== undefined) root.setAttribute("data-sponsor-source", source);
   dom.window.eval(sponsorEmbedScript);
   for (let index = 0; index < 20 && !root.hasAttribute("data-sponsor-rendered"); index += 1) {
     await new Promise((resolve) => setTimeout(resolve, 0));
@@ -90,6 +99,96 @@ test("renders companion data and a checkout form using the public endpoints", as
   assert.ok(form?.querySelector('[name="sponsorName"][required]'));
   assert.ok(form?.querySelector('[name="sponsorEmail"][required]'));
   assert.equal(root.innerHTML.includes(companion.name), true);
+});
+
+test("cta mode renders only a sponsor link and preserves sponsorship-page query parameters", async () => {
+  const { root } = await renderWidget({
+    details: "hide",
+    infoUrl: "https://rescue.example/sponsor?campaign=spring",
+    intro: "Ignored intro",
+    mode: "cta",
+    name: "hide",
+    photo: "hide",
+  });
+
+  const cta = root.querySelector<HTMLAnchorElement>("a.dogathon-sponsor-cta");
+  assert.equal(cta?.textContent, "Sponsor Biscuit");
+  assert.equal(
+    cta?.href,
+    "https://rescue.example/sponsor?campaign=spring&source=https%3A%2F%2Frescue.example%2Fdogs%2Fbiscuit",
+  );
+  assert.deepEqual(
+    Array.from(root.children).map((element) => element.tagName),
+    ["STYLE", "A"],
+  );
+});
+
+test("cta mode renders the existing status message for unavailable companions", async () => {
+  for (const [status, expected] of [
+    ["sponsored", "This companion already has an active sponsor."],
+    ["adopted", "This companion has been adopted and is no longer accepting sponsorships."],
+  ] as const) {
+    const { root } = await renderWidget({
+      infoUrl: "https://rescue.example/sponsor",
+      mode: "cta",
+      response: { ...companion, status },
+    });
+
+    assert.equal(root.querySelector(".dogathon-sponsor-message")?.textContent, expected);
+    assert.equal(root.querySelector(".dogathon-sponsor-cta"), null);
+    assert.equal(root.querySelector("form"), null);
+  }
+});
+
+test("cta mode renders nothing and warns when the sponsorship page URL is missing", async () => {
+  const warnings: unknown[][] = [];
+  const originalWarn = console.warn;
+  console.warn = (...values: unknown[]) => { warnings.push(values); };
+  try {
+    const { root } = await renderWidget({ mode: "cta" });
+
+    assert.equal(root.children.length, 0);
+    assert.equal(root.classList.contains("dogathon-sponsor-root"), false);
+    assert.deepEqual(warnings, [["Dogathon sponsor CTA requires data-sponsor-info-url."]]);
+  } finally {
+    console.warn = originalWarn;
+  }
+});
+
+test("card mode resolves its companion source from an absolute http source query parameter", async () => {
+  const { requested, root } = await renderWidget({
+    url: "https://rescue.example/sponsor?campaign=spring&source=https%3A%2F%2Frescue.example%2Fdogs%2Fbiscuit%3Fref%3Dprofile",
+  });
+
+  assert.equal(
+    requested,
+    "https://pawcast.example/api/public/happy-paws/companion?source=https%3A%2F%2Frescue.example%2Fdogs%2Fbiscuit%3Fref%3Dprofile",
+  );
+  assert.equal(
+    root.querySelector<HTMLInputElement>('[name="returnTo"]')?.value,
+    "https://rescue.example/sponsor?campaign=spring&source=https%3A%2F%2Frescue.example%2Fdogs%2Fbiscuit%3Fref%3Dprofile",
+  );
+});
+
+test("data-sponsor-source wins over the page source query parameter", async () => {
+  const { requested } = await renderWidget({
+    source: "https://rescue.example/dogs/chex",
+    url: "https://rescue.example/sponsor?source=https%3A%2F%2Frescue.example%2Fdogs%2Fbiscuit",
+  });
+
+  assert.equal(
+    requested,
+    "https://pawcast.example/api/public/happy-paws/companion?source=https%3A%2F%2Frescue.example%2Fdogs%2Fchex",
+  );
+});
+
+test("card mode ignores a source query parameter that is not an absolute http URL", async () => {
+  const { requested } = await renderWidget({ url: "https://rescue.example/sponsor?source=%2Fdogs%2Fbiscuit" });
+
+  assert.equal(
+    requested,
+    "https://pawcast.example/api/public/happy-paws/companion?source=https%3A%2F%2Frescue.example%2Fsponsor%3Fsource%3D%252Fdogs%252Fbiscuit",
+  );
 });
 
 test("renders the default sponsor intro for an available companion", async () => {
