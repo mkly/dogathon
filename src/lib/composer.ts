@@ -13,7 +13,14 @@ export interface SponsorUpdateCompanion {
   ageText?: string;
 }
 
-export type SponsorUpdateNote = string | { note: string; [key: string]: unknown };
+export type SponsorUpdateNote =
+  | string
+  | {
+      note: string;
+      /** The check-in interview the note was distilled from, as role-tagged lines. */
+      conversation?: string[];
+      [key: string]: unknown;
+    };
 
 export interface ComposeSponsorUpdateInput {
   companion: SponsorUpdateCompanion;
@@ -80,7 +87,7 @@ async function composeWithModel(input: ComposeSponsorUpdateInput): Promise<Compo
     maxOutputTokens: MAX_SPONSOR_UPDATE_OUTPUT_TOKENS,
     output: Output.object({ schema: composedSponsorUpdateSchema }),
     instructions:
-      `You write warm, short email updates in an animal shelter's voice. Use only facts in the supplied JSON; never invent details.${regularUpdateGuidance} Format the notes section with the literal Markdown heading "## Recent notes".`,
+      `You write warm, short email updates in an animal shelter's voice. Use only facts in the supplied JSON; never invent details. Where a note carries a conversation, that is the volunteer's own account of the visit and the note is only a digest of it: draw the specifics from the conversation, and prefer the volunteer's wording over the interviewer's.${regularUpdateGuidance} Format the notes section with the literal Markdown heading "## Recent notes".`,
     prompt: JSON.stringify({
       companion: input.companion,
       notes: input.notes,

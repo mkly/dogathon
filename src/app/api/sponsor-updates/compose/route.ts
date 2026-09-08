@@ -5,12 +5,28 @@ import { env } from "@/lib/env";
 import { requireApiOrganization } from "@/lib/organization-access";
 import { companionPageUrl } from "@/lib/sponsor-update-delivery";
 import { prisma } from "@/lib/prisma";
+import { messageText } from "@/lib/ui-message-text";
 import { uuidSchema } from "@/lib/uuid";
+import { interviewTranscriptSchema } from "@/lib/volunteer-interview-request";
 
 const composeRequestSchema = z.object({
   residentId: uuidSchema,
   type: z.enum(["regular", "graduation"]).optional(),
 });
+
+/**
+ * The care note is the summariser's digest of a check-in; the interview itself
+ * carries the detail the digest drops, so the composer gets both.
+ */
+function conversationLines(transcript: unknown): string[] | undefined {
+  const parsed = interviewTranscriptSchema.safeParse(transcript);
+  if (!parsed.success) return undefined;
+  const lines = parsed.data
+    .map((message) => ({ role: message.role, text: messageText(message).replace("[[READY]]", "").trim() }))
+    .filter(({ text }) => text)
+    .map(({ role, text }) => `${role === "user" ? "Volunteer" : "Interviewer"}: ${text}`);
+  return lines.length > 0 ? lines : undefined;
+}
 
 export async function POST(request: Request) {
   const access = await requireApiOrganization(request.headers, { sponsorUpdate: ["manage"] });
@@ -40,7 +56,12 @@ export async function POST(request: Request) {
           orderBy: { createdAt: "desc" },
           take: 10,
           // never pull photoData bytes into the compose payload
-          select: { note: true, photoUrl: true, createdAt: true },
+          select: {
+            note: true,
+            photoUrl: true,
+            createdAt: true,
+            checkIn: { select: { transcript: true } },
+          },
         },
       },
     }),
@@ -67,7 +88,10 @@ export async function POST(request: Request) {
         sex: resident.sex,
         ageText: resident.ageText,
       },
-      notes: resident.volunteerNotes,
+      notes: resident.volunteerNotes.map(({ checkIn, ...note }) => ({
+        ...note,
+        conversation: conversationLines(checkIn?.transcript),
+      })),
       pinnedPostscript: settings?.pinnedPostscript ?? "",
       type,
       companionPageUrl: companionPageUrl(env.BETTER_AUTH_URL, resident.organization.slug, resident.id),
