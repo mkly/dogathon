@@ -28,7 +28,7 @@ type VolunteerPageProps = {
 const volunteerQuerySchema = z.object({
   companion: uuidSchema.optional().catch(undefined),
   submitted: z.literal("1").optional().catch(undefined),
-  error: z.enum(["invalid", "rate-limited", "unavailable"]).optional().catch(undefined),
+  error: z.enum(["invalid", "rate-limited", "save", "summary", "unavailable"]).optional().catch(undefined),
 });
 
 const MAX_CHECK_IN_RESIDENTS = 100;
@@ -100,7 +100,9 @@ export default async function VolunteerPage({ params, searchParams }: VolunteerP
           </header>
           {error === "rate-limited" ? <p className={styles.chatError} role="alert">Please wait a little before trying again.</p> : null}
           {error === "invalid" ? <p className={styles.chatError} role="alert">The check-in details were invalid. Please try again.</p> : null}
-          {error === "unavailable" ? <p className={styles.chatError} role="alert">We could not save that check-in. The companion may no longer be available.</p> : null}
+          {error === "unavailable" ? <p className={styles.chatError} role="alert">That companion is no longer available for check-ins.</p> : null}
+          {error === "summary" ? <p className={styles.chatError} role="alert">We could not write the care note from that conversation. Please try again.</p> : null}
+          {error === "save" ? <p className={styles.chatError} role="alert">The care note was written but could not be saved. Please try again.</p> : null}
 
           {checkInResidents.length > 0 ? (
             <CheckInChat

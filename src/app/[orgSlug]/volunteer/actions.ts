@@ -56,13 +56,19 @@ export async function finishCheckIn(orgSlug: string, rawInput: unknown) {
 
   if (!resident) redirect(volunteerUrl(safeOrgSlug, { error: "unavailable" }));
 
+  let note: string;
   try {
-    const { note } = await summarizeInterview({
+    ({ note } = await summarizeInterview({
       companion: resident,
       messages,
       orgName: access.organization.name,
-    });
+    }));
+  } catch (error) {
+    console.error("volunteer check-in summary failed", error);
+    redirect(volunteerUrl(safeOrgSlug, { error: "summary" }));
+  }
 
+  try {
     const noteId = randomUUID();
     await prisma.$transaction(async (tx) => {
       await tx.volunteerNote.create({
@@ -85,8 +91,9 @@ export async function finishCheckIn(orgSlug: string, rawInput: unknown) {
         await tx.volunteerNote.update({ where: { id: noteId }, data: { photoUrl } });
       }
     });
-  } catch {
-    redirect(volunteerUrl(safeOrgSlug, { error: "unavailable" }));
+  } catch (error) {
+    console.error("volunteer check-in save failed", error);
+    redirect(volunteerUrl(safeOrgSlug, { error: "save" }));
   }
 
   redirect(volunteerUrl(safeOrgSlug, { companion: residentId, submitted: "1" }));
