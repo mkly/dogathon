@@ -4,7 +4,6 @@ import clsx from "clsx";
 import type { KeyboardEvent, ReactNode } from "react";
 import { useRef, useState } from "react";
 
-import { Stitch } from "@/components/felt";
 import felt from "@/components/felt.module.css";
 
 export type CheckInResident = {
@@ -87,7 +86,6 @@ export function CheckInChatView({
               tabIndex={selected ? 0 : -1}
               type="button"
             >
-              <Stitch fine />
               {renderPhoto(resident)}
               <span>{resident.name}</span>
             </button>
