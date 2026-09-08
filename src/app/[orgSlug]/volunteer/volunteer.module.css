@@ -684,6 +684,10 @@
   .cardName {
     font-size: 1rem;
   }
+
+  .avatar {
+    display: none;
+  }
 }
 
 @media (min-width: 42rem) {
