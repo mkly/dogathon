@@ -113,10 +113,11 @@ export const sponsorEmbedScript = String.raw`(() => {
   };
 
   const tierFields = (tiers, monthlyCents, currency) => {
+    const defaultTier = tiers.find((tier) => tier.isDefault === true) || tiers[0];
     // An organization that has never saved its sponsorship settings has no tiers, and checkout
     // falls back to the default price, so the card shows that price and posts no tier at all.
     if (tiers.length < 2) {
-      const tier = tiers[0];
+      const tier = defaultTier;
       const fields = document.createDocumentFragment();
       if (tier) {
         const selectedTier = create("input");
@@ -134,14 +135,14 @@ export const sponsorEmbedScript = String.raw`(() => {
 
     const choices = create("fieldset", "tiers");
     choices.append(create("legend", "tiers-legend", "Choose a monthly sponsorship"));
-    tiers.forEach((tier, index) => {
+    tiers.forEach((tier) => {
       const choice = create("label", "tier");
       const input = create("input", "tier-input");
       input.setAttribute("type", "radio");
       input.setAttribute("name", "tier");
       input.setAttribute("value", tier.id);
       input.setAttribute("required", "");
-      if (index === 0) input.setAttribute("checked", "");
+      if (tier === defaultTier) input.setAttribute("checked", "");
       const copy = create("span", "tier-copy");
       copy.append(create("span", "tier-price", price(tier.monthlyCents, currency)));
       copy.append(create("span", "tier-description", tier.description));

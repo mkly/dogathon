@@ -19,8 +19,8 @@ const companion = {
   sponsorUrl: "https://pawcast.example/happy-paws/sponsor",
   status: "available",
   tiers: [
-    { description: "Everyday care and treats", id: "tier-care", monthlyCents: 3250 },
-    { description: "Care plus veterinary support", id: "tier-vet", monthlyCents: 5000 },
+    { description: "Everyday care and treats", id: "tier-care", isDefault: false, monthlyCents: 3250 },
+    { description: "Care plus veterinary support", id: "tier-vet", isDefault: true, monthlyCents: 5000 },
   ],
 };
 
@@ -43,7 +43,9 @@ async function renderWidget({
   name?: string;
   ok?: boolean;
   photo?: string;
-  response?: typeof companion;
+  response?: Omit<typeof companion, "tiers"> & {
+    tiers: Array<Omit<(typeof companion.tiers)[number], "isDefault"> & { isDefault?: boolean }>;
+  };
   source?: string;
   url?: string;
 } = {}) {
@@ -106,9 +108,9 @@ test("renders companion data and a checkout form using the public endpoints", as
   const tierInputs = form?.querySelectorAll<HTMLInputElement>('[name="tier"]');
   assert.equal(tierInputs?.length, 2);
   assert.equal(tierInputs?.[0]?.value, "tier-care");
-  assert.equal(tierInputs?.[0]?.checked, true);
+  assert.equal(tierInputs?.[0]?.checked, false);
   assert.equal(tierInputs?.[1]?.value, "tier-vet");
-  assert.equal(tierInputs?.[1]?.checked, false);
+  assert.equal(tierInputs?.[1]?.checked, true);
   assert.deepEqual(
     Array.from(form?.querySelectorAll(".dogathon-sponsor-tier") ?? []).map((tier) => tier.textContent),
     ["$32.50 monthlyEveryday care and treats", "$50.00 monthlyCare plus veterinary support"],
@@ -116,12 +118,24 @@ test("renders companion data and a checkout form using the public endpoints", as
   assert.equal(root.innerHTML.includes(companion.name), true);
 });
 
+test("falls back to the first tier when the companion response has no default", async () => {
+  const tiers = [
+    { description: "Everyday care and treats", id: "tier-care", monthlyCents: 3250 },
+    { description: "Care plus veterinary support", id: "tier-vet", monthlyCents: 5000 },
+  ];
+  const { root } = await renderWidget({ response: { ...companion, tiers } });
+  const tierInputs = root.querySelectorAll<HTMLInputElement>('[name="tier"]');
+
+  assert.equal(tierInputs[0]?.checked, true);
+  assert.equal(tierInputs[1]?.checked, false);
+});
+
 test("renders one tier as the price and description without radio controls", async () => {
   const description = "<strong>Everyday care</strong>";
   const { root } = await renderWidget({
     response: {
       ...companion,
-      tiers: [{ description, id: "tier-care", monthlyCents: 3250 }],
+      tiers: [{ description, id: "tier-care", isDefault: true, monthlyCents: 3250 }],
     },
   });
 

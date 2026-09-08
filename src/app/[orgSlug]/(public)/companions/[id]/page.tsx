@@ -44,9 +44,10 @@ export default async function CompanionPage({ params, searchParams }: CompanionP
   const available = resident.status === "available";
   const tiers = organization.sponsorshipTiers;
   const firstTier = tiers[0];
+  const defaultTier = tiers.find((tier) => "isDefault" in tier && tier.isDefault === true) ?? firstTier;
   // An organization that has never saved its sponsorship settings has no tiers, and checkout
   // falls back to the default price, so the page shows that price and posts no tier at all.
-  const monthlyAmount = formatMonthlyAmount(firstTier?.monthlyCents ?? DEFAULT_SPONSORSHIP_MONTHLY_CENTS);
+  const monthlyAmount = formatMonthlyAmount(defaultTier?.monthlyCents ?? DEFAULT_SPONSORSHIP_MONTHLY_CENTS);
   return (
     <PageViewTransition>
       <main className={`${styles.siteShell} ${styles.detailShell}`}>
@@ -136,18 +137,18 @@ export default async function CompanionPage({ params, searchParams }: CompanionP
                 <input name="residentId" type="hidden" value={resident.id} />
 
                 {tiers.length < 2 ? (
-                  firstTier ? (
+                  defaultTier ? (
                     <div className={styles.singleTier}>
-                      <input name="tier" type="hidden" value={firstTier.id} />
-                      <p>{firstTier.description}</p>
+                      <input name="tier" type="hidden" value={defaultTier.id} />
+                      <p>{defaultTier.description}</p>
                     </div>
                   ) : null
                 ) : (
                   <fieldset className={styles.sponsorshipTiers}>
                     <legend>Choose a monthly sponsorship</legend>
-                    {tiers.map((tier, index) => (
+                    {tiers.map((tier) => (
                       <label className={styles.sponsorshipTier} key={tier.id}>
-                        <input defaultChecked={index === 0} name="tier" required type="radio" value={tier.id} />
+                        <input defaultChecked={tier.id === defaultTier?.id} name="tier" required type="radio" value={tier.id} />
                         <Stitch fine />
                         <span>
                           <strong>{formatMonthlyAmount(tier.monthlyCents)}/month</strong>
