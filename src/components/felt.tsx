@@ -3,6 +3,7 @@ import type {
   ButtonHTMLAttributes,
   ComponentProps,
   HTMLAttributes,
+  Ref,
 } from "react";
 import { clsx } from "clsx";
 
@@ -56,6 +57,7 @@ export function FeltPanel({
 }
 
 export type FeltButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
+  ref?: Ref<HTMLButtonElement>;
   tone?: FeltTone;
   stitched?: boolean;
 };

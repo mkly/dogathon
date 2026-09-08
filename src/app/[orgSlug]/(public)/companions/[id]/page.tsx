@@ -5,7 +5,6 @@ import { Suspense, ViewTransition } from "react";
 import { createSponsorship } from "@/app/actions";
 import { FeltField, FeltLink, FeltPanel, PhotoPatch, Stitch, StitchBadge } from "@/components/felt";
 import { PageViewTransition } from "@/components/page-view-transition";
-import { PendingFeltSubmitButton } from "@/components/pending-submit-button";
 import { formatMonthlyAmount } from "@/lib/format";
 import {
   getPublicCompanionParams,
@@ -17,6 +16,7 @@ import { uuidSchema } from "@/lib/uuid";
 
 import { CompanionBanner, CompanionFormError, CompanionSponsorState } from "./companion-banner";
 import { companionFacts, sponsorshipSucceeded } from "./companion-page";
+import { SponsorSubmitButton } from "./sponsor-submit-button";
 import styles from "../../../../public.module.css";
 
 export const revalidate = 86400;
@@ -169,9 +169,9 @@ export default async function CompanionPage({ params, searchParams }: CompanionP
                   <input autoComplete="email" id="sponsorEmail" name="sponsorEmail" required type="email" />
                 </FeltField>
 
-                <PendingFeltSubmitButton className={styles.sponsorButton} pendingLabel="Opening checkout…" tone="mustard" type="submit">
+                <SponsorSubmitButton className={styles.sponsorButton} pendingLabel="Opening checkout…" tone="mustard" type="submit">
                   Continue to checkout
-                </PendingFeltSubmitButton>
+                </SponsorSubmitButton>
               </form>
             </FeltPanel>
           </CompanionSponsorState>

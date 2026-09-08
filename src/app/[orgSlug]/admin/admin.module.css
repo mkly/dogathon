@@ -409,7 +409,6 @@
   }
   .tierRowActions { justify-content: flex-start; min-width: 0; }
 }
-}
 .originsTextarea { min-height: 7rem; resize: vertical; }
 .fieldHint { margin: -4px 0 0; font-size: 0.75rem; font-weight: 700; line-height: 1.45; opacity: 0.75; }
 
