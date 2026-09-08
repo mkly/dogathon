@@ -15,10 +15,11 @@ import {
 import { PhotoPatch } from "@/components/felt";
 import { PageViewTransition } from "@/components/page-view-transition";
 import { formatDate, sponsorshipStatusLabel } from "@/lib/format";
-import { getOrganizationAccessBySlug } from "@/lib/organization-access";
+import { checkOrganizationPermission, getOrganizationAccessBySlug } from "@/lib/organization-access";
 import { prisma } from "@/lib/prisma";
 
 import styles from "./companions-covered.module.css";
+import { MarkAdoptedButton } from "./mark-adopted-button";
 
 export const dynamic = "force-dynamic";
 
@@ -47,12 +48,16 @@ export default async function CompanionsCoveredPage({ params, searchParams }: Co
     sponsors: ["read"],
   });
 
+
   if (!access) notFound();
   if (!access.context) {
     const next = encodeURIComponent(`/${orgSlug}/admin/companions-covered`);
     redirect(access.authenticated ? "/staff/organizations" : `/staff/sign-in?next=${next}`);
   }
   const { context } = access;
+  const canMarkAdopted = await checkOrganizationPermission(await headers(), context.orgId, {
+    sponsorUpdate: ["manage"],
+  });
 
   const residentWhere = {
     orgId: context.orgId,
@@ -152,13 +157,22 @@ export default async function CompanionsCoveredPage({ params, searchParams }: Co
                         </AdminBadge>
                       </div>
                     </div>
-                    <AdminLink
-                      className={styles.detailLink}
-                      href={`/${orgSlug}/companions/${resident.id}`}
-                      tone="mustard"
-                    >
-                      View companion page
-                    </AdminLink>
+                    <div className={styles.companionActions}>
+                      {canMarkAdopted && resident.available ? (
+                        <MarkAdoptedButton
+                          orgSlug={orgSlug}
+                          residentId={resident.id}
+                          residentName={resident.name}
+                        />
+                      ) : null}
+                      <AdminLink
+                        className={styles.detailLink}
+                        href={`/${orgSlug}/companions/${resident.id}`}
+                        tone="mustard"
+                      >
+                        View companion page
+                      </AdminLink>
+                    </div>
                   </div>
 
                   <AdminTable>

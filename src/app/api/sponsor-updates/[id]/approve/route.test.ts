@@ -11,8 +11,8 @@ const baseUpdate = {
   orgId: "org-1",
   residentId: "resident-1",
   type: "graduation" as const,
-  subject: "A farewell from Biscuit",
-  bodyText: "Biscuit is no longer listed for sponsorship.",
+  subject: "Biscuit found a home!",
+  bodyText: "Biscuit has been adopted!",
   photoUrl: null,
   status: "draft" as const,
   organization: { slug: "huffy-puff" },
@@ -31,7 +31,7 @@ const baseUpdate = {
         id: "adopted",
         monthlyCents: 4000,
         status: "ended" as const,
-        endedReason: "unavailable" as const,
+        endedReason: "adopted" as const,
         sponsor: { email: "adopted@example.com" },
       },
     ],
@@ -65,7 +65,7 @@ function context() {
   return { params: Promise.resolve({ id: updateId }) };
 }
 
-test("graduation approval delivers to unavailable-ended sponsorships and marks sent after success", async () => {
+test("graduation approval delivers to adopted-ended sponsorships and marks sent after success", async () => {
   let recipientIds: string[] = [];
   let renderedMonthlyCents = 0;
   let markedSent = false;

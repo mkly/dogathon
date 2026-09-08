@@ -108,7 +108,7 @@ export function SponsorUpdateEmail(input: SponsorUpdateEmailProps) {
   const heroTile = absolute(input.origin, graduation ? TILE.mustard : TILE.moss);
   const photo = input.photoUrl ? absolute(input.origin, input.photoUrl) : null;
   const preheader = graduation
-    ? `${name}'s sponsorship has come to an end — thank you for being there.`
+    ? `${name} has been adopted — thank you for being there all the way home.`
     : `Fresh news from ${name}, straight off the volunteer notebook.`;
 
   return (
@@ -168,7 +168,7 @@ export function SponsorUpdateEmail(input: SponsorUpdateEmailProps) {
                   textTransform: "uppercase",
                 }}
               >
-                {graduation ? "A farewell" : "A new update"}
+                {graduation ? "Adoption day" : "A new update"}
               </Text>
               <Heading
                 as="h1"

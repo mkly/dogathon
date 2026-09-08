@@ -64,6 +64,13 @@
   gap: 7px;
 }
 
+.companionActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
 .detailLink {
   text-decoration: none;
   white-space: nowrap;
@@ -110,7 +117,12 @@
     height: 78px;
   }
 
-  .detailLink {
+  .companionActions {
     grid-column: 1 / -1;
+    justify-content: stretch;
+  }
+
+  .companionActions > * {
+    flex: 1;
   }
 }

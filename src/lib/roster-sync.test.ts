@@ -8,12 +8,12 @@ import {
   allocateResidentSlug,
   assertRelatedUrl,
   cancelPendingStripeSubscriptions,
-  markResidentUnavailable,
+  markResidentAdopted,
   discoverRoster,
   discoverRosterWithCompleteness,
   extractScrapedText,
   extractScrapedTexts,
-  graduationDraft,
+  adoptionDraft,
   loadRoster,
   loadRosterSource,
   onlyIdentifyingSourceUrls,
@@ -263,7 +263,7 @@ test("adoption ends sponsorships at the adoption time and marks Stripe cancellat
     },
   } as unknown as SyncTransaction;
 
-  const closed = await markResidentUnavailable(
+  const closed = await markResidentAdopted(
     tx,
     "org-rescue",
     { id: "resident-1", name: "Hattie" },
@@ -281,7 +281,7 @@ test("adoption ends sponsorships at the adoption time and marks Stripe cancellat
       data: {
         status: "ended",
         endedAt,
-        endedReason: "unavailable",
+        endedReason: "adopted",
         stripeCancellationPendingAt: endedAt,
       },
     },
@@ -290,7 +290,7 @@ test("adoption ends sponsorships at the adoption time and marks Stripe cancellat
       data: {
         status: "ended",
         endedAt,
-        endedReason: "unavailable",
+        endedReason: "adopted",
         stripeCancellationPendingAt: null,
       },
     },
@@ -1078,7 +1078,7 @@ test("stops roster discovery after ten model steps", async () => {
 });
 
 test("graduation drafts are queued and sponsor-specific", () => {
-  const draft = graduationDraft("companion-1", "Hattie", "Sam");
+  const draft = adoptionDraft("companion-1", "Hattie", "Sam");
 
   assert.equal(draft.type, "graduation");
   assert.equal(draft.status, "draft");
@@ -1120,10 +1120,11 @@ test("an incomplete crawl still adopts a resident with an explicit Adopted marke
     { usedFallbackCapture: false, rosterComplete: false },
   );
 
-  assert.deepEqual(changes.unavailableCandidates, [resident]);
+  assert.deepEqual(changes.adoptedCandidates, [resident]);
+  assert.deepEqual(changes.unavailableCandidates, []);
 });
 
-test("a complete crawl still adopts an available resident missing from the roster", () => {
+test("a complete crawl marks an available resident missing from the roster unavailable, not adopted", () => {
   const resident = { id: "resident-1", name: "Hattie", available: true };
   const changes = planRosterAvailabilityChanges(
     [resident],
@@ -1131,6 +1132,7 @@ test("a complete crawl still adopts an available resident missing from the roste
     { usedFallbackCapture: false, rosterComplete: true },
   );
 
+  assert.deepEqual(changes.adoptedCandidates, []);
   assert.deepEqual(changes.unavailableCandidates, [resident]);
 });
 

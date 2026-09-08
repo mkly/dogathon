@@ -163,13 +163,15 @@ test("prepares one sender before the concurrent fan-out", async () => {
   assert.equal(sends, 2);
 });
 
-test("selects active recipients for regular updates and unavailable-ended recipients for graduations", () => {
+test("selects active recipients for regular updates and adopted-ended recipients for graduations", () => {
   const active = { status: "active" as const, endedReason: null };
+  const adopted = { status: "ended" as const, endedReason: "adopted" as const };
   const unavailable = { status: "ended" as const, endedReason: "unavailable" as const };
   const cancelled = { status: "ended" as const, endedReason: "canceled" as const };
 
   assert.equal(isSponsorUpdateRecipient("regular", active), true);
-  assert.equal(isSponsorUpdateRecipient("regular", unavailable), false);
-  assert.equal(isSponsorUpdateRecipient("graduation", unavailable), true);
+  assert.equal(isSponsorUpdateRecipient("regular", adopted), false);
+  assert.equal(isSponsorUpdateRecipient("graduation", adopted), true);
+  assert.equal(isSponsorUpdateRecipient("graduation", unavailable), false);
   assert.equal(isSponsorUpdateRecipient("graduation", cancelled), false);
 });

@@ -10,7 +10,7 @@ export type SponsorUpdateType = "regular" | "graduation";
 
 export type RecipientSponsorship = {
   status: "active" | "ended";
-  endedReason: "unavailable" | "canceled" | null;
+  endedReason: "adopted" | "unavailable" | "canceled" | null;
 };
 
 export function isSponsorUpdateRecipient(
@@ -18,7 +18,7 @@ export function isSponsorUpdateRecipient(
   sponsorship: RecipientSponsorship,
 ): boolean {
   return type === "graduation"
-    ? sponsorship.endedReason === "unavailable"
+    ? sponsorship.endedReason === "adopted"
     : sponsorship.status === "active";
 }
 

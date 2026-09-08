@@ -21,7 +21,7 @@ type RouteContext = { params: Promise<{ id: string }> };
 type ApprovalSponsorship = DeliverySponsorship & {
   monthlyCents: number;
   status: "active" | "ended";
-  endedReason: "unavailable" | "canceled" | null;
+  endedReason: "adopted" | "unavailable" | "canceled" | null;
 };
 
 type ApprovalUpdate = {
@@ -78,7 +78,7 @@ const approvalDependencies: ApprovalDependencies = {
             sponsorships: {
               where: {
                 orgId,
-                OR: [{ status: "active" }, { endedReason: "unavailable" }],
+                OR: [{ status: "active" }, { endedReason: "adopted" }],
               },
               include: { sponsor: { select: { email: true } } },
               orderBy: { createdAt: "asc" },

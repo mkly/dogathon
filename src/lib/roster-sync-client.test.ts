@@ -10,7 +10,8 @@ import {
 const summary = {
   created: 1,
   updated: 2,
-  madeUnavailable: 0,
+  adopted: 0,
+    madeUnavailable: 0,
   madeAvailable: 0,
   sponsorshipsClosed: 0,
   usedFallbackCapture: false,

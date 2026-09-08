@@ -39,6 +39,13 @@ export function sponsorshipStatusLabel(status: "active" | "ended") {
   return status === "active" ? "Active" : "Ended";
 }
 
-export function sponsorshipEndedReasonLabel(reason: "unavailable" | "canceled" | null) {
-  return reason === "unavailable" ? "No longer available" : reason === "canceled" ? "Canceled" : "—";
+export function sponsorshipEndedReasonLabel(
+  reason: "adopted" | "unavailable" | "canceled" | null,
+) {
+  switch (reason) {
+    case "adopted": return "Adopted";
+    case "unavailable": return "No longer available";
+    case "canceled": return "Canceled";
+    default: return "—";
+  }
 }

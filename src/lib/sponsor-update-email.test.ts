@@ -60,13 +60,13 @@ test("escapes sponsor-facing copy instead of injecting it as markup", async () =
   assert.match(html, /&lt;b&gt;tags&lt;\/b&gt; &amp; an ampersand/u);
 });
 
-test("switches the hero to the mustard farewell treatment", async () => {
+test("switches the hero to the mustard adoption treatment", async () => {
   const regular = await render(createElement(SponsorUpdateEmail, base));
   const graduation = await render(createElement(SponsorUpdateEmail, { ...base, type: "graduation" }));
 
   assert.match(regular, /A new update/u);
   assert.match(regular, /felt-moss\.jpg/u);
-  assert.match(graduation, /A farewell/u);
+  assert.match(graduation, /Adoption day/u);
   assert.match(graduation, /felt-mustard\.jpg/u);
 });
 

@@ -232,7 +232,7 @@ async function ApprovalQueue({
             sponsorships: {
               where: {
                 orgId,
-                OR: [{ status: "active" }, { endedReason: "unavailable" }],
+                OR: [{ status: "active" }, { endedReason: "adopted" }],
               },
               select: { id: true, status: true, endedReason: true },
             },
