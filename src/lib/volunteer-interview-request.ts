@@ -17,18 +17,20 @@ const messagePartsSchema = z
   .transform((parts) => parts.filter((part) => part.type === "text"))
   .pipe(z.array(textPartSchema).min(1));
 
+export const MAX_INTERVIEW_MESSAGES = 40;
+
 export const interviewMessageSchema = z.object({
   id: z.string().min(1).max(200),
   role: z.enum(["user", "assistant"]),
   parts: messagePartsSchema,
 });
 
-export const interviewTranscriptSchema = z.array(interviewMessageSchema).max(40);
+export const interviewTranscriptSchema = z.array(interviewMessageSchema);
 
 export const interviewRequestSchema = z.object({
   orgSlug: z.string().trim().min(1).max(200),
   checkInId: uuidSchema,
-  messages: interviewTranscriptSchema.min(1),
+  messages: interviewTranscriptSchema.min(1).max(MAX_INTERVIEW_MESSAGES),
 });
 
 export type InterviewRequest = z.infer<typeof interviewRequestSchema>;
