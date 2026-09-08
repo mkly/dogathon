@@ -18,12 +18,14 @@ export type InterviewRouteContext = {
   messages: InterviewRequest["messages"];
   orgId: string;
   orgName: string;
+  photoStorageKey: string | null;
   userId: string;
 };
 
 type InterviewRouteDependencies = {
   findCheckIn: (orgId: string, userId: string, checkInId: string) => Promise<{
     companion: InterviewRouteContext["companion"];
+    photoStorageKey: string | null;
     transcript: unknown;
   } | null>;
   getAccess: typeof getOrganizationAccessBySlug;
@@ -39,11 +41,20 @@ const interviewRouteDependencies: InterviewRouteDependencies = {
         status: "in_progress",
       },
       select: {
+        photos: {
+          orderBy: { createdAt: "asc" },
+          select: { storageKey: true },
+          take: 1,
+        },
         resident: { select: { name: true, breed: true, sex: true, ageText: true } },
         transcript: true,
       },
     });
-    return checkIn ? { companion: checkIn.resident, transcript: checkIn.transcript } : null;
+    return checkIn ? {
+      companion: checkIn.resident,
+      photoStorageKey: checkIn.photos[0]?.storageKey ?? null,
+      transcript: checkIn.transcript,
+    } : null;
   },
   getAccess: getOrganizationAccessBySlug,
 };
@@ -66,7 +77,7 @@ export async function parseInterviewRouteRequest(
     return {
       ok: false,
       response: Response.json(
-        { error: "orgSlug, checkInId, and 1–40 valid messages are required" },
+        { error: "orgSlug, checkInId, and up to 40 valid messages are required" },
         { status: 400 },
       ),
     };
@@ -105,13 +116,19 @@ export function createGetInterviewRouteContext(dependencies: InterviewRouteDepen
       return { ok: false, response: Response.json({ error: "Check-in not found" }, { status: 404 }) };
     }
     const stored = interviewTranscriptSchema.safeParse(checkIn.transcript);
+    const storedMessages = stored.success ? textOnlyTranscript(stored.data) : null;
     const incoming = textOnlyTranscript(input.messages);
     const expectedPrefix = incoming.slice(0, -1);
     const nextMessage = incoming.at(-1);
+    const isOpeningTurn = incoming.length === 0
+      && storedMessages?.length === 0
+      && Boolean(checkIn.photoStorageKey);
     if (
-      !stored.success
-      || nextMessage?.role !== "user"
-      || JSON.stringify(textOnlyTranscript(stored.data)) !== JSON.stringify(expectedPrefix)
+      !storedMessages
+      || (!isOpeningTurn && (
+        nextMessage?.role !== "user"
+        || JSON.stringify(storedMessages) !== JSON.stringify(expectedPrefix)
+      ))
     ) {
       return {
         ok: false,
@@ -127,6 +144,7 @@ export function createGetInterviewRouteContext(dependencies: InterviewRouteDepen
         messages: incoming,
         orgId: access.context.orgId,
         orgName: access.organization.name,
+        photoStorageKey: checkIn.photoStorageKey,
         userId: access.context.userId,
       },
     };

@@ -55,6 +55,8 @@ test("builds a bounded, grounded companion interview prompt", () => {
   assert.match(prompt, /no more than five questions/u);
   assert.match(prompt, /Never invent facts/u);
   assert.match(prompt, /medical advice/u);
+  assert.match(prompt, /one concrete visible detail/u);
+  assert.match(prompt, /Never infer health, breed, or identity from a photo/u);
   assert.match(prompt, /\[\[READY\]\]/u);
 });
 
@@ -140,6 +142,46 @@ test("streams a credentialed interview turn with the companion prompt", async ()
   assert.match(messages[0].content, /\[\[READY\]\]/u);
 });
 
+test("opens from photo bytes and falls back to a text-only opening when vision fails", async () => {
+  env.OPENAI_API_KEY = "test-key";
+  env.OPENAI_BASE_URL = "https://model.example/v1";
+  env.OPENAI_MODEL = "vision-interviewer";
+  env.features = Object.freeze({ ...env.features, ai: true });
+  const requestBodies: Array<Record<string, unknown>> = [];
+  const logged: unknown[][] = [];
+  const originalConsoleError = console.error;
+  console.error = (...args) => { logged.push(args); };
+  globalThis.fetch = async (_input, init) => {
+    requestBodies.push(JSON.parse(String(init?.body)) as Record<string, unknown>);
+    if (requestBodies.length === 1) {
+      return Response.json(
+        { error: { message: "This model does not support image input" } },
+        { status: 400 },
+      );
+    }
+    return Response.json({
+      choices: [{ message: { content: "What did you and Biscuit do together today?" }, finish_reason: "stop" }],
+    });
+  };
+
+  try {
+    const response = await interviewTurn({
+      companion,
+      orgName: "Happy Tails",
+      messages: [],
+      photo: { data: new Uint8Array([1, 2, 3]), mime: "image/jpeg" },
+    });
+    assert.match(await response.text(), /What did you and Biscuit do together today/u);
+  } finally {
+    console.error = originalConsoleError;
+  }
+
+  assert.equal(requestBodies.length, 2);
+  assert.match(JSON.stringify(requestBodies[0]), /data:image\/jpeg;base64/u);
+  assert.doesNotMatch(JSON.stringify(requestBodies[1]), /image_url|data:image/u);
+  assert.match(String(logged[0]?.[0]), /vision opening failed/u);
+});
+
 test("uses structured model output for a grounded summary", async () => {
   env.OPENAI_API_KEY = "test-key";
   env.OPENAI_BASE_URL = "https://model.example/v1";
@@ -198,4 +240,5 @@ test("rejects oversized message lists and text parts", () => {
     ...valid,
     messages: [{ id: "a1", role: "assistant", parts: [{ type: "step-start" }] }],
   }).success, false);
+  assert.equal(interviewRequestSchema.safeParse({ ...valid, messages: [] }).success, true);
 });

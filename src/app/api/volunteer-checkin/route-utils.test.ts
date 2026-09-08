@@ -71,3 +71,31 @@ test("accepts only the next user message after the stored transcript", async () 
   assert.equal(replaced.ok, false);
   if (!replaced.ok) assert.equal(replaced.response.status, 409);
 });
+
+test("accepts an empty opening turn only for an empty check-in with a photo", async () => {
+  function openingRoute(photoStorageKey: string | null) {
+    return createGetInterviewRouteContext({
+      async findCheckIn() {
+        return {
+          companion: { ageText: "Adult", breed: "Corgi", name: "Biscuit", sex: "Female" },
+          photoStorageKey,
+          transcript: [],
+        };
+      },
+      async getAccess() {
+        return {
+          authenticated: true,
+          context: { memberId: "member-1", orgId: "org-1", role: "volunteer", userId: "user-1" },
+          organization: { id: "org-1", name: "Huffy Puff", slug: "huffy-puff" },
+        };
+      },
+    } as never);
+  }
+  const request = new Request("http://localhost/api/volunteer-checkin/chat");
+  const openingInput = { ...input, messages: [] };
+
+  assert.equal((await openingRoute("orgs/org-1/photo.jpg")(request, openingInput)).ok, true);
+  const withoutPhoto = await openingRoute(null)(request, openingInput);
+  assert.equal(withoutPhoto.ok, false);
+  if (!withoutPhoto.ok) assert.equal(withoutPhoto.response.status, 409);
+});

@@ -30,7 +30,7 @@ export const interviewTranscriptSchema = z.array(interviewMessageSchema);
 export const interviewRequestSchema = z.object({
   orgSlug: z.string().trim().min(1).max(200),
   checkInId: uuidSchema,
-  messages: interviewTranscriptSchema.min(1).max(MAX_INTERVIEW_MESSAGES),
+  messages: interviewTranscriptSchema.max(MAX_INTERVIEW_MESSAGES),
 });
 
 export type InterviewRequest = z.infer<typeof interviewRequestSchema>;

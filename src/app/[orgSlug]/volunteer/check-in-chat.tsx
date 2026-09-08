@@ -66,6 +66,7 @@ export function CheckInChat({
   const [finishError, setFinishError] = useState("");
   const [finishing, setFinishing] = useState(false);
   const threadEndRef = useRef<HTMLDivElement>(null);
+  const openingRequestedRef = useRef(false);
   const previewUrlsRef = useRef(new Set<string>());
 
   const userMessageCount = messages.filter((message) => message.role === "user").length;
@@ -94,6 +95,18 @@ export function CheckInChat({
       previewUrls.forEach((url) => URL.revokeObjectURL(url));
     };
   }, []);
+
+  useEffect(() => {
+    if (
+      hasAttachedPhoto
+      && messages.length === 0
+      && status === "ready"
+      && !openingRequestedRef.current
+    ) {
+      openingRequestedRef.current = true;
+      void sendMessage();
+    }
+  }, [hasAttachedPhoto, messages.length, sendMessage, status]);
 
   async function uploadPhoto(photo: UploadedPhoto) {
     const fallbackError = "The photo could not be uploaded. Please try again.";
@@ -276,10 +289,6 @@ export function CheckInChat({
               ) : null}
             </div>
           ))}
-        </div>
-
-        <div className={`${styles.message} ${styles.assistantMessage}`}>
-          Lovely photo of {resident.name}. What were you two up to?
         </div>
 
         {messages.map((message) => {
