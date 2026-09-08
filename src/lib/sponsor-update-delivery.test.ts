@@ -4,7 +4,7 @@ import test from "node:test";
 import {
   deliverSponsorUpdate,
   companionPageUrl,
-  isSponsorUpdateRecipient,
+  isRegularSponsorUpdateRecipient,
 } from "./sponsor-update-delivery.ts";
 
 test("builds an organization-scoped companion URL", () => {
@@ -163,16 +163,15 @@ test("prepares one sender before the concurrent fan-out", async () => {
   assert.equal(sends, 2);
 });
 
-test("selects active recipients for regular updates and adopted-ended recipients for graduations", () => {
+test("selects active recipients for regular updates", () => {
   const active = { status: "active" as const, endedReason: null };
   const adopted = { status: "ended" as const, endedReason: "adopted" as const };
   const unavailable = { status: "ended" as const, endedReason: "unavailable" as const };
   const cancelled = { status: "ended" as const, endedReason: "canceled" as const };
 
-  assert.equal(isSponsorUpdateRecipient("regular", active, true), true);
-  assert.equal(isSponsorUpdateRecipient("regular", active, false), false);
-  assert.equal(isSponsorUpdateRecipient("regular", adopted, true), false);
-  assert.equal(isSponsorUpdateRecipient("graduation", adopted, false), true);
-  assert.equal(isSponsorUpdateRecipient("graduation", unavailable, false), false);
-  assert.equal(isSponsorUpdateRecipient("graduation", cancelled, false), false);
+  assert.equal(isRegularSponsorUpdateRecipient(active, true), true);
+  assert.equal(isRegularSponsorUpdateRecipient(active, false), false);
+  assert.equal(isRegularSponsorUpdateRecipient(adopted, true), false);
+  assert.equal(isRegularSponsorUpdateRecipient(unavailable, false), false);
+  assert.equal(isRegularSponsorUpdateRecipient(cancelled, false), false);
 });

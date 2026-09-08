@@ -27,7 +27,7 @@ import { getEmailConnectorStatus } from "@/lib/email-connectors";
 import { formatDateTime, formatMonthlyAmount } from "@/lib/format";
 import { getOrganizationAccessBySlug } from "@/lib/organization-access";
 import { prisma } from "@/lib/prisma";
-import { isSponsorUpdateRecipient } from "@/lib/sponsor-update-delivery";
+import { isRegularSponsorUpdateRecipient } from "@/lib/sponsor-update-delivery";
 
 import pawcastWordmark from "../../../../../public/brand/pawcast-wordmark.png";
 
@@ -45,6 +45,11 @@ const STAFF_ROOM_LIST_LIMIT = 50;
 async function getThirtyDaysAgo() {
   await io();
   return new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+}
+
+async function getCurrentTime() {
+  await io();
+  return Date.now();
 }
 
 async function DashboardStats({ orgId, orgSlug }: { orgId: string; orgSlug: string }) {
@@ -222,7 +227,7 @@ async function ApprovalQueue({
   orgId: string;
   orgSlug: string;
 }) {
-  const [draftResults, emailConnector] = await Promise.all([
+  const [draftResults, emailConnector, currentTime] = await Promise.all([
     prisma.sponsorUpdate.findMany({
       where: { orgId, status: "draft" },
       orderBy: [{ createdAt: "asc" }, { id: "asc" }],
@@ -232,16 +237,24 @@ async function ApprovalQueue({
             sponsorships: {
               where: {
                 orgId,
-                OR: [{ status: "active" }, { endedReason: "adopted" }],
+                status: "active",
               },
-              select: { id: true, status: true, endedReason: true },
+              select: { id: true, status: true },
             },
+          },
+        },
+        sponsorship: {
+          select: {
+            id: true,
+            status: true,
+            sponsor: { select: { name: true } },
           },
         },
       },
       take: STAFF_ROOM_LIST_LIMIT + 1,
     }),
     getEmailConnectorStatus(orgId),
+    getCurrentTime(),
   ]);
   const draftsTruncated = draftResults.length > STAFF_ROOM_LIST_LIMIT;
   const drafts = draftResults.slice(0, STAFF_ROOM_LIST_LIMIT);
@@ -292,13 +305,21 @@ async function ApprovalQueue({
           </AdminSurface>
         ) : (
           drafts.map((draft) => {
-            const recipientCount = draft.resident.sponsorships.filter((sponsorship) =>
-              isSponsorUpdateRecipient(draft.type, sponsorship, draft.resident.available)).length;
+            const graduation = draft.type === "graduation";
+            const recipientCount = graduation
+              ? Number(Boolean(draft.sponsorship))
+              : draft.resident.sponsorships.filter((sponsorship) =>
+                isRegularSponsorUpdateRecipient(sponsorship, draft.resident.available)).length;
+            const waitingDays = Math.max(
+              0,
+              Math.floor((currentTime - draft.createdAt.getTime()) / (24 * 60 * 60 * 1000)),
+            );
             return <DraftEditor
               bodyText={draft.bodyText}
               emailConnected={emailConnector.connected}
               focusTargetId="draft-queue"
               id={draft.id}
+              isGraduation={graduation}
               key={draft.id}
               orgSlug={orgSlug}
               subject={draft.subject}
@@ -309,8 +330,9 @@ async function ApprovalQueue({
                 <h3>{draft.resident.name}</h3>
                 <p>{draft.resident.personality}</p>
                 <small>
-                  goes to {recipientCount}{" "}
-                  {pluralize("sponsor", recipientCount)}
+                  {graduation && draft.sponsorship
+                    ? `for ${draft.sponsorship.sponsor.name} · waiting ${waitingDays} ${pluralize("day", waitingDays)}`
+                    : <>goes to {recipientCount} {pluralize("sponsor", recipientCount)}</>}
                 </small>
               </div>
             </DraftEditor>;

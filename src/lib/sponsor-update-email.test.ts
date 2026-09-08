@@ -10,7 +10,7 @@ const base = {
   companionName: "Biscuit",
   subject: "An update from Biscuit",
   bodyText: "Here is the latest.\n\n## Recent notes\n\n- Took a treat from a stranger.\n- Slept through the night.\n\nThank you.",
-  companionUrl: "https://pawcast.test/companions/abc",
+  actionUrl: "https://pawcast.test/companions/abc",
   monthlyCents: 3250,
   origin: "https://pawcast.test",
   photoUrl: "/uploads/biscuit.jpg",
@@ -68,6 +68,7 @@ test("switches the hero to the mustard adoption treatment", async () => {
   assert.match(regular, /felt-moss\.jpg/u);
   assert.match(graduation, /Adoption day/u);
   assert.match(graduation, /felt-mustard\.jpg/u);
+  assert.match(graduation, /Choose your next companion/u);
 });
 
 test("neutralizes unsafe markdown link destinations", async () => {

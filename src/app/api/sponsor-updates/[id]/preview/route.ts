@@ -5,7 +5,8 @@ import { env } from "@/lib/env";
 import { requireApiOrganization } from "@/lib/organization-access";
 import { prisma } from "@/lib/prisma";
 import { DEFAULT_SPONSORSHIP_MONTHLY_CENTS } from "@/lib/rescue-settings";
-import { companionPageUrl, isSponsorUpdateRecipient } from "@/lib/sponsor-update-delivery";
+import { companionPageUrl, isRegularSponsorUpdateRecipient } from "@/lib/sponsor-update-delivery";
+import { sponsorshipSelectionUrl } from "@/lib/sponsorship-selection-token";
 import { uuidSchema } from "@/lib/uuid";
 import { render } from "@react-email/render";
 import { createElement } from "react";
@@ -36,6 +37,9 @@ export async function GET(request: Request, { params }: RouteContext) {
           slug: true,
         },
       },
+      sponsorship: {
+        select: { monthlyCents: true },
+      },
       resident: {
         select: {
           name: true,
@@ -55,13 +59,24 @@ export async function GET(request: Request, { params }: RouteContext) {
   }
 
   const origin = env.BETTER_AUTH_URL;
+  const actionUrl = sponsorUpdate.type === "graduation"
+    && sponsorUpdate.sponsorshipId
+    && env.BETTER_AUTH_SECRET
+    ? sponsorshipSelectionUrl(
+      origin,
+      sponsorUpdate.organization.slug,
+      sponsorUpdate.sponsorshipId,
+      env.BETTER_AUTH_SECRET,
+    )
+    : companionPageUrl(origin, sponsorUpdate.organization.slug, sponsorUpdate.residentId);
   const html = await render(createElement(SponsorUpdateEmail, {
     companionName: sponsorUpdate.resident.name,
     subject: sponsorUpdate.subject,
     bodyText: sponsorUpdate.bodyText,
-    companionUrl: companionPageUrl(origin, sponsorUpdate.organization.slug, sponsorUpdate.residentId),
-    monthlyCents: sponsorUpdate.resident.sponsorships.find((sponsorship) =>
-      isSponsorUpdateRecipient(sponsorUpdate.type, sponsorship, sponsorUpdate.resident.available))?.monthlyCents
+    actionUrl,
+    monthlyCents: sponsorUpdate.sponsorship?.monthlyCents
+      ?? sponsorUpdate.resident.sponsorships.find((sponsorship) =>
+        isRegularSponsorUpdateRecipient(sponsorship, sponsorUpdate.resident.available))?.monthlyCents
       ?? DEFAULT_SPONSORSHIP_MONTHLY_CENTS,
     origin,
     photoUrl: sponsorUpdate.photoUrl ?? sponsorUpdate.resident.photoUrls[0] ?? null,

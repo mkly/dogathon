@@ -110,6 +110,7 @@ export function DraftEditor({
   emailConnected,
   focusTargetId,
   id,
+  isGraduation,
   orgSlug,
   subject: initialSubject,
 }: {
@@ -118,6 +119,7 @@ export function DraftEditor({
   emailConnected: boolean;
   focusTargetId: string;
   id: string;
+  isGraduation: boolean;
   orgSlug: string;
   subject: string;
 }) {
@@ -231,16 +233,21 @@ export function DraftEditor({
             method: "DELETE",
             headers: { "X-Organization-Slug": orgSlug },
           },
-          "Discard draft",
+          isGraduation ? "Deny adoption notice" : "Discard draft",
         );
         await refreshAdminPage();
-        pushToast("success", "Draft discarded.");
+        pushToast(
+          "success",
+          isGraduation
+            ? "Adoption notice denied. The sponsorship keeps billing."
+            : "Draft discarded.",
+        );
       } catch (error) {
         pushToast(
           "error",
           error instanceof Error
             ? error.message
-            : "Discard draft could not reach the server.",
+            : `${isGraduation ? "Deny adoption notice" : "Discard draft"} could not reach the server.`,
         );
       } finally {
         setPending(null);
@@ -293,7 +300,9 @@ export function DraftEditor({
                 onClick={() => setDenyConfirmOpen(true)}
                 tone="brick"
               >
-                {pending === "deny" ? "Discarding…" : "Deny & discard"}
+                {pending === "deny"
+                  ? (isGraduation ? "Denying…" : "Discarding…")
+                  : (isGraduation ? "Deny & keep billing" : "Deny & discard")}
               </AdminButton>
               {/* the themed email as the sponsor will see it, not the plain draft text */}
               <AdminLink
@@ -444,10 +453,12 @@ export function DraftEditor({
                       >
                         <AdminSurface className={styles.dialogPanel} tone="oatmeal">
                           <AlertDialog.Title asChild>
-                            <h2>Discard this draft?</h2>
+                            <h2>{isGraduation ? "Deny this adoption notice?" : "Discard this draft?"}</h2>
                           </AlertDialog.Title>
                           <AlertDialog.Description className={styles.dialogDescription}>
-                            This cannot be undone.
+                            {isGraduation
+                              ? "The notice will be dismissed and this sponsorship will keep billing as normal."
+                              : "This cannot be undone."}
                           </AlertDialog.Description>
                           <div className={styles.modalActions}>
                             <AlertDialog.Cancel asChild>
@@ -461,7 +472,7 @@ export function DraftEditor({
                                 }}
                                 tone="brick"
                               >
-                                Discard draft
+                                {isGraduation ? "Deny & keep billing" : "Discard draft"}
                               </AdminButton>
                             </AlertDialog.Action>
                           </div>

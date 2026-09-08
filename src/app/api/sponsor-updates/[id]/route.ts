@@ -70,7 +70,15 @@ export async function DELETE(request: Request, { params }: RouteContext) {
   if (!access.ok) return access.response;
   const { orgId } = access.context;
 
-  const deleted = await prisma.sponsorUpdate.deleteMany({ where: { id, orgId, status: "draft" } });
+  const dismissed = await prisma.sponsorUpdate.updateMany({
+    where: { id, orgId, status: "draft", type: "graduation" },
+    data: { status: "dismissed" },
+  });
+  const deleted = dismissed.count === 0
+    ? await prisma.sponsorUpdate.deleteMany({
+      where: { id, orgId, status: "draft", type: "regular" },
+    })
+    : dismissed;
 
   if (deleted.count !== 1) {
     const exists = await prisma.sponsorUpdate.findFirst({ where: { id, orgId }, select: { id: true } });

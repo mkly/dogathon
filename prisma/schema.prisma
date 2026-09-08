@@ -306,23 +306,24 @@ model StripeWebhookEvent {
 }
 
 model SponsorUpdate {
-  id            String              @id @default(uuid(4)) @db.Uuid
-  orgId         String              @db.Uuid
-  residentId    String              @db.Uuid
-  sponsorshipId String?             @db.Uuid
-  type          SponsorUpdateType   @default(regular)
-  subject       String
-  bodyText      String
+  id                     String              @id @default(uuid(4)) @db.Uuid
+  orgId                  String              @db.Uuid
+  residentId             String              @db.Uuid
+  sponsorshipId          String?             @db.Uuid
+  type                   SponsorUpdateType   @default(regular)
+  subject                String
+  bodyText               String
   /// The volunteer-note photo this update was written from, captured at compose
   /// time so the email never falls back to the roster's profile shot.
-  photoUrl      String?
-  status        SponsorUpdateStatus @default(draft)
-  sentAt        DateTime?
-  createdAt     DateTime            @default(now())
-  updatedAt     DateTime            @updatedAt
-  organization  Organization        @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  resident      Resident            @relation(fields: [residentId, orgId], references: [id, orgId], onDelete: Cascade)
-  sponsorship   Sponsorship?        @relation(fields: [sponsorshipId], references: [id], onDelete: SetNull)
+  photoUrl               String?
+  status                 SponsorUpdateStatus @default(draft)
+  sentAt                 DateTime?
+  awaitingTransitionedAt DateTime?
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
+  organization           Organization        @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  resident               Resident            @relation(fields: [residentId, orgId], references: [id, orgId], onDelete: Cascade)
+  sponsorship            Sponsorship?        @relation(fields: [sponsorshipId], references: [id], onDelete: SetNull)
 
   @@unique([id, orgId])
   @@index([orgId, status])
