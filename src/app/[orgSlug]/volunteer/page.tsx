@@ -20,7 +20,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Volunteer check-in | Dogathon",
-  description: "Share a quick photo or care note for a rescue companion.",
+  description: "Snap a photo and answer a few questions about a rescue companion.",
 };
 
 type VolunteerPageProps = {

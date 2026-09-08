@@ -31,7 +31,7 @@ type CheckInPageProps = {
 };
 
 const errorSchema = z.object({
-  error: z.enum(["invalid", "rate-limited", "save", "summary"]).optional().catch(undefined),
+  error: z.enum(["invalid", "rate-limited"]).optional().catch(undefined),
 });
 
 export default async function CheckInPage({ params, searchParams }: CheckInPageProps) {
@@ -99,8 +99,6 @@ export default async function CheckInPage({ params, searchParams }: CheckInPageP
           </header>
           {error === "rate-limited" ? <p className={styles.chatError} role="alert">Please wait a little before trying again.</p> : null}
           {error === "invalid" ? <p className={styles.chatError} role="alert">The saved conversation is not ready to finish.</p> : null}
-          {error === "summary" ? <p className={styles.chatError} role="alert">We could not write the care note from that conversation. Please try again.</p> : null}
-          {error === "save" ? <p className={styles.chatError} role="alert">The care note was written but could not be saved. Please try again.</p> : null}
           <CheckInChat
             checkInId={checkInId}
             initialPhotos={checkIn.photos}

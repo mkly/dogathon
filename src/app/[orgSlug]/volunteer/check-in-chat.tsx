@@ -29,7 +29,7 @@ type CheckInChatProps = {
   initialMessages: UIMessage[];
   orgSlug: string;
   resident: { id: string; name: string };
-  onFinish: (checkInId: string) => Promise<void> | void;
+  onFinish: (checkInId: string, messages: UIMessage[]) => Promise<void> | void;
 };
 
 function visibleMessageText(message: UIMessage) {
@@ -57,7 +57,7 @@ export function CheckInChat({
     }),
     [checkInId, orgSlug],
   );
-  const { error, messages, sendMessage, status } = useChat({
+  const { error, messages, sendMessage, status, stop } = useChat({
     id: checkInId,
     messages: initialMessages,
     transport,
@@ -210,8 +210,12 @@ export function CheckInChat({
     if (finishing) return;
     setFinishing(true);
     setFinishError("");
+    // Cut off any reply still streaming; the note is written from what is on
+    // screen, so a half-typed question is dropped.
+    stop();
+    const transcript = messages.filter((message) => messageText(message).trim().length > 0);
     try {
-      await onFinish(checkInId);
+      await onFinish(checkInId, transcript);
     } catch {
       setFinishError("We could not finish this check-in. Please try again.");
       setFinishing(false);
