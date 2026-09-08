@@ -251,14 +251,14 @@ function TierRow({
             Description for tier {index + 1}
           </label>
           <AdminField>
-            <input
+            <textarea
               disabled={pending}
               id={`tier-description-${tier.key}`}
               maxLength={DESCRIPTION_MAX}
               name="tierDescription"
               onChange={(event) => updateTier(tier.key, { description: event.target.value })}
               placeholder="What this amount covers, in a sentence"
-              type="text"
+              rows={2}
               value={tier.description}
             />
           </AdminField>
@@ -268,7 +268,7 @@ function TierRow({
               tier.description.length >= DESCRIPTION_MAX - 20 && styles.tierCounterNearLimit,
             )}
           >
-            {DESCRIPTION_MAX - tier.description.length} left
+            {tier.description.length} / {DESCRIPTION_MAX}
           </span>
         </div>
         <div className={styles.tierRowActions}>

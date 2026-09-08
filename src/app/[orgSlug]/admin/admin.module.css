@@ -292,10 +292,14 @@
 .tier {
   position: relative;
   display: grid;
-  grid-template-columns: auto auto minmax(8.5rem, 10rem) minmax(0, 1fr) auto;
+  grid-template-columns: auto auto minmax(7.5rem, 9rem) minmax(0, 1fr) auto;
+  grid-template-areas:
+    "handle position price spacer actions"
+    "handle position description description description";
   align-items: center;
-  gap: 10px;
-  padding: 10px 12px 10px 8px;
+  column-gap: 10px;
+  row-gap: 8px;
+  padding: 10px 12px 12px 6px;
   border: 1px solid rgb(61 51 43 / 22%);
   border-radius: 10px;
   background: white;
@@ -309,6 +313,8 @@
 .tierDefaultInput,
 .srOnly { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 .tierHandle {
+  grid-area: handle;
+  align-self: start;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -327,17 +333,18 @@
 .tierHandle:focus-visible { outline: 2px solid var(--felt-denim); outline-offset: 1px; }
 .tierHandle:active { cursor: grabbing; }
 .tierHandle:disabled { cursor: default; opacity: 0.4; }
-.tierPosition { min-width: 1.4rem; font-size: 0.72rem; font-weight: 900; text-align: center; opacity: 0.55; font-variant-numeric: tabular-nums; }
-.tierPriceCell, .tierDescriptionCell { display: grid; gap: 4px; min-width: 0; }
+.tierPosition { grid-area: position; align-self: start; padding-top: 0.6rem; min-width: 1.4rem; font-size: 0.72rem; font-weight: 900; text-align: center; opacity: 0.55; font-variant-numeric: tabular-nums; }
+.tierPriceCell { grid-area: price; min-width: 0; }
+.tierDescriptionCell { grid-area: description; display: grid; gap: 4px; min-width: 0; }
+.tierDescriptionCell textarea { min-height: 3.4rem; padding: 0.45rem 0.6rem; font-size: 0.85rem; line-height: 1.4; resize: vertical; }
 .tierPrice { display: flex; align-items: center; }
 .tierPrice > span { padding: 0 0.6rem; font-size: 0.8rem; font-weight: 900; opacity: 0.55; white-space: nowrap; }
 .tierPrice > span:first-child { padding-right: 0; }
-.tierPrice > input { min-width: 0; padding-left: 0.35rem; font-variant-numeric: tabular-nums; -moz-appearance: textfield; }
+.tierPrice > input { min-width: 0; min-height: 2.25rem; padding: 0.45rem 0.35rem; font-size: 0.85rem; font-variant-numeric: tabular-nums; -moz-appearance: textfield; }
 .tierPrice > input::-webkit-outer-spin-button, .tierPrice > input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-.tierCounter { position: absolute; right: 0; bottom: -1.05rem; font-size: 0.66rem; font-weight: 800; opacity: 0.5; }
-.tierDescriptionCell { position: relative; }
+.tierCounter { justify-self: end; font-size: 0.66rem; font-weight: 800; font-variant-numeric: tabular-nums; opacity: 0.5; }
 .tierCounterNearLimit { color: var(--felt-brick); opacity: 1; }
-.tierRowActions { display: flex; align-items: center; gap: 8px; justify-self: end; }
+.tierRowActions { grid-area: actions; display: flex; align-items: center; justify-content: flex-end; gap: 6px; min-width: 9rem; }
 .tierTextButton {
   padding: 0.35rem 0.55rem;
   border: 0;
@@ -393,9 +400,15 @@
 .tierAdd:focus-visible { outline: 2px solid var(--felt-denim); outline-offset: 2px; }
 .tierAdd:disabled { cursor: not-allowed; opacity: 0.5; }
 @media (max-width: 640px) {
-  .tier { grid-template-columns: auto auto minmax(0, 1fr) auto; }
-  .tierDescriptionCell { grid-column: 1 / -1; }
-  .tierCounter { position: static; justify-self: end; }
+  .tier {
+    grid-template-columns: auto auto minmax(0, 1fr);
+    grid-template-areas:
+      "handle position price"
+      "handle position actions"
+      "handle position description";
+  }
+  .tierRowActions { justify-content: flex-start; min-width: 0; }
+}
 }
 .originsTextarea { min-height: 7rem; resize: vertical; }
 .fieldHint { margin: -4px 0 0; font-size: 0.75rem; font-weight: 700; line-height: 1.45; opacity: 0.75; }
