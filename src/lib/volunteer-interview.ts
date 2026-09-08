@@ -2,6 +2,7 @@ import {
   convertToModelMessages,
   createUIMessageStream,
   createUIMessageStreamResponse,
+  generateId,
   generateText,
   Output,
   streamText,
@@ -73,6 +74,7 @@ function textStreamResponse(text: string, input: InterviewInput, options: Interv
       writer.write({ type: "finish", finishReason: "stop" });
     },
     originalMessages: input.messages,
+    generateId,
     onEnd: ({ messages }) => options.onFinish?.(messages),
   });
   return createUIMessageStreamResponse({ stream });
@@ -160,6 +162,7 @@ export async function interviewTurn(input: InterviewInput, options: InterviewTur
 
   return result.toUIMessageStreamResponse({
     originalMessages: input.messages,
+    generateMessageId: generateId,
     onEnd: ({ messages }) => options.onFinish?.(messages),
   });
 }
