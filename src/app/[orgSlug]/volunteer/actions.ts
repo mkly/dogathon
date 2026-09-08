@@ -10,62 +10,99 @@ import { getOrganizationAccessBySlug } from "@/lib/organization-access";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { summarizeInterview } from "@/lib/volunteer-interview";
-import { interviewRequestSchema } from "@/lib/volunteer-interview-request";
+import { interviewTranscriptSchema, textOnlyTranscript } from "@/lib/volunteer-interview-request";
 import { attachVolunteerPhotos } from "@/lib/volunteer-photos";
+import { uuidSchema } from "@/lib/uuid";
 
 import { MAX_PHOTO_BYTES } from "./photo-limits";
 
-const finishCheckInSchema = interviewRequestSchema.omit({ orgSlug: true }).extend({
-  photoIds: z.array(z.uuid()).max(20),
-});
-
-function volunteerUrl(orgSlug: string, params: Record<string, string>) {
-  return `/${encodeURIComponent(orgSlug)}/volunteer?${new URLSearchParams(params).toString()}`;
+function sessionUrl(orgSlug: string, checkInId: string, error?: string) {
+  const path = `/${encodeURIComponent(orgSlug)}/volunteer/${encodeURIComponent(checkInId)}`;
+  return error ? `${path}?${new URLSearchParams({ error }).toString()}` : path;
 }
 
-export async function finishCheckIn(orgSlug: string, rawInput: unknown) {
-  const parsedOrgSlug = z.string().trim().min(1).max(200).safeParse(orgSlug);
-  if (!parsedOrgSlug.success) notFound();
-  const safeOrgSlug = parsedOrgSlug.data;
-  const access = await getOrganizationAccessBySlug(await headers(), safeOrgSlug, {
+async function requireVolunteerAccess(orgSlug: string, nextPath: string) {
+  const parsed = z.string().trim().min(1).max(200).safeParse(orgSlug);
+  if (!parsed.success) notFound();
+  const access = await getOrganizationAccessBySlug(await headers(), parsed.data, {
     roster: ["contribute"],
   });
   if (!access) notFound();
   if (!access.context) {
-    const next = encodeURIComponent(`/${safeOrgSlug}/volunteer`);
+    const next = encodeURIComponent(nextPath);
     redirect(access.authenticated ? "/staff/organizations" : `/staff/sign-in?next=${next}`);
   }
-  const { context } = access;
+  return { ...access, context: access.context, orgSlug: parsed.data };
+}
 
-  const rateLimit = await checkRateLimit({ ...RATE_LIMITS.volunteerCheckIn, identity: `user:${context.userId}`, scope: "volunteer-checkin-summary" });
-  if (!rateLimit.allowed) redirect(volunteerUrl(safeOrgSlug, { error: "rate-limited" }));
+export async function startCheckIn(orgSlug: string, residentId: string) {
+  const resident = uuidSchema.safeParse(residentId);
+  if (!resident.success) notFound();
+  const access = await requireVolunteerAccess(orgSlug, `/${orgSlug}/volunteer`);
 
-  const parsed = finishCheckInSchema.safeParse(rawInput);
-  if (!parsed.success) redirect(volunteerUrl(safeOrgSlug, { error: "invalid" }));
-  const { residentId, messages, photoIds } = parsed.data;
-
-  const resident = await prisma.resident.findFirst({
+  const companion = await prisma.resident.findFirst({
     where: {
-      id: residentId,
-      orgId: context.orgId,
+      id: resident.data,
+      orgId: access.context.orgId,
       available: true,
       sponsorships: { some: { status: "active" } },
     },
-    select: { ageText: true, breed: true, id: true, name: true, sex: true },
+    select: { id: true },
   });
+  if (!companion) redirect(`/${access.orgSlug}/volunteer?error=unavailable`);
 
-  if (!resident) redirect(volunteerUrl(safeOrgSlug, { error: "unavailable" }));
+  const checkIn = await prisma.checkIn.create({
+    data: {
+      orgId: access.context.orgId,
+      residentId: companion.id,
+      transcript: [],
+      userId: access.context.userId,
+    },
+    select: { id: true },
+  });
+  redirect(sessionUrl(access.orgSlug, checkIn.id));
+}
+
+export async function finishCheckIn(orgSlug: string, rawCheckInId: unknown) {
+  const checkInId = uuidSchema.safeParse(rawCheckInId);
+  if (!checkInId.success) notFound();
+  const access = await requireVolunteerAccess(orgSlug, sessionUrl(orgSlug.trim(), checkInId.data));
+
+  const rateLimit = await checkRateLimit({
+    ...RATE_LIMITS.volunteerCheckIn,
+    identity: `user:${access.context.userId}`,
+    scope: "volunteer-checkin-summary",
+  });
+  if (!rateLimit.allowed) redirect(sessionUrl(access.orgSlug, checkInId.data, "rate-limited"));
+
+  const checkIn = await prisma.checkIn.findFirst({
+    where: {
+      id: checkInId.data,
+      orgId: access.context.orgId,
+      status: "in_progress",
+      userId: access.context.userId,
+    },
+    select: {
+      resident: { select: { ageText: true, breed: true, id: true, name: true, sex: true } },
+      transcript: true,
+    },
+  });
+  if (!checkIn) notFound();
+
+  const transcript = interviewTranscriptSchema.min(1).safeParse(checkIn.transcript);
+  if (!transcript.success) redirect(sessionUrl(access.orgSlug, checkInId.data, "invalid"));
+  const messages = textOnlyTranscript(transcript.data);
 
   let note: string;
   try {
     ({ note } = await summarizeInterview({
-      companion: resident,
+      companion: checkIn.resident,
       messages,
       orgName: access.organization.name,
     }));
   } catch (error) {
     console.error("volunteer check-in summary failed", error);
-    redirect(volunteerUrl(safeOrgSlug, { error: "summary" }));
+    redirect(sessionUrl(access.orgSlug, checkInId.data, "summary"));
   }
 
   try {
@@ -74,27 +111,37 @@ export async function finishCheckIn(orgSlug: string, rawInput: unknown) {
       await tx.volunteerNote.create({
         data: {
           id: noteId,
-          orgId: context.orgId,
+          orgId: access.context.orgId,
           note,
-          residentId,
+          residentId: checkIn.resident.id,
         },
       });
 
       const photoUrl = await attachVolunteerPhotos(tx, {
+        checkInId: checkInId.data,
         maxByteSize: MAX_PHOTO_BYTES,
         noteId,
-        orgId: context.orgId,
-        photoIds,
-        residentId,
+        orgId: access.context.orgId,
+        residentId: checkIn.resident.id,
       });
       if (photoUrl) {
         await tx.volunteerNote.update({ where: { id: noteId }, data: { photoUrl } });
       }
+      const completed = await tx.checkIn.updateMany({
+        where: {
+          id: checkInId.data,
+          orgId: access.context.orgId,
+          status: "in_progress",
+          userId: access.context.userId,
+        },
+        data: { noteId, status: "completed" },
+      });
+      if (completed.count !== 1) throw new Error("Check-in was already completed");
     });
   } catch (error) {
     console.error("volunteer check-in save failed", error);
-    redirect(volunteerUrl(safeOrgSlug, { error: "save" }));
+    redirect(sessionUrl(access.orgSlug, checkInId.data, "save"));
   }
 
-  redirect(volunteerUrl(safeOrgSlug, { companion: residentId, submitted: "1" }));
+  redirect(sessionUrl(access.orgSlug, checkInId.data));
 }

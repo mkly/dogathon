@@ -1,0 +1,11 @@
+.title {
+  display: flex;
+  gap: 1rem;
+  margin: 2rem 0 0.75rem;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.title h2 {
+  margin: 0;
+}

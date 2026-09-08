@@ -5,11 +5,12 @@ process.env.DATABASE_URL ??= "postgresql://dogathon:dogathon@localhost:5432/doga
 
 const { createVolunteerPhotoPostHandler } = await import("./route.ts");
 const residentId = "5af589d8-dc5f-4bc7-9ce3-2ca9f06833c8";
+const checkInId = "7f30c5a1-f260-43de-b0c9-d69eb23cb131";
 
 function request(photo = new File([Uint8Array.from([1, 2])], "walk.jpg")) {
   const formData = new FormData();
   formData.set("orgSlug", "huffy-puff");
-  formData.set("residentId", residentId);
+  formData.set("checkInId", checkInId);
   formData.set("photo", photo);
   return new Request("http://localhost/api/volunteer-photos", { method: "POST", body: formData });
 }
@@ -18,7 +19,7 @@ function dependencies(overrides: Record<string, unknown> = {}) {
   return {
     async createPhoto() {},
     async deletePhoto() {},
-    async findResident() { return true; },
+    async findCheckIn() { return residentId; },
     async getAccess() {
       return {
         authenticated: true,
@@ -72,6 +73,7 @@ test("validates processed image content and stores only photo metadata", async (
   assert.equal(response.status, 201);
   assert.deepEqual(created, {
     id: "8f77b971-f0b5-493c-aa9a-5931c1f17ea5",
+    checkInId,
     orgId: "org-1",
     residentId,
     storageKey: "orgs/org-1/volunteer-photos/8f77b971-f0b5-493c-aa9a-5931c1f17ea5.jpg",

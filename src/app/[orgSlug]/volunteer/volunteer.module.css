@@ -69,10 +69,6 @@
   align-items: center;
 }
 
-.companionChip[aria-checked="true"] {
-  --drop: 0.7;
-}
-
 .companionChip:focus-visible,
 .composer button:focus-visible,
 .photoButton:focus-within,
@@ -333,6 +329,15 @@
   margin: 0.75rem 0 1.5rem;
   font-weight: 700;
   line-height: 1.5;
+}
+
+.savedNote {
+  margin: 0 0 1.5rem;
+  padding: 0.85rem;
+  border: 2px dashed rgb(255 255 255 / 35%);
+  border-radius: 12px;
+  font-weight: 700;
+  text-align: left;
 }
 
 .againLink {

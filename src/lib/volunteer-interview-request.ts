@@ -17,16 +17,28 @@ const messagePartsSchema = z
   .transform((parts) => parts.filter((part) => part.type === "text"))
   .pipe(z.array(textPartSchema).min(1));
 
-const messageSchema = z.object({
+export const MAX_INTERVIEW_MESSAGES = 40;
+
+export const interviewMessageSchema = z.object({
   id: z.string().min(1).max(200),
   role: z.enum(["user", "assistant"]),
   parts: messagePartsSchema,
 });
 
+export const interviewTranscriptSchema = z.array(interviewMessageSchema);
+
 export const interviewRequestSchema = z.object({
   orgSlug: z.string().trim().min(1).max(200),
-  residentId: uuidSchema,
-  messages: z.array(messageSchema).min(1).max(40),
+  checkInId: uuidSchema,
+  messages: interviewTranscriptSchema.min(1).max(MAX_INTERVIEW_MESSAGES),
 });
 
 export type InterviewRequest = z.infer<typeof interviewRequestSchema>;
+
+export function textOnlyTranscript(messages: z.infer<typeof interviewTranscriptSchema>) {
+  return messages.map((message) => ({
+    id: message.id,
+    role: message.role,
+    parts: message.parts.map((part) => ({ type: "text" as const, text: part.text })),
+  }));
+}

@@ -5,10 +5,9 @@ import { DefaultChatTransport, type UIMessage } from "ai";
 import Image from "next/image";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
-import { FeltButton, PhotoPatch } from "@/components/felt";
+import { FeltButton } from "@/components/felt";
 import { messageText } from "@/lib/ui-message-text";
 
-import { CheckInChatView, type CheckInResident } from "./check-in-chat-view";
 import { MAX_PHOTO_BYTES } from "./photo-limits";
 import styles from "./volunteer.module.css";
 
@@ -23,16 +22,12 @@ type UploadedPhoto = {
   uploadedId?: string;
 };
 
-export type CheckInResult = {
-  residentId: string;
-  messages: UIMessage[];
-  photoIds: string[];
-};
-
 type CheckInChatProps = {
+  checkInId: string;
+  initialMessages: UIMessage[];
   orgSlug: string;
-  residents: CheckInResident[];
-  onFinish: (result: CheckInResult) => Promise<void> | void;
+  resident: { id: string; name: string };
+  onFinish: (checkInId: string) => Promise<void> | void;
 };
 
 function visibleMessageText(message: UIMessage) {
@@ -45,52 +40,25 @@ function visibleMessageText(message: UIMessage) {
   return text.trim();
 }
 
-export function CheckInChat({ orgSlug, residents, onFinish }: CheckInChatProps) {
-  return (
-    <CheckInChatView
-      classNames={{
-        chatFrame: styles.chatFrame,
-        companionChip: styles.companionChip,
-        companionPicker: styles.companionPicker,
-      }}
-      renderPhoto={(resident) => (
-        <PhotoPatch
-          alt=""
-          className={styles.chipPhoto}
-          sizes="40px"
-          src={resident.photoUrl}
-        />
-      )}
-      renderSession={(resident) => (
-        <ChatSession
-          key={resident.id}
-          onFinish={onFinish}
-          orgSlug={orgSlug}
-          resident={resident}
-        />
-      )}
-      residents={residents}
-    />
-  );
-}
-
-function ChatSession({
+export function CheckInChat({
+  checkInId,
+  initialMessages,
   orgSlug,
   resident,
   onFinish,
-}: {
-  orgSlug: string;
-  resident: CheckInResident;
-  onFinish: CheckInChatProps["onFinish"];
-}) {
+}: CheckInChatProps) {
   const transport = useMemo(
     () => new DefaultChatTransport({
       api: "/api/volunteer-checkin/chat",
-      body: { orgSlug, residentId: resident.id },
+      body: { checkInId, orgSlug },
     }),
-    [orgSlug, resident.id],
+    [checkInId, orgSlug],
   );
-  const { error, messages, sendMessage, status } = useChat({ transport });
+  const { error, messages, sendMessage, status } = useChat({
+    id: checkInId,
+    messages: initialMessages,
+    transport,
+  });
   const [input, setInput] = useState("");
   const [photos, setPhotos] = useState<UploadedPhoto[]>([]);
   const [photoError, setPhotoError] = useState("");
@@ -132,7 +100,7 @@ function ChatSession({
     const formData = new FormData();
     formData.set("photo", photo.file);
     formData.set("orgSlug", orgSlug);
-    formData.set("residentId", resident.id);
+    formData.set("checkInId", checkInId);
 
     try {
       const response = await fetch("/api/volunteer-photos", { body: formData, method: "POST" });
@@ -201,11 +169,7 @@ function ChatSession({
     setFinishing(true);
     setFinishError("");
     try {
-      await onFinish({
-        messages,
-        photoIds: photos.flatMap((photo) => photo.uploadedId ? [photo.uploadedId] : []),
-        residentId: resident.id,
-      });
+      await onFinish(checkInId);
     } catch {
       setFinishError("We could not finish this check-in. Please try again.");
       setFinishing(false);

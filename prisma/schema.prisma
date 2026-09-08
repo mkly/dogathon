@@ -20,6 +20,7 @@ model User {
   members       Member[]
   invitations   Invitation[]
   sponsor       Sponsor?
+  checkIns      CheckIn[]
 
   username String?
 
@@ -59,6 +60,7 @@ model Organization {
   sponsorshipTiers       SponsorshipTier[]
   volunteerNotes         VolunteerNote[]
   volunteerPhotos        VolunteerPhoto[]
+  checkIns               CheckIn[]
   sponsorUpdates         SponsorUpdate[]
   settings               RescueSettings?
   rosterSyncNotes        RosterSyncNote[]
@@ -230,6 +232,7 @@ model Resident {
   sponsorships         Sponsorship[]
   volunteerNotes       VolunteerNote[]
   volunteerPhotos      VolunteerPhoto[]
+  checkIns             CheckIn[]
   sponsorUpdates       SponsorUpdate[]
   organization         Organization                  @relation(fields: [orgId], references: [id], onDelete: Cascade)
 
@@ -237,6 +240,32 @@ model Resident {
   @@unique([orgId, slug])
   @@unique([id, orgId])
   @@index([orgId, available, species])
+}
+
+enum CheckInStatus {
+  in_progress
+  completed
+}
+
+model CheckIn {
+  id           String         @id @default(uuid(4)) @db.Uuid
+  orgId        String         @db.Uuid
+  residentId   String         @db.Uuid
+  userId       String         @db.Uuid
+  status       CheckInStatus  @default(in_progress)
+  transcript   Json
+  noteId       String?        @unique @db.Uuid
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  organization Organization   @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  resident     Resident       @relation(fields: [residentId, orgId], references: [id, orgId], onDelete: Cascade)
+  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  note         VolunteerNote? @relation(fields: [noteId], references: [id], onDelete: SetNull)
+  photos       VolunteerPhoto[]
+
+  @@unique([id, orgId])
+  @@index([orgId, residentId, createdAt])
+  @@index([userId, status])
 }
 
 model Sponsorship {
@@ -275,6 +304,7 @@ model VolunteerNote {
   organization Organization     @relation(fields: [orgId], references: [id], onDelete: Cascade)
   resident     Resident         @relation(fields: [residentId, orgId], references: [id, orgId], onDelete: Cascade)
   photos       VolunteerPhoto[]
+  checkIn      CheckIn?
 
   @@unique([id, orgId])
   @@index([orgId, createdAt])
@@ -286,6 +316,7 @@ model VolunteerPhoto {
   orgId        String         @db.Uuid
   residentId   String         @db.Uuid
   noteId       String?        @db.Uuid
+  checkInId    String?        @db.Uuid
   storageKey   String         @unique
   url          String
   mime         String
@@ -294,9 +325,11 @@ model VolunteerPhoto {
   organization Organization   @relation(fields: [orgId], references: [id], onDelete: Cascade)
   resident     Resident       @relation(fields: [residentId, orgId], references: [id, orgId], onDelete: Cascade)
   note         VolunteerNote? @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  checkIn      CheckIn?       @relation(fields: [checkInId], references: [id], onDelete: SetNull)
 
   @@unique([id, orgId])
   @@index([noteId])
+  @@index([checkInId])
   @@index([orgId, createdAt])
 }
 

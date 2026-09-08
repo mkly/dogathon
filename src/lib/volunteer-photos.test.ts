@@ -3,7 +3,7 @@ import test from "node:test";
 
 import { attachVolunteerPhotos } from "./volunteer-photos.ts";
 
-test("attaches only scoped orphan photos and returns the first requested URL", async () => {
+test("attaches only photos scoped to the check-in and returns the oldest URL", async () => {
   const calls: unknown[] = [];
   const tx = {
     volunteerPhoto: {
@@ -13,28 +13,25 @@ test("attaches only scoped orphan photos and returns the first requested URL", a
       },
       async findMany(input: unknown) {
         calls.push(input);
-        return [
-          { id: "photo-2", url: "/two.jpg" },
-          { id: "photo-1", url: "/one.jpg" },
-        ];
+        return [{ url: "/one.jpg" }];
       },
     },
   };
 
   const url = await attachVolunteerPhotos(tx as never, {
+    checkInId: "check-in-1",
     maxByteSize: 8_388_608,
     orgId: "org-1",
     residentId: "resident-1",
     noteId: "note-1",
-    photoIds: ["photo-1", "photo-2", "photo-1"],
   });
 
   assert.equal(url, "/one.jpg");
   assert.deepEqual(calls, [
     {
       where: {
-        id: { in: ["photo-1", "photo-2"] },
         byteSize: { lte: 8_388_608 },
+        checkInId: "check-in-1",
         noteId: null,
         orgId: "org-1",
         residentId: "resident-1",
@@ -43,30 +40,32 @@ test("attaches only scoped orphan photos and returns the first requested URL", a
     },
     {
       where: {
-        id: { in: ["photo-1", "photo-2"] },
         byteSize: { lte: 8_388_608 },
+        checkInId: "check-in-1",
         noteId: "note-1",
         orgId: "org-1",
         residentId: "resident-1",
       },
-      select: { id: true, url: true },
+      orderBy: { createdAt: "asc" },
+      select: { url: true },
+      take: 1,
     },
   ]);
 });
 
-test("does not query when there are no photos", async () => {
+test("returns undefined when a check-in has no photos", async () => {
   const tx = {
     volunteerPhoto: {
-      async updateMany() { throw new Error("unexpected update"); },
-      async findMany() { throw new Error("unexpected query"); },
+      async updateMany() { return { count: 0 }; },
+      async findMany() { return []; },
     },
   };
 
   assert.equal(await attachVolunteerPhotos(tx as never, {
+    checkInId: "check-in-1",
     maxByteSize: 8_388_608,
     orgId: "org-1",
     residentId: "resident-1",
     noteId: "note-1",
-    photoIds: [],
   }), undefined);
 });

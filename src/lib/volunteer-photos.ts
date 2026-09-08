@@ -1,30 +1,24 @@
 import type { Prisma } from "@/generated/prisma/client";
 
 type AttachVolunteerPhotosInput = {
+  checkInId: string;
   maxByteSize: number;
   orgId: string;
   residentId: string;
   noteId: string;
-  photoIds: string[];
 };
 
 type VolunteerPhotoTransaction = Pick<Prisma.TransactionClient, "volunteerPhoto">;
 
-/**
- * Claims previously uploaded photos for a completed check-in and returns the
- * first attached URL in the order supplied by the client.
- */
+/** Claims all photos from a completed check-in and returns the oldest URL. */
 export async function attachVolunteerPhotos(
   tx: VolunteerPhotoTransaction,
   input: AttachVolunteerPhotosInput,
 ): Promise<string | undefined> {
-  const photoIds = [...new Set(input.photoIds)];
-  if (photoIds.length === 0) return undefined;
-
   await tx.volunteerPhoto.updateMany({
     where: {
-      id: { in: photoIds },
       byteSize: { lte: input.maxByteSize },
+      checkInId: input.checkInId,
       noteId: null,
       orgId: input.orgId,
       residentId: input.residentId,
@@ -34,14 +28,15 @@ export async function attachVolunteerPhotos(
 
   const attached = await tx.volunteerPhoto.findMany({
     where: {
-      id: { in: photoIds },
       byteSize: { lte: input.maxByteSize },
+      checkInId: input.checkInId,
       noteId: input.noteId,
       orgId: input.orgId,
       residentId: input.residentId,
     },
-    select: { id: true, url: true },
+    orderBy: { createdAt: "asc" },
+    select: { url: true },
+    take: 1,
   });
-  const urls = new Map(attached.map((photo) => [photo.id, photo.url]));
-  return photoIds.map((id) => urls.get(id)).find((url) => url !== undefined);
+  return attached[0]?.url;
 }
