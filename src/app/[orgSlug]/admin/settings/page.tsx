@@ -185,10 +185,10 @@ async function RescueSettings({ orgId, orgSlug }: { orgId: string; orgSlug: stri
       <AdminSurface className={styles.settings} tone="brick">
         <div className={styles.settingsIntro}>
           <AdminEyebrow tone="brick">Sponsorship embeds</AdminEyebrow>
-          <h2>Price and trusted rescue sites</h2>
+          <h2>Tiers and trusted rescue sites</h2>
           <p>
-            Set the monthly sponsorship amount and the exact rescue-site origins allowed to use
-            public embeds and checkout.
+            Offer up to six monthly sponsorship tiers, pick the one sponsors see selected first, and
+            list the exact rescue-site origins allowed to use public embeds and checkout.
           </p>
         </div>
         <SponsorshipSettingsForm
