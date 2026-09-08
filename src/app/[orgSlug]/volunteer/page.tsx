@@ -6,7 +6,7 @@ import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
 
 import { AdminEmptyState, AdminPage } from "@/components/admin-ui";
-import { FeltLink, FeltPanel, PhotoPatch, StitchBadge } from "@/components/felt";
+import { FeltPanel, PhotoPatch, StitchBadge } from "@/components/felt";
 import felt from "@/components/felt.module.css";
 import { PageViewTransition } from "@/components/page-view-transition";
 import { prisma } from "@/lib/prisma";
@@ -14,6 +14,7 @@ import { getOrganizationAccessBySlug } from "@/lib/organization-access";
 
 import feltPup from "../../../../public/mascot/felt-pup-2.png";
 import { startCheckIn } from "./actions";
+import { UnfinishedCheckIns } from "./unfinished-check-ins";
 import styles from "./volunteer.module.css";
 
 export const dynamic = "force-dynamic";
@@ -95,24 +96,7 @@ export default async function VolunteerPage({ params, searchParams }: VolunteerP
             <p className={styles.chatError} role="alert">That companion is no longer available for check-ins.</p>
           ) : null}
 
-          {openCheckIns.length > 0 ? (
-            <>
-              <h2 className={styles.pickerHeading}>Pick up where you left off</h2>
-              <div aria-label="Unfinished check-ins" className={styles.companionPicker}>
-                {openCheckIns.map(({ id, resident }) => (
-                  <FeltLink className={styles.companionCard} href={`/${orgSlug}/volunteer/${id}`} key={id} tone="oatmeal">
-                    <PhotoPatch alt="" className={styles.cardPhoto} sizes="(min-width: 42rem) 14rem, 45vw" src={resident.photoUrls[0]} />
-                    <span className={styles.cardCopy}>
-                      <span className={styles.cardName}>{resident.name}</span>
-                      <span className={styles.cardBreed}>{resident.breed}</span>
-                      <span className={clsx(felt["felt-button"], "felt-moss", styles.cardAction)}>Continue</span>
-                    </span>
-                  </FeltLink>
-                ))}
-              </div>
-              <h2 className={styles.pickerHeading}>Start a new check-in</h2>
-            </>
-          ) : null}
+          <UnfinishedCheckIns checkIns={openCheckIns} orgSlug={orgSlug} />
 
           {checkInResidents.length > 0 ? (
             <div aria-label="Choose a companion" className={styles.companionPicker}>

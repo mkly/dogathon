@@ -2,12 +2,14 @@
 
 import { randomUUID } from "node:crypto";
 
+import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { after } from "next/server";
 import { z } from "zod";
 
 import { getOrganizationAccessBySlug } from "@/lib/organization-access";
+import { deletePhoto } from "@/lib/photo-storage";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { summarizeInterview } from "@/lib/volunteer-interview";
@@ -62,6 +64,45 @@ export async function startCheckIn(orgSlug: string, residentId: string) {
     select: { id: true },
   });
   redirect(sessionUrl(access.orgSlug, checkIn.id));
+}
+
+export async function discardCheckIn(orgSlug: string, rawCheckInId: unknown) {
+  const checkInId = uuidSchema.safeParse(rawCheckInId);
+  if (!checkInId.success) notFound();
+  const access = await requireVolunteerAccess(orgSlug, `/${orgSlug.trim()}/volunteer`);
+
+  const photos = await prisma.volunteerPhoto.findMany({
+    where: {
+      checkIn: {
+        id: checkInId.data,
+        orgId: access.context.orgId,
+        status: "in_progress",
+        userId: access.context.userId,
+      },
+      noteId: null,
+    },
+    select: { id: true, storageKey: true },
+  });
+  const deleted = await prisma.checkIn.deleteMany({
+    where: {
+      id: checkInId.data,
+      orgId: access.context.orgId,
+      status: "in_progress",
+      userId: access.context.userId,
+    },
+  });
+  if (deleted.count === 1 && photos.length > 0) {
+    await prisma.volunteerPhoto.deleteMany({ where: { id: { in: photos.map((photo) => photo.id) } } });
+    await Promise.all(photos.map(async (photo) => {
+      try {
+        await deletePhoto(photo.storageKey);
+      } catch (error) {
+        console.error("volunteer photo could not be removed from storage", error);
+      }
+    }));
+  }
+
+  revalidatePath(`/${access.orgSlug}/volunteer`);
 }
 
 export async function finishCheckIn(orgSlug: string, rawCheckInId: unknown, rawMessages: unknown) {
