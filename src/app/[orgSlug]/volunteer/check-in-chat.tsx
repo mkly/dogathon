@@ -57,7 +57,7 @@ export function CheckInChat({ orgSlug, residents, onFinish }: CheckInChatProps) 
         <PhotoPatch
           alt=""
           className={styles.chipPhoto}
-          sizes="44px"
+          sizes="40px"
           src={resident.photoUrl}
         />
       )}
