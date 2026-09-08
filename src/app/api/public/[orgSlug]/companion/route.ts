@@ -2,6 +2,7 @@ import {
   getPublicOrganization,
   getPublicResidentBySlug,
   getPublicResidentBySource,
+  isPublicResidentSponsorable,
 } from "@/lib/public-roster-cache";
 import {
   anonymousRateLimitIdentity,
@@ -126,7 +127,9 @@ export function createPublicCompanionHandlers(
       : sourceUrl
         ? await publicDependencies.getResidentBySource(organization.id, sourceUrl)
         : null;
-    if (!resident) return notFound(request, organization);
+    if (!resident || !isPublicResidentSponsorable(resident)) {
+      return notFound(request, organization);
+    }
 
     const routeBase = new URL(request.url);
     const encodedSlug = encodeURIComponent(orgSlug);
@@ -137,9 +140,6 @@ export function createPublicCompanionHandlers(
     const sponsorUrl = new URL(`/${encodedSlug}/sponsor`, routeBase);
     sponsorUrl.searchParams.set("source", resident.sourceUrl);
 
-    const status = !resident.available
-      ? "unavailable"
-      : resident._count.sponsorships > 0 ? "sponsored" : "available";
     const defaultTier = organization.sponsorshipTiers.find((tier) => tier.isDefault)
       ?? organization.sponsorshipTiers[0];
     const response = Response.json({
@@ -159,7 +159,7 @@ export function createPublicCompanionHandlers(
       })),
       monthlyCents: defaultTier?.monthlyCents ?? DEFAULT_SPONSORSHIP_MONTHLY_CENTS,
       currency: "usd",
-      status,
+      status: "available",
       companionUrl: companionUrl.toString(),
       sponsorUrl: sponsorUrl.toString(),
     });

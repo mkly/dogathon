@@ -76,7 +76,7 @@ test("returns the public companion contract and allows a configured origin", asy
     tiers: organization.sponsorshipTiers,
     monthlyCents: 6000,
     currency: "usd",
-    available: true,
+    status: "available",
     companionUrl: `https://pawcast.example/happy-paws/companions/${resident.id}`,
     sponsorUrl: "https://pawcast.example/happy-paws/sponsor?source=https%3A%2F%2Frescue.example%2Fdogs%2Fbiscuit",
   });
@@ -107,15 +107,13 @@ test("looks up by companion slug and gives it precedence over source", async () 
 
 test("omits CORS permission for a disallowed origin while still serving the response", async () => {
   const { GET } = createPublicCompanionHandlers(dependencies({
-    async getResidentBySource() {
-      return { ...resident, _count: { sponsorships: 1 } };
-    },
+    async getResidentBySource() { return resident; },
   }));
   const response = await GET(request("https://other.example"), context());
 
   assert.equal(response.status, 200);
   assert.equal(response.headers.get("access-control-allow-origin"), null);
-  assert.equal((await response.json()).status, "sponsored");
+  assert.equal((await response.json()).status, "available");
 });
 
 test("handles preflight for configured origins", async () => {
@@ -164,13 +162,17 @@ test("rate limits reads before looking up a companion", async () => {
   assert.equal(lookedUp, false);
 });
 
-test("unavailable companions take precedence over active sponsorships", async () => {
-  const { GET } = createPublicCompanionHandlers(dependencies({
-    async getResidentBySource() {
-      return { ...resident, available: false, _count: { sponsorships: 1 } };
-    },
-  }));
-  const response = await GET(request(), context());
+for (const [condition, nonSponsorableResident] of [
+  ["unavailable", { ...resident, available: false }],
+  ["already sponsored", { ...resident, _count: { sponsorships: 1 } }],
+] as const) {
+  test(`returns 404 when a companion is ${condition}`, async () => {
+    const { GET } = createPublicCompanionHandlers(dependencies({
+      async getResidentBySource() { return nonSponsorableResident; },
+    }));
+    const response = await GET(request(), context());
 
-  assert.equal((await response.json()).status, "unavailable");
-});
+    assert.equal(response.status, 404);
+    assert.deepEqual(await response.json(), { error: "Companion not found" });
+  });
+}

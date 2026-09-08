@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { Suspense, ViewTransition } from "react";
 
 import { createSponsorship } from "@/app/actions";
-import { FeltField, FeltLink, FeltPanel, PhotoPatch, Stitch, StitchBadge } from "@/components/felt";
+import { FeltField, FeltPanel, PhotoPatch, Stitch, StitchBadge } from "@/components/felt";
 import { PageViewTransition } from "@/components/page-view-transition";
 import { formatMonthlyAmount } from "@/lib/format";
 import {
@@ -41,7 +41,6 @@ export default async function CompanionPage({ params, searchParams }: CompanionP
 
   if (!resident) notFound();
 
-  const available = resident.available;
   const tiers = organization.sponsorshipTiers;
   const firstTier = tiers[0];
   const defaultTier = tiers.find((tier) => "isDefault" in tier && tier.isDefault === true) ?? firstTier;
@@ -96,9 +95,7 @@ export default async function CompanionPage({ params, searchParams }: CompanionP
           </div>
 
           <div className={styles.profileCopy}>
-            <StitchBadge tone={available ? "moss" : "brick"}>
-              {available ? "Available" : "Not available"}
-            </StitchBadge>
+            <StitchBadge tone="moss">Available</StitchBadge>
             <h1>{resident.name}</h1>
             <p className={styles.companionFacts}>
               {companionFacts(resident)}
@@ -117,82 +114,67 @@ export default async function CompanionPage({ params, searchParams }: CompanionP
           </div>
         </section>
 
-        {available ? (
-          <CompanionSponsorState sponsored={sponsored}>
-            <FeltPanel className={styles.sponsorPanel} tone="oatmeal">
-              <div className={styles.sponsorPitch}>
-                <p className={styles.eyebrow}>Monthly sponsorship</p>
-                <h2>
-                  {tiers.length < 2
-                    ? `Cover ${resident.name}'s care for ${monthlyAmount} a month`
-                    : `Help cover ${resident.name}'s care every month`}
-                </h2>
-                <p>
-                  Your gift goes toward food, vet visits, and a warm bed while {resident.name} waits
-                  for a home. You&apos;ll get updates from the rescue along the way, and your
-                  sponsorship ends on its own the day {resident.name} no longer needs one.
-                </p>
-              </div>
+        <CompanionSponsorState sponsored={sponsored}>
+          <FeltPanel className={styles.sponsorPanel} tone="oatmeal">
+            <div className={styles.sponsorPitch}>
+              <p className={styles.eyebrow}>Monthly sponsorship</p>
+              <h2>
+                {tiers.length < 2
+                  ? `Cover ${resident.name}'s care for ${monthlyAmount} a month`
+                  : `Help cover ${resident.name}'s care every month`}
+              </h2>
+              <p>
+                Your gift goes toward food, vet visits, and a warm bed while {resident.name} waits
+                for a home. You&apos;ll get updates from the rescue along the way, and your
+                sponsorship ends on its own the day {resident.name} no longer needs one.
+              </p>
+            </div>
 
-              <Suspense fallback={null}><CompanionFormError name={resident.name} /></Suspense>
+            <Suspense fallback={null}><CompanionFormError name={resident.name} /></Suspense>
 
-              <form action={createSponsorship} className={styles.sponsorForm}>
-                <input name="orgSlug" type="hidden" value={orgSlug} />
-                <input name="residentId" type="hidden" value={resident.id} />
+            <form action={createSponsorship} className={styles.sponsorForm}>
+              <input name="orgSlug" type="hidden" value={orgSlug} />
+              <input name="residentId" type="hidden" value={resident.id} />
 
-                {tiers.length < 2 ? (
-                  defaultTier ? (
-                    <div className={styles.singleTier}>
-                      <input name="tier" type="hidden" value={defaultTier.id} />
-                      <p>{defaultTier.description}</p>
-                    </div>
-                  ) : null
-                ) : (
-                  <fieldset className={styles.sponsorshipTiers}>
-                    <legend>Pick a monthly amount</legend>
-                    {tiers.map((tier) => (
-                      <label className={styles.sponsorshipTier} key={tier.id}>
-                        <input defaultChecked={tier.id === defaultTier?.id} name="tier" required type="radio" value={tier.id} />
-                        <Stitch fine />
-                        <span>
-                          <strong>{formatMonthlyAmount(tier.monthlyCents)}/month</strong>
-                          <small>{tier.description}</small>
-                        </span>
-                      </label>
-                    ))}
-                  </fieldset>
-                )}
+              {tiers.length < 2 ? (
+                defaultTier ? (
+                  <div className={styles.singleTier}>
+                    <input name="tier" type="hidden" value={defaultTier.id} />
+                    <p>{defaultTier.description}</p>
+                  </div>
+                ) : null
+              ) : (
+                <fieldset className={styles.sponsorshipTiers}>
+                  <legend>Pick a monthly amount</legend>
+                  {tiers.map((tier) => (
+                    <label className={styles.sponsorshipTier} key={tier.id}>
+                      <input defaultChecked={tier.id === defaultTier?.id} name="tier" required type="radio" value={tier.id} />
+                      <Stitch fine />
+                      <span>
+                        <strong>{formatMonthlyAmount(tier.monthlyCents)}/month</strong>
+                        <small>{tier.description}</small>
+                      </span>
+                    </label>
+                  ))}
+                </fieldset>
+              )}
 
-                <label htmlFor="sponsorName">Your name</label>
-                <FeltField>
-                  <input autoComplete="name" id="sponsorName" name="sponsorName" required />
-                </FeltField>
+              <label htmlFor="sponsorName">Your name</label>
+              <FeltField>
+                <input autoComplete="name" id="sponsorName" name="sponsorName" required />
+              </FeltField>
 
-                <label htmlFor="sponsorEmail">Email</label>
-                <FeltField>
-                  <input autoComplete="email" id="sponsorEmail" name="sponsorEmail" required type="email" />
-                </FeltField>
+              <label htmlFor="sponsorEmail">Email</label>
+              <FeltField>
+                <input autoComplete="email" id="sponsorEmail" name="sponsorEmail" required type="email" />
+              </FeltField>
 
-                <SponsorSubmitButton className={styles.sponsorButton} pendingLabel="Opening checkout…" tone="mustard" type="submit">
-                  Continue to checkout
-                </SponsorSubmitButton>
-              </form>
-            </FeltPanel>
-          </CompanionSponsorState>
-        ) : (
-          <FeltPanel className={styles.confirmation} tone="brick">
-            <h2>{resident.name} isn&apos;t taking sponsors right now</h2>
-            <p>Sponsorships for {resident.name} have ended. Another resident is still waiting for one.</p>
-            <FeltLink
-              className={styles.cardLink}
-              href={`/${orgSlug}`}
-              tone="cream"
-              transitionTypes={["nav-back"]}
-            >
-              Meet the companions
-            </FeltLink>
+              <SponsorSubmitButton className={styles.sponsorButton} pendingLabel="Opening checkout…" tone="mustard" type="submit">
+                Continue to checkout
+              </SponsorSubmitButton>
+            </form>
           </FeltPanel>
-        )}
+        </CompanionSponsorState>
       </main>
     </PageViewTransition>
   );

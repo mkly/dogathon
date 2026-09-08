@@ -1,11 +1,24 @@
 import { revalidateTag, unstable_cache } from "next/cache";
 
+import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 
 const PUBLIC_ROSTER_TAG = "public-roster";
 const PUBLIC_ROSTER_CACHE = { tags: [PUBLIC_ROSTER_TAG], revalidate: 86400 };
 const PUBLIC_ORGANIZATION_LIMIT = 100;
 const PUBLIC_RESIDENT_LIMIT = 500;
+
+export const PUBLIC_SPONSORABLE_RESIDENT_WHERE = {
+  available: true,
+  sponsorships: { none: { status: "active" } },
+} satisfies Prisma.ResidentWhereInput;
+
+export function isPublicResidentSponsorable(resident: {
+  available: boolean;
+  _count: { sponsorships: number };
+}) {
+  return resident.available && resident._count.sponsorships === 0;
+}
 
 export const getPublicOrganizations = unstable_cache(
   () => prisma.organization.findMany({
@@ -31,7 +44,7 @@ export const getPublicOrganization = unstable_cache(
 
 export const getPublicResidents = unstable_cache(
   (orgId: string) => prisma.resident.findMany({
-    where: { orgId, available: true },
+    where: { orgId, ...PUBLIC_SPONSORABLE_RESIDENT_WHERE },
     orderBy: { name: "asc" },
     take: PUBLIC_RESIDENT_LIMIT,
   }),
@@ -40,7 +53,9 @@ export const getPublicResidents = unstable_cache(
 );
 
 export const getPublicResident = unstable_cache(
-  (orgId: string, id: string) => prisma.resident.findFirst({ where: { id, orgId } }),
+  (orgId: string, id: string) => prisma.resident.findFirst({
+    where: { id, orgId, ...PUBLIC_SPONSORABLE_RESIDENT_WHERE },
+  }),
   ["public-resident"],
   PUBLIC_ROSTER_CACHE,
 );
@@ -50,7 +65,7 @@ export const getPublicResident = unstable_cache(
 export const getPublicResidentBySource = unstable_cache(
   async (orgId: string, sourceUrl: string) => (sourceUrl
     ? prisma.resident.findFirst({
-        where: { orgId, sourceUrl },
+        where: { orgId, sourceUrl, ...PUBLIC_SPONSORABLE_RESIDENT_WHERE },
         select: {
           id: true,
           name: true,
@@ -71,7 +86,7 @@ export const getPublicResidentBySource = unstable_cache(
 
 export const getPublicResidentBySlug = unstable_cache(
   (orgId: string, slug: string) => prisma.resident.findFirst({
-    where: { orgId, slug },
+    where: { orgId, slug, ...PUBLIC_SPONSORABLE_RESIDENT_WHERE },
     select: {
       id: true,
       name: true,
@@ -91,7 +106,7 @@ export const getPublicResidentBySlug = unstable_cache(
 
 export const getPublicCompanionParams = unstable_cache(
   () => prisma.resident.findMany({
-    where: { available: true },
+    where: PUBLIC_SPONSORABLE_RESIDENT_WHERE,
     orderBy: { id: "asc" },
     select: { id: true, organization: { select: { slug: true } } },
     take: PUBLIC_RESIDENT_LIMIT,

@@ -13,7 +13,7 @@ test("a found source redirects to its companion page with a normalized identity"
     },
     async (orgId, sourceUrl) => {
       calls.push([orgId, sourceUrl]);
-      return { id: "resident-id", available: true };
+      return { id: "resident-id", available: true, _count: { sponsorships: 0 } };
     },
   );
 
@@ -24,17 +24,19 @@ test("a found source redirects to its companion page with a normalized identity"
   });
 });
 
-test("an unavailable resident still redirects to the companion page", async () => {
-  const result = await resolveSponsorDestination(
-    { orgId: "rescue-id", orgSlug: "happy-paws", source: "https://rescue.example/dogs/fern" },
-    async () => ({ id: "unavailable-id", available: false }),
-  );
+for (const [condition, resident] of [
+  ["unavailable", { id: "unavailable-id", available: false, _count: { sponsorships: 0 } }],
+  ["already sponsored", { id: "sponsored-id", available: true, _count: { sponsorships: 1 } }],
+] as const) {
+  test(`a resident that is ${condition} renders the unavailable path`, async () => {
+    const result = await resolveSponsorDestination(
+      { orgId: "rescue-id", orgSlug: "happy-paws", source: "https://rescue.example/dogs/fern" },
+      async () => resident,
+    );
 
-  assert.deepEqual(result, {
-    href: "/happy-paws/companions/unavailable-id",
-    kind: "redirect",
+    assert.deepEqual(result, { kind: "unknown" });
   });
-});
+}
 
 test("an unknown source renders the unavailable path", async () => {
   const result = await resolveSponsorDestination(
@@ -49,7 +51,7 @@ test("missing, invalid, non-http, and oversized sources do not query the roster"
   let lookups = 0;
   const findResident = async () => {
     lookups += 1;
-    return { id: "unexpected", available: true };
+    return { id: "unexpected", available: true, _count: { sponsorships: 0 } };
   };
 
   for (const source of [
