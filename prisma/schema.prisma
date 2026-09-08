@@ -214,6 +214,7 @@ model Resident {
   name                 String
   slug                 String
   sourceUrl            String                        @default("")
+  species              String                        @default("")
   breed                String
   dobText              String
   ageText              String
@@ -235,7 +236,7 @@ model Resident {
   @@unique([orgId, name])
   @@unique([orgId, slug])
   @@unique([id, orgId])
-  @@index([orgId, available])
+  @@index([orgId, available, species])
 }
 
 model Sponsorship {

@@ -33,6 +33,7 @@ type PublicResident = {
   name: string;
   slug: string;
   sourceUrl: string;
+  species: string;
   breed: string;
   ageText: string;
   sex: string;
@@ -147,6 +148,7 @@ export function createPublicCompanionHandlers(
       name: resident.name,
       slug: resident.slug,
       sourceUrl: resident.sourceUrl,
+      species: resident.species,
       breed: resident.breed,
       ageText: resident.ageText,
       sex: resident.sex,

@@ -8,6 +8,7 @@ import { z } from "zod";
 import { createAiModel } from "./ai-model.ts";
 import { env } from "./env.ts";
 import type { CompanionRecord } from "./parser.ts";
+import { normalizeSpecies } from "./species.ts";
 import { DOCUMENT_SEPARATOR, parseCompanionRoster } from "./parser.ts";
 import { prisma } from "./prisma.ts";
 import { isPublicHttpUrl } from "./public-http-url.ts";
@@ -444,6 +445,7 @@ async function upsertCompanion(
 ) {
   const sourceUrl = normalizeSourceUrl(companion.sourceUrl ?? "");
   const profile = {
+    species: normalizeSpecies(companion.species),
     breed: companion.breed,
     dobText: companion.dobText,
     ageText: companion.ageText,

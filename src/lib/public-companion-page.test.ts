@@ -25,8 +25,8 @@ test("checkout returns keep the page reachable after the companion is sponsored"
 
 test("companion facts omit missing values without dangling separators", () => {
   assert.equal(
-    companionFacts({ ageText: "3 years", breed: "Hound", sex: "Female", weightText: "42 lb" }),
-    "Hound · Female · 3 years · 42 lb",
+    companionFacts({ ageText: "3 years", breed: "Hound", species: "dog", sex: "Female", weightText: "42 lb" }),
+    "Dog · Hound · Female · 3 years · 42 lb",
   );
   assert.equal(
     companionFacts({ ageText: null, breed: "Hound", sex: "", weightText: undefined }),

@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import { parseCompanionRoster } from "./parser.ts";
+import { normalizeSpecies, speciesLabel } from "./species.ts";
 
 const pageA = readFile(new URL("../../seed/dogs-page-A.html", import.meta.url), "utf8");
 const pageB = readFile(new URL("../../seed/dogs-page-B.html", import.meta.url), "utf8");
@@ -29,7 +30,7 @@ test("a hand-typed adoption marker updates the parsed record", async () => {
 test("HTML parsing uses DOM sections, decoded attributes, and list items", async () => {
   const companions = await parseCompanionRoster(`
     <h3>Peanut &amp; Butter</h3>
-    <p><strong>Personality:</strong> gentle<br><strong>Breed:</strong> terrier mix<br>
+    <p><strong>Personality:</strong> gentle<br><strong>Species:</strong> Dogs<br><strong>Breed:</strong> terrier mix<br>
       <strong>Age:</strong> est DOB 1/2/23<br><strong>Weight:</strong> 18 lbs<br>
       <strong>Sex:</strong> female</p>
     <ul><li>Likes naps &amp; snacks</li></ul>
@@ -39,6 +40,7 @@ test("HTML parsing uses DOM sections, decoded attributes, and list items", async
 
   assert.deepEqual(companions, [{
     name: "Peanut & Butter",
+    species: "Dogs",
     breed: "terrier mix",
     dobText: "2023-01-02",
     ageText: "est DOB 1/2/23",
@@ -72,6 +74,7 @@ Footer
 
   assert.deepEqual(companions, [{
     name: "Willow",
+    species: "",
     breed: "shepherd mix",
     dobText: "2023-01-02",
     ageText: "Estimated DOB: January 2, 2023",
@@ -174,6 +177,16 @@ test("a successful model parse is returned as-is", async () => {
   assert.deepEqual(companions.map((companion) => companion.name), ["Biscuit"]);
   assert.equal(companions[0].adopted, true);
   assert.deepEqual(companions[0].careNotes, []);
+});
+
+test("species values normalize to open-ended canonical slugs and human labels", () => {
+  assert.equal(normalizeSpecies("  Puppies  "), "dog");
+  assert.equal(normalizeSpecies("GUINEA   PIGS"), "guinea-pig");
+  assert.equal(normalizeSpecies("Tortoises"), "reptile");
+  assert.equal(normalizeSpecies("Sugar Gliders"), "sugar-glider");
+  assert.equal(normalizeSpecies("---"), "");
+  assert.equal(speciesLabel("guinea-pig"), "Guinea pig");
+  assert.equal(speciesLabel("sugar-glider"), "Sugar Glider");
 });
 
 test("a scraped detail page with a gallery above its Meet heading parses offline", async () => {

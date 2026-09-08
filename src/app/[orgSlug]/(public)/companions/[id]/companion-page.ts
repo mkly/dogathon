@@ -1,6 +1,9 @@
+import { speciesLabel } from "@/lib/species";
+
 type CompanionFactValues = {
   ageText?: string | null;
   breed?: string | null;
+  species?: string | null;
   sex?: string | null;
   weightText?: string | null;
 };
@@ -18,7 +21,13 @@ function firstValue(value?: string | string[]) {
 }
 
 export function companionFacts(companion: CompanionFactValues) {
-  return [companion.breed, companion.sex, companion.ageText, companion.weightText]
+  return [
+    companion.species ? speciesLabel(companion.species) : "",
+    companion.breed,
+    companion.sex,
+    companion.ageText,
+    companion.weightText,
+  ]
     .filter(Boolean)
     .join(" · ");
 }
