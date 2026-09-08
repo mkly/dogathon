@@ -17,11 +17,13 @@ export type UnfinishedCheckIn = {
 
 export function UnfinishedCheckIns({ checkIns, orgSlug }: { checkIns: UnfinishedCheckIn[]; orgSlug: string }) {
   const [removed, setRemoved] = useState<string[]>([]);
+  const [confirming, setConfirming] = useState<string | null>(null);
   const [, startTransition] = useTransition();
   const visible = checkIns.filter((checkIn) => !removed.includes(checkIn.id));
   if (visible.length === 0) return null;
 
   function discard(checkIn: UnfinishedCheckIn) {
+    setConfirming(null);
     setRemoved((current) => [...current, checkIn.id]);
     startTransition(async () => {
       try {
@@ -45,14 +47,28 @@ export function UnfinishedCheckIns({ checkIns, orgSlug }: { checkIns: Unfinished
               <span className={styles.cardName}>{checkIn.resident.name}</span>
               <span className={styles.cardBreed}>{checkIn.resident.breed}</span>
             </span>
-            <span className={styles.resumeActions}>
-              <FeltLink className={clsx(styles.cardAction, styles.resumeAction)} href={`/${orgSlug}/volunteer/${checkIn.id}`} tone="moss">
-                Continue<span className={styles.srOnly}> the update for {checkIn.resident.name}</span>
-              </FeltLink>
-              <button className={clsx(felt["felt-button"], "felt-cream", styles.cardAction, styles.discardButton)} onClick={() => discard(checkIn)} type="button">
-                Discard<span className={styles.srOnly}> the unfinished update for {checkIn.resident.name}</span>
-              </button>
-            </span>
+            {confirming === checkIn.id ? (
+              <span className={styles.resumeActions}>
+                <span className={styles.discardPrompt}>Discard this update?</span>
+                <button className={clsx(felt["felt-button"], "felt-brick", styles.cardAction, styles.resumeAction)} onClick={() => discard(checkIn)} type="button">
+                  Discard<span className={styles.srOnly}> the unfinished update for {checkIn.resident.name}</span>
+                </button>
+                <button className={styles.keepButton} onClick={() => setConfirming(null)} type="button">
+                  Keep
+                </button>
+              </span>
+            ) : (
+              <span className={styles.resumeActions}>
+                <FeltLink className={clsx(styles.cardAction, styles.resumeAction)} href={`/${orgSlug}/volunteer/${checkIn.id}`} tone="moss">
+                  Continue<span className={styles.srOnly}> the update for {checkIn.resident.name}</span>
+                </FeltLink>
+                <button aria-label={`Discard the unfinished update for ${checkIn.resident.name}`} className={styles.discardButton} onClick={() => setConfirming(checkIn.id)} type="button">
+                  <svg aria-hidden="true" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="2.4" viewBox="0 0 20 20">
+                    <path d="M5.5 5.5l9 9M14.5 5.5l-9 9" />
+                  </svg>
+                </button>
+              </span>
+            )}
           </li>
         ))}
       </ul>

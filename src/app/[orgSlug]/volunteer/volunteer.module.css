@@ -129,8 +129,7 @@
   gap: 0.5rem;
 }
 
-.resumeAction,
-.discardButton {
+.resumeAction {
   min-height: 2.6rem;
   margin-top: 0;
   padding-inline: 1rem;
@@ -141,14 +140,54 @@
   margin-top: 0.25rem;
 }
 
-/* Discard sits beside Continue as the quieter of two pills on the strip. */
+/* Discard is a faint cross with a full-size hit area; it asks before acting. */
 .discardButton {
-  --drop: 0.45;
+  display: inline-flex;
+  width: 2.6rem;
+  height: 2.6rem;
+  padding: 0;
   border: 0;
+  border-radius: 999px;
+  color: var(--felt-ink);
+  background: none;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.45;
+  cursor: pointer;
+  transition: opacity 120ms ease, background-color 120ms ease;
+}
+
+.discardButton svg {
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
+.discardButton:hover {
+  background: rgb(0 0 0 / 0.07);
+  opacity: 1;
+}
+
+.discardPrompt {
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.keepButton {
+  min-height: 2.6rem;
+  padding: 0 0.5rem;
+  border: 0;
+  color: var(--felt-ink);
+  background: none;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 800;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
   cursor: pointer;
 }
 
-.discardButton:focus-visible {
+.discardButton:focus-visible,
+.keepButton:focus-visible {
   outline: 3px solid var(--felt-mustard);
   outline-offset: 2px;
 }
@@ -282,11 +321,19 @@
     gap: 0.6rem;
   }
 
-  .resumeAction,
-  .discardButton {
-    flex: 1 1 0;
+  .resumeAction {
+    flex: 1 1 auto;
     min-height: 2.75rem;
     justify-content: center;
+  }
+
+  .discardButton {
+    width: 2.75rem;
+    height: 2.75rem;
+  }
+
+  .discardPrompt {
+    flex: 1 1 auto;
   }
 
   .shell {
