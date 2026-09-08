@@ -29,7 +29,19 @@ export async function POST(request: Request) {
     return await interviewTurn({ ...route.context, photo }, {
       async onFinish(messages) {
         const parsed = interviewTranscriptSchema.safeParse(messages);
-        if (!parsed.success) throw new Error("Generated check-in transcript was invalid");
+        if (!parsed.success) {
+          const shape = messages.map((message) => ({
+            id: message.id,
+            role: message.role,
+            parts: message.parts.map((part) => ({
+              type: part.type,
+              length: "text" in part && typeof part.text === "string" ? part.text.length : undefined,
+            })),
+          }));
+          throw new Error(
+            `Generated check-in transcript was invalid: ${JSON.stringify(parsed.error.issues)}; messages: ${JSON.stringify(shape)}`,
+          );
+        }
         await prisma.checkIn.updateMany({
           where: {
             id: route.context.checkInId,
