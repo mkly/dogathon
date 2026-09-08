@@ -193,6 +193,26 @@
   .shell::after {
     display: none;
   }
+
+  /* On phones the thank-you sheet fills the screen like the chat shell does,
+     with the message centered on the felt instead of a card floating in
+     cream. */
+  .confirmation {
+    --drop: 0;
+    display: flex;
+    width: 100%;
+    min-height: 100dvh;
+    margin: 0;
+    padding: 2.5rem 1.5rem;
+    flex-direction: column;
+    justify-content: center;
+    border-radius: 0;
+  }
+
+  .confirmation::after,
+  .confirmation > svg {
+    display: none;
+  }
 }
 
 .chatHeader {
