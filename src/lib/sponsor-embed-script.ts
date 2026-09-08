@@ -137,8 +137,12 @@ export const sponsorEmbedScript = String.raw`(() => {
         photo.setAttribute("alt", companion.name);
         content.append(photo);
       }
-      content.append(create("h2", "name", companion.name));
-      content.append(create("p", "details", [companion.breed, companion.ageText, companion.sex].filter(Boolean).join(" · ")));
+      if (!isHidden(root, "name")) {
+        content.append(create("h2", "name", companion.name));
+      }
+      if (!isHidden(root, "details")) {
+        content.append(create("p", "details", [companion.breed, companion.ageText, companion.sex].filter(Boolean).join(" · ")));
+      }
       content.append(create("p", "price", price(companion.monthlyCents, companion.currency)));
       content.append(create("p", "status", statusText(companion.status)));
 

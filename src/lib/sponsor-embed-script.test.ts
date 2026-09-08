@@ -21,10 +21,14 @@ const companion = {
 };
 
 async function renderWidget({
+  details,
+  name,
   photo,
   response = companion,
   url = "https://rescue.example/dogs/biscuit#bio",
 }: {
+  details?: string;
+  name?: string;
   photo?: string;
   response?: typeof companion;
   url?: string;
@@ -44,6 +48,8 @@ async function renderWidget({
 
   const root = dom.window.document.querySelector<HTMLElement>("[data-sponsor-org]");
   assert.ok(root);
+  if (details !== undefined) root.setAttribute("data-sponsor-details", details);
+  if (name !== undefined) root.setAttribute("data-sponsor-name", name);
   if (photo !== undefined) root.setAttribute("data-sponsor-photo", photo);
   dom.window.eval(sponsorEmbedScript);
   for (let index = 0; index < 20 && !root.hasAttribute("data-sponsor-rendered"); index += 1) {
@@ -97,6 +103,29 @@ for (const [photo, expected] of [
     }
   });
 }
+
+test("data-sponsor-name hides only the visible companion name", async () => {
+  const { root } = await renderWidget({ name: "hide" });
+
+  assert.equal(root.querySelector(".dogathon-sponsor-name"), null);
+  assert.equal(root.querySelector(".dogathon-sponsor-details")?.textContent, "Corgi mix · Adult · Female");
+  assert.equal(root.querySelector("img")?.getAttribute("alt"), companion.name);
+});
+
+test("data-sponsor-details hides only the companion details", async () => {
+  const { root } = await renderWidget({ details: "hide" });
+
+  assert.equal(root.querySelector(".dogathon-sponsor-name")?.textContent, companion.name);
+  assert.equal(root.querySelector(".dogathon-sponsor-details"), null);
+});
+
+test("name, details, and photo attributes can hide all three card parts", async () => {
+  const { root } = await renderWidget({ details: "hide", name: "hide", photo: "hide" });
+
+  assert.equal(root.querySelector(".dogathon-sponsor-name"), null);
+  assert.equal(root.querySelector(".dogathon-sponsor-details"), null);
+  assert.equal(root.querySelector(".dogathon-sponsor-photo"), null);
+});
 
 for (const [query, expected] of [
   ["sponsored=1", "Thank you! Your sponsorship is confirmed."],

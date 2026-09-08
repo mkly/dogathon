@@ -12,7 +12,7 @@
   <body>
     <h1>Sponsor embed demo</h1>
     <p>
-      Add <code>?org=organization-slug&amp;source=https://rescue.example/dogs/name&amp;photo=hide</code>
+      Add <code>?org=organization-slug&amp;source=https://rescue.example/dogs/name&amp;photo=hide&amp;name=hide&amp;details=hide</code>
       to test a synced companion. Without a matching source, the embed demonstrates its public-roster fallback.
     </p>
     <div id="sponsor-demo" data-sponsor-org="maple-street"></div>
@@ -22,6 +22,8 @@
       if (demoParameters.get("org")) demo.setAttribute("data-sponsor-org", demoParameters.get("org"));
       if (demoParameters.get("source")) demo.setAttribute("data-sponsor-source", demoParameters.get("source"));
       if (demoParameters.get("photo")) demo.setAttribute("data-sponsor-photo", demoParameters.get("photo"));
+      if (demoParameters.get("name")) demo.setAttribute("data-sponsor-name", demoParameters.get("name"));
+      if (demoParameters.get("details")) demo.setAttribute("data-sponsor-details", demoParameters.get("details"));
     </script>
     <script src="/embed.js"></script>
   </body>
