@@ -305,8 +305,7 @@
     opacity var(--motion-duration-fast) var(--motion-ease-standard);
 }
 .tierIsDefault { border-color: var(--felt-mustard); box-shadow: inset 3px 0 0 var(--felt-mustard); }
-.tierDragging { opacity: 0.45; box-shadow: 0 6px 18px rgb(61 51 43 / 18%); }
-.tierDropTarget { border-color: var(--felt-denim); box-shadow: 0 0 0 2px color-mix(in srgb, var(--felt-denim), white 55%); }
+.tierDragging { z-index: 1; border-color: var(--felt-denim); box-shadow: 0 8px 22px rgb(61 51 43 / 22%); }
 .tierDefaultInput,
 .srOnly { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 .tierHandle {
