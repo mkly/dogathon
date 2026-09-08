@@ -8,8 +8,8 @@ import { formatMonthlyAmount } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 import { verifySponsorshipSelectionToken } from "@/lib/sponsorship-selection-token";
 
-import pawcastWordmark from "../../../../../public/brand/pawcast-wordmark.png";
-import styles from "../../../public.module.css";
+import pawcastWordmark from "../../../../../../public/brand/pawcast-wordmark.png";
+import styles from "../../../../public.module.css";
 import { endSponsorshipAction, transferSponsorshipAction } from "./actions";
 
 type NextCompanionPageProps = {
