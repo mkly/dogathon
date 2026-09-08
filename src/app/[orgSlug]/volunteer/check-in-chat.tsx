@@ -6,7 +6,7 @@ import Image from "next/image";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
 import { FeltButton, PhotoPatch } from "@/components/felt";
-import { messageText } from "@/lib/volunteer-interview";
+import { messageText } from "@/lib/ui-message-text";
 
 import { CheckInChatView, type CheckInResident } from "./check-in-chat-view";
 import { MAX_PHOTO_BYTES } from "./photo-limits";

@@ -10,6 +10,7 @@ import {
 import { z } from "zod";
 
 import { createAiModel, hasAiCredentials } from "./ai-model.ts";
+import { messageText } from "./ui-message-text.ts";
 
 export type InterviewCompanion = {
   name: string;
@@ -33,15 +34,6 @@ const SCRIPTED_QUESTIONS = [
 const interviewSummarySchema = z.object({
   note: z.string().trim().min(1).max(2000),
 });
-
-export function messageText(message: UIMessage): string {
-  return message.parts
-    .filter((part): part is Extract<(typeof message.parts)[number], { type: "text" }> =>
-      part.type === "text")
-    .map((part) => part.text.trim())
-    .filter(Boolean)
-    .join("\n");
-}
 
 function userAnswers(messages: UIMessage[]): string[] {
   return messages
