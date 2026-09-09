@@ -280,7 +280,7 @@ export async function createStripeCheckout(
             currency: "usd",
             unit_amount: input.monthlyCents,
             recurring: { interval: "month" },
-            product_data: { name: `Sponsor ${resident.name}` },
+            product_data: { name: `Sponsorship with ${organization.name}` },
           },
           quantity: 1,
         },

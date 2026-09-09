@@ -164,6 +164,24 @@ test("Stripe Connect onboarding, checkout, and signed webhooks maintain sponsors
   assert.equal(connected.detailsSubmitted, true);
   assert.equal(store.organization.stripeChargesEnabled, true);
 
+  server.use(http.post(`${stripeApi}/v1/checkout/sessions`, async ({ request }) => {
+    const checkoutRequest = new URLSearchParams(await request.text());
+    assert.equal(
+      checkoutRequest.get("line_items[0][price_data][product_data][name]"),
+      "Sponsorship with Fixture Rescue",
+    );
+    assert.equal(checkoutRequest.get("metadata[residentId]"), "companion_mabel");
+    assert.equal(
+      checkoutRequest.get("subscription_data[metadata][residentId]"),
+      "companion_mabel",
+    );
+    return HttpResponse.json({
+      id: "cs_fixture",
+      object: "checkout.session",
+      url: "https://checkout.stripe.test/cs_fixture",
+    });
+  }));
+
   const checkout = await createStripeCheckout(
     {
       orgId: "org_rescue",
