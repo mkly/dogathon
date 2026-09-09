@@ -278,8 +278,6 @@ export const SponsorshipScalarFieldEnum = {
   status: 'status',
   endedReason: 'endedReason',
   endedAt: 'endedAt',
-  awaitingSince: 'awaitingSince',
-  awaitingReminderDraftedAt: 'awaitingReminderDraftedAt',
   stripeCheckoutSessionId: 'stripeCheckoutSessionId',
   stripeSubscriptionId: 'stripeSubscriptionId',
   stripeCustomerId: 'stripeCustomerId',
@@ -330,7 +328,6 @@ export const SponsorUpdateScalarFieldEnum = {
   status: 'status',
   sentAt: 'sentAt',
   awaitingTransitionedAt: 'awaitingTransitionedAt',
-  isAwaitingReminder: 'isAwaitingReminder',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const

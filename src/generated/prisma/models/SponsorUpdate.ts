@@ -37,7 +37,6 @@ export type SponsorUpdateMinAggregateOutputType = {
   status: $Enums.SponsorUpdateStatus | null
   sentAt: Date | null
   awaitingTransitionedAt: Date | null
-  isAwaitingReminder: boolean | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -55,7 +54,6 @@ export type SponsorUpdateMaxAggregateOutputType = {
   status: $Enums.SponsorUpdateStatus | null
   sentAt: Date | null
   awaitingTransitionedAt: Date | null
-  isAwaitingReminder: boolean | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -73,7 +71,6 @@ export type SponsorUpdateCountAggregateOutputType = {
   status: number
   sentAt: number
   awaitingTransitionedAt: number
-  isAwaitingReminder: number
   createdAt: number
   updatedAt: number
   _all: number
@@ -93,7 +90,6 @@ export type SponsorUpdateMinAggregateInputType = {
   status?: true
   sentAt?: true
   awaitingTransitionedAt?: true
-  isAwaitingReminder?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -111,7 +107,6 @@ export type SponsorUpdateMaxAggregateInputType = {
   status?: true
   sentAt?: true
   awaitingTransitionedAt?: true
-  isAwaitingReminder?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -129,7 +124,6 @@ export type SponsorUpdateCountAggregateInputType = {
   status?: true
   sentAt?: true
   awaitingTransitionedAt?: true
-  isAwaitingReminder?: true
   createdAt?: true
   updatedAt?: true
   _all?: true
@@ -220,7 +214,6 @@ export type SponsorUpdateGroupByOutputType = {
   status: $Enums.SponsorUpdateStatus
   sentAt: Date | null
   awaitingTransitionedAt: Date | null
-  isAwaitingReminder: boolean
   createdAt: Date
   updatedAt: Date
   _count: SponsorUpdateCountAggregateOutputType | null
@@ -259,7 +252,6 @@ export type SponsorUpdateWhereInput = {
   status?: Prisma.EnumSponsorUpdateStatusFilter<"SponsorUpdate"> | $Enums.SponsorUpdateStatus
   sentAt?: Prisma.DateTimeNullableFilter<"SponsorUpdate"> | Date | string | null
   awaitingTransitionedAt?: Prisma.DateTimeNullableFilter<"SponsorUpdate"> | Date | string | null
-  isAwaitingReminder?: Prisma.BoolFilter<"SponsorUpdate"> | boolean
   createdAt?: Prisma.DateTimeFilter<"SponsorUpdate"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"SponsorUpdate"> | Date | string
   organization?: Prisma.XOR<Prisma.OrganizationScalarRelationFilter, Prisma.OrganizationWhereInput>
@@ -281,7 +273,6 @@ export type SponsorUpdateOrderByWithRelationInput = {
   status?: Prisma.SortOrder
   sentAt?: Prisma.SortOrderInput | Prisma.SortOrder
   awaitingTransitionedAt?: Prisma.SortOrderInput | Prisma.SortOrder
-  isAwaitingReminder?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   organization?: Prisma.OrganizationOrderByWithRelationInput
@@ -307,7 +298,6 @@ export type SponsorUpdateWhereUniqueInput = Prisma.AtLeast<{
   status?: Prisma.EnumSponsorUpdateStatusFilter<"SponsorUpdate"> | $Enums.SponsorUpdateStatus
   sentAt?: Prisma.DateTimeNullableFilter<"SponsorUpdate"> | Date | string | null
   awaitingTransitionedAt?: Prisma.DateTimeNullableFilter<"SponsorUpdate"> | Date | string | null
-  isAwaitingReminder?: Prisma.BoolFilter<"SponsorUpdate"> | boolean
   createdAt?: Prisma.DateTimeFilter<"SponsorUpdate"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"SponsorUpdate"> | Date | string
   organization?: Prisma.XOR<Prisma.OrganizationScalarRelationFilter, Prisma.OrganizationWhereInput>
@@ -329,7 +319,6 @@ export type SponsorUpdateOrderByWithAggregationInput = {
   status?: Prisma.SortOrder
   sentAt?: Prisma.SortOrderInput | Prisma.SortOrder
   awaitingTransitionedAt?: Prisma.SortOrderInput | Prisma.SortOrder
-  isAwaitingReminder?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   _count?: Prisma.SponsorUpdateCountOrderByAggregateInput
@@ -353,7 +342,6 @@ export type SponsorUpdateScalarWhereWithAggregatesInput = {
   status?: Prisma.EnumSponsorUpdateStatusWithAggregatesFilter<"SponsorUpdate"> | $Enums.SponsorUpdateStatus
   sentAt?: Prisma.DateTimeNullableWithAggregatesFilter<"SponsorUpdate"> | Date | string | null
   awaitingTransitionedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"SponsorUpdate"> | Date | string | null
-  isAwaitingReminder?: Prisma.BoolWithAggregatesFilter<"SponsorUpdate"> | boolean
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"SponsorUpdate"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"SponsorUpdate"> | Date | string
 }
@@ -368,7 +356,6 @@ export type SponsorUpdateCreateInput = {
   status?: $Enums.SponsorUpdateStatus
   sentAt?: Date | string | null
   awaitingTransitionedAt?: Date | string | null
-  isAwaitingReminder?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
   organization: Prisma.OrganizationCreateNestedOneWithoutSponsorUpdatesInput
@@ -390,7 +377,6 @@ export type SponsorUpdateUncheckedCreateInput = {
   status?: $Enums.SponsorUpdateStatus
   sentAt?: Date | string | null
   awaitingTransitionedAt?: Date | string | null
-  isAwaitingReminder?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
   checkIns?: Prisma.CheckInUncheckedCreateNestedManyWithoutSponsorUpdateInput
@@ -406,7 +392,6 @@ export type SponsorUpdateUpdateInput = {
   status?: Prisma.EnumSponsorUpdateStatusFieldUpdateOperationsInput | $Enums.SponsorUpdateStatus
   sentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   awaitingTransitionedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  isAwaitingReminder?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutSponsorUpdatesNestedInput
@@ -428,7 +413,6 @@ export type SponsorUpdateUncheckedUpdateInput = {
   status?: Prisma.EnumSponsorUpdateStatusFieldUpdateOperationsInput | $Enums.SponsorUpdateStatus
   sentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   awaitingTransitionedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  isAwaitingReminder?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   checkIns?: Prisma.CheckInUncheckedUpdateManyWithoutSponsorUpdateNestedInput
@@ -447,7 +431,6 @@ export type SponsorUpdateCreateManyInput = {
   status?: $Enums.SponsorUpdateStatus
   sentAt?: Date | string | null
   awaitingTransitionedAt?: Date | string | null
-  isAwaitingReminder?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -462,7 +445,6 @@ export type SponsorUpdateUpdateManyMutationInput = {
   status?: Prisma.EnumSponsorUpdateStatusFieldUpdateOperationsInput | $Enums.SponsorUpdateStatus
   sentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   awaitingTransitionedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  isAwaitingReminder?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -480,7 +462,6 @@ export type SponsorUpdateUncheckedUpdateManyInput = {
   status?: Prisma.EnumSponsorUpdateStatusFieldUpdateOperationsInput | $Enums.SponsorUpdateStatus
   sentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   awaitingTransitionedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  isAwaitingReminder?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -518,7 +499,6 @@ export type SponsorUpdateCountOrderByAggregateInput = {
   status?: Prisma.SortOrder
   sentAt?: Prisma.SortOrder
   awaitingTransitionedAt?: Prisma.SortOrder
-  isAwaitingReminder?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -536,7 +516,6 @@ export type SponsorUpdateMaxOrderByAggregateInput = {
   status?: Prisma.SortOrder
   sentAt?: Prisma.SortOrder
   awaitingTransitionedAt?: Prisma.SortOrder
-  isAwaitingReminder?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -554,7 +533,6 @@ export type SponsorUpdateMinOrderByAggregateInput = {
   status?: Prisma.SortOrder
   sentAt?: Prisma.SortOrder
   awaitingTransitionedAt?: Prisma.SortOrder
-  isAwaitingReminder?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -719,7 +697,6 @@ export type SponsorUpdateCreateWithoutOrganizationInput = {
   status?: $Enums.SponsorUpdateStatus
   sentAt?: Date | string | null
   awaitingTransitionedAt?: Date | string | null
-  isAwaitingReminder?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
   resident: Prisma.ResidentCreateNestedOneWithoutSponsorUpdatesInput
@@ -739,7 +716,6 @@ export type SponsorUpdateUncheckedCreateWithoutOrganizationInput = {
   status?: $Enums.SponsorUpdateStatus
   sentAt?: Date | string | null
   awaitingTransitionedAt?: Date | string | null
-  isAwaitingReminder?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
   checkIns?: Prisma.CheckInUncheckedCreateNestedManyWithoutSponsorUpdateInput
@@ -787,7 +763,6 @@ export type SponsorUpdateScalarWhereInput = {
   status?: Prisma.EnumSponsorUpdateStatusFilter<"SponsorUpdate"> | $Enums.SponsorUpdateStatus
   sentAt?: Prisma.DateTimeNullableFilter<"SponsorUpdate"> | Date | string | null
   awaitingTransitionedAt?: Prisma.DateTimeNullableFilter<"SponsorUpdate"> | Date | string | null
-  isAwaitingReminder?: Prisma.BoolFilter<"SponsorUpdate"> | boolean
   createdAt?: Prisma.DateTimeFilter<"SponsorUpdate"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"SponsorUpdate"> | Date | string
 }
@@ -802,7 +777,6 @@ export type SponsorUpdateCreateWithoutResidentInput = {
   status?: $Enums.SponsorUpdateStatus
   sentAt?: Date | string | null
   awaitingTransitionedAt?: Date | string | null
-  isAwaitingReminder?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
   organization: Prisma.OrganizationCreateNestedOneWithoutSponsorUpdatesInput
@@ -821,7 +795,6 @@ export type SponsorUpdateUncheckedCreateWithoutResidentInput = {
   status?: $Enums.SponsorUpdateStatus
   sentAt?: Date | string | null
   awaitingTransitionedAt?: Date | string | null
-  isAwaitingReminder?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
   checkIns?: Prisma.CheckInUncheckedCreateNestedManyWithoutSponsorUpdateInput
@@ -863,7 +836,6 @@ export type SponsorUpdateCreateWithoutCheckInsInput = {
   status?: $Enums.SponsorUpdateStatus
   sentAt?: Date | string | null
   awaitingTransitionedAt?: Date | string | null
-  isAwaitingReminder?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
   organization: Prisma.OrganizationCreateNestedOneWithoutSponsorUpdatesInput
@@ -884,7 +856,6 @@ export type SponsorUpdateUncheckedCreateWithoutCheckInsInput = {
   status?: $Enums.SponsorUpdateStatus
   sentAt?: Date | string | null
   awaitingTransitionedAt?: Date | string | null
-  isAwaitingReminder?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -915,7 +886,6 @@ export type SponsorUpdateUpdateWithoutCheckInsInput = {
   status?: Prisma.EnumSponsorUpdateStatusFieldUpdateOperationsInput | $Enums.SponsorUpdateStatus
   sentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   awaitingTransitionedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  isAwaitingReminder?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutSponsorUpdatesNestedInput
@@ -936,7 +906,6 @@ export type SponsorUpdateUncheckedUpdateWithoutCheckInsInput = {
   status?: Prisma.EnumSponsorUpdateStatusFieldUpdateOperationsInput | $Enums.SponsorUpdateStatus
   sentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   awaitingTransitionedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  isAwaitingReminder?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -951,7 +920,6 @@ export type SponsorUpdateCreateWithoutSponsorshipInput = {
   status?: $Enums.SponsorUpdateStatus
   sentAt?: Date | string | null
   awaitingTransitionedAt?: Date | string | null
-  isAwaitingReminder?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
   organization: Prisma.OrganizationCreateNestedOneWithoutSponsorUpdatesInput
@@ -971,7 +939,6 @@ export type SponsorUpdateUncheckedCreateWithoutSponsorshipInput = {
   status?: $Enums.SponsorUpdateStatus
   sentAt?: Date | string | null
   awaitingTransitionedAt?: Date | string | null
-  isAwaitingReminder?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
   checkIns?: Prisma.CheckInUncheckedCreateNestedManyWithoutSponsorUpdateInput
@@ -1015,7 +982,6 @@ export type SponsorUpdateCreateManyOrganizationInput = {
   status?: $Enums.SponsorUpdateStatus
   sentAt?: Date | string | null
   awaitingTransitionedAt?: Date | string | null
-  isAwaitingReminder?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -1030,7 +996,6 @@ export type SponsorUpdateUpdateWithoutOrganizationInput = {
   status?: Prisma.EnumSponsorUpdateStatusFieldUpdateOperationsInput | $Enums.SponsorUpdateStatus
   sentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   awaitingTransitionedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  isAwaitingReminder?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   resident?: Prisma.ResidentUpdateOneRequiredWithoutSponsorUpdatesNestedInput
@@ -1050,7 +1015,6 @@ export type SponsorUpdateUncheckedUpdateWithoutOrganizationInput = {
   status?: Prisma.EnumSponsorUpdateStatusFieldUpdateOperationsInput | $Enums.SponsorUpdateStatus
   sentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   awaitingTransitionedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  isAwaitingReminder?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   checkIns?: Prisma.CheckInUncheckedUpdateManyWithoutSponsorUpdateNestedInput
@@ -1068,7 +1032,6 @@ export type SponsorUpdateUncheckedUpdateManyWithoutOrganizationInput = {
   status?: Prisma.EnumSponsorUpdateStatusFieldUpdateOperationsInput | $Enums.SponsorUpdateStatus
   sentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   awaitingTransitionedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  isAwaitingReminder?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -1084,7 +1047,6 @@ export type SponsorUpdateCreateManyResidentInput = {
   status?: $Enums.SponsorUpdateStatus
   sentAt?: Date | string | null
   awaitingTransitionedAt?: Date | string | null
-  isAwaitingReminder?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -1099,7 +1061,6 @@ export type SponsorUpdateUpdateWithoutResidentInput = {
   status?: Prisma.EnumSponsorUpdateStatusFieldUpdateOperationsInput | $Enums.SponsorUpdateStatus
   sentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   awaitingTransitionedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  isAwaitingReminder?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutSponsorUpdatesNestedInput
@@ -1118,7 +1079,6 @@ export type SponsorUpdateUncheckedUpdateWithoutResidentInput = {
   status?: Prisma.EnumSponsorUpdateStatusFieldUpdateOperationsInput | $Enums.SponsorUpdateStatus
   sentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   awaitingTransitionedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  isAwaitingReminder?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   checkIns?: Prisma.CheckInUncheckedUpdateManyWithoutSponsorUpdateNestedInput
@@ -1135,7 +1095,6 @@ export type SponsorUpdateUncheckedUpdateManyWithoutResidentInput = {
   status?: Prisma.EnumSponsorUpdateStatusFieldUpdateOperationsInput | $Enums.SponsorUpdateStatus
   sentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   awaitingTransitionedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  isAwaitingReminder?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -1152,7 +1111,6 @@ export type SponsorUpdateCreateManySponsorshipInput = {
   status?: $Enums.SponsorUpdateStatus
   sentAt?: Date | string | null
   awaitingTransitionedAt?: Date | string | null
-  isAwaitingReminder?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -1167,7 +1125,6 @@ export type SponsorUpdateUpdateWithoutSponsorshipInput = {
   status?: Prisma.EnumSponsorUpdateStatusFieldUpdateOperationsInput | $Enums.SponsorUpdateStatus
   sentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   awaitingTransitionedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  isAwaitingReminder?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutSponsorUpdatesNestedInput
@@ -1187,7 +1144,6 @@ export type SponsorUpdateUncheckedUpdateWithoutSponsorshipInput = {
   status?: Prisma.EnumSponsorUpdateStatusFieldUpdateOperationsInput | $Enums.SponsorUpdateStatus
   sentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   awaitingTransitionedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  isAwaitingReminder?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   checkIns?: Prisma.CheckInUncheckedUpdateManyWithoutSponsorUpdateNestedInput
@@ -1205,7 +1161,6 @@ export type SponsorUpdateUncheckedUpdateManyWithoutSponsorshipInput = {
   status?: Prisma.EnumSponsorUpdateStatusFieldUpdateOperationsInput | $Enums.SponsorUpdateStatus
   sentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   awaitingTransitionedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  isAwaitingReminder?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -1254,7 +1209,6 @@ export type SponsorUpdateSelect<ExtArgs extends runtime.Types.Extensions.Interna
   status?: boolean
   sentAt?: boolean
   awaitingTransitionedAt?: boolean
-  isAwaitingReminder?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   organization?: boolean | Prisma.OrganizationDefaultArgs<ExtArgs>
@@ -1277,7 +1231,6 @@ export type SponsorUpdateSelectCreateManyAndReturn<ExtArgs extends runtime.Types
   status?: boolean
   sentAt?: boolean
   awaitingTransitionedAt?: boolean
-  isAwaitingReminder?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   organization?: boolean | Prisma.OrganizationDefaultArgs<ExtArgs>
@@ -1298,7 +1251,6 @@ export type SponsorUpdateSelectUpdateManyAndReturn<ExtArgs extends runtime.Types
   status?: boolean
   sentAt?: boolean
   awaitingTransitionedAt?: boolean
-  isAwaitingReminder?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   organization?: boolean | Prisma.OrganizationDefaultArgs<ExtArgs>
@@ -1319,12 +1271,11 @@ export type SponsorUpdateSelectScalar = {
   status?: boolean
   sentAt?: boolean
   awaitingTransitionedAt?: boolean
-  isAwaitingReminder?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type SponsorUpdateOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "orgId" | "residentId" | "sponsorshipId" | "type" | "subject" | "teaser" | "bodyText" | "heroPhotoUrl" | "status" | "sentAt" | "awaitingTransitionedAt" | "isAwaitingReminder" | "createdAt" | "updatedAt", ExtArgs["result"]["sponsorUpdate"]>
+export type SponsorUpdateOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "orgId" | "residentId" | "sponsorshipId" | "type" | "subject" | "teaser" | "bodyText" | "heroPhotoUrl" | "status" | "sentAt" | "awaitingTransitionedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["sponsorUpdate"]>
 export type SponsorUpdateInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   organization?: boolean | Prisma.OrganizationDefaultArgs<ExtArgs>
   resident?: boolean | Prisma.ResidentDefaultArgs<ExtArgs>
@@ -1364,7 +1315,6 @@ export type $SponsorUpdatePayload<ExtArgs extends runtime.Types.Extensions.Inter
     status: $Enums.SponsorUpdateStatus
     sentAt: Date | null
     awaitingTransitionedAt: Date | null
-    isAwaitingReminder: boolean
     createdAt: Date
     updatedAt: Date
   }, ExtArgs["result"]["sponsorUpdate"]>
@@ -1806,7 +1756,6 @@ export interface SponsorUpdateFieldRefs {
   readonly status: Prisma.FieldRef<"SponsorUpdate", 'SponsorUpdateStatus'>
   readonly sentAt: Prisma.FieldRef<"SponsorUpdate", 'DateTime'>
   readonly awaitingTransitionedAt: Prisma.FieldRef<"SponsorUpdate", 'DateTime'>
-  readonly isAwaitingReminder: Prisma.FieldRef<"SponsorUpdate", 'Boolean'>
   readonly createdAt: Prisma.FieldRef<"SponsorUpdate", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"SponsorUpdate", 'DateTime'>
 }

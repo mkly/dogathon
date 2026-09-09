@@ -46,7 +46,6 @@ type ApprovalUpdate = {
   status: "draft" | "approved" | "sent" | "dismissed";
   sponsorshipId: string | null;
   awaitingTransitionedAt: Date | null;
-  isAwaitingReminder: boolean;
   organization: {
     name: string;
     slug: string;
@@ -101,17 +100,11 @@ const approvalDependencies: ApprovalDependencies = {
           id: update.sponsorshipId!,
           orgId: update.orgId,
           residentId: update.residentId,
-          status: update.isAwaitingReminder || update.awaitingTransitionedAt
+          status: update.awaitingTransitionedAt
             ? "awaiting"
             : "active",
         },
-        data: update.isAwaitingReminder || update.awaitingTransitionedAt
-          ? { status: "awaiting" }
-          : {
-            status: "awaiting",
-            awaitingSince: claimedAt,
-            awaitingReminderDraftedAt: null,
-          },
+        data: { status: "awaiting" },
       });
       if (sponsorship.count !== 1) return false;
 
@@ -121,12 +114,11 @@ const approvalDependencies: ApprovalDependencies = {
           orgId: update.orgId,
           status: "draft",
           sponsorshipId: update.sponsorshipId,
-          isAwaitingReminder: update.isAwaitingReminder,
           awaitingTransitionedAt: update.awaitingTransitionedAt ? { not: null } : null,
         },
         data: {
           status: "approved",
-          ...(!update.isAwaitingReminder && !update.awaitingTransitionedAt
+          ...(!update.awaitingTransitionedAt
             ? { awaitingTransitionedAt: claimedAt }
             : {}),
         },
@@ -245,12 +237,8 @@ export function createApproveSponsorUpdateHandler(dependencies: ApprovalDependen
       && (!sponsorUpdate.sponsorshipId
         || !sponsorUpdate.sponsorship
         || sponsorUpdate.sponsorship.residentId !== sponsorUpdate.residentId
-        || (sponsorUpdate.isAwaitingReminder
-          ? sponsorUpdate.sponsorship.status !== "awaiting"
-          : (
-            sponsorUpdate.sponsorship.status !== "active"
-            && !(sponsorUpdate.sponsorship.status === "awaiting" && sponsorUpdate.awaitingTransitionedAt)
-          )))
+        || (sponsorUpdate.sponsorship.status !== "active"
+          && !(sponsorUpdate.sponsorship.status === "awaiting" && sponsorUpdate.awaitingTransitionedAt)))
     ) {
       return Response.json(
         { error: "This sponsorship is no longer active" },
@@ -266,7 +254,7 @@ export function createApproveSponsorUpdateHandler(dependencies: ApprovalDependen
       );
     }
 
-    if (sponsorUpdate.type === "graduation" && !sponsorUpdate.isAwaitingReminder) {
+    if (sponsorUpdate.type === "graduation") {
       let composition: GraduationCompositionResult;
       try {
         composition = await dependencies.composeGraduation(id, orgId);

@@ -246,19 +246,19 @@ enum CheckInStatus {
 }
 
 model CheckIn {
-  id              String         @id @default(uuid(4)) @db.Uuid
-  orgId           String         @db.Uuid
-  residentId      String         @db.Uuid
-  userId          String         @db.Uuid
-  status          CheckInStatus  @default(in_progress)
+  id              String           @id @default(uuid(4)) @db.Uuid
+  orgId           String           @db.Uuid
+  residentId      String           @db.Uuid
+  userId          String           @db.Uuid
+  status          CheckInStatus    @default(in_progress)
   transcript      Json
-  sponsorUpdateId String?        @db.Uuid
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
-  organization    Organization   @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  resident        Resident       @relation(fields: [residentId, orgId], references: [id, orgId], onDelete: Cascade)
-  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  sponsorUpdate   SponsorUpdate? @relation(fields: [sponsorUpdateId], references: [id], onDelete: SetNull)
+  sponsorUpdateId String?          @db.Uuid
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  organization    Organization     @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  resident        Resident         @relation(fields: [residentId, orgId], references: [id, orgId], onDelete: Cascade)
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sponsorUpdate   SponsorUpdate?   @relation(fields: [sponsorUpdateId], references: [id], onDelete: SetNull)
   photos          VolunteerPhoto[]
 
   @@unique([id, orgId])
@@ -276,8 +276,6 @@ model Sponsorship {
   status                  SponsorshipStatus       @default(active)
   endedReason             SponsorshipEndedReason?
   endedAt                 DateTime?
-  awaitingSince           DateTime?
-  awaitingReminderDraftedAt DateTime?
   stripeCheckoutSessionId String?                 @unique
   stripeSubscriptionId    String?                 @unique
   stripeCustomerId        String?
@@ -335,7 +333,6 @@ model SponsorUpdate {
   status                 SponsorUpdateStatus @default(draft)
   sentAt                 DateTime?
   awaitingTransitionedAt DateTime?
-  isAwaitingReminder     Boolean             @default(false)
   createdAt              DateTime            @default(now())
   updatedAt              DateTime            @updatedAt
   organization           Organization        @relation(fields: [orgId], references: [id], onDelete: Cascade)
