@@ -45,6 +45,9 @@ function configuredPhotoPattern() {
 const configuredPattern = configuredPhotoPattern();
 
 const nextConfig: NextConfig = {
+  devIndicators: {
+    position: "bottom-right",
+  },
   images: {
     // Without S3, volunteer photos are served from the app itself, with the
     // owning organization in the query string; Next refuses local image

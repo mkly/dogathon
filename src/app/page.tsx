@@ -2,83 +2,68 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 
-import {
-  FeltLink,
-  FeltPanel,
-  PhotoPatch,
-  Stitch,
-  StitchBadge,
-} from "@/components/felt";
+import { FeltLink, FeltPanel, Stitch, StitchBadge } from "@/components/felt";
 import { PageViewTransition } from "@/components/page-view-transition";
-import {
-  getPublicOrganizations,
-  getPublicResidents,
-} from "@/lib/public-roster-cache";
 
 import wordmark from "../../public/brand/pawcast-wordmark.png";
 import feltPup from "../../public/mascot/felt-pup-2.png";
 import styles from "./landing.module.css";
 
-export const revalidate = 86400;
-
 export const metadata: Metadata = {
-  title: "Pawcast | Sponsor a rescue companion",
+  title: "Pawcast | Monthly sponsorship for animal rescues",
   description:
-    "Chip in a little each month for a companion at a rescue, and hear how they are doing from the people who spend time with them.",
+    "Manage monthly animal sponsorships, sync your adoption roster, and send sponsor updates from one place with Pawcast.",
 };
 
 const steps = [
   {
-    title: "Pick a companion",
-    copy: "Browse the residents at a rescue and choose the one you keep coming back to.",
+    title: "Set up your sponsorship page",
+    copy: "Create your rescue’s page, connect your adoption roster, and set your monthly sponsorship amounts.",
   },
   {
-    title: "Give a little each month",
-    copy: "Choose an amount that suits you. It goes to the rescue for food, beds, vet visits and the rest of daily life. Stop whenever you like.",
+    title: "Accept monthly sponsorships",
+    copy: "Share your page with your community. Supporters choose a companion to follow and contribute monthly toward your rescue’s work.",
   },
   {
-    title: "Hear how they are doing",
-    copy: "Volunteers who spend time with your companion share what they got up to. The rescue turns that into an update with photos and sends it to you.",
+    title: "Send updates to sponsors",
+    copy: "Collect photos and notes from volunteers. Pawcast prepares update drafts for your staff to review, edit, and send.",
   },
 ];
 
 const questions = [
   {
-    question: "Where does the money go?",
+    question: "Can we set our own sponsorship amounts?",
     answer:
-      "To the rescue. It helps cover the everyday cost of looking after their residents, from food and bedding to trips to the vet. Each rescue sets its own amounts, and you will see them on the companion's page.",
+      "Yes. Your team chooses the monthly sponsorship amounts shown on your rescue’s page. Supporters choose from those amounts when they sign up.",
   },
   {
-    question: "Is sponsoring the same as adopting?",
+    question: "How are payments processed?",
     answer:
-      "No. Sponsoring supports a companion while the rescue looks after them. You do not need to live nearby or be ready to adopt. If you would like to adopt, the rescue can tell you how.",
+      "Payments are processed through Stripe Connect and passed through to your rescue’s connected Stripe account. We’re also working on a Fundraise Up integration.",
   },
   {
-    question: "What happens when my companion is adopted?",
+    question: "How do we keep our roster up to date?",
     answer:
-      "You will hear the good news in an update, then choose the companion you would like to follow next. Your monthly sponsorship continues, and you can switch companions or cancel at any time from your sponsorship page.",
+      "Add your adoption-page URL in staff settings. Pawcast syncs companion details from that source, and your team can review sync results and mark companions as adopted in the staff room.",
   },
   {
-    question: "Can I stop?",
+    question: "What happens when a companion is adopted?",
     answer:
-      "Yes. You can switch companions or cancel at any time from your sponsorship page.",
+      "Sponsors hear the good news and can choose another companion to follow. Their monthly sponsorship continues supporting your rescue. They can switch companions or cancel at any time.",
+  },
+  {
+    question: "How are updates created?",
+    answer:
+      "Volunteers choose the animal they spent time with, add photos, and answer a few questions about their visit. Pawcast uses those details to prepare a sponsor update draft. Your staff can review and edit it before sending, so volunteers can contribute without having to write a finished update.",
+  },
+  {
+    question: "Does our team approve sponsor updates?",
+    answer:
+      "Yes. Your team can review and edit update drafts before sending them. Volunteers contribute the photos and stories; your rescue controls what sponsors receive.",
   },
 ];
 
-export default async function LandingPage() {
-  const organizations = await getPublicOrganizations();
-  const featuredOrganization =
-    organizations.find(({ slug }) => slug === "huffy-puff") ?? organizations[0];
-  const residents = featuredOrganization
-    ? await getPublicResidents(featuredOrganization.id)
-    : [];
-  const photographedResidents = residents.filter(
-    (resident) => resident.photoUrls[0],
-  );
-  const companion =
-    photographedResidents.find(({ name }) => name === "Bingo") ??
-    photographedResidents[0];
-
+export default function LandingPage() {
   return (
     <PageViewTransition>
       <main className={styles.shell}>
@@ -96,40 +81,40 @@ export default async function LandingPage() {
           </Link>
           <nav aria-label="Main" className={styles.nav}>
             <a href="#how-it-works">How it works</a>
-            <a href="#rescues">Rescues</a>
-            <Link className={styles.accountLink} href="/account">
-              <StitchBadge tone="cream">
-                <Stitch fine />
-                My sponsorship
-              </StitchBadge>
+            <a href="#questions">Questions</a>
+            <Link className={styles.accountLink} href="/staff/sign-in">
+              Staff sign in <span aria-hidden="true">↗</span>
             </Link>
           </nav>
         </header>
 
         <div id="content">
-          <FeltPanel className={styles.hero} tone="moss">
+          <section className={styles.hero} aria-labelledby="hero-title">
             <div className={styles.heroCopy}>
-              <p className={styles.eyebrow}>Rescue sponsorship</p>
-              <h1>
-                Stand by a <span className="felt-hl">rescue companion</span>{" "}
-                until they are home.
-              </h1>
+              <StitchBadge className={styles.eyebrow} tone="moss">
+                <Stitch fine />
+                For animal rescues
+              </StitchBadge>
+              <h1 id="hero-title">Monthly sponsorships for your rescue.</h1>
               <p className={styles.lede}>
-                Pick a companion at a rescue, chip in a few dollars a month, and
-                hear how they are doing from the volunteers who see them every
-                week.
+                Give supporters a way to sponsor the animals in your care.
+                Manage monthly sponsorships, keep your adoption roster up to
+                date, and send updates using photos and notes from volunteers.
               </p>
               <FeltLink
                 className={styles.heroLink}
-                href="#rescues"
+                href="/staff/sign-in"
                 tone="mustard"
               >
-                Meet the companions
+                Get started with Pawcast
               </FeltLink>
             </div>
             {/* decorative: the heading and lede already carry the meaning */}
-            <Image alt="" className={styles.mascot} preload src={feltPup} />
-          </FeltPanel>
+            <div className={styles.mascotScene} aria-hidden="true">
+              <FeltPanel className={styles.mascotPanel} tone="moss" />
+              <Image alt="" className={styles.mascot} preload src={feltPup} />
+            </div>
+          </section>
 
           <section
             aria-labelledby="how-title"
@@ -137,110 +122,56 @@ export default async function LandingPage() {
             id="how-it-works"
           >
             <h2 id="how-title">How it works</h2>
-            <ol className={styles.steps}>
-              {steps.map((step, index) => (
-                <li key={step.title}>
-                  <FeltPanel
-                    className={styles.step}
-                    stitched={false}
-                    tone="cream"
-                  >
-                    <StitchBadge className={styles.stepNumber} tone="denim">
+            <div className={styles.stepsLayout}>
+              <svg
+                className={styles.stepThread}
+                viewBox="0 0 1000 80"
+                preserveAspectRatio="none"
+                aria-hidden="true"
+              >
+                <path
+                  d="M0 30 C35 30 55 39 90 36 C125 34 142 19 128 20 C114 21 125 40 160 35 C270 25 420 28 500 30 C565 23 610 28 655 32 C694 35 719 44 723 35 C728 24 700 25 706 33 C719 43 750 40 768 32 C784 23 755 19 753 31 C751 42 784 39 807 34 C870 28 955 28 1000 30"
+                  vectorEffect="non-scaling-stroke"
+                />
+              </svg>
+              <ol className={styles.steps}>
+                {steps.map((step, index) => (
+                  <li className={styles.step} key={step.title}>
+                    <StitchBadge
+                      className={styles.stepNumber}
+                      tone={(["moss", "mustard", "denim"] as const)[index]}
+                    >
+                      <Stitch fine />
                       {index + 1}
                     </StitchBadge>
                     <h3>{step.title}</h3>
                     <p>{step.copy}</p>
-                  </FeltPanel>
-                </li>
-              ))}
-            </ol>
-          </section>
-
-          <section
-            aria-labelledby="rescues-title"
-            className={styles.rescues}
-            id="rescues"
-          >
-            <div className={styles.rescueIntro}>
-              <h2 id="rescues-title">Start with a rescue.</h2>
-              <p>
-                Every rescue here has people who turn up for their residents
-                every day. Pick one and meet the companions in their care.
-              </p>
-              <ul className={styles.rescueList}>
-                {organizations.length ? (
-                  organizations.map((organization) => (
-                    <li key={organization.id}>
-                      <FeltLink
-                        className={styles.rescueLink}
-                        href={`/${organization.slug}`}
-                        tone="oatmeal"
-                      >
-                        <span>{organization.name}</span>
-                        <small>Meet their companions</small>
-                      </FeltLink>
-                    </li>
-                  ))
-                ) : (
-                  <li className={styles.rescueEmpty}>
-                    The first rescues are settling in. Check back soon.
                   </li>
-                )}
-              </ul>
+                ))}
+              </ol>
             </div>
-
-            {companion && featuredOrganization ? (
-              <FeltPanel
-                className={styles.featured}
-                stitched={false}
-                tone="oatmeal"
-              >
-                <PhotoPatch
-                  alt={`${companion.name}, ${companion.breed}`}
-                  className={styles.featuredPhoto}
-                  preload
-                  sizes="(max-width: 700px) calc(100vw - 80px), 300px"
-                  src={companion.photoUrls[0]}
-                />
-                <div className={styles.featuredCopy}>
-                  <p className={styles.featuredLabel}>
-                    Waiting at {featuredOrganization.name}
-                  </p>
-                  <h3>{companion.name}</h3>
-                  <p>
-                    {companion.breed} · {companion.ageText}
-                  </p>
-                  <FeltLink
-                    className={styles.featuredLink}
-                    href={`/${featuredOrganization.slug}/companions/${companion.id}`}
-                    tone="brick"
-                  >
-                    Meet {companion.name}
-                  </FeltLink>
-                </div>
-              </FeltPanel>
-            ) : null}
           </section>
 
           <section
             aria-labelledby="questions-title"
             className={styles.questions}
+            id="questions"
           >
-            <h2 id="questions-title">Good to know</h2>
-            <FeltPanel className={styles.answers} tone="cream">
+            <h2 id="questions-title">Common questions</h2>
+            <div className={styles.answers}>
               {questions.map(({ question, answer }) => (
                 <details key={question}>
                   <summary>{question}</summary>
                   <p>{answer}</p>
                 </details>
               ))}
-            </FeltPanel>
+            </div>
           </section>
         </div>
 
         <footer className={styles.footer}>
           <span>Pawcast</span>
-          <Link href="/account">Manage your sponsorship</Link>
+          <Link href="/staff/sign-in">Staff sign in</Link>
         </footer>
       </main>
     </PageViewTransition>

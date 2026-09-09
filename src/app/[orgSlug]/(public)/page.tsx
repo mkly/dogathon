@@ -3,9 +3,14 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { z } from "zod";
 
-import { FeltLink, FeltPanel, PhotoPatch } from "@/components/felt";
+import {
+  FeltLink,
+  FeltPanel,
+  PhotoPatch,
+  Stitch,
+  StitchBadge,
+} from "@/components/felt";
 import { PageViewTransition } from "@/components/page-view-transition";
-import { PublicHeader } from "@/components/public-header";
 import { ViewTransition } from "react";
 import { formatMonthlyAmount } from "@/lib/format";
 import {
@@ -17,9 +22,10 @@ import {
 import { DEFAULT_SPONSORSHIP_MONTHLY_CENTS } from "@/lib/rescue-settings";
 import { normalizeSpecies, speciesLabel } from "@/lib/species";
 
-import feltPup from "../../../../public/mascot/felt-pup-2.png";
+import wordmark from "../../../../public/brand/pawcast-wordmark.png";
 
-import styles from "../../public.module.css";
+import styles from "./roster.module.css";
+import { PhotoCharm } from "./photo-charm";
 
 export const revalidate = 86400;
 
@@ -62,34 +68,67 @@ export default async function OrganizationHome({
     : undefined;
   const residents = await getPublicResidents(organization.id, activeSpecies);
   const monthlyAmount = formatMonthlyAmount(
-    organization.sponsorshipTiers.find((tier) => tier.isDefault)
-      ?.monthlyCents ??
-      organization.sponsorshipTiers[0]?.monthlyCents ??
-      DEFAULT_SPONSORSHIP_MONTHLY_CENTS,
+    organization.sponsorshipTiers.length
+      ? Math.min(
+          ...organization.sponsorshipTiers.map((tier) => tier.monthlyCents),
+        )
+      : DEFAULT_SPONSORSHIP_MONTHLY_CENTS,
   );
 
   return (
     <PageViewTransition>
       <main className={styles.siteShell}>
-        <PublicHeader organizationName={organization.name} orgSlug={orgSlug} />
+        <header className={styles.header}>
+          <Link href={`/${orgSlug}`} aria-label={`${organization.name} home`}>
+            <Image
+              alt="Pawcast"
+              className={styles.wordmark}
+              src={wordmark}
+              preload
+            />
+          </Link>
+          <Link className={styles.accountLink} href="/account">
+            My sponsorship <span aria-hidden="true">↗</span>
+          </Link>
+        </header>
 
-        <FeltPanel className={styles.hero} tone="moss">
+        <section className={styles.hero} aria-labelledby="roster-title">
           <div className={styles.heroCopy}>
-            <h1>
-              Put a little love behind a{" "}
-              <span className={styles.noOrphan}>
-                <span className="felt-hl">rescue friend</span>.
-              </span>
-            </h1>
+            <StitchBadge className={styles.rescueBadge} tone="moss">
+              <Stitch fine />
+              {organization.name}
+            </StitchBadge>
+            <h1 id="roster-title">Meet the animals in our care.</h1>
             <p className={styles.lede}>
-              Sponsor a resident for {monthlyAmount} a month until they find
-              their forever home. You&apos;ll help with everyday care and get
-              the good news from their journey.
+              You don’t have to bring them home to help care for them. Your
+              monthly sponsorship supports {organization.name}, with photos and
+              updates from the people who know them best.
             </p>
           </div>
-          {/* decorative: the heading and lede already carry the meaning */}
-          <Image alt="" className={styles.mascot} preload src={feltPup} />
-        </FeltPanel>
+          <FeltPanel className={styles.sponsorNote} tone="denim">
+            <svg
+              className={styles.heartPatch}
+              viewBox="0 0 80 72"
+              aria-hidden="true"
+              focusable="false"
+            >
+              <path
+                className={styles.heartShape}
+                d="M40 65 C29 57 5 40 5 23 C5 4 28 0 40 17 C52 0 75 4 75 23 C75 40 51 57 40 65Z"
+              />
+              <path
+                className={styles.heartSeam}
+                d="M40 57 C29 49 12 37 12 24 C12 10 29 9 40 28 C51 9 68 10 68 24 C68 37 51 49 40 57Z"
+              />
+            </svg>
+            <p>
+              Small gifts.
+              <br />
+              Everyday care.
+            </p>
+            <span>Sponsorships from {monthlyAmount}/month</span>
+          </FeltPanel>
+        </section>
 
         {speciesCounts.length > 1 && (
           <nav
@@ -119,44 +158,65 @@ export default async function OrganizationHome({
             aria-label="Companions available to sponsor"
             className={styles.companionGrid}
           >
-            {residents.map((resident) => (
-              <FeltPanel
-                className={styles.companionCard}
-                key={resident.id}
-                stitched={false}
-                tone="oatmeal"
-              >
-                <ViewTransition
-                  default="none"
-                  name={`companion-${resident.id}`}
-                  share="companion-photo"
+            {residents.map((resident, index) => (
+              <article className={styles.companionCard} key={resident.id}>
+                <Link
+                  className={styles.photoLink}
+                  href={`/${orgSlug}/companions/${resident.id}`}
+                  aria-label={`Meet ${resident.name}`}
+                  tabIndex={-1}
                 >
-                  <PhotoPatch
-                    alt={`${resident.name}, ${resident.breed}`}
-                    className={styles.gridPhoto}
-                    sizes="(max-width: 700px) calc(100vw - 80px), (max-width: 1028px) 29vw, 274px"
-                    src={resident.photoUrls[0]}
-                  />
-                </ViewTransition>
+                  <PhotoCharm id={resident.id} />
+                  <ViewTransition
+                    default="none"
+                    name={`companion-${resident.id}`}
+                    share="companion-photo"
+                  >
+                    <PhotoPatch
+                      alt={`${resident.name}, ${resident.breed}`}
+                      className={styles.gridPhoto}
+                      sizes="(max-width: 640px) min(300px, calc(100vw - 80px)), (max-width: 900px) calc((90vw - 48px) / 2), (max-width: 1180px) calc((90vw - 112px) / 3), 316px"
+                      preload={index < 3}
+                      src={resident.photoUrls[0]}
+                    />
+                  </ViewTransition>
+                </Link>
                 <div className={styles.cardCopy}>
-                  <h2>{resident.name}</h2>
+                  <h2>
+                    <Link href={`/${orgSlug}/companions/${resident.id}`}>
+                      {resident.name}
+                    </Link>
+                  </h2>
                   <p>
-                    {resident.breed} · {resident.ageText}
+                    {[resident.breed, resident.ageText]
+                      .filter(Boolean)
+                      .join(" · ")}
                   </p>
+                  {resident.personality.trim() && (
+                    <p className={styles.personality}>{resident.personality}</p>
+                  )}
                   <FeltLink
                     className={styles.cardLink}
                     href={`/${orgSlug}/companions/${resident.id}`}
-                    tone="brick"
+                    tone="moss"
                   >
-                    Meet {resident.name}
+                    <span>Meet {resident.name}</span>
+                    <svg
+                      className={styles.stitchedArrow}
+                      viewBox="0 0 36 24"
+                      aria-hidden="true"
+                      focusable="false"
+                    >
+                      <path d="M3 13 C11 10 19 15 31 12 M23 4 L32 12 L24 20" />
+                    </svg>
                   </FeltLink>
                 </div>
-              </FeltPanel>
+              </article>
             ))}
           </section>
         ) : (
           <FeltPanel className={styles.emptyState} tone="oatmeal">
-            <h2>Every companion is tucked in for now.</h2>
+            <h2>No animals are available to sponsor right now.</h2>
             <p>
               Check back soon to meet the next residents looking for a sponsor.
             </p>

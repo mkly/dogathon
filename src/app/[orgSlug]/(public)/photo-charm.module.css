@@ -1,0 +1,44 @@
+.charm {
+  position: absolute;
+  z-index: 1;
+  right: -30px;
+  bottom: -32px;
+  width: 78px;
+  height: 80px;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.patch {
+  filter: drop-shadow(0 2px 1.5px rgb(61 51 43 / 25%));
+}
+
+.felt {
+  fill: var(--felt-color);
+  stroke: rgb(255 255 255 / 18%);
+  stroke-width: 0.8;
+  stroke-linejoin: round;
+}
+
+.texture {
+  mix-blend-mode: soft-light;
+}
+
+.seam {
+  fill: none;
+  stroke-dasharray: 3 3.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.shadow {
+  stroke: rgb(61 51 43 / 24%);
+  stroke-width: 2;
+  transform: translateY(1px);
+}
+
+.thread {
+  stroke: var(--felt-thread);
+  stroke-width: 1.4;
+  opacity: 0.8;
+}

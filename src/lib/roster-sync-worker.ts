@@ -11,6 +11,7 @@ import {
   fetchVolunteerPhotoCleanupJob,
 } from "./roster-sync-queue.ts";
 import type { RosterSyncJobView } from "./roster-sync-client.ts";
+import { prisma } from "./prisma.ts";
 import {
   RosterSyncRefusal,
   syncRoster,
@@ -22,10 +23,12 @@ import type { SchedulerEnvironment } from "./scheduler-auth.ts";
 import { cleanupVolunteerPhotos } from "./volunteer-photo-cleanup.ts";
 
 const DEFAULT_ROSTER_SYNC_DRAIN_BUDGET_MS = 4 * 60 * 1000;
+const ORGANIZATION_REMOVED_REASON = "Organization no longer exists";
 
 type DrainDependencies = {
   supervise: () => Promise<void>;
   fetch: () => Promise<ClaimedRosterSyncJob | null>;
+  organizationExists: (orgId: string) => Promise<boolean>;
   succeed: (jobId: string, summary: SyncSummary) => Promise<RosterSyncJobView>;
   refuse: (jobId: string, reason: string) => Promise<RosterSyncJobView>;
   fail: (jobId: string, error: string) => Promise<RosterSyncJobView>;
@@ -43,6 +46,13 @@ export type RosterSyncDrainResult =
 const defaultDependencies: DrainDependencies = {
   supervise: superviseRosterSyncQueue,
   fetch: fetchRosterSyncJob,
+  organizationExists: async (orgId) =>
+    Boolean(
+      await prisma.organization.findUnique({
+        where: { id: orgId },
+        select: { id: true },
+      }),
+    ),
   succeed: succeedRosterSyncJob,
   refuse: refuseRosterSyncJob,
   fail: failRosterSyncJob,
@@ -62,6 +72,12 @@ export function createRosterSyncDrainer(
     await dependencies.supervise();
     const claimed = await dependencies.fetch();
     if (!claimed) return { drained: false };
+    if (!(await dependencies.organizationExists(claimed.data.orgId))) {
+      return {
+        drained: true,
+        job: await dependencies.refuse(claimed.id, ORGANIZATION_REMOVED_REASON),
+      };
+    }
 
     const budgetSignal = AbortSignal.timeout(budgetMs);
     const signal = claimed.signal

@@ -1,111 +1,77 @@
-/* Layout only: the patch itself (tint, fabric grain, bevel, drop shadow) comes
-   from the shared .felt-panel/.felt-<tone> classes the Toaster is given. */
 .toast {
+  --status-color: var(--felt-ink);
   display: flex;
+  align-items: center;
+  gap: 12px;
+  box-sizing: border-box;
   width: min(24rem, calc(100vw - 36px));
-  align-items: flex-start;
-  gap: 10px;
-  padding: 14px 16px;
+  padding: 14px 12px 14px 16px;
+  border: 1px solid rgb(61 51 43 / 14%);
+  border-left: 3px solid var(--status-color);
+  border-radius: 12px;
+  background: var(--felt-cream);
+  color: var(--felt-ink);
+  box-shadow: 0 4px 18px rgb(61 51 43 / 12%);
 }
-
+.toast[data-type="success"] {
+  --status-color: #496239;
+}
+.toast[data-type="warning"] {
+  --status-color: #855e0d;
+}
+.toast[data-type="error"] {
+  --status-color: #9a3e30;
+}
 .icon {
   order: 1;
   display: grid;
   place-items: center;
-  width: 26px;
-  height: 26px;
-  flex: 0 0 26px;
-  border-radius: 8px;
-  background-color: var(--felt-cream);
-  background-image: url("/textures/fabric-tile.webp");
-  background-size: 160px;
-  background-blend-mode: soft-light;
-  box-shadow:
-    0 1.5px 3px rgb(0 0 0 / 20%),
-    inset 0 1px 0.5px rgb(255 255 255 / 55%),
-    inset 0 -1px 0.8px rgb(0 0 0 / 14%);
-  border: 1px solid rgb(61 51 43 / 12%);
-  color: var(--felt-ink);
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+  color: var(--status-color);
 }
-
 .icon svg {
-  width: 16px;
-  height: 16px;
   display: block;
+  width: 20px;
+  height: 20px;
 }
-
-/* Success: Moss toast with cream badge and deep moss icon */
-.toast:global(.felt-moss) .icon,
-.toast[data-type="success"] .icon {
-  background-color: var(--felt-cream);
-  border-color: rgb(61 51 43 / 14%);
-  box-shadow:
-    0 1.5px 3px rgb(0 0 0 / 20%),
-    inset 0 1px 0.5px rgb(255 255 255 / 65%),
-    inset 0 -1px 0.8px rgb(0 0 0 / 14%);
-  color: #3b5025;
-}
-
-/* Warning: Mustard toast with ink badge and golden mustard icon */
-.toast:global(.felt-mustard) .icon,
-.toast[data-type="warning"] .icon {
-  background-color: var(--felt-ink);
-  border-color: rgb(0 0 0 / 25%);
-  box-shadow:
-    0 1.5px 3px rgb(0 0 0 / 28%),
-    inset 0 1px 0.5px rgb(255 255 255 / 16%),
-    inset 0 -1px 0.8px rgb(0 0 0 / 35%);
-  color: #ebb529;
-}
-
-/* Error: Brick toast with cream badge and deep brick icon */
-.toast:global(.felt-brick) .icon,
-.toast[data-type="error"] .icon {
-  background-color: var(--felt-cream);
-  border-color: rgb(61 51 43 / 14%);
-  box-shadow:
-    0 1.5px 3px rgb(0 0 0 / 20%),
-    inset 0 1px 0.5px rgb(255 255 255 / 65%),
-    inset 0 -1px 0.8px rgb(0 0 0 / 14%);
-  color: #9a2f20;
-}
-
 .content {
   order: 2;
   min-width: 0;
   flex: 1 1 auto;
-  margin-top: 3px;
 }
-
 .title {
-  font-size: 0.82rem;
-  font-weight: 800;
-  line-height: 1.4;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
 }
-
 .closeButton {
   order: 3;
   display: grid;
-  width: 22px;
-  height: 22px;
-  flex: 0 0 22px;
-  margin-top: 2px;
-  margin-left: auto;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  margin: 0;
   padding: 0;
   border: 0;
-  border-radius: 50%;
-  background: rgb(255 255 255 / 18%);
-  color: inherit;
+  border-radius: 6px;
+  background: transparent;
+  color: #756b60;
   cursor: pointer;
-  place-items: center;
 }
-
 .closeButton:hover {
-  background: rgb(255 255 255 / 30%);
+  background: rgb(61 51 43 / 7%);
+  color: var(--felt-ink);
 }
-
+.closeButton:focus-visible {
+  outline: 2px solid var(--felt-ink);
+  outline-offset: 2px;
+}
 @media (max-width: 620px) {
   .toast {
-    width: calc(100vw - 28px);
+    width: min(24rem, calc(100vw - 28px));
   }
 }

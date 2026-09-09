@@ -55,6 +55,7 @@ function dependencies(
   return {
     supervise: async () => undefined,
     fetch: async () => claim,
+    organizationExists: async () => true,
     syncRoster: async () => summary,
     succeed: async () => job("succeeded"),
     refuse: async () => job("refused"),
@@ -141,6 +142,28 @@ test("an empty queue is a successful no-op", async () => {
     dependencies({ fetch: async () => null }),
   );
   assert.deepEqual(await drain(), { drained: false });
+});
+
+test("a job for a deleted organization is refused without running a sync", async () => {
+  let syncCalls = 0;
+  let recordedReason = "";
+  const drain = createRosterSyncDrainer(
+    dependencies({
+      organizationExists: async () => false,
+      syncRoster: async () => {
+        syncCalls += 1;
+        return summary;
+      },
+      refuse: async (_jobId, reason) => {
+        recordedReason = reason;
+        return job("refused");
+      },
+    }),
+  );
+
+  assert.deepEqual(await drain(), { drained: true, job: job("refused") });
+  assert.equal(syncCalls, 0);
+  assert.equal(recordedReason, "Organization no longer exists");
 });
 
 test("a roster refusal is completed with a refused outcome", async () => {
