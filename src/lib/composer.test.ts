@@ -36,16 +36,20 @@ after(() => {
 test("composes a grounded regular update without credentials", async () => {
   const draft = await composeSponsorUpdate({
     companion: { name: "Biscuit", available: true, breed: "Corgi mix" },
-    notes: [{ note: "The vet visit went well." }, "Teeth cleaned."],
+    chats: [{
+      completedAt: new Date("2026-08-12T12:00:00Z"),
+      transcript: ["Volunteer: Biscuit chased a ball.", "Volunteer: Then she took a nap."],
+      photos: [],
+    }],
     pinnedPostscript: "Come meet us at Saturday's adoption fair.",
     type: "regular",
     companionPageUrl: "{{companionPageUrl}}",
   });
 
   assert.match(draft.subject, /Biscuit/u);
-  assert.match(draft.bodyText, /vet visit went well/u);
-  assert.match(draft.bodyText, /Teeth cleaned/u);
-  assert.match(draft.bodyText, /^## Recent notes$/mu);
+  assert.match(draft.teaser, /Biscuit/u);
+  assert.match(draft.bodyText, /chased a ball/u);
+  assert.match(draft.bodyText, /took a nap/u);
   assert.ok(draft.bodyText.endsWith("Come meet us at Saturday's adoption fair."));
 });
 
@@ -53,7 +57,7 @@ test("appends a Markdown postscript verbatim", async () => {
   const postscript = "**Bold**\n\n[Link](https://example.org)\n\n## Heading\n\n- A bullet";
   const draft = await composeSponsorUpdate({
     companion: { name: "Biscuit", available: true },
-    notes: ["Played fetch."],
+    chats: [],
     pinnedPostscript: postscript,
     type: "regular",
     companionPageUrl: "https://pawcast.test/companions/biscuit",
@@ -78,14 +82,20 @@ test("uses the configured chat-completions endpoint and model", async () => {
     return Response.json({
       choices: [{ message: { content: JSON.stringify({
         subject: "Biscuit made a new friend",
+        teaser: "Biscuit had a bright afternoon at the park.",
         bodyText: "Biscuit had fun meeting a new friend at the park.",
+        captions: [],
       }) } }],
     });
   };
 
   await composeSponsorUpdate({
     companion: { name: "Biscuit", available: true, breed: "Corgi mix", sex: "Female", ageText: "Adult" },
-    notes: [{ note: "Had fun and met a new friend at the park." }],
+    chats: [{
+      completedAt: new Date("2026-08-12T12:00:00Z"),
+      transcript: ["Volunteer: Biscuit met a new friend at the park."],
+      photos: [],
+    }],
     pinnedPostscript: "**A permanent note**",
     type: "regular",
     companionPageUrl: "{{companionPageUrl}}",
@@ -97,42 +107,24 @@ test("uses the configured chat-completions endpoint and model", async () => {
   assert.equal(requestHeaders.get("authorization"), "Bearer test-key");
   assert.equal(requestBody.model, "rescue-writer");
 
-  const messages = requestBody.messages as Array<{ role: string; content: string }>;
+  const messages = requestBody.messages as Array<{ role: string; content: string | Array<{ type: string; text?: string }> }>;
   assert.equal(messages[0].role, "system");
-  assert.match(messages[0].content, /Treat the volunteer notes as the update/u);
-  assert.match(messages[0].content, /do not turn the email into a profile or biography/u);
-  const promptInput = JSON.parse(messages[1].content) as { companion: Record<string, unknown> };
-  assert.deepEqual(promptInput.companion, {
-    name: "Biscuit",
-    available: true,
-    breed: "Corgi mix",
-    sex: "Female",
-    ageText: "Adult",
-  });
-  assert.equal("personality" in promptInput.companion, false);
-  assert.equal("careNotes" in promptInput.companion, false);
-  assert.equal("pinnedPostscript" in promptInput, false);
-});
-
-test("supports a graduation update", async () => {
-  const draft = await composeSponsorUpdate({
-    companion: { name: "Biscuit", available: false },
-    notes: [{ note: "Biscuit went home with a family today." }],
-    pinnedPostscript: "Thank you for being part of the rescue.",
-    type: "graduation",
-    companionPageUrl: "https://rescue.example/companions/biscuit",
-  });
-
-  assert.match(draft.subject, /home/u);
-  assert.match(draft.bodyText, /Biscuit/u);
-  assert.match(draft.bodyText, /went home with a family/u);
+  assert.match(String(messages[0].content), /warm animal-rescue update/u);
+  assert.ok(Array.isArray(messages[1].content));
+  const promptText = messages[1].content
+    .filter((part) => part.type === "text")
+    .map((part) => part.text)
+    .join("\n");
+  assert.match(promptText, /Biscuit met a new friend/u);
+  assert.match(promptText, /Breed: Corgi mix/u);
+  assert.doesNotMatch(promptText, /A permanent note/u);
 });
 
 test("refuses a regular update for an unavailable companion", async () => {
   await assert.rejects(
     composeSponsorUpdate({
       companion: { name: "Biscuit", available: false },
-      notes: [],
+      chats: [],
       pinnedPostscript: "",
       type: "regular",
       companionPageUrl: "https://rescue.example/companions/biscuit",
