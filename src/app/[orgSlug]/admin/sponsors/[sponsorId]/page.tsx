@@ -117,9 +117,9 @@ export default async function SponsorDetailPage({ params }: SponsorDetailPagePro
         </AdminSurface>
 
         {ongoingSponsorships.length > 0 ? (
-          <section aria-labelledby="awaiting-heading" className={styles.awaitingSection}>
+          <section aria-labelledby="manage-sponsorships-heading" className={styles.awaitingSection}>
             <div className={styles.historyTitle}>
-              <h2 id="awaiting-heading">Manage sponsorships</h2>
+              <h2 id="manage-sponsorships-heading">Manage sponsorships</h2>
               <AdminBadge tone="brick">{ongoingSponsorships.length} ongoing</AdminBadge>
             </div>
             <p className={styles.limitNotice}>

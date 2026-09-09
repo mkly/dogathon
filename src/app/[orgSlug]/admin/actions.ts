@@ -109,7 +109,7 @@ export async function endStaffAwaitingSponsorship(
     },
   });
   if (!sponsorship) {
-    return { ok: false, message: "This sponsorship is no longer awaiting a companion." };
+    return { ok: false, message: "This sponsorship is no longer choosing a next companion." };
   }
 
   try {
