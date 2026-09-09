@@ -81,8 +81,6 @@ test("transfers one awaiting sponsorship without changing billing and sends conf
     data: {
       residentId: "00000000-0000-4000-8000-000000000005",
       status: "active",
-      awaitingSince: null,
-      awaitingReminderDraftedAt: null,
       endedAt: null,
       endedReason: null,
     },
