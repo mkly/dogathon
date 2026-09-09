@@ -104,9 +104,7 @@ const approvalDependencies: ApprovalDependencies = {
             ? "awaiting"
             : "active",
         },
-        data: update.awaitingTransitionedAt
-          ? { status: "awaiting" }
-          : { status: "awaiting" },
+        data: { status: "awaiting" },
       });
       if (sponsorship.count !== 1) return false;
 
