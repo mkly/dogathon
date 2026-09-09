@@ -77,6 +77,7 @@ async function draftReminder(
         isAwaitingReminder: true,
         status: "draft",
         subject: `Choose the next companion for your sponsorship`,
+        teaser: `${sponsorship.resident.name} left the rescue two weeks ago — pick who your sponsorship helps next.`,
         bodyText: `${sponsorship.sponsor.name}, it has been two weeks since ${sponsorship.resident.name} left the rescue. Please choose a new companion for your sponsorship using this secure link: ${actionUrl}`,
       },
     });

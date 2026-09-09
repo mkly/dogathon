@@ -1427,6 +1427,7 @@ export function adoptionDraft(
     type: "graduation" as const,
     status: "draft" as const,
     subject,
+    teaser: departure,
     bodyText: `${sponsorName}, ${departure} Once this notice is approved, your sponsorship will pause and no further charges will be made while you choose what comes next. Thank you for everything you gave ${companionName} along the way.`,
   };
 }
