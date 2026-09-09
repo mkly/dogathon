@@ -256,7 +256,7 @@ test("adoption drafts are queued and sponsor-specific", () => {
   assert.match(draft.teaser, /found a home/i);
   assert.equal(draft.heroPhotoUrl, "/uploads/hattie.jpg");
   assert.match(draft.bodyText, /Sam/);
-  assert.match(draft.bodyText, /sponsorship will pause/i);
+  assert.match(draft.bodyText, /sponsorship carries on/i);
   assert.doesNotMatch(draft.bodyText, /sponsorship has ended/i);
 });
 

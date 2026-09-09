@@ -43,11 +43,11 @@ const questions = [
   },
   {
     question: "What happens when my companion is adopted?",
-    answer: "You get the good news first, with a last update about where they are headed. After that you can choose another companion to stand by, or leave it there.",
+    answer: "You will hear the good news in an update, then choose the companion you would like to follow next. Your monthly sponsorship continues, and you can switch companions or cancel at any time from your sponsorship page.",
   },
   {
     question: "Can I stop?",
-    answer: "Yes, at any time, from your sponsorship page. No phone calls and no questions asked.",
+    answer: "Yes. You can switch companions or cancel at any time from your sponsorship page.",
   },
 ];
 

@@ -2,7 +2,7 @@ import { render } from "@react-email/render";
 import { createElement } from "react";
 
 import type { Prisma } from "@/generated/prisma/client";
-import { SponsorshipChoiceEmail } from "@/emails/sponsorship-choice-email";
+import { SponsorshipChoiceEmail, sponsorshipChoiceEmailSubject } from "@/emails/sponsorship-choice-email";
 import { createOrganizationEmailSender } from "@/lib/email-connectors";
 import { prisma } from "@/lib/prisma";
 import { revalidatePublicRoster } from "@/lib/public-roster-cache";
@@ -38,9 +38,10 @@ async function sendChoiceEmail(
   result: ChoiceResult,
   input: { companionName?: string; type: "transferred" | "ended" },
 ) {
-  const subject = input.type === "transferred"
-    ? `Your sponsorship now supports ${input.companionName}`
-    : `Thank you for sponsoring with ${result.organization.name}`;
+  const subject = sponsorshipChoiceEmailSubject({
+    ...input,
+    organizationName: result.organization.name,
+  });
   const email = createElement(SponsorshipChoiceEmail, {
     ...input,
     monthlyCents: result.monthlyCents,

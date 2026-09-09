@@ -53,7 +53,7 @@ export default async function NextCompanionPage({ params, searchParams }: NextCo
         {!sponsorship ? (
           <Notice>
             <h1>This link no longer applies</h1>
-            <p>It may have expired, or this sponsorship may already have been updated. No changes were made.</p>
+            <p>It may no longer be valid, or this sponsorship may already have been updated. No changes were made.</p>
           </Notice>
         ) : sponsorship.status === "ended" ? (
           <Notice>
@@ -64,7 +64,7 @@ export default async function NextCompanionPage({ params, searchParams }: NextCo
           <>
             <FeltPanel className={styles.selectionHero} tone="moss">
               <h1>Choose your next companion</h1>
-              <p>Your monthly amount stays the same. Pick one available companion and we&apos;ll resume your existing sponsorship.</p>
+              <p>Your monthly sponsorship continues at the same amount. Choose an available companion to follow next. You can switch companions or cancel at any time from your sponsorship page.</p>
               {query.error === "resident_unavailable" ? <p className={styles.formError}>That companion was just chosen. Please pick another.</p> : null}
             </FeltPanel>
 
@@ -79,7 +79,7 @@ export default async function NextCompanionPage({ params, searchParams }: NextCo
                       <form action={transferSponsorshipAction.bind(null, orgSlug, selection)} className={styles.selectionForm}>
                         <input name="residentId" type="hidden" value={resident.id} />
                         <PendingFeltSubmitButton pendingLabel="Moving sponsorship…" tone="brick" type="submit">
-                          Sponsor {resident.name}
+                          Follow {resident.name}
                         </PendingFeltSubmitButton>
                       </form>
                     </div>
@@ -90,7 +90,7 @@ export default async function NextCompanionPage({ params, searchParams }: NextCo
 
             {sponsorship.status === "awaiting" ? (
               <FeltPanel className={styles.stopSponsoring} tone="cream">
-                <div><h2>Prefer to stop?</h2><p>You can end this sponsorship and cancel its recurring charge.</p></div>
+                <div><h2>Prefer to stop?</h2><p>You can cancel this monthly sponsorship at any time.</p></div>
                 <form action={endSponsorshipAction.bind(null, orgSlug, selection)}>
                   <PendingFeltSubmitButton pendingLabel="Ending sponsorship…" tone="oatmeal" type="submit">Stop sponsoring</PendingFeltSubmitButton>
                 </form>

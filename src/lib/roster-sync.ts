@@ -1448,7 +1448,7 @@ export function adoptionDraft(
     status: "draft" as const,
     subject,
     teaser,
-    bodyText: `${sponsorName}, ${departure} Once this notice is approved, your sponsorship will pause and no further charges will be made while you choose what comes next. Thank you for everything you gave ${companionName} along the way.`,
+    bodyText: `${sponsorName}, ${departure} Your monthly sponsorship carries on, and you can choose the companion you would like to follow next. Thank you for everything you gave ${companionName} along the way.`,
     heroPhotoUrl,
   };
 }
