@@ -47,7 +47,10 @@ const nextConfig: NextConfig = {
     // Without S3, volunteer photos are served from the app itself, with the
     // owning organization in the query string; Next refuses local image
     // sources with a query unless the path is allowed here.
-    localPatterns: [{ pathname: "/api/volunteer-photos/**" }],
+    localPatterns: [
+      { pathname: "/api/volunteer-photos/**" },
+      { pathname: "/mascot/**" },
+    ],
     remotePatterns: configuredPattern
       ? [...rosterPhotoPatterns, configuredPattern]
       : rosterPhotoPatterns,

@@ -304,6 +304,76 @@
   margin: 0;
 }
 
+.graduationFooter {
+  align-items: flex-end;
+}
+
+.graduationCompanions {
+  min-width: 0;
+  width: 100%;
+}
+
+.graduationCompanionGrid {
+  display: grid;
+  gap: 0.8rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  list-style: none;
+  margin: 1.25rem 0 0;
+  padding: 0;
+}
+
+.graduationCompanion {
+  background: var(--update-paper);
+  border: 1px solid var(--update-line);
+  border-radius: 0.75rem;
+  color: var(--update-ink);
+  display: block;
+  overflow: hidden;
+  text-decoration: none;
+  transition: border-color 160ms ease, transform 160ms ease;
+}
+
+.graduationCompanion:hover {
+  border-color: #aabbb2;
+  transform: translateY(-1px);
+}
+
+.graduationCompanion:focus-visible {
+  outline: 3px solid #84bca8;
+  outline-offset: 3px;
+}
+
+.graduationCompanionPhoto {
+  aspect-ratio: 3 / 2;
+  display: block;
+  height: auto;
+  object-fit: cover;
+  width: 100%;
+}
+
+.graduationCompanionCopy {
+  display: block;
+  padding: 0.8rem;
+}
+
+.graduationCompanionCopy strong,
+.graduationCompanionCopy span {
+  display: block;
+}
+
+.graduationCompanionCopy strong {
+  font-size: 0.95rem;
+}
+
+.graduationCompanionCopy span {
+  color: var(--update-muted);
+  font-size: 0.78rem;
+  margin-top: 0.2rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .footerLinks {
   display: flex;
   flex-wrap: wrap;
@@ -334,9 +404,16 @@
   }
 }
 
+@media (max-width: 30rem) {
+  .graduationCompanionGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .shareButton,
-  .slideshowControls button {
+  .slideshowControls button,
+  .graduationCompanion {
     transition: none;
   }
 }
