@@ -21,7 +21,6 @@ import {
 import { prisma } from "@/lib/prisma";
 import { DEFAULT_SPONSORSHIP_MONTHLY_CENTS } from "@/lib/rescue-settings";
 import { sponsorshipSelectionUrl } from "@/lib/sponsorship-selection-token";
-import { pauseStripeCollection } from "@/lib/stripe-billing";
 import { uuidSchema } from "@/lib/uuid";
 import { render } from "@react-email/render";
 import { createElement } from "react";
@@ -51,7 +50,6 @@ type ApprovalUpdate = {
   organization: {
     name: string;
     slug: string;
-    stripeAccountId: string | null;
   };
   resident: {
     name: string;
@@ -70,7 +68,6 @@ type ApprovalDependencies = {
   getConnectorStatus: typeof getEmailConnectorStatus;
   markSent: (id: string, orgId: string, sentAt: Date) => Promise<unknown>;
   now: () => Date;
-  pauseCollection: typeof pauseStripeCollection;
   renderMessage: (
     update: ApprovalUpdate,
     monthlyCents: number,
@@ -151,7 +148,6 @@ const approvalDependencies: ApprovalDependencies = {
           select: {
             name: true,
             slug: true,
-            stripeAccountId: true,
           },
         },
         sponsorship: {
@@ -180,7 +176,6 @@ const approvalDependencies: ApprovalDependencies = {
     });
   },
   now: () => new Date(),
-  pauseCollection: pauseStripeCollection,
   async renderMessage(update, _monthlyCents, renderedAt) {
     const origin = env.BETTER_AUTH_URL;
     const selectionUrl = update.type === "graduation"
@@ -310,12 +305,6 @@ export function createApproveSponsorUpdateHandler(dependencies: ApprovalDependen
         ? [sponsorUpdate.sponsorship!]
         : sponsorUpdate.resident.sponsorships.filter((sponsorship) =>
           isRegularSponsorUpdateRecipient(sponsorship, sponsorUpdate.resident.available));
-      if (sponsorUpdate.type === "graduation" && !sponsorUpdate.isAwaitingReminder) {
-        await dependencies.pauseCollection({
-          stripeAccountId: sponsorUpdate.organization.stripeAccountId,
-          subscriptionId: sponsorUpdate.sponsorship!.stripeSubscriptionId,
-        });
-      }
       const groups = Map.groupBy(sponsorships, ({ monthlyCents }) => monthlyCents);
       const deliveries = (await Promise.all([...groups].map(async ([monthlyCents, recipients]) => {
         const message = await dependencies.renderMessage(

@@ -328,42 +328,15 @@ type StripeSubscriptionOperation = {
 };
 
 function hasStripeSubscription(
-  operation: "pause" | "resume" | "cancel",
   input: StripeSubscriptionOperation,
 ): input is { stripeAccountId: string; subscriptionId: string } {
   if (input.stripeAccountId && input.subscriptionId) return true;
-  console.info(`Skipping Stripe subscription ${operation}: subscription or connected account is missing`);
+  console.info("Skipping Stripe subscription cancel: subscription or connected account is missing");
   return false;
 }
 
-export async function pauseStripeCollection(input: StripeSubscriptionOperation) {
-  if (!hasStripeSubscription("pause", input)) return;
-
-  return stripe().subscriptions.update(
-    input.subscriptionId,
-    { pause_collection: { behavior: "void" } },
-    { stripeAccount: input.stripeAccountId },
-  );
-}
-
-export async function resumeStripeCollection(
-  input: StripeSubscriptionOperation & { now: Date },
-) {
-  if (!hasStripeSubscription("resume", input)) return;
-
-  return stripe().subscriptions.update(
-    input.subscriptionId,
-    {
-      pause_collection: "",
-      billing_cycle_anchor: "now",
-      proration_behavior: "none",
-    },
-    { stripeAccount: input.stripeAccountId },
-  );
-}
-
 export async function cancelStripeSubscription(input: StripeSubscriptionOperation) {
-  if (!hasStripeSubscription("cancel", input)) return;
+  if (!hasStripeSubscription(input)) return;
 
   return stripe().subscriptions.cancel(
     input.subscriptionId,

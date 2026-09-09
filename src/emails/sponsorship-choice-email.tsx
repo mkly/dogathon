@@ -1,11 +1,10 @@
 import { Body, Container, Head, Heading, Html, Preview, Section, Text } from "@react-email/components";
 
-import { formatDate, formatMonthlyAmount } from "../lib/format.ts";
+import { formatMonthlyAmount } from "../lib/format.ts";
 
 type SponsorshipChoiceEmailProps = {
   companionName?: string;
   monthlyCents: number;
-  nextChargeDate?: Date;
   organizationName: string;
   sponsorName: string;
   type: "transferred" | "ended";
@@ -33,11 +32,6 @@ export function SponsorshipChoiceEmail(input: SponsorshipChoiceEmailProps) {
                 <Text style={{ fontSize: "16px", lineHeight: "1.6" }}>
                   Hi {input.sponsorName}, your {formatMonthlyAmount(input.monthlyCents)} monthly sponsorship now helps care for {input.companionName}.
                 </Text>
-                {input.nextChargeDate ? (
-                  <Text style={{ fontSize: "16px", lineHeight: "1.6" }}>
-                    Your next charge is scheduled for {formatDate(input.nextChargeDate)}.
-                  </Text>
-                ) : null}
               </>
             ) : (
               <Text style={{ fontSize: "16px", lineHeight: "1.6" }}>
