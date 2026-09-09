@@ -422,8 +422,9 @@ async function ApprovalQueue({
               key={draft.id}
               orgSlug={orgSlug}
               subject={draft.subject}
+              teaser={draft.teaser}
             >
-              <PhotoPatch alt={`${draft.resident.name} portrait`} className={styles.photo} sizes="(max-width: 720px) 104px, 120px" src={draft.resident.photoUrls[0]} />
+              <PhotoPatch alt={`${draft.resident.name} update`} className={styles.photo} sizes="(max-width: 720px) 104px, 120px" src={draft.heroPhotoUrl ?? draft.resident.photoUrls[0]} />
               <div className={styles.companionSummary}>
                 <AdminBadge tone={draft.type === "graduation" ? "mustard" : "denim"}>{draft.type}</AdminBadge>
                 <h3>{draft.resident.name}</h3>

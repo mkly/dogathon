@@ -114,6 +114,7 @@ export function DraftEditor({
   isGraduation,
   orgSlug,
   subject: initialSubject,
+  teaser: initialTeaser,
 }: {
   bodyText: string;
   children: ReactNode;
@@ -124,15 +125,18 @@ export function DraftEditor({
   isGraduation: boolean;
   orgSlug: string;
   subject: string;
+  teaser: string;
 }) {
   const apiFetch = useApiFetch();
   const [visible, hideOptimistically] = useOptimistic(true);
   const [, startTransition] = useTransition();
   const [savedDraft, setSavedDraft] = useState({
     subject: initialSubject,
+    teaser: initialTeaser,
     bodyText: initialBodyText,
   });
   const [subject, setSubject] = useState(initialSubject);
+  const [teaser, setTeaser] = useState(initialTeaser);
   const [bodyText, setBodyText] = useState(initialBodyText);
   const [bodyOverLimit, setBodyOverLimit] = useState(false);
   const [editorOpen, setEditorOpen] = useState(false);
@@ -150,12 +154,14 @@ export function DraftEditor({
 
   function openEditor() {
     setSubject(savedDraft.subject);
+    setTeaser(savedDraft.teaser);
     setBodyText(savedDraft.bodyText);
     setEditorOpen(true);
   }
 
   function closeEditor() {
     setSubject(savedDraft.subject);
+    setTeaser(savedDraft.teaser);
     setBodyText(savedDraft.bodyText);
     setEditorOpen(false);
   }
@@ -171,7 +177,8 @@ export function DraftEditor({
         },
         body: JSON.stringify({
           subject: draft.subject,
-          emailBody: draft.bodyText,
+          teaser: draft.teaser,
+          bodyText: draft.bodyText,
         }),
       },
       "Save draft",
@@ -181,7 +188,7 @@ export function DraftEditor({
   async function save() {
     setPending("save");
     try {
-      const editedDraft = { subject, bodyText };
+      const editedDraft = { subject, teaser, bodyText };
       await persistDraft(editedDraft);
       setSavedDraft(editedDraft);
       setEditorOpen(false);
@@ -281,7 +288,7 @@ export function DraftEditor({
           <div className={styles.draftControls}>
             <div className={styles.draftPreview}>
               <p className={styles.draftSubject}>{savedDraft.subject}</p>
-              <p>{savedDraft.bodyText}</p>
+              <p>{savedDraft.teaser}</p>
             </div>
             <div className={styles.draftActions}>
               <AdminButton
@@ -313,14 +320,13 @@ export function DraftEditor({
                   ? (isAwaitingReminder ? "Dismissing…" : isGraduation ? "Denying…" : "Discarding…")
                   : (isAwaitingReminder ? "Dismiss reminder" : isGraduation ? "Deny & keep billing" : "Deny & discard")}
               </AdminButton>
-              {/* the themed email as the sponsor will see it, not the plain draft text */}
               <AdminLink
                 className={styles.previewLink}
-                href={`/api/sponsor-updates/${id}/preview?org=${encodeURIComponent(orgSlug)}`}
+                href={`/${orgSlug}/updates/${id}`}
                 rel="noreferrer"
                 target="_blank"
               >
-                Preview email
+                Preview
               </AdminLink>
             </div>
 
@@ -371,7 +377,7 @@ export function DraftEditor({
                             </AdminButton>
                           </div>
                           <Dialog.Description className={styles.dialogDescription}>
-                            Review the email copy before saving this draft.
+                            Review the update copy before saving this draft.
                           </Dialog.Description>
                           <div className={styles.draftEditor}>
                             <label htmlFor={`subject-${id}`}>Subject</label>
@@ -384,14 +390,32 @@ export function DraftEditor({
                                 value={subject}
                               />
                             </AdminField>
-                            <label htmlFor={`email-${id}`} id={`email-label-${id}`}>Email body</label>
+                            <label htmlFor={`teaser-${id}`}>Teaser</label>
+                            <AdminField>
+                              <input
+                                aria-describedby={`teaser-counter-${id}`}
+                                id={`teaser-${id}`}
+                                maxLength={240}
+                                onChange={(event) => setTeaser(event.target.value)}
+                                required
+                                value={teaser}
+                              />
+                            </AdminField>
+                            <small
+                              aria-live="polite"
+                              className={styles.teaserCounter}
+                              id={`teaser-counter-${id}`}
+                            >
+                              {teaser.length} / 240 characters
+                            </small>
+                            <label htmlFor={`body-${id}`} id={`body-label-${id}`}>Body</label>
                             <AdminField className={styles.richTextEditorField}>
                               <MarkdownEditor
                                 classNames={richTextEditorClassNames}
                                 defaultValue={savedDraft.bodyText}
                                 disabled={pending !== null}
-                                id={`email-${id}`}
-                                labelledBy={`email-label-${id}`}
+                                id={`body-${id}`}
+                                labelledBy={`body-label-${id}`}
                                 maxLength={SPONSOR_UPDATE_BODY_MAX_LENGTH}
                                 onChange={setBodyText}
                                 onValidityChange={setBodyOverLimit}
@@ -407,7 +431,12 @@ export function DraftEditor({
                               </AdminButton>
                               <AdminButton
                                 className={styles.saveDraftButton}
-                                disabled={pending !== null || bodyOverLimit || !bodyText.trim()}
+                                disabled={
+                                  pending !== null
+                                  || bodyOverLimit
+                                  || !teaser.trim()
+                                  || !bodyText.trim()
+                                }
                                 onClick={save}
                                 tone="mustard"
                               >

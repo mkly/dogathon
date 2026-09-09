@@ -9,11 +9,13 @@ type RouteContext = { params: Promise<{ id: string }> };
 
 const draftInputSchema = z.object({
   subject: z.string(),
-  emailBody: z.string(),
+  teaser: z.string(),
+  bodyText: z.string(),
 });
-const trimmedDraftSchema = draftInputSchema.transform(({ subject, emailBody }) => ({
+const trimmedDraftSchema = draftInputSchema.transform(({ subject, teaser, bodyText }) => ({
   subject: subject.trim(),
-  bodyText: emailBody.trim(),
+  teaser: teaser.trim(),
+  bodyText: bodyText.trim(),
 }));
 
 export async function PATCH(request: Request, { params }: RouteContext) {
@@ -35,10 +37,13 @@ export async function PATCH(request: Request, { params }: RouteContext) {
 
   const validated = trimmedDraftSchema.safeParse(body);
   if (!validated.success) {
-    return Response.json({ error: "Subject and email body are required" }, { status: 400 });
+    return Response.json({ error: "Subject, teaser, and body are required" }, { status: 400 });
   }
-  if (!validated.data.subject || !validated.data.bodyText) {
-    return Response.json({ error: "Subject and email body cannot be empty" }, { status: 400 });
+  if (!validated.data.subject || !validated.data.teaser || !validated.data.bodyText) {
+    return Response.json({ error: "Subject, teaser, and body cannot be empty" }, { status: 400 });
+  }
+  if (validated.data.teaser.length > 240) {
+    return Response.json({ error: "Teaser cannot exceed 240 characters" }, { status: 400 });
   }
   if (validated.data.bodyText.length > SPONSOR_UPDATE_BODY_MAX_LENGTH) {
     return Response.json({ error: sponsorUpdateBodyOverLimitMessage() }, { status: 400 });
