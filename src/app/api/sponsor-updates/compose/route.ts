@@ -53,10 +53,11 @@ export async function POST(request: Request) {
           orderBy: { updatedAt: "desc" },
           take: 10,
           select: {
+            updatedAt: true,
             transcript: true,
             photos: {
               orderBy: { createdAt: "desc" },
-              select: { url: true, webUrl: true },
+              select: { id: true, url: true, webUrl: true, createdAt: true },
               take: 1,
             },
           },
@@ -85,11 +86,17 @@ export async function POST(request: Request) {
         breed: resident.breed,
         sex: resident.sex,
         ageText: resident.ageText,
+        personality: resident.personality,
       },
-      notes: resident.checkIns.map((checkIn) => {
-        const conversation = conversationLines(checkIn.transcript) ?? [];
-        return { note: conversation.join("\n"), conversation };
-      }),
+      chats: resident.checkIns.map((checkIn) => ({
+        completedAt: checkIn.updatedAt,
+        transcript: conversationLines(checkIn.transcript) ?? [],
+        photos: checkIn.photos.map((photo) => ({
+          id: photo.id,
+          url: photo.webUrl ?? photo.url,
+          takenAt: photo.createdAt,
+        })),
+      })),
       pinnedPostscript: settings?.pinnedPostscript ?? "",
       type,
       companionPageUrl: companionPageUrl(env.BETTER_AUTH_URL, resident.organization.slug, resident.id),
@@ -103,10 +110,16 @@ export async function POST(request: Request) {
       orgId,
       residentId: resident.id,
       type,
+      subject: composed.subject,
+      teaser: composed.teaser,
+      bodyText: composed.bodyText,
       heroPhotoUrl: resident.checkIns
         .flatMap((checkIn) => checkIn.photos)
-        .map((photo) => photo.webUrl ?? photo.url)[0] ?? null,
-      ...composed,
+        .find((photo) => photo.id === composed.heroPhotoId)?.webUrl
+        ?? resident.checkIns
+          .flatMap((checkIn) => checkIn.photos)
+          .find((photo) => photo.id === composed.heroPhotoId)?.url
+        ?? null,
     },
   });
 

@@ -19,16 +19,20 @@ after(() => {
 test("composes a grounded regular update without credentials", async () => {
   const draft = await composeSponsorUpdate({
     companion: { name: "Biscuit", available: true, breed: "Corgi mix" },
-    notes: [{ note: "The vet visit went well." }, "Teeth cleaned."],
+    chats: [{
+      completedAt: new Date("2026-08-12T12:00:00Z"),
+      transcript: ["Volunteer: Biscuit chased a ball.", "Volunteer: Then she took a nap."],
+      photos: [],
+    }],
     pinnedPostscript: "Come meet us at Saturday's adoption fair.",
     type: "regular",
     companionPageUrl: "{{companionPageUrl}}",
   });
 
   assert.match(draft.subject, /Biscuit/u);
-  assert.match(draft.bodyText, /vet visit went well/u);
-  assert.match(draft.bodyText, /Teeth cleaned/u);
-  assert.match(draft.bodyText, /^## Recent notes$/mu);
+  assert.match(draft.teaser, /Biscuit/u);
+  assert.match(draft.bodyText, /chased a ball/u);
+  assert.match(draft.bodyText, /took a nap/u);
   assert.ok(draft.bodyText.endsWith("Come meet us at Saturday's adoption fair."));
 });
 
@@ -36,7 +40,7 @@ test("appends a Markdown postscript verbatim", async () => {
   const postscript = "**Bold**\n\n[Link](https://example.org)\n\n## Heading\n\n- A bullet";
   const draft = await composeSponsorUpdate({
     companion: { name: "Biscuit", available: true },
-    notes: ["Played fetch."],
+    chats: [],
     pinnedPostscript: postscript,
     type: "regular",
     companionPageUrl: "https://pawcast.test/companions/biscuit",
@@ -46,25 +50,11 @@ test("appends a Markdown postscript verbatim", async () => {
   assert.equal(draft.bodyText.slice(-postscript.length), postscript);
 });
 
-test("supports a graduation update", async () => {
-  const draft = await composeSponsorUpdate({
-    companion: { name: "Biscuit", available: false },
-    notes: [{ note: "Biscuit went home with a family today." }],
-    pinnedPostscript: "Thank you for being part of the rescue.",
-    type: "graduation",
-    companionPageUrl: "https://rescue.example/companions/biscuit",
-  });
-
-  assert.match(draft.subject, /home/u);
-  assert.match(draft.bodyText, /Biscuit/u);
-  assert.match(draft.bodyText, /went home with a family/u);
-});
-
 test("refuses a regular update for an unavailable companion", async () => {
   await assert.rejects(
     composeSponsorUpdate({
       companion: { name: "Biscuit", available: false },
-      notes: [],
+      chats: [],
       pinnedPostscript: "",
       type: "regular",
       companionPageUrl: "https://rescue.example/companions/biscuit",
