@@ -151,6 +151,12 @@
   text-transform: capitalize;
 }
 
+.sponsorshipActions {
+  display: grid;
+  gap: 8px;
+  justify-items: stretch;
+}
+
 .empty {
   text-align: center;
 }

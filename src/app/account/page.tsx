@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { AdminBadge, AdminSurface } from "@/components/admin-ui";
+import { FeltLink } from "@/components/felt";
 import { SignOutButton } from "@/components/sign-out-button";
 import { PageViewTransition } from "@/components/page-view-transition";
 import { getSession } from "@/lib/auth-session";
@@ -55,7 +56,7 @@ export default async function SponsorAccountPage() {
       status: true,
       createdAt: true,
       stripeCustomerId: true,
-      organization: { select: { name: true } },
+      organization: { select: { name: true, slug: true } },
       resident: { select: { name: true } },
     },
     orderBy: { createdAt: "desc" },
@@ -103,8 +104,20 @@ export default async function SponsorAccountPage() {
                         <span>{formatMonthlyAmount(record.monthlyCents)}/month</span>
                       </div>
                     </div>
-                    {record.stripeCustomerId ? (
-                      <BillingPortalForm sponsorshipId={record.id} />
+                    {["active", "awaiting"].includes(record.status) || record.stripeCustomerId ? (
+                      <div className={styles.sponsorshipActions}>
+                        {["active", "awaiting"].includes(record.status) ? (
+                          <FeltLink
+                            href={`/${record.organization.slug}/sponsor/next?sponsorship=${record.id}`}
+                            tone="oatmeal"
+                          >
+                            Choose a different companion
+                          </FeltLink>
+                        ) : null}
+                        {record.stripeCustomerId ? (
+                          <BillingPortalForm sponsorshipId={record.id} />
+                        ) : null}
+                      </div>
                     ) : null}
                   </article>
                 ))}
