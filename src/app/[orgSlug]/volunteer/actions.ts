@@ -72,7 +72,6 @@ export async function discardCheckIn(orgSlug: string, rawCheckInId: unknown) {
         status: "in_progress",
         userId: access.context.userId,
       },
-      checkInId: checkInId.data,
     },
     select: { id: true, storageKey: true },
   });

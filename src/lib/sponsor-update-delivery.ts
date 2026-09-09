@@ -52,6 +52,13 @@ export function companionPageUrl(origin: string, orgSlug: string, residentId: st
   ).toString();
 }
 
+export function updatePageUrl(origin: string, orgSlug: string, updateId: string): string {
+  return new URL(
+    `/${encodeURIComponent(orgSlug)}/updates/${encodeURIComponent(updateId)}`,
+    origin,
+  ).toString();
+}
+
 /**
  * One send failure must not abandon the rest of the fan-out, nor strand the
  * update mid-approval, so every attempt is recorded rather than thrown.

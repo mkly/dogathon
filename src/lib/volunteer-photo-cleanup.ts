@@ -5,6 +5,13 @@ export const ORPHAN_PHOTO_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
 type OrphanPhoto = { id: string; storageKey: string };
 
+// An upload is only ever created against an in-progress check-in, so a photo is
+// stranded when that check-in was abandoned rather than finished or discarded —
+// or when it is gone entirely and left the row behind with a null checkInId.
+const orphanWhere = {
+  OR: [{ checkInId: null }, { checkIn: { status: "in_progress" as const } }],
+};
+
 type CleanupDependencies = {
   deletePhoto: (key: string) => Promise<void>;
   deleteRows: (ids: string[]) => Promise<void>;
@@ -14,11 +21,11 @@ type CleanupDependencies = {
 const defaults: CleanupDependencies = {
   deletePhoto,
   async deleteRows(ids) {
-    await prisma.volunteerPhoto.deleteMany({ where: { id: { in: ids }, checkInId: null } });
+    await prisma.volunteerPhoto.deleteMany({ where: { id: { in: ids }, ...orphanWhere } });
   },
   async findOrphans(olderThan) {
     return prisma.volunteerPhoto.findMany({
-      where: { createdAt: { lt: olderThan }, checkInId: null },
+      where: { createdAt: { lt: olderThan }, ...orphanWhere },
       select: { id: true, storageKey: true },
       take: 100,
     });
