@@ -97,7 +97,10 @@ function localPhotoPath(key: string, dependencies: PhotoStorageDependencies) {
 function localPhotoUrl(key: string) {
   const match = /^orgs\/([^/]+)\/volunteer-photos\/([^/.]+)\.[^/]+$/u.exec(key);
   if (!match) throw new Error(`Invalid volunteer photo key: ${key}`);
-  return `/api/volunteer-photos/${encodeURIComponent(match[2])}?org=${encodeURIComponent(match[1])}`;
+  const isWebVariant = match[2].endsWith("-web");
+  const photoId = isWebVariant ? match[2].slice(0, -4) : match[2];
+  const variant = isWebVariant ? "&variant=web" : "";
+  return `/api/volunteer-photos/${encodeURIComponent(photoId)}?org=${encodeURIComponent(match[1])}${variant}`;
 }
 
 function isMissingObject(error: unknown) {
@@ -118,6 +121,15 @@ export function photoKey(input: { orgId: string; photoId: string; ext: string })
     throw new Error("Photo keys require an organization ID, photo ID, and file extension.");
   }
   return `orgs/${input.orgId}/volunteer-photos/${input.photoId}.${extension}`;
+}
+
+export function webPhotoKey(key: string) {
+  const extensionIndex = key.lastIndexOf(".");
+  const slashIndex = Math.max(key.lastIndexOf("/"), key.lastIndexOf("\\"));
+  if (extensionIndex <= slashIndex + 1) {
+    throw new Error("A photo storage key needs a file extension for its web variant.");
+  }
+  return `${key.slice(0, extensionIndex)}-web${key.slice(extensionIndex)}`;
 }
 
 export async function putPhoto(
