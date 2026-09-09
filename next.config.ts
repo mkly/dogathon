@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const rosterPhotoPatterns = [
+  // Fixture-only: the static update-page mock hotlinks Unsplash photos. Delete
+  // this entry with the fixture when the update page is wired to real data.
   {
     protocol: "https" as const,
     hostname: "images.unsplash.com",
