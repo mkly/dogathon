@@ -10,6 +10,7 @@ import { formatDateTime } from "@/lib/format";
 import { escapeHtmlInMarkdown, neutralizeUnsafeMarkdownDestinations } from "@/lib/markdown-safety";
 import { getOrganizationAccessBySlug } from "@/lib/organization-access";
 import { prisma } from "@/lib/prisma";
+import { isPublicResidentSponsorable } from "@/lib/public-roster-cache";
 import { uuidSchema } from "@/lib/uuid";
 
 import { PhotoSlideshow, type UpdatePhoto } from "./photo-slideshow";
@@ -115,7 +116,7 @@ export default async function UpdatePage({ params }: UpdatePageProps) {
   const heroUrl = update.heroPhotoUrl ?? photos[0]?.src ?? update.resident.photoUrls[0];
   const heroCaption = photos.find((photo) => photo.src === heroUrl)?.caption;
   const safeBody = neutralizeUnsafeMarkdownDestinations(escapeHtmlInMarkdown(update.bodyText));
-  const sponsorable = update.resident.available && update.resident._count.sponsorships === 0;
+  const sponsorable = isPublicResidentSponsorable(update.resident);
 
   return (
     <main className={styles.articleShell}>

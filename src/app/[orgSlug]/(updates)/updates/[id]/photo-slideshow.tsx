@@ -79,7 +79,7 @@ export function PhotoSlideshow({ companionName, photos }: PhotoSlideshowProps) {
                   src={photo.src}
                   width={1400}
                 />
-                <figcaption>{photo.caption}</figcaption>
+                {photo.caption ? <figcaption>{photo.caption}</figcaption> : null}
               </figure>
             </li>
           ))}
