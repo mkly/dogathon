@@ -9,13 +9,72 @@
 }
 
 .icon {
-  flex: 0 0 auto;
-  margin-top: 2px;
+  order: 1;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  flex: 0 0 26px;
+  border-radius: 8px;
+  background-color: var(--felt-cream);
+  background-image: url("/textures/fabric-tile.webp");
+  background-size: 160px;
+  background-blend-mode: soft-light;
+  box-shadow:
+    0 1.5px 3px rgb(0 0 0 / 20%),
+    inset 0 1px 0.5px rgb(255 255 255 / 55%),
+    inset 0 -1px 0.8px rgb(0 0 0 / 14%);
+  border: 1px solid rgb(61 51 43 / 12%);
+  color: var(--felt-ink);
+}
+
+.icon svg {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+
+/* Success: Moss toast with cream badge and deep moss icon */
+.toast:global(.felt-moss) .icon,
+.toast[data-type="success"] .icon {
+  background-color: var(--felt-cream);
+  border-color: rgb(61 51 43 / 14%);
+  box-shadow:
+    0 1.5px 3px rgb(0 0 0 / 20%),
+    inset 0 1px 0.5px rgb(255 255 255 / 65%),
+    inset 0 -1px 0.8px rgb(0 0 0 / 14%);
+  color: #3b5025;
+}
+
+/* Warning: Mustard toast with ink badge and golden mustard icon */
+.toast:global(.felt-mustard) .icon,
+.toast[data-type="warning"] .icon {
+  background-color: var(--felt-ink);
+  border-color: rgb(0 0 0 / 25%);
+  box-shadow:
+    0 1.5px 3px rgb(0 0 0 / 28%),
+    inset 0 1px 0.5px rgb(255 255 255 / 16%),
+    inset 0 -1px 0.8px rgb(0 0 0 / 35%);
+  color: #ebb529;
+}
+
+/* Error: Brick toast with cream badge and deep brick icon */
+.toast:global(.felt-brick) .icon,
+.toast[data-type="error"] .icon {
+  background-color: var(--felt-cream);
+  border-color: rgb(61 51 43 / 14%);
+  box-shadow:
+    0 1.5px 3px rgb(0 0 0 / 20%),
+    inset 0 1px 0.5px rgb(255 255 255 / 65%),
+    inset 0 -1px 0.8px rgb(0 0 0 / 14%);
+  color: #9a2f20;
 }
 
 .content {
+  order: 2;
   min-width: 0;
   flex: 1 1 auto;
+  margin-top: 3px;
 }
 
 .title {
@@ -25,10 +84,13 @@
 }
 
 .closeButton {
+  order: 3;
   display: grid;
   width: 22px;
   height: 22px;
   flex: 0 0 22px;
+  margin-top: 2px;
+  margin-left: auto;
   padding: 0;
   border: 0;
   border-radius: 50%;

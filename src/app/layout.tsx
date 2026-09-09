@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Nunito } from "next/font/google";
 import { Toaster } from "sonner";
 
+import feltStyles from "@/components/felt.module.css";
 import { FeltFilters } from "@/components/felt";
 
 import "./felt.css";
@@ -47,7 +48,7 @@ export default function RootLayout({
               classNames: {
                 // the felt patch itself stays the shared primitive; the module
                 // only adds toast layout on top of it
-                toast: `felt-panel ${toastStyles.toast}`,
+                toast: `${feltStyles["felt-panel"]} ${toastStyles.toast}`,
                 title: toastStyles.title,
                 content: toastStyles.content,
                 closeButton: toastStyles.closeButton,
