@@ -3,6 +3,11 @@ import type { NextConfig } from "next";
 const rosterPhotoPatterns = [
   {
     protocol: "https" as const,
+    hostname: "images.unsplash.com",
+    pathname: "/photo-**",
+  },
+  {
+    protocol: "https" as const,
     hostname: "www.sfspca.org",
     pathname: "/wp-content/uploads/**",
   },
