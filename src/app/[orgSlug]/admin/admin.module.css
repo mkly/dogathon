@@ -502,6 +502,14 @@
   text-align: right;
 }
 .richTextCounterOverLimit { color: var(--felt-brick); opacity: 1; }
+.teaserCounter {
+  justify-self: end;
+  margin-top: -0.35rem;
+  font-size: 0.7rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.55;
+}
 .inlineReveal, .noticeReveal, .statusReveal, .stripeConnectReveal { overflow: hidden; }
 .unsavedSource { margin: 0; font-size: 0.78rem; font-weight: 800; line-height: 1.4; }
 
