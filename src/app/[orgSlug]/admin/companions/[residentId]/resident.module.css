@@ -9,3 +9,108 @@
 .title h2 {
   margin: 0;
 }
+
+.chatList {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.chat {
+  padding: 1rem;
+}
+
+.chatMeta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.chatMeta p { margin: 0; }
+
+.chatMeta p:last-child {
+  font-size: 0.8rem;
+  opacity: 0.72;
+}
+
+.transcript {
+  margin-top: 0.85rem;
+  border-top: 1px solid rgb(61 51 43 / 18%);
+  padding-top: 0.75rem;
+}
+
+.transcript summary {
+  width: fit-content;
+  color: var(--felt-denim);
+  font-size: 0.82rem;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.transcript ol {
+  display: grid;
+  margin: 0.85rem 0 0;
+  padding: 0;
+  gap: 0.75rem;
+  list-style: none;
+}
+
+.transcript li {
+  padding-left: 0.75rem;
+  border-left: 3px solid rgb(61 51 43 / 18%);
+}
+
+.transcript li strong { font-size: 0.75rem; }
+
+.transcript li p,
+.transcript > p {
+  margin: 0.2rem 0 0;
+  white-space: pre-wrap;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.previews {
+  margin-bottom: 0.75rem;
+  padding: 1rem;
+}
+
+.previews h3 {
+  margin: 0 0 0.65rem;
+  font-size: 0.9rem;
+}
+
+.previews ul {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  gap: 0.6rem;
+  list-style: none;
+}
+
+.previews li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.previews li > div {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.previews span {
+  font-size: 0.75rem;
+  opacity: 0.72;
+}
+
+.empty { padding: 1rem; }
+
+@media (max-width: 36rem) {
+  .chatMeta,
+  .previews li {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}

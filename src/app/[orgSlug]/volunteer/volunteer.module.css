@@ -832,6 +832,24 @@
   line-height: 1.5;
 }
 
+.confirmationPhotos {
+  display: flex;
+  margin: -0.4rem 0 1.5rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.6rem;
+}
+
+.confirmationThumbnail {
+  width: 4rem;
+  margin: 0;
+}
+
+.confirmationThumbnail img,
+.confirmationThumbnail [role="img"] { aspect-ratio: 1; }
+
+.confirmationThumbnail [role="img"] small { display: none; }
+
 .againLink {
   display: inline-flex;
   min-height: 3rem;

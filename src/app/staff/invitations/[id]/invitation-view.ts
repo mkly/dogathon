@@ -29,12 +29,12 @@ const roleDetails: Record<string, { article: "a" | "an"; description: string; la
   },
   member: {
     article: "a",
-    description: "Contribute companion notes and help keep rescue records current.",
+    description: "Contribute companion updates and help keep rescue records current.",
     label: "Member",
   },
   volunteer: {
     article: "a",
-    description: "Share companion care notes and help with the rescue roster.",
+    description: "Share companion updates and help with the rescue roster.",
     label: "Volunteer",
   },
 };
