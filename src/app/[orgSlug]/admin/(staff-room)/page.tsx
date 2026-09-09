@@ -329,6 +329,9 @@ async function ApprovalQueue({
       include: {
         resident: {
           include: {
+            _count: {
+              select: { checkIns: { where: pendingCheckInsWhere() } },
+            },
             sponsorships: {
               where: {
                 orgId,
@@ -421,6 +424,7 @@ async function ApprovalQueue({
               isGraduation={graduation}
               key={draft.id}
               orgSlug={orgSlug}
+              pendingChatCount={draft.resident._count.checkIns}
               subject={draft.subject}
             >
               <PhotoPatch alt={`${draft.resident.name} portrait`} className={styles.photo} sizes="(max-width: 720px) 104px, 120px" src={draft.resident.photoUrls[0]} />

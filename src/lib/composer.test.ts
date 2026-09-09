@@ -62,3 +62,26 @@ test("refuses a regular update for an unavailable companion", async () => {
     /regular updates require an available companion/u,
   );
 });
+
+test("uses the existing graduation draft as the adoption-story seed", async () => {
+  const draft = await composeSponsorUpdate({
+    companion: { name: "Biscuit", available: false },
+    chats: [{
+      completedAt: new Date("2026-09-01T12:00:00Z"),
+      transcript: ["Volunteer: Biscuit spent the afternoon curled up in the sun."],
+      photos: [],
+    }],
+    previousUpdate: {
+      sentAt: new Date("2026-09-02T12:00:00Z"),
+      bodyText: "Biscuit has been adopted and is heading home.",
+    },
+    pinnedPostscript: "",
+    type: "graduation",
+    companionPageUrl: "https://rescue.example/companions/biscuit",
+  });
+
+  assert.match(draft.subject, /found a home/u);
+  assert.match(draft.teaser, /found a home/u);
+  assert.match(draft.bodyText, /has been adopted/u);
+  assert.match(draft.bodyText, /curled up in the sun/u);
+});

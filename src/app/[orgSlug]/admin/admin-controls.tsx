@@ -113,6 +113,7 @@ export function DraftEditor({
   isAwaitingReminder,
   isGraduation,
   orgSlug,
+  pendingChatCount,
   subject: initialSubject,
 }: {
   bodyText: string;
@@ -123,6 +124,7 @@ export function DraftEditor({
   isAwaitingReminder: boolean;
   isGraduation: boolean;
   orgSlug: string;
+  pendingChatCount: number;
   subject: string;
 }) {
   const apiFetch = useApiFetch();
@@ -138,7 +140,7 @@ export function DraftEditor({
   const [editorOpen, setEditorOpen] = useState(false);
   const [denyConfirmOpen, setDenyConfirmOpen] = useState(false);
   const shouldRestoreFocus = useRef(false);
-  const [pending, setPending] = useState<"save" | "approve" | "deny" | null>(
+  const [pending, setPending] = useState<"save" | "compose" | "approve" | "deny" | null>(
     null,
   );
   const motionTransition = useMotionTiming();
@@ -196,6 +198,33 @@ export function DraftEditor({
     } finally {
       setPending(null);
     }
+  }
+
+  function composeGraduation() {
+    startTransition(async () => {
+      setPending("compose");
+      try {
+        await apiFetch(
+          `/api/sponsor-updates/${id}/compose-graduation`,
+          {
+            method: "POST",
+            headers: { "X-Organization-Slug": orgSlug },
+          },
+          "Weave in recent chats",
+        );
+        await refreshAdminPage();
+        pushToast("success", "Recent chats woven into the graduation story.");
+      } catch (error) {
+        pushToast(
+          "error",
+          error instanceof Error
+            ? error.message
+            : "Weaving in recent chats could not reach the server.",
+        );
+      } finally {
+        setPending(null);
+      }
+    });
   }
 
   function approve() {
@@ -291,6 +320,17 @@ export function DraftEditor({
               >
                 Edit
               </AdminButton>
+              {isGraduation && !isAwaitingReminder && pendingChatCount > 0 ? (
+                <AdminButton
+                  disabled={pending !== null}
+                  onClick={composeGraduation}
+                  tone="denim"
+                >
+                  {pending === "compose"
+                    ? "Weaving in recent chats…"
+                    : `Weave in ${pendingChatCount} recent chats`}
+                </AdminButton>
+              ) : null}
               <AdminButton
                 aria-describedby={
                   emailConnected ? undefined : EMAIL_CONNECTOR_NOTICE_ID

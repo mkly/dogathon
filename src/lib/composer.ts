@@ -157,7 +157,9 @@ export async function buildComposerMessages(input: ComposeSponsorUpdateInput): P
     content.push({
       type: "text",
       text: [
-        `The last update sent on ${formatDate(input.previousUpdate.sentAt)} said:`,
+        input.type === "graduation"
+          ? "The current graduation draft is the seed for this adoption story:"
+          : `The last update sent on ${formatDate(input.previousUpdate.sentAt)} said:`,
         input.previousUpdate.bodyText,
       ].join("\n\n"),
     });
@@ -176,14 +178,21 @@ function deterministicCompose(input: ComposeSponsorUpdateInput): ComposedSponsor
   const name = input.companion.name.trim();
   const { chats, photos } = selectedInput(input);
   const visitCount = chats.length;
-  const body = chats.map((chat) => [
+  const chatBody = chats.map((chat) => [
     `On ${formatDate(chat.completedAt)}:`,
     chat.transcript.join("\n"),
   ].join("\n\n")).join("\n\n");
+  const body = input.type === "graduation"
+    ? [input.previousUpdate?.bodyText.trim(), chatBody].filter(Boolean).join("\n\n")
+    : chatBody;
 
   return {
-    subject: `${name}: news from ${visitCount} recent visits`,
-    teaser: `${name} has news from ${visitCount} recent visits. Read about the moments volunteers shared with ${name}.`,
+    subject: input.type === "graduation"
+      ? `${name} found a home!`
+      : `${name}: news from ${visitCount} recent visits`,
+    teaser: input.type === "graduation"
+      ? `${name} has found a home. Here is a warm look back at the moments that brought them here.`
+      : `${name} has news from ${visitCount} recent visits. Read about the moments volunteers shared with ${name}.`,
     bodyText: appendPostscript(body, input.pinnedPostscript),
     heroPhotoId: photos[0]?.id ?? null,
     captions: photos.map((photo) => ({

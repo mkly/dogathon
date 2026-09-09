@@ -4,6 +4,10 @@ import {
 } from "@/emails/sponsor-update-email";
 import { getEmailConnectorStatus } from "@/lib/email-connectors";
 import { env } from "@/lib/env";
+import {
+  composeGraduationDraft,
+  type GraduationCompositionResult,
+} from "@/lib/graduation-draft-composer";
 import { requireApiOrganization } from "@/lib/organization-access";
 import {
   deliverSponsorUpdate,
@@ -60,6 +64,7 @@ type ApprovalUpdate = {
 
 type ApprovalDependencies = {
   claimUpdate: (update: ApprovalUpdate, claimedAt: Date) => Promise<boolean>;
+  composeGraduation: (id: string, orgId: string) => Promise<GraduationCompositionResult>;
   deliver: typeof deliverSponsorUpdate;
   findUpdate: (id: string, orgId: string) => Promise<ApprovalUpdate | null>;
   getConnectorStatus: typeof getEmailConnectorStatus;
@@ -136,6 +141,7 @@ const approvalDependencies: ApprovalDependencies = {
       throw error;
     });
   },
+  composeGraduation: composeGraduationDraft,
   deliver: deliverSponsorUpdate,
   async findUpdate(id, orgId) {
     return prisma.sponsorUpdate.findFirst({
@@ -232,7 +238,7 @@ export function createApproveSponsorUpdateHandler(dependencies: ApprovalDependen
     if (!access.ok) return access.response;
     const { orgId } = access.context;
 
-    const sponsorUpdate = await dependencies.findUpdate(id, orgId);
+    let sponsorUpdate = await dependencies.findUpdate(id, orgId);
     if (!sponsorUpdate) {
       return Response.json({ error: "Update not found" }, { status: 404 });
     }
@@ -263,6 +269,35 @@ export function createApproveSponsorUpdateHandler(dependencies: ApprovalDependen
         { error: "Connect the email address updates are sent from before approving them" },
         { status: 409 },
       );
+    }
+
+    if (sponsorUpdate.type === "graduation" && !sponsorUpdate.isAwaitingReminder) {
+      let composition: GraduationCompositionResult;
+      try {
+        composition = await dependencies.composeGraduation(id, orgId);
+      } catch (error) {
+        console.error("Graduation update composition failed", { id, orgId, error });
+        return Response.json(
+          { error: "Drafting the graduation story failed. Please try again." },
+          { status: 502 },
+        );
+      }
+      if (composition === "conflict") {
+        return Response.json(
+          { error: "Those chats were already used in another update." },
+          { status: 409 },
+        );
+      }
+      if (composition === "not-found") {
+        return Response.json({ error: "Only draft updates can be approved" }, { status: 409 });
+      }
+      if (composition === "composed") {
+        const refreshedUpdate = await dependencies.findUpdate(id, orgId);
+        if (!refreshedUpdate || refreshedUpdate.status !== "draft") {
+          return Response.json({ error: "Only draft updates can be approved" }, { status: 409 });
+        }
+        sponsorUpdate = refreshedUpdate;
+      }
     }
 
     const approvedAt = dependencies.now();
