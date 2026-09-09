@@ -75,8 +75,33 @@ export async function DELETE(request: Request, { params }: RouteContext) {
     data: { status: "dismissed" },
   });
   const deleted = dismissed.count === 0
-    ? await prisma.sponsorUpdate.deleteMany({
-      where: { id, orgId, status: "draft", type: "regular" },
+    ? await prisma.$transaction(async (tx) => {
+      const draft = await tx.sponsorUpdate.findFirst({
+        where: { id, orgId, status: "draft", type: "regular" },
+        select: { id: true },
+      });
+      if (!draft) return { count: 0 };
+
+      const checkIns = await tx.checkIn.findMany({
+        where: { orgId, sponsorUpdateId: id },
+        select: { id: true },
+      });
+
+      await tx.checkIn.updateMany({
+        where: { orgId, sponsorUpdateId: id },
+        data: { sponsorUpdateId: null },
+      });
+      await tx.volunteerPhoto.updateMany({
+        where: {
+          orgId,
+          checkInId: { in: checkIns.map(({ id: checkInId }) => checkInId) },
+        },
+        data: { caption: null },
+      });
+
+      return tx.sponsorUpdate.deleteMany({
+        where: { id, orgId, status: "draft", type: "regular" },
+      });
     })
     : dismissed;
 
