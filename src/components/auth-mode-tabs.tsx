@@ -26,7 +26,6 @@ export function AuthModeTabs({ button: Button, className, mode, onSelect }: Auth
             tone={selected ? "mustard" : "denim-lt"}
           >
             <span>{label}</span>
-            {selected ? <span>Current mode</span> : null}
           </Button>
         );
       })}
