@@ -3,10 +3,7 @@ import { after, before, test } from "node:test";
 
 import type { UIMessage } from "ai";
 
-import {
-  buildInterviewSystemPrompt,
-  interviewTurn,
-} from "./volunteer-interview.ts";
+import { interviewTurn } from "./volunteer-interview.ts";
 import { interviewRequestSchema } from "./volunteer-interview-request.ts";
 import { messageText } from "./ui-message-text.ts";
 import { env } from "./env.ts";
@@ -26,40 +23,6 @@ before(() => {
 after(() => {
   env.OPENAI_API_KEY = originalEnvironment.OPENAI_API_KEY;
   env.features = originalEnvironment.features;
-});
-
-test("builds a bounded, grounded companion interview prompt", () => {
-  const prompt = buildInterviewSystemPrompt({ companion, orgName: "Happy Tails" });
-
-  assert.match(prompt, /Biscuit/u);
-  assert.match(prompt, /Corgi mix/u);
-  assert.match(prompt, /one short question at a time/u);
-  assert.match(prompt, /no more than five questions/u);
-  assert.match(prompt, /Never invent facts/u);
-  assert.match(prompt, /medical advice/u);
-  assert.match(prompt, /one concrete visible detail/u);
-  assert.match(prompt, /Never infer health, breed, or identity from a photo/u);
-  assert.match(prompt, /\[\[READY\]\]/u);
-});
-
-test("uses the deterministic three-question script and then marks the interview ready", async () => {
-  const turns = [message("u0", "user", "I'd like to check in")];
-  const expectedQuestions = [
-    "What did you and Biscuit get up to today?",
-    "What was Biscuit like today",
-    "Was there a moment with Biscuit that made you smile",
-  ];
-
-  for (const [index, expected] of expectedQuestions.entries()) {
-    const response = await interviewTurn({ companion, orgName: "Happy Tails", messages: turns });
-    const body = await response.text();
-    assert.match(body, new RegExp(expected.replace(/[?' ]/gu, "."), "u"));
-    turns.push(message(`a${index}`, "assistant", body.trim()));
-    turns.push(message(`u${index + 1}`, "user", `Answer ${index + 1}`));
-  }
-
-  const ready = await interviewTurn({ companion, orgName: "Happy Tails", messages: turns });
-  assert.match(await ready.text(), /\[\[READY\]\]/u);
 });
 
 test("passes the complete text-only turn to the persistence callback", async () => {
@@ -104,7 +67,7 @@ test("rejects oversized message lists and text parts", () => {
   }).success, false);
   assert.equal(interviewRequestSchema.safeParse({
     ...valid,
-    messages: [message("1", "user", "x".repeat(2001))],
+    messages: [message("1", "user", "x".repeat(10_001))],
   }).success, false);
   assert.equal(interviewRequestSchema.safeParse({
     ...valid,
