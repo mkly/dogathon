@@ -49,7 +49,7 @@ before(async () => {
 });
 
 after(async () => {
-  await boss?.stop({ graceful: false });
+  await boss?.stop();
   if (!admin) return;
   await admin.query(
     "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = $1",

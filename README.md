@@ -206,9 +206,8 @@ openssl rand -hex 32
 npx vercel env add CRON_SECRET production
 ```
 
-Configure an external server to call `POST /api/jobs/drain` every five minutes,
-`GET /api/jobs/schedule-roster-sync` daily at 08:00 UTC, and
-`GET /api/jobs/schedule-sponsorship-grace-period` daily. All routes require
+Configure an external server to call `POST /api/jobs/drain` every five minutes
+and `GET /api/jobs/schedule-roster-sync` daily at 08:00 UTC. Both routes require
 the same value in an `Authorization: Bearer <CRON_SECRET>` header and refuse
 calls when `CRON_SECRET` is not configured.
 
@@ -233,7 +232,6 @@ Then install these entries in root's crontab with `sudo crontab -e`:
 ```cron
 */5 * * * * /usr/bin/flock -n /tmp/dogathon-drain.lock /usr/bin/curl --config /etc/dogathon/cron.curl --request POST https://dogathon.example/api/jobs/drain
 0 8 * * * /usr/bin/curl --config /etc/dogathon/cron.curl https://dogathon.example/api/jobs/schedule-roster-sync
-15 8 * * * /usr/bin/curl --config /etc/dogathon/cron.curl https://dogathon.example/api/jobs/schedule-sponsorship-grace-period
 ```
 
 The `flock` guard prevents overlapping drain invocations. Confirm the paths to

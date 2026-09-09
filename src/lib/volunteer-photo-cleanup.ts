@@ -32,7 +32,7 @@ const defaults: CleanupDependencies = {
   },
 };
 
-/** Deletes unattached uploads only after their grace period has elapsed. */
+/** Deletes unattached uploads only after their retention period has elapsed. */
 export async function cleanupVolunteerPhotos(
   dependencies: Partial<CleanupDependencies> = {},
   now = new Date(),

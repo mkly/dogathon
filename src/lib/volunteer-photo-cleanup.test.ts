@@ -3,7 +3,7 @@ import test from "node:test";
 
 import { cleanupVolunteerPhotos, ORPHAN_PHOTO_MAX_AGE_MS } from "./volunteer-photo-cleanup.ts";
 
-test("orphan photo cleanup removes only uploads older than the grace period", async () => {
+test("orphan photo cleanup removes only uploads older than the retention period", async () => {
   const now = new Date("2026-09-06T12:00:00Z");
   let cutoff: Date | undefined;
   const deletedKeys: string[] = [];
