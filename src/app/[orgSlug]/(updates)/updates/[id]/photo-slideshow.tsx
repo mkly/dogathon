@@ -4,16 +4,21 @@ import useEmblaCarousel from "embla-carousel-react";
 import Image from "next/image";
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 
-import type { UpdatePhoto } from "./fixture";
 import styles from "./updates.module.css";
 
+export type UpdatePhoto = {
+  caption: string | null;
+  src: string;
+};
+
 type PhotoSlideshowProps = {
+  companionName: string;
   photos: readonly UpdatePhoto[];
 };
 
 const subscribeToHydration = () => () => undefined;
 
-export function PhotoSlideshow({ photos }: PhotoSlideshowProps) {
+export function PhotoSlideshow({ companionName, photos }: PhotoSlideshowProps) {
   const [viewportRef, emblaApi] = useEmblaCarousel({ loop: true });
   const [selectedIndex, setSelectedIndex] = useState(0);
   const enhanced = useSyncExternalStore(subscribeToHydration, () => true, () => false);
@@ -47,7 +52,7 @@ export function PhotoSlideshow({ photos }: PhotoSlideshowProps) {
 
   return (
     <section
-      aria-label="More photos of Juniper"
+      aria-label={`More photos of ${companionName}`}
       aria-roledescription="carousel"
       className={`${styles.slideshow} ${enhanced ? styles.enhanced : ""}`}
     >
@@ -67,7 +72,7 @@ export function PhotoSlideshow({ photos }: PhotoSlideshowProps) {
             >
               <figure>
                 <Image
-                  alt={photo.alt}
+                  alt={photo.caption || `${companionName}, photo ${index + 1}`}
                   className={styles.slidePhoto}
                   height={900}
                   sizes="(max-width: 48rem) calc(100vw - 2rem), 44rem"
