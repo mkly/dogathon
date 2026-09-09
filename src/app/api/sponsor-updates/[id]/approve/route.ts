@@ -50,7 +50,6 @@ type ApprovalUpdate = {
   organization: {
     name: string;
     slug: string;
-    stripeAccountId: string | null;
   };
   resident: {
     name: string;
@@ -149,7 +148,6 @@ const approvalDependencies: ApprovalDependencies = {
           select: {
             name: true,
             slug: true,
-            stripeAccountId: true,
           },
         },
         sponsorship: {

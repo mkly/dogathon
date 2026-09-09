@@ -328,16 +328,15 @@ type StripeSubscriptionOperation = {
 };
 
 function hasStripeSubscription(
-  operation: "cancel",
   input: StripeSubscriptionOperation,
 ): input is { stripeAccountId: string; subscriptionId: string } {
   if (input.stripeAccountId && input.subscriptionId) return true;
-  console.info(`Skipping Stripe subscription ${operation}: subscription or connected account is missing`);
+  console.info("Skipping Stripe subscription cancel: subscription or connected account is missing");
   return false;
 }
 
 export async function cancelStripeSubscription(input: StripeSubscriptionOperation) {
-  if (!hasStripeSubscription("cancel", input)) return;
+  if (!hasStripeSubscription(input)) return;
 
   return stripe().subscriptions.cancel(
     input.subscriptionId,
