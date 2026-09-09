@@ -171,7 +171,7 @@ export async function markResidentAdopted(formData: FormData) {
   const { name, drafted } = await prisma.$transaction(async (tx) => {
     const resident = await tx.resident.findUnique({
       where: { id_orgId: { id: residentId, orgId } },
-      select: { id: true, name: true, available: true },
+      select: { id: true, name: true, photoUrls: true, available: true },
     });
     if (!resident) notFound();
     if (!resident.available) {

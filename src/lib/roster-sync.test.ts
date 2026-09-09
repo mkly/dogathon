@@ -146,6 +146,9 @@ test("adoption changes only resident availability and drafts one notice per acti
         { id: "sponsorship-2", sponsor: { name: "Lee" } },
       ],
     },
+    volunteerPhoto: {
+      findFirst: async () => ({ url: "/uploads/latest.jpg", webUrl: null }),
+    },
     sponsorUpdate: {
       create: async (input: unknown) => {
         drafts.push(input);
@@ -156,7 +159,7 @@ test("adoption changes only resident availability and drafts one notice per acti
   const closed = await markResidentAdopted(
     tx,
     "org-rescue",
-    { id: "resident-1", name: "Hattie" },
+    { id: "resident-1", name: "Hattie", photoUrls: ["/residents/hattie.jpg"] },
   );
 
   assert.equal(closed, 2);
@@ -166,8 +169,8 @@ test("adoption changes only resident availability and drafts one notice per acti
   }]);
   assert.equal(drafts.length, 2);
   assert.deepEqual(drafts, [
-    { data: { ...adoptionDraft("resident-1", "sponsorship-1", "Hattie", "Sam", "adopted"), orgId: "org-rescue" } },
-    { data: { ...adoptionDraft("resident-1", "sponsorship-2", "Hattie", "Lee", "adopted"), orgId: "org-rescue" } },
+    { data: { ...adoptionDraft("resident-1", "sponsorship-1", "Hattie", "Sam", "adopted", "/uploads/latest.jpg"), orgId: "org-rescue" } },
+    { data: { ...adoptionDraft("resident-1", "sponsorship-2", "Hattie", "Lee", "adopted", "/uploads/latest.jpg"), orgId: "org-rescue" } },
   ]);
 });
 
@@ -238,18 +241,34 @@ test("refuses a sibling tenant on a shared private suffix", async () => {
 });
 
 test("adoption drafts are queued and sponsor-specific", () => {
-  const draft = adoptionDraft("companion-1", "sponsorship-1", "Hattie", "Sam", "adopted");
+  const draft = adoptionDraft(
+    "companion-1",
+    "sponsorship-1",
+    "Hattie",
+    "Sam",
+    "adopted",
+    "/uploads/hattie.jpg",
+  );
 
   assert.equal(draft.type, "graduation");
   assert.equal(draft.status, "draft");
   assert.equal(draft.sponsorshipId, "sponsorship-1");
+  assert.match(draft.teaser, /found a home/i);
+  assert.equal(draft.heroPhotoUrl, "/uploads/hattie.jpg");
   assert.match(draft.bodyText, /Sam/);
   assert.match(draft.bodyText, /sponsorship will pause/i);
   assert.doesNotMatch(draft.bodyText, /sponsorship has ended/i);
 });
 
 test("unavailability drafts say the companion is no longer at the rescue", () => {
-  const draft = adoptionDraft("companion-1", "sponsorship-1", "Hattie", "Sam", "unavailable");
+  const draft = adoptionDraft(
+    "companion-1",
+    "sponsorship-1",
+    "Hattie",
+    "Sam",
+    "unavailable",
+    null,
+  );
 
   assert.match(draft.bodyText, /no longer at the rescue/i);
   assert.match(draft.subject, /no longer at the rescue/i);

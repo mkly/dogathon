@@ -75,7 +75,7 @@ type SyncRosterOptions = {
   signal?: AbortSignal;
 };
 
-type RetiredResident = { id: string; name: string };
+type RetiredResident = { id: string; name: string; photoUrls: string[] };
 
 export async function syncRoster(
   orgId: string,
@@ -125,7 +125,14 @@ export async function syncRoster(
     options.signal?.throwIfAborted();
     const before = await tx.resident.findMany({
       where: { orgId },
-      select: { id: true, name: true, sourceUrl: true, available: true, unavailabilityReason: true },
+      select: {
+        id: true,
+        name: true,
+        sourceUrl: true,
+        photoUrls: true,
+        available: true,
+        unavailabilityReason: true,
+      },
     });
     const existingNames = new Set(before.map((resident) => resident.name));
     const existingSourceUrls = new Set(before.map((resident) => resident.sourceUrl).filter(Boolean));
@@ -212,13 +219,21 @@ async function retireResident(
     data: { available: false, unavailabilityReason },
   });
 
-  const sponsorships = await tx.sponsorship.findMany({
-    where: { residentId: resident.id, orgId, status: "active" },
-    select: {
-      id: true,
-      sponsor: { select: { name: true } },
-    },
-  });
+  const [sponsorships, latestPhoto] = await Promise.all([
+    tx.sponsorship.findMany({
+      where: { residentId: resident.id, orgId, status: "active" },
+      select: {
+        id: true,
+        sponsor: { select: { name: true } },
+      },
+    }),
+    tx.volunteerPhoto.findFirst({
+      where: { residentId: resident.id, orgId },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      select: { url: true, webUrl: true },
+    }),
+  ]);
+  const heroPhotoUrl = latestPhoto?.webUrl ?? latestPhoto?.url ?? resident.photoUrls[0] ?? null;
 
   for (const sponsorship of sponsorships) {
     await tx.sponsorUpdate.create({
@@ -229,6 +244,7 @@ async function retireResident(
           resident.name,
           sponsorship.sponsor.name,
           unavailabilityReason,
+          heroPhotoUrl,
         ),
         orgId,
       },
@@ -1414,6 +1430,7 @@ export function adoptionDraft(
   companionName: string,
   sponsorName: string,
   reason: "adopted" | "unavailable",
+  heroPhotoUrl: string | null,
 ) {
   const departure = reason === "adopted"
     ? `${companionName} has been adopted!`
@@ -1421,13 +1438,17 @@ export function adoptionDraft(
   const subject = reason === "adopted"
     ? `${companionName} found a home!`
     : `${companionName} is no longer at the rescue`;
+  const teaser = reason === "adopted"
+    ? `${companionName} has found a home. Here is a warm look back at the moments that brought them here.`
+    : `${companionName} has left the rescue. Here is a warm look back at the time we shared.`;
   return {
     residentId,
     sponsorshipId,
     type: "graduation" as const,
     status: "draft" as const,
     subject,
-    teaser: departure,
+    teaser,
     bodyText: `${sponsorName}, ${departure} Once this notice is approved, your sponsorship will pause and no further charges will be made while you choose what comes next. Thank you for everything you gave ${companionName} along the way.`,
+    heroPhotoUrl,
   };
 }

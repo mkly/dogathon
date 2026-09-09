@@ -65,6 +65,7 @@ function request() {
 function dependencies(overrides: Record<string, unknown> = {}) {
   return {
     async claimUpdate() { return true; },
+    async composeGraduation() { return "no-pending-chats" as const; },
     async deliver() { return []; },
     async findUpdate() { return baseUpdate; },
     async getConnectorStatus() { return { connected: true, type: "gmail", fromEmail: "staff@example.com" }; },
