@@ -529,7 +529,7 @@ export function ComposeButton({
         "Compose update",
       );
       await refreshAdminPage();
-      pushToast("success", `${residentName}'s draft is ready for review.`);
+      pushToast("success", `Drafted an update for ${residentName}`);
     } catch (error) {
       pushToast(
         "error",
@@ -552,6 +552,7 @@ export function ComposeButton({
       >
         {pending ? "Composing…" : "Compose update"}
       </AdminButton>
+      {pending ? <small className={styles.composeHint}>This can take a minute or two</small> : null}
     </div>
   );
 }
