@@ -469,7 +469,7 @@ export function DraftEditor({
                               ? "The reminder will be dismissed and the sponsorship will remain paused."
                               : isGraduation
                               ? "The notice will be dismissed and this sponsorship will keep billing as normal."
-                              : "This cannot be undone."}
+                              : "The collected chats will go back to Ready to compose."}
                           </AlertDialog.Description>
                           <div className={styles.modalActions}>
                             <AlertDialog.Cancel asChild>
