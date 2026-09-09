@@ -84,7 +84,7 @@ export async function transferSponsorshipAction(
     refreshSponsorshipDirectories(orgSlug, sponsorship.sponsorId);
     return {
       ok: true,
-      message: `Sponsorship transferred to ${result.companionName}. A confirmation was emailed to the sponsor.`,
+      message: `Sponsorship moved to ${result.companionName}. A confirmation was emailed to the sponsor.`,
     };
   } catch (error) {
     if (error instanceof SponsorshipTransferError) {
@@ -109,7 +109,7 @@ export async function endStaffAwaitingSponsorship(
     },
   });
   if (!sponsorship) {
-    return { ok: false, message: "This sponsorship is no longer awaiting a companion." };
+    return { ok: false, message: "This sponsorship is no longer choosing a next companion." };
   }
 
   try {

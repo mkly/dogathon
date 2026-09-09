@@ -18,7 +18,7 @@ import { checkOrganizationPermission, getOrganizationAccessBySlug } from "@/lib/
 import { prisma } from "@/lib/prisma";
 import { uuidSchema } from "@/lib/uuid";
 
-import { AwaitingSponsorshipControls } from "./awaiting-sponsorship-controls";
+import { SponsorshipControls } from "./sponsorship-controls";
 import styles from "../sponsors.module.css";
 
 export const dynamic = "force-dynamic";
@@ -48,11 +48,11 @@ export default async function SponsorDetailPage({ params }: SponsorDetailPagePro
     redirect(access.authenticated ? "/staff/organizations" : `/staff/sign-in?next=${next}`);
   }
   const { context } = access;
-  const canManageAwaiting = await checkOrganizationPermission(requestHeaders, context.orgId, {
+  const canManageSponsorships = await checkOrganizationPermission(requestHeaders, context.orgId, {
     sponsorUpdate: ["manage"],
   });
 
-  const [sponsor, awaitingSponsorships, availableResidents] = await Promise.all([
+  const [sponsor, ongoingSponsorships, availableResidents] = await Promise.all([
     prisma.sponsor.findFirst({
       where: { id: sponsorId, sponsorships: { some: { orgId: context.orgId } } },
       select: {
@@ -75,14 +75,15 @@ export default async function SponsorDetailPage({ params }: SponsorDetailPagePro
       },
     }),
     prisma.sponsorship.findMany({
-      where: { orgId: context.orgId, sponsorId, status: "awaiting" },
+      where: { orgId: context.orgId, sponsorId, status: { in: ["active", "awaiting"] } },
       select: {
         id: true,
+        status: true,
         resident: { select: { name: true } },
       },
       orderBy: { id: "asc" },
     }),
-    canManageAwaiting ? prisma.resident.findMany({
+    canManageSponsorships ? prisma.resident.findMany({
       where: {
         orgId: context.orgId,
         available: true,
@@ -115,29 +116,36 @@ export default async function SponsorDetailPage({ params }: SponsorDetailPagePro
           </div>
         </AdminSurface>
 
-        {awaitingSponsorships.length > 0 ? (
-          <section aria-labelledby="awaiting-heading" className={styles.awaitingSection}>
+        {ongoingSponsorships.length > 0 ? (
+          <section aria-labelledby="manage-sponsorships-heading" className={styles.awaitingSection}>
             <div className={styles.historyTitle}>
-              <h2 id="awaiting-heading">Awaiting a new companion</h2>
-              <AdminBadge tone="brick">{awaitingSponsorships.length} awaiting</AdminBadge>
+              <h2 id="manage-sponsorships-heading">Manage sponsorships</h2>
+              <AdminBadge tone="brick">{ongoingSponsorships.length} ongoing</AdminBadge>
             </div>
+            <p className={styles.limitNotice}>
+              Sponsorships keep renewing while sponsors are between companions. Staff can move an
+              active sponsorship or one choosing a next companion at any time.
+            </p>
             <AdminSurface className={styles.historyPanel} tone="mustard">
               <AdminTable>
                 <thead>
                   <tr>
-                    <th scope="col">Former companion</th>
-                    {canManageAwaiting ? <th scope="col">Resolution</th> : null}
+                    <th scope="col">Companion</th>
+                    <th scope="col">Status</th>
+                    {canManageSponsorships ? <th scope="col">Actions</th> : null}
                   </tr>
                 </thead>
                 <tbody>
-                  {awaitingSponsorships.map((sponsorship) => (
+                  {ongoingSponsorships.map((sponsorship) => (
                     <tr key={sponsorship.id}>
                       <td>{sponsorship.resident.name}</td>
-                      {canManageAwaiting ? (
+                      <td><AdminStatus>{sponsorshipStatusLabel(sponsorship.status)}</AdminStatus></td>
+                      {canManageSponsorships ? (
                         <td>
-                          <AwaitingSponsorshipControls
+                          <SponsorshipControls
                             availableResidents={availableResidents}
-                            formerCompanionName={sponsorship.resident.name}
+                            canEnd={sponsorship.status === "awaiting"}
+                            currentCompanionName={sponsorship.resident.name}
                             orgSlug={orgSlug}
                             sponsorshipId={sponsorship.id}
                           />

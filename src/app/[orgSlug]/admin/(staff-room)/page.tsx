@@ -60,9 +60,9 @@ async function getCurrentTime() {
 
 async function DashboardStats({ orgId, orgSlug }: { orgId: string; orgSlug: string }) {
   const thirtyDaysAgo = await getThirtyDaysAgo();
-  const [activeSponsorships, sponsoredCompanionCount, sentSponsorUpdateCount] = await Promise.all([
+  const [ongoingSponsorships, sponsoredCompanionCount, sentSponsorUpdateCount] = await Promise.all([
     prisma.sponsorship.aggregate({
-      where: { orgId, status: "active" },
+      where: { orgId, status: { in: ["active", "awaiting"] } },
       _count: true,
       _sum: { monthlyCents: true },
     }),
@@ -80,26 +80,28 @@ async function DashboardStats({ orgId, orgSlug }: { orgId: string; orgSlug: stri
       },
     }),
   ]);
-  const activeSponsorCount = activeSponsorships._count;
-  const monthlyRecurring = activeSponsorships._sum.monthlyCents ?? 0;
+  const ongoingSponsorshipCount = ongoingSponsorships._count;
+  const monthlyRecurring = ongoingSponsorships._sum.monthlyCents ?? 0;
 
   return (
     <section aria-label="Program statistics" className={styles.stats}>
       <AdminSurface className={styles.stat} tone="mustard">
         <strong>{formatMonthlyAmount(monthlyRecurring)}</strong>
         <span>a month, recurring</span>
-        <small>{activeSponsorCount} active {pluralize("sponsorship", activeSponsorCount)}</small>
+        <small>
+          {ongoingSponsorshipCount} ongoing {pluralize("sponsorship", ongoingSponsorshipCount)}
+        </small>
       </AdminSurface>
       <Link
-        aria-label={`View active sponsors (${activeSponsorCount} active)`}
+        aria-label={`View sponsors (${ongoingSponsorshipCount} ongoing sponsorships)`}
         className={styles.statLink}
         href={`/${orgSlug}/admin/sponsors`}
         transitionTypes={["nav-forward"]}
       >
         <AdminSurface className={styles.stat} tone="moss">
-          <strong>{activeSponsorCount}</strong>
-          <span>active sponsors</span>
-          <small>ready for the next update</small>
+          <strong>{ongoingSponsorshipCount}</strong>
+          <span>ongoing sponsorships</span>
+          <small>active or choosing a next companion</small>
         </AdminSurface>
       </Link>
       <Link
@@ -117,7 +119,7 @@ async function DashboardStats({ orgId, orgSlug }: { orgId: string; orgSlug: stri
       <AdminSurface className={styles.stat} tone="brick">
         <strong>{sentSponsorUpdateCount}</strong>
         <span>updates sent</span>
-        <small>in the last 30 days</small>
+        <small>in the past month</small>
       </AdminSurface>
     </section>
   );

@@ -38,7 +38,7 @@ export function formatMonthlyAmount(monthlyCents: number) {
 export function sponsorshipStatusLabel(status: "active" | "awaiting" | "ended") {
   switch (status) {
     case "active": return "Active";
-    case "awaiting": return "Awaiting a new companion";
+    case "awaiting": return "Choosing next companion";
     case "ended": return "Ended";
   }
 }
