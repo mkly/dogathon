@@ -37,6 +37,7 @@ const getUpdate = cache((orgSlug: string, id: string, publiclyVisibleOnly = fals
       status: true,
       subject: true,
       teaser: true,
+      type: true,
       updatedAt: true,
       organization: { select: { name: true } },
       resident: {
@@ -65,6 +66,32 @@ function updatePhotos(update: NonNullable<Awaited<ReturnType<typeof getUpdate>>>
     .flatMap((checkIn) => checkIn.photos)
     .sort((left, right) => left.createdAt.getTime() - right.createdAt.getTime())
     .map((photo) => ({ caption: photo.caption, src: photo.webUrl ?? photo.url }));
+}
+
+async function getGraduationCompanions(orgSlug: string, residentId: string) {
+  const residents = await prisma.resident.findMany({
+    where: {
+      available: true,
+      id: { not: residentId },
+      organization: { slug: orgSlug },
+    },
+    orderBy: { name: "asc" },
+    select: {
+      ageText: true,
+      breed: true,
+      id: true,
+      name: true,
+      photoUrls: true,
+      _count: { select: { sponsorships: { where: { status: "active" } } } },
+    },
+  });
+
+  return residents
+    .sort((left, right) => (
+      left._count.sponsorships - right._count.sponsorships
+      || left.name.localeCompare(right.name)
+    ))
+    .slice(0, 4);
 }
 
 export async function generateMetadata({ params }: UpdatePageProps): Promise<Metadata> {
@@ -117,13 +144,20 @@ export default async function UpdatePage({ params }: UpdatePageProps) {
   const heroCaption = photos.find((photo) => photo.src === heroUrl)?.caption;
   const safeBody = neutralizeUnsafeMarkdownDestinations(escapeHtmlInMarkdown(update.bodyText));
   const sponsorable = isPublicResidentSponsorable(update.resident);
+  const graduationCompanions = update.type === "graduation"
+    ? await getGraduationCompanions(orgSlug, update.resident.id)
+    : [];
 
   return (
     <main className={styles.articleShell}>
       <article>
         {preview ? <p className={styles.previewBanner}>Draft preview, not sent yet</p> : null}
         <header className={styles.articleHeader}>
-          <p className={styles.eyebrow}>{update.organization.name}</p>
+          <p className={styles.eyebrow}>
+            {update.type === "graduation"
+              ? `${update.resident.name} has been adopted`
+              : update.organization.name}
+          </p>
           <h1>{update.subject}</h1>
           <div className={styles.headerDetails}>
             <p>
@@ -164,22 +198,56 @@ export default async function UpdatePage({ params }: UpdatePageProps) {
           </section>
         ) : null}
 
-        <footer className={styles.articleFooter}>
-          <div>
-            <p className={styles.footerHeading}>Keep following the good news</p>
-            <p>
-              Meet {update.resident.name} again or see who else is waiting at{" "}
-              {update.organization.name}.
-            </p>
-            <nav aria-label="Related pages" className={styles.footerLinks}>
-              {sponsorable ? (
-                <Link href={`/${orgSlug}/companions/${update.resident.id}`}>
-                  Sponsor {update.resident.name} too
-                </Link>
-              ) : null}
-              <Link href={`/${orgSlug}`}>Meet the rescue residents</Link>
-            </nav>
-          </div>
+        <footer className={`${styles.articleFooter} ${graduationCompanions.length ? styles.graduationFooter : ""}`}>
+          {graduationCompanions.length ? (
+            <section aria-labelledby="graduation-companions-heading" className={styles.graduationCompanions}>
+              <p className={styles.footerHeading} id="graduation-companions-heading">
+                Companions who could use a sponsor
+              </p>
+              <ul className={styles.graduationCompanionGrid}>
+                {graduationCompanions.map((resident) => (
+                  <li key={resident.id}>
+                    <Link className={styles.graduationCompanion} href={`/${orgSlug}/companions/${resident.id}`}>
+                      {resident.photoUrls[0] ? (
+                        <Image
+                          alt={resident.name}
+                          className={styles.graduationCompanionPhoto}
+                          height={320}
+                          sizes="(max-width: 30rem) calc(100vw - 2.5rem), 18rem"
+                          src={resident.photoUrls[0]}
+                          width={480}
+                        />
+                      ) : (
+                        <span aria-hidden="true" className={styles.graduationCompanionPlaceholder}>
+                          🐾
+                        </span>
+                      )}
+                      <span className={styles.graduationCompanionCopy}>
+                        <strong>{resident.name}</strong>
+                        <span>{[resident.breed, resident.ageText].filter(Boolean).join(" · ")}</span>
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : (
+            <div>
+              <p className={styles.footerHeading}>Keep following the good news</p>
+              <p>
+                Meet {update.resident.name} again or see who else is waiting at{" "}
+                {update.organization.name}.
+              </p>
+              <nav aria-label="Related pages" className={styles.footerLinks}>
+                {update.type === "regular" && sponsorable ? (
+                  <Link href={`/${orgSlug}/companions/${update.resident.id}`}>
+                    Sponsor {update.resident.name} too
+                  </Link>
+                ) : null}
+                <Link href={`/${orgSlug}`}>Meet the rescue residents</Link>
+              </nav>
+            </div>
+          )}
           <ShareUpdateButton title={update.subject} />
         </footer>
       </article>
