@@ -108,27 +108,6 @@ async function main() {
     }
   }
 
-  const notes = [
-    "Vet visit went well.",
-    "Teeth cleaned.",
-    "Ate a sock.",
-  ] as const;
-
-  for (const note of notes) {
-    const existingNote = await prisma.volunteerNote.findFirst({
-      where: { orgId: organization.id, residentId: biscuit.id, note },
-    });
-    const noteData = { orgId: organization.id, residentId: biscuit.id, note };
-    if (existingNote) {
-      await prisma.volunteerNote.update({
-        where: { id: existingNote.id },
-        data: { ...noteData, photoUrl: null },
-      });
-    } else {
-      await prisma.volunteerNote.create({ data: noteData });
-    }
-  }
-
   await prisma.rescueSettings.upsert({
     where: { orgId: organization.id },
     update: {
@@ -227,28 +206,6 @@ async function main() {
     });
   }
 
-  const secondNoteText = "Learned to bring the tennis ball back.";
-  const existingSecondNote = await prisma.volunteerNote.findFirst({
-    where: {
-      orgId: secondOrganization.id,
-      residentId: juniper.id,
-      note: secondNoteText,
-    },
-  });
-  const secondNoteData = {
-    orgId: secondOrganization.id,
-    residentId: juniper.id,
-    note: secondNoteText,
-  };
-  if (existingSecondNote) {
-    await prisma.volunteerNote.update({
-      where: { id: existingSecondNote.id },
-      data: { ...secondNoteData, photoUrl: null },
-    });
-  } else {
-    await prisma.volunteerNote.create({ data: secondNoteData });
-  }
-
   await prisma.rescueSettings.upsert({
     where: { orgId: secondOrganization.id },
     update: {
@@ -268,7 +225,7 @@ async function main() {
     data: { orgId: secondOrganization.id, monthlyCents: 3000, description: "", position: 0, isDefault: true },
   });
 
-  console.log("Seeded two organizations with distinct rosters, care history, sponsorships, and settings.");
+  console.log("Seeded two organizations with distinct rosters, sponsorships, and settings.");
 }
 
 main()

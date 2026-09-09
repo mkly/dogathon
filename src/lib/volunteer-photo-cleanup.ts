@@ -14,11 +14,11 @@ type CleanupDependencies = {
 const defaults: CleanupDependencies = {
   deletePhoto,
   async deleteRows(ids) {
-    await prisma.volunteerPhoto.deleteMany({ where: { id: { in: ids }, noteId: null } });
+    await prisma.volunteerPhoto.deleteMany({ where: { id: { in: ids }, checkInId: null } });
   },
   async findOrphans(olderThan) {
     return prisma.volunteerPhoto.findMany({
-      where: { createdAt: { lt: olderThan }, noteId: null },
+      where: { createdAt: { lt: olderThan }, checkInId: null },
       select: { id: true, storageKey: true },
       take: 100,
     });

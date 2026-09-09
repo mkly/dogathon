@@ -14,10 +14,6 @@ const composeRequestSchema = z.object({
   type: z.enum(["regular", "graduation"]).optional(),
 });
 
-/**
- * The care note is the summariser's digest of a check-in; the interview itself
- * carries the detail the digest drops, so the composer gets both.
- */
 function conversationLines(transcript: unknown): string[] | undefined {
   const parsed = interviewTranscriptSchema.safeParse(transcript);
   if (!parsed.success) return undefined;
@@ -52,15 +48,17 @@ export async function POST(request: Request) {
       where: { id: input.data.residentId, orgId },
       include: {
         organization: { select: { slug: true } },
-        volunteerNotes: {
-          orderBy: { createdAt: "desc" },
+        checkIns: {
+          where: { status: "completed", sponsorUpdateId: null },
+          orderBy: { updatedAt: "desc" },
           take: 10,
-          // never pull photoData bytes into the compose payload
           select: {
-            note: true,
-            photoUrl: true,
-            createdAt: true,
-            checkIn: { select: { transcript: true } },
+            transcript: true,
+            photos: {
+              orderBy: { createdAt: "desc" },
+              select: { url: true, webUrl: true },
+              take: 1,
+            },
           },
         },
       },
@@ -88,10 +86,10 @@ export async function POST(request: Request) {
         sex: resident.sex,
         ageText: resident.ageText,
       },
-      notes: resident.volunteerNotes.map(({ checkIn, ...note }) => ({
-        ...note,
-        conversation: conversationLines(checkIn?.transcript),
-      })),
+      notes: resident.checkIns.map((checkIn) => {
+        const conversation = conversationLines(checkIn.transcript) ?? [];
+        return { note: conversation.join("\n"), conversation };
+      }),
       pinnedPostscript: settings?.pinnedPostscript ?? "",
       type,
       companionPageUrl: companionPageUrl(env.BETTER_AUTH_URL, resident.organization.slug, resident.id),
@@ -105,9 +103,9 @@ export async function POST(request: Request) {
       orgId,
       residentId: resident.id,
       type,
-      // pin the picture from the notes this draft was written from: the roster
-      // profile shot is the companion, but the update is about the day
-      photoUrl: resident.volunteerNotes.find((note) => note.photoUrl)?.photoUrl ?? null,
+      heroPhotoUrl: resident.checkIns
+        .flatMap((checkIn) => checkIn.photos)
+        .map((photo) => photo.webUrl ?? photo.url)[0] ?? null,
       ...composed,
     },
   });

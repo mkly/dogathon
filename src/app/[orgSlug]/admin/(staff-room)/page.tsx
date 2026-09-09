@@ -128,12 +128,12 @@ function DashboardStatsLoading() {
 }
 
 async function ComposeSection({ orgId, orgSlug }: { orgId: string; orgSlug: string }) {
-  const noteResidentResults = await prisma.resident.findMany({
+  const chatResidentResults = await prisma.resident.findMany({
     // once a draft exists the companion moves to the approval queue below,
     // so keep it out of the compose list until that draft is resolved
     where: {
       orgId,
-      volunteerNotes: { some: { orgId } },
+      checkIns: { some: { sponsorUpdateId: null, status: "completed" } },
       sponsorUpdates: { none: { orgId, status: "draft" } },
     },
     orderBy: [{ name: "asc" }, { id: "asc" }],
@@ -142,42 +142,53 @@ async function ComposeSection({ orgId, orgSlug }: { orgId: string; orgSlug: stri
       name: true,
       breed: true,
       photoUrls: true,
-      volunteerNotes: {
-        orderBy: { createdAt: "desc" },
-        select: { createdAt: true, note: true, photoUrl: true },
+      checkIns: {
+        where: { sponsorUpdateId: null, status: "completed" },
+        orderBy: { updatedAt: "desc" },
+        select: {
+          updatedAt: true,
+          photos: {
+            orderBy: { createdAt: "desc" },
+            select: { url: true, webUrl: true },
+            take: 1,
+          },
+        },
         take: 1,
       },
-      _count: { select: { volunteerNotes: true } },
+      _count: {
+        select: { checkIns: { where: { sponsorUpdateId: null, status: "completed" } } },
+      },
     },
     take: STAFF_ROOM_LIST_LIMIT + 1,
   });
-  const noteResidentsTruncated = noteResidentResults.length > STAFF_ROOM_LIST_LIMIT;
-  const noteResidents = noteResidentResults.slice(0, STAFF_ROOM_LIST_LIMIT);
+  const chatResidentsTruncated = chatResidentResults.length > STAFF_ROOM_LIST_LIMIT;
+  const chatResidents = chatResidentResults.slice(0, STAFF_ROOM_LIST_LIMIT);
 
   return (
     <section className={styles.composeSection}>
       <AdminSectionHeader
         actions={<AdminBadge tone="mustard">
-          {noteResidents.length} {pluralize("companion", noteResidents.length)}
+          {chatResidents.length} {pluralize("companion", chatResidents.length)}
         </AdminBadge>}
-        eyebrow="Volunteer notebook"
-        title="Notes ready for an update"
+        eyebrow="Volunteer chats"
+        title="Chats ready for an update"
       />
 
-      {noteResidentsTruncated && (
+      {chatResidentsTruncated && (
         <p className={styles.listLimitNotice} role="status">
-          Showing the first {STAFF_ROOM_LIST_LIMIT} companions with notes ready for an update.
+          Showing the first {STAFF_ROOM_LIST_LIMIT} companions with chats ready for an update.
         </p>
       )}
 
-      {noteResidents.length === 0 ? (
+      {chatResidents.length === 0 ? (
         <AdminSurface className={styles.composeEmpty} tone="oatmeal">
-          No volunteer notes are waiting yet.
+          No volunteer chats are waiting yet.
         </AdminSurface>
       ) : (
         <div className={styles.composeGrid}>
-          {noteResidents.map((resident) => {
-            const latestNote = resident.volunteerNotes[0];
+          {chatResidents.map((resident) => {
+            const latestChat = resident.checkIns[0];
+            const latestPhoto = latestChat?.photos[0];
 
             return (
               <AdminSurface className={styles.composeItem} key={resident.id} tone="oatmeal">
@@ -185,7 +196,7 @@ async function ComposeSection({ orgId, orgSlug }: { orgId: string; orgSlug: stri
                   alt={`${resident.name} portrait`}
                   className={styles.composePhoto}
                   sizes="(max-width: 720px) 72px, 84px"
-                  src={latestNote?.photoUrl ?? resident.photoUrls[0]}
+                  src={latestPhoto?.webUrl ?? latestPhoto?.url ?? resident.photoUrls[0]}
                 />
                 <div className={styles.composeCopy}>
                   <h3>
@@ -198,10 +209,10 @@ async function ComposeSection({ orgId, orgSlug }: { orgId: string; orgSlug: stri
                     </Link>
                   </h3>
                   <p className={styles.composeBreed}>{resident.breed}</p>
-                  {latestNote ? <p className={styles.composeNote}>{latestNote.note}</p> : null}
+                  {latestChat ? <p className={styles.composeNote}>A completed volunteer chat is waiting.</p> : null}
                   <p className={styles.composeMeta}>
-                    {resident._count.volunteerNotes} {pluralize("volunteer note", resident._count.volunteerNotes)}
-                    {latestNote && <> · Latest {formatDateTime(latestNote.createdAt)} UTC</>}
+                    {resident._count.checkIns} {pluralize("volunteer chat", resident._count.checkIns)}
+                    {latestChat && <> · Latest {formatDateTime(latestChat.updatedAt)} UTC</>}
                   </p>
                 </div>
                 <ComposeButton orgSlug={orgSlug} residentId={resident.id} residentName={resident.name} />
@@ -216,7 +227,7 @@ async function ComposeSection({ orgId, orgSlug }: { orgId: string; orgSlug: stri
 
 function ComposeSectionLoading() {
   return (
-    <section aria-label="Loading volunteer notes" className={styles.composeSection}>
+    <section aria-label="Loading volunteer chats" className={styles.composeSection}>
       <div className={`${styles.sectionSkeleton} ${styles.skeleton}`} />
       <div className={styles.composeGrid}>
         <AdminSurface className={`${styles.composeItem} ${styles.skeleton}`} tone="oatmeal" />
@@ -309,7 +320,7 @@ async function ApprovalQueue({
             <AdminEmptyState variant="dashboard">
               <span aria-hidden="true">🐾</span>
               <h3>The queue is clear</h3>
-              <p>Fresh volunteer notes will become drafts here.</p>
+              <p>Fresh volunteer chats will become drafts here.</p>
             </AdminEmptyState>
           </AdminSurface>
         ) : (

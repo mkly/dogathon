@@ -4,11 +4,9 @@ import {
   createUIMessageStreamResponse,
   generateId,
   generateText,
-  Output,
   streamText,
   type UIMessage,
 } from "ai";
-import { z } from "zod";
 
 import { createAiModel, hasAiCredentials, reasoning } from "./ai-model.ts";
 import { messageText } from "./ui-message-text.ts";
@@ -40,17 +38,6 @@ const SCRIPTED_QUESTIONS = [
   (name: string) => `Was there a moment with ${name} that made you smile, something a sponsor would love to hear about?`,
 ] as const;
 
-const interviewSummarySchema = z.object({
-  note: z.string().trim().min(1).max(2000),
-});
-
-function userAnswers(messages: UIMessage[]): string[] {
-  return messages
-    .filter((message) => message.role === "user")
-    .map(messageText)
-    .filter(Boolean);
-}
-
 function scriptedReply(input: InterviewInput): string {
   const questionsAsked = input.messages.filter((message) =>
     message.role === "assistant" && SCRIPTED_QUESTIONS.some((question) =>
@@ -80,15 +67,6 @@ function textStreamResponse(text: string, input: InterviewInput, options: Interv
   return createUIMessageStreamResponse({ stream });
 }
 
-function ensureSentence(text: string): string {
-  return /[.!?]$/u.test(text) ? text : `${text}.`;
-}
-
-function deterministicSummary(messages: UIMessage[]): { note: string } {
-  const note = userAnswers(messages).map(ensureSentence).join(" ").slice(0, 2000).trim();
-  return { note: note || "No visit details were provided." };
-}
-
 export function buildInterviewSystemPrompt({
   companion,
   orgName,
@@ -108,10 +86,8 @@ export function buildInterviewSystemPrompt({
 
 // Reasoning models spend their thinking inside this budget before any visible
 // text, so it only exists as a runaway guard and must stay far above what a
-// turn or note needs; a tight cap shows up as an empty reply or as a summary
-// that fails with "No output generated".
+// turn needs; a tight cap shows up as an empty reply.
 const MAX_INTERVIEW_TURN_OUTPUT_TOKENS = 8000;
-const MAX_INTERVIEW_SUMMARY_OUTPUT_TOKENS = 8000;
 
 async function generateOpening(input: InterviewInput, includePhoto: boolean): Promise<string> {
   const content = includePhoto && input.photo
@@ -170,34 +146,4 @@ export async function interviewTurn(input: InterviewInput, options: InterviewTur
     generateMessageId: generateId,
     onEnd: ({ messages }) => options.onFinish?.(messages),
   });
-}
-
-export async function summarizeInterview(input: InterviewInput): Promise<{ note: string }> {
-  if (!hasAiCredentials()) return deterministicSummary(input.messages);
-
-  const transcript = input.messages
-    .map((message) => `${message.role}: ${messageText(message)}`)
-    .filter((line) => !line.endsWith(": "))
-    .join("\n");
-  let output: { note: string } | undefined;
-  try {
-    ({ output } = await generateText({
-      model: createAiModel(),
-      output: Output.object({ schema: interviewSummarySchema }),
-      maxOutputTokens: MAX_INTERVIEW_SUMMARY_OUTPUT_TOKENS,
-      providerOptions: reasoning("medium"),
-      instructions: [
-        "Condense the volunteer interview into a short plain-text note, two to four sentences, that a writer will later draw on for a cheerful email update to the companion's sponsors.",
-        "Keep only the vivid specifics: activities, personality, funny or sweet moments, and the volunteer's own wording. Use only facts in the transcript, do not invent details, and leave out anything that reads like a medical or care report.",
-        "Write the facts directly. No heading, no preamble, no commentary about what the note is for or what was not mentioned, and no remarks about the photo unless the volunteer described it.",
-      ].join(" "),
-      prompt: JSON.stringify({ companion: input.companion, transcript }),
-    }));
-  } catch (error) {
-    // the transcript itself travels with the note, so the composer still has
-    // the volunteer's own words when the digest falls back to their answers
-    console.error("volunteer check-in summary model failed; using the volunteer's answers as the note", error);
-  }
-
-  return output ?? deterministicSummary(input.messages);
 }

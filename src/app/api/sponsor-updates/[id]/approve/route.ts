@@ -34,7 +34,7 @@ type ApprovalUpdate = {
   type: SponsorUpdateType;
   subject: string;
   bodyText: string;
-  photoUrl: string | null;
+  heroPhotoUrl: string | null;
   status: "draft" | "approved" | "sent" | "dismissed";
   sponsorshipId: string | null;
   awaitingTransitionedAt: Date | null;
@@ -186,7 +186,7 @@ const approvalDependencies: ApprovalDependencies = {
       actionUrl,
       monthlyCents,
       origin,
-      photoUrl: update.photoUrl ?? update.resident.photoUrls[0] ?? null,
+      photoUrl: update.heroPhotoUrl ?? update.resident.photoUrls[0] ?? null,
       type: update.type,
     });
     const [bodyHtml, bodyText] = await Promise.all([

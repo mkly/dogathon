@@ -6,7 +6,6 @@ import type { UIMessage } from "ai";
 import {
   buildInterviewSystemPrompt,
   interviewTurn,
-  summarizeInterview,
 } from "./volunteer-interview.ts";
 import { interviewRequestSchema } from "./volunteer-interview-request.ts";
 import { messageText } from "./ui-message-text.ts";
@@ -95,19 +94,6 @@ test("passes the complete text-only turn to the persistence callback", async () 
   assert.match(persisted ? messageText(persisted[1]) : "", /get up to today/u);
 });
 
-test("summarizes fallback answers deterministically", async () => {
-  const result = await summarizeInterview({
-    companion,
-    messages: [
-      message("u1", "user", "We walked around the garden"),
-      message("a1", "assistant", "How was her mood?"),
-      message("u2", "user", "She was calm and drank water"),
-    ],
-  });
-
-  assert.equal(result.note, "We walked around the garden. She was calm and drank water.");
-});
-
 test("streams a credentialed interview turn with the companion prompt", async () => {
   env.OPENAI_API_KEY = "test-key";
   env.OPENAI_BASE_URL = "https://model.example/v1";
@@ -178,31 +164,6 @@ test("opens from photo bytes and falls back to a text-only opening when vision f
   assert.match(JSON.stringify(requestBodies[0]), /data:image\/jpeg;base64/u);
   assert.doesNotMatch(JSON.stringify(requestBodies[1]), /image_url|data:image/u);
   assert.match(String(logged[0]?.[0]), /vision opening failed/u);
-});
-
-test("uses structured model output for a grounded summary", async () => {
-  env.OPENAI_API_KEY = "test-key";
-  env.OPENAI_BASE_URL = "https://model.example/v1";
-  env.OPENAI_MODEL = "rescue-interviewer";
-  env.features = Object.freeze({ ...env.features, ai: true });
-  let requestBody: Record<string, unknown> | undefined;
-  globalThis.fetch = async (_input, init) => {
-    requestBody = JSON.parse(String(init?.body)) as Record<string, unknown>;
-    return Response.json({
-      choices: [{ message: { content: JSON.stringify({ note: "Biscuit enjoyed a calm garden walk." }) } }],
-    });
-  };
-
-  const result = await summarizeInterview({
-    companion,
-    messages: [message("u1", "user", "We had a calm garden walk")],
-  });
-
-  assert.equal(result.note, "Biscuit enjoyed a calm garden walk.");
-  assert.ok(requestBody);
-  const messages = requestBody.messages as Array<{ role: string; content: string }>;
-  assert.match(messages[0].content, /do not invent details/u);
-  assert.match(messages[1].content, /calm garden walk/u);
 });
 
 test("keeps assistant messages that carry step boundary parts", () => {

@@ -58,7 +58,6 @@ model Organization {
   residents              Resident[]
   sponsorships           Sponsorship[]
   sponsorshipTiers       SponsorshipTier[]
-  volunteerNotes         VolunteerNote[]
   volunteerPhotos        VolunteerPhoto[]
   checkIns               CheckIn[]
   sponsorUpdates         SponsorUpdate[]
@@ -230,7 +229,6 @@ model Resident {
   createdAt            DateTime                      @default(now())
   updatedAt            DateTime                      @updatedAt
   sponsorships         Sponsorship[]
-  volunteerNotes       VolunteerNote[]
   volunteerPhotos      VolunteerPhoto[]
   checkIns             CheckIn[]
   sponsorUpdates       SponsorUpdate[]
@@ -248,23 +246,24 @@ enum CheckInStatus {
 }
 
 model CheckIn {
-  id           String         @id @default(uuid(4)) @db.Uuid
-  orgId        String         @db.Uuid
-  residentId   String         @db.Uuid
-  userId       String         @db.Uuid
-  status       CheckInStatus  @default(in_progress)
-  transcript   Json
-  noteId       String?        @unique @db.Uuid
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
-  organization Organization   @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  resident     Resident       @relation(fields: [residentId, orgId], references: [id, orgId], onDelete: Cascade)
-  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  note         VolunteerNote? @relation(fields: [noteId], references: [id], onDelete: SetNull)
-  photos       VolunteerPhoto[]
+  id              String         @id @default(uuid(4)) @db.Uuid
+  orgId           String         @db.Uuid
+  residentId      String         @db.Uuid
+  userId          String         @db.Uuid
+  status          CheckInStatus  @default(in_progress)
+  transcript      Json
+  sponsorUpdateId String?        @db.Uuid
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  organization    Organization   @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  resident        Resident       @relation(fields: [residentId, orgId], references: [id, orgId], onDelete: Cascade)
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sponsorUpdate   SponsorUpdate? @relation(fields: [sponsorUpdateId], references: [id], onDelete: SetNull)
+  photos          VolunteerPhoto[]
 
   @@unique([id, orgId])
   @@index([orgId, residentId, createdAt])
+  @@index([orgId, residentId, status, sponsorUpdateId])
   @@index([userId, status])
 }
 
@@ -295,41 +294,24 @@ model Sponsorship {
   @@index([sponsorId])
 }
 
-model VolunteerNote {
-  id           String           @id @default(uuid(4)) @db.Uuid
-  orgId        String           @db.Uuid
-  residentId   String           @db.Uuid
-  note         String
-  photoUrl     String?
-  createdAt    DateTime         @default(now())
-  organization Organization     @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  resident     Resident         @relation(fields: [residentId, orgId], references: [id, orgId], onDelete: Cascade)
-  photos       VolunteerPhoto[]
-  checkIn      CheckIn?
-
-  @@unique([id, orgId])
-  @@index([orgId, createdAt])
-  @@index([residentId, orgId, createdAt])
-}
-
 model VolunteerPhoto {
-  id           String         @id @default(uuid(4)) @db.Uuid
-  orgId        String         @db.Uuid
-  residentId   String         @db.Uuid
-  noteId       String?        @db.Uuid
-  checkInId    String?        @db.Uuid
-  storageKey   String         @unique
-  url          String
-  mime         String
-  byteSize     Int
-  createdAt    DateTime       @default(now())
-  organization Organization   @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  resident     Resident       @relation(fields: [residentId, orgId], references: [id, orgId], onDelete: Cascade)
-  note         VolunteerNote? @relation(fields: [noteId], references: [id], onDelete: Cascade)
-  checkIn      CheckIn?       @relation(fields: [checkInId], references: [id], onDelete: SetNull)
+  id            String       @id @default(uuid(4)) @db.Uuid
+  orgId         String       @db.Uuid
+  residentId    String       @db.Uuid
+  checkInId     String?      @db.Uuid
+  storageKey    String       @unique
+  url           String
+  webStorageKey String?      @unique
+  webUrl        String?
+  caption       String?
+  mime          String
+  byteSize      Int
+  createdAt     DateTime     @default(now())
+  organization  Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  resident      Resident     @relation(fields: [residentId, orgId], references: [id, orgId], onDelete: Cascade)
+  checkIn       CheckIn?     @relation(fields: [checkInId], references: [id], onDelete: SetNull)
 
   @@unique([id, orgId])
-  @@index([noteId])
   @@index([checkInId])
   @@index([orgId, createdAt])
 }
@@ -347,10 +329,9 @@ model SponsorUpdate {
   sponsorshipId          String?             @db.Uuid
   type                   SponsorUpdateType   @default(regular)
   subject                String
+  teaser                 String              @default("")
   bodyText               String
-  /// The volunteer-note photo this update was written from, captured at compose
-  /// time so the email never falls back to the roster's profile shot.
-  photoUrl               String?
+  heroPhotoUrl           String?
   status                 SponsorUpdateStatus @default(draft)
   sentAt                 DateTime?
   awaitingTransitionedAt DateTime?
@@ -360,6 +341,7 @@ model SponsorUpdate {
   organization           Organization        @relation(fields: [orgId], references: [id], onDelete: Cascade)
   resident               Resident            @relation(fields: [residentId, orgId], references: [id, orgId], onDelete: Cascade)
   sponsorship            Sponsorship?        @relation(fields: [sponsorshipId], references: [id], onDelete: SetNull)
+  checkIns               CheckIn[]
 
   @@unique([id, orgId])
   @@index([orgId, status])

@@ -13,7 +13,7 @@ const baseUpdate = {
   type: "graduation" as const,
   subject: "Biscuit found a home!",
   bodyText: "Biscuit has been adopted!",
-  photoUrl: null,
+  heroPhotoUrl: null,
   status: "draft" as const,
   sponsorshipId: "active",
   awaitingTransitionedAt: null,

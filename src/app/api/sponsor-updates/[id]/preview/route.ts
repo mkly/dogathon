@@ -79,7 +79,7 @@ export async function GET(request: Request, { params }: RouteContext) {
         isRegularSponsorUpdateRecipient(sponsorship, sponsorUpdate.resident.available))?.monthlyCents
       ?? DEFAULT_SPONSORSHIP_MONTHLY_CENTS,
     origin,
-    photoUrl: sponsorUpdate.photoUrl ?? sponsorUpdate.resident.photoUrls[0] ?? null,
+    photoUrl: sponsorUpdate.heroPhotoUrl ?? sponsorUpdate.resident.photoUrls[0] ?? null,
     type: sponsorUpdate.type === "graduation" ? "graduation" : "regular",
   }));
 

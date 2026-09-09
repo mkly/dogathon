@@ -1,23 +1,16 @@
 "use server";
 
-import { randomUUID } from "node:crypto";
-
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
-import { after } from "next/server";
 import { z } from "zod";
 
 import { getOrganizationAccessBySlug } from "@/lib/organization-access";
 import { deletePhoto } from "@/lib/photo-storage";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
-import { summarizeInterview } from "@/lib/volunteer-interview";
 import { interviewTranscriptSchema, MAX_INTERVIEW_MESSAGES, textOnlyTranscript } from "@/lib/volunteer-interview-request";
-import { attachVolunteerPhotos } from "@/lib/volunteer-photos";
 import { uuidSchema } from "@/lib/uuid";
-
-import { MAX_PHOTO_BYTES } from "./photo-limits";
 
 function sessionUrl(orgSlug: string, checkInId: string, error?: string) {
   const path = `/${encodeURIComponent(orgSlug)}/volunteer/${encodeURIComponent(checkInId)}`;
@@ -79,7 +72,7 @@ export async function discardCheckIn(orgSlug: string, rawCheckInId: unknown) {
         status: "in_progress",
         userId: access.context.userId,
       },
-      noteId: null,
+      checkInId: checkInId.data,
     },
     select: { id: true, storageKey: true },
   });
@@ -113,7 +106,7 @@ export async function finishCheckIn(orgSlug: string, rawCheckInId: unknown, rawM
   const rateLimit = await checkRateLimit({
     ...RATE_LIMITS.volunteerCheckIn,
     identity: `user:${access.context.userId}`,
-    scope: "volunteer-checkin-summary",
+    scope: "volunteer-checkin-finish",
   });
   if (!rateLimit.allowed) redirect(sessionUrl(access.orgSlug, checkInId.data, "rate-limited"));
 
@@ -125,19 +118,6 @@ export async function finishCheckIn(orgSlug: string, rawCheckInId: unknown, rawM
   }
   const messages = textOnlyTranscript(transcript.data);
 
-  const checkIn = await prisma.checkIn.findFirst({
-    where: {
-      id: checkInId.data,
-      orgId: access.context.orgId,
-      status: "in_progress",
-      userId: access.context.userId,
-    },
-    select: {
-      resident: { select: { ageText: true, breed: true, id: true, name: true, sex: true } },
-    },
-  });
-  if (!checkIn) notFound();
-
   const completed = await prisma.checkIn.updateMany({
     where: {
       id: checkInId.data,
@@ -148,36 +128,6 @@ export async function finishCheckIn(orgSlug: string, rawCheckInId: unknown, rawM
     data: { status: "completed", transcript: messages },
   });
   if (completed.count !== 1) notFound();
-
-  const { orgId } = access.context;
-  const orgName = access.organization.name;
-  const { resident } = checkIn;
-
-  // The volunteer is done; the note is written after the response goes out.
-  after(async () => {
-    const { note } = await summarizeInterview({ companion: resident, messages, orgName });
-    const noteId = randomUUID();
-    try {
-      await prisma.$transaction(async (tx) => {
-        await tx.volunteerNote.create({
-          data: { id: noteId, orgId, note, residentId: resident.id },
-        });
-        const photoUrl = await attachVolunteerPhotos(tx, {
-          checkInId: checkInId.data,
-          maxByteSize: MAX_PHOTO_BYTES,
-          noteId,
-          orgId,
-          residentId: resident.id,
-        });
-        if (photoUrl) {
-          await tx.volunteerNote.update({ where: { id: noteId }, data: { photoUrl } });
-        }
-        await tx.checkIn.update({ where: { id: checkInId.data }, data: { noteId } });
-      });
-    } catch (error) {
-      console.error("volunteer check-in note save failed", error);
-    }
-  });
 
   redirect(sessionUrl(access.orgSlug, checkInId.data));
 }
