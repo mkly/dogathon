@@ -37,7 +37,7 @@
 .statLink:hover .stat { border-color: var(--felt-denim); }
 
 .queueSection { margin-bottom: 52px; }
-.composeSection { margin-bottom: 52px; }
+.updatesSection { margin-bottom: 52px; }
 
 .skeleton {
   position: relative;
@@ -64,48 +64,57 @@
 .settings h2 { font-size: clamp(1.6rem, 4vw, 2.1rem); }
 .queue { display: grid; gap: 22px; }
 
-.composeGrid {
+.updateTabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: -6px 0 18px;
+  border-bottom: 1px solid rgb(61 51 43 / 20%);
+}
+
+.updateTab,
+.updateTabActive {
+  margin-bottom: -1px;
+  padding: 10px 14px;
+  border-bottom: 3px solid transparent;
+  color: inherit;
+  font-size: 0.78rem;
+  font-weight: 850;
+  text-decoration: none;
+}
+
+.updateTab:hover { color: var(--felt-denim); }
+.updateTabActive { border-bottom-color: var(--felt-denim); color: var(--felt-denim); }
+
+.updateList {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
 }
 
-.composeItem {
+.updateRow {
   display: grid;
-  grid-template-columns: 84px minmax(0, 1fr);
-  grid-template-rows: auto 1fr auto;
-  align-items: start;
-  gap: 12px 16px;
-  padding: 18px;
+  grid-template-columns: 72px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  min-height: 104px;
+  padding: 16px 18px;
 }
 
-.composePhoto { width: 84px; grid-row: 1 / -1; }
-.composePhoto img { aspect-ratio: 1; }
-.composeCopy { grid-column: 2; grid-row: 1 / 3; min-width: 0; }
+.updatePhoto { width: 72px; }
+.updatePhoto img { aspect-ratio: 1; }
+.updateCopy { display: grid; justify-items: start; min-width: 0; gap: 7px; }
 
-.composeItem h3 { margin: 0 0 3px; font-size: 1.2rem; font-weight: 900; line-height: 1.15; }
-.composeName {
+.updateRow h3 { margin: 0; font-size: 1.2rem; font-weight: 900; line-height: 1.15; }
+.updateName {
   color: inherit;
   text-decoration: none;
   transition: color var(--motion-duration-base) var(--motion-ease-standard);
 }
-.composeName:hover { color: var(--felt-denim); text-decoration: underline; text-underline-offset: 0.16em; }
-.composeItem .composeBreed { margin: 0 0 10px; font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; opacity: 0.6; }
-.composeItem .composeNote {
-  display: -webkit-box;
-  margin: 0;
-  overflow: hidden;
-  font-size: 0.86rem;
-  font-weight: 600;
-  line-height: 1.5;
-  opacity: 0.86;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 4;
-}
-.composeItem .composeMeta { margin: 8px 0 0; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.02em; opacity: 0.6; }
-.composeItem .actionStack { grid-column: 2; grid-row: 3; justify-items: start; margin-top: 4px; }
-.composeItem .actionStack > * { white-space: nowrap; }
-.composeEmpty { padding: 26px; text-align: center; font-weight: 800; }
+.updateName:hover { color: var(--felt-denim); text-decoration: underline; text-underline-offset: 0.16em; }
+.updateMeta { margin: 0; font-size: 0.74rem; font-weight: 800; opacity: 0.65; }
+.updateRow .actionStack { justify-items: stretch; }
+.updateRow .actionStack > * { white-space: nowrap; }
+.composeHint { max-width: 10rem; font-size: 0.68rem; font-weight: 750; line-height: 1.3; opacity: 0.68; text-align: center; }
 .listLimitNotice { margin: -8px 0 20px; font-size: 0.78rem; font-weight: 800; opacity: 0.72; }
 
 .queueItem {
@@ -509,7 +518,6 @@
 
 @media (max-width: 900px) {
   .stats { grid-template-columns: repeat(2, 1fr); }
-  .composeGrid { grid-template-columns: 1fr; }
   .queueItem { grid-template-columns: 104px 1fr; }
   .photo { width: 104px; }
   .draftControls { grid-column: 1 / -1; }
@@ -519,10 +527,14 @@
 @media (max-width: 620px) {
   .stats { grid-template-columns: 1fr 1fr; gap: 12px; }
   .stat { min-height: 112px; padding: 17px; }
-  .composeItem { grid-template-columns: 72px minmax(0, 1fr); }
-  .composePhoto { width: 72px; grid-row: 1 / 3; }
-  .composeItem .actionStack { grid-column: 1 / -1; justify-items: stretch; }
-  .composeItem .actionStack > * { text-align: center; }
+  .updateTabs { align-items: stretch; flex-direction: column; gap: 0; border-bottom: 0; }
+  .updateTab, .updateTabActive { margin-bottom: 0; border-bottom-width: 1px; }
+  .updateTabActive { border-left: 3px solid var(--felt-denim); }
+  .updateRow { grid-template-columns: 64px minmax(0, 1fr); align-items: start; padding: 16px; }
+  .updatePhoto { width: 64px; }
+  .updateRow .actionStack { grid-column: 1 / -1; width: 100%; }
+  .updateRow .actionStack > * { width: 100%; text-align: center; }
+  .composeHint { max-width: none; }
   .queueItem { padding: 19px; }
   .dialogPanel { padding: 22px 18px; }
   .modalActions { align-items: stretch; flex-direction: column-reverse; }

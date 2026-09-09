@@ -24,8 +24,9 @@ import {
 } from "@/components/page-view-transition";
 import { SignOutButton } from "@/components/sign-out-button";
 import { getEmailConnectorStatus } from "@/lib/email-connectors";
-import { formatDateTime, formatMonthlyAmount } from "@/lib/format";
+import { formatMonthlyAmount } from "@/lib/format";
 import { getOrganizationAccessBySlug } from "@/lib/organization-access";
+import { pendingCheckInsWhere } from "@/lib/pending-check-ins";
 import { prisma } from "@/lib/prisma";
 import { isRegularSponsorUpdateRecipient } from "@/lib/sponsor-update-delivery";
 
@@ -38,7 +39,12 @@ import styles from "../admin.module.css";
 
 export const dynamic = "force-dynamic";
 
-type AdminPageProps = { params: Promise<{ orgSlug: string }> };
+type AdminPageProps = {
+  params: Promise<{ orgSlug: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+};
+
+type UpdatesTab = "ready" | "waiting";
 
 const STAFF_ROOM_LIST_LIMIT = 50;
 
@@ -127,95 +133,165 @@ function DashboardStatsLoading() {
   );
 }
 
-async function ComposeSection({ orgId, orgSlug }: { orgId: string; orgSlug: string }) {
-  const chatResidentResults = await prisma.resident.findMany({
-    // once a draft exists the companion moves to the approval queue below,
-    // so keep it out of the compose list until that draft is resolved
-    where: {
-      orgId,
-      checkIns: { some: { sponsorUpdateId: null, status: "completed" } },
-      sponsorUpdates: { none: { orgId, status: "draft" } },
-    },
-    orderBy: [{ name: "asc" }, { id: "asc" }],
-    select: {
-      id: true,
-      name: true,
-      breed: true,
-      photoUrls: true,
-      checkIns: {
-        where: { sponsorUpdateId: null, status: "completed" },
-        orderBy: { updatedAt: "desc" },
-        select: {
-          updatedAt: true,
-          photos: {
-            orderBy: { createdAt: "desc" },
-            select: { url: true, webUrl: true },
-            take: 1,
+function relativeSentTime(sentAt: Date, currentTime: number) {
+  const elapsedDays = Math.max(0, Math.floor((currentTime - sentAt.getTime()) / 86_400_000));
+  if (elapsedDays === 0) return "today";
+  if (elapsedDays === 1) return "yesterday";
+  if (elapsedDays < 30) return `${elapsedDays} days ago`;
+
+  const elapsedMonths = Math.floor(elapsedDays / 30);
+  if (elapsedMonths < 12) {
+    return `${elapsedMonths} ${pluralize("month", elapsedMonths)} ago`;
+  }
+
+  const elapsedYears = Math.floor(elapsedMonths / 12);
+  return `${elapsedYears} ${pluralize("year", elapsedYears)} ago`;
+}
+
+async function UpdatesSection({
+  activeTab,
+  orgId,
+  orgSlug,
+}: {
+  activeTab: UpdatesTab;
+  orgId: string;
+  orgSlug: string;
+}) {
+  const [sponsoredResidents, currentTime] = await Promise.all([
+    prisma.resident.findMany({
+      where: {
+        orgId,
+        sponsorships: {
+          some: { orgId, status: { in: ["active", "awaiting"] } },
+        },
+      },
+      select: {
+        id: true,
+        name: true,
+        photoUrls: true,
+        checkIns: {
+          where: pendingCheckInsWhere(),
+          orderBy: [{ updatedAt: "asc" }, { id: "asc" }],
+          select: { updatedAt: true },
+          take: 1,
+        },
+        sponsorUpdates: {
+          where: { orgId, status: "sent" },
+          orderBy: [{ sentAt: "desc" }, { createdAt: "desc" }],
+          select: { createdAt: true, sentAt: true },
+          take: 1,
+        },
+        _count: {
+          select: {
+            checkIns: { where: pendingCheckInsWhere() },
+            sponsorUpdates: {
+              where: { orgId, status: { in: ["draft", "approved"] } },
+            },
           },
         },
-        take: 1,
       },
-      _count: {
-        select: { checkIns: { where: { sponsorUpdateId: null, status: "completed" } } },
-      },
-    },
-    take: STAFF_ROOM_LIST_LIMIT + 1,
-  });
-  const chatResidentsTruncated = chatResidentResults.length > STAFF_ROOM_LIST_LIMIT;
-  const chatResidents = chatResidentResults.slice(0, STAFF_ROOM_LIST_LIMIT);
+    }),
+    getCurrentTime(),
+  ]);
+
+  const byName = (a: (typeof sponsoredResidents)[number], b: (typeof sponsoredResidents)[number]) =>
+    a.name.localeCompare(b.name) || a.id.localeCompare(b.id);
+  const readyResidents = sponsoredResidents
+    .filter((resident) => resident._count.checkIns > 0 && resident._count.sponsorUpdates === 0)
+    .sort((a, b) =>
+      b._count.checkIns - a._count.checkIns ||
+      (a.checkIns[0]?.updatedAt.getTime() ?? 0) - (b.checkIns[0]?.updatedAt.getTime() ?? 0) ||
+      byName(a, b));
+  const waitingResidents = sponsoredResidents
+    .filter((resident) => resident._count.checkIns === 0)
+    .sort((a, b) => {
+      const aSentAt = a.sponsorUpdates[0]?.sentAt ?? a.sponsorUpdates[0]?.createdAt;
+      const bSentAt = b.sponsorUpdates[0]?.sentAt ?? b.sponsorUpdates[0]?.createdAt;
+      if (!aSentAt && bSentAt) return -1;
+      if (aSentAt && !bSentAt) return 1;
+      return (aSentAt?.getTime() ?? 0) - (bSentAt?.getTime() ?? 0) || byName(a, b);
+    });
+  const activeResidents = activeTab === "ready" ? readyResidents : waitingResidents;
+  const residentsTruncated = activeResidents.length > STAFF_ROOM_LIST_LIMIT;
+  const residents = activeResidents.slice(0, STAFF_ROOM_LIST_LIMIT);
 
   return (
-    <section className={styles.composeSection}>
+    <section className={styles.updatesSection}>
       <AdminSectionHeader
-        actions={<AdminBadge tone="mustard">
-          {chatResidents.length} {pluralize("companion", chatResidents.length)}
-        </AdminBadge>}
         eyebrow="Volunteer chats"
-        title="Chats ready for an update"
+        title="Updates"
       />
 
-      {chatResidentsTruncated && (
+      <nav aria-label="Update queues" className={styles.updateTabs}>
+        <Link
+          aria-current={activeTab === "ready" ? "page" : undefined}
+          className={activeTab === "ready" ? styles.updateTabActive : styles.updateTab}
+          href={`/${orgSlug}/admin?updates=ready`}
+        >
+          Ready to compose ({readyResidents.length})
+        </Link>
+        <Link
+          aria-current={activeTab === "waiting" ? "page" : undefined}
+          className={activeTab === "waiting" ? styles.updateTabActive : styles.updateTab}
+          href={`/${orgSlug}/admin?updates=waiting`}
+        >
+          Waiting on volunteers ({waitingResidents.length})
+        </Link>
+      </nav>
+
+      {residentsTruncated && (
         <p className={styles.listLimitNotice} role="status">
-          Showing the first {STAFF_ROOM_LIST_LIMIT} companions with chats ready for an update.
+          Showing the first {STAFF_ROOM_LIST_LIMIT} companions in this list.
         </p>
       )}
 
-      {chatResidents.length === 0 ? (
-        <AdminSurface className={styles.composeEmpty} tone="oatmeal">
-          No volunteer chats are waiting yet.
+      {residents.length === 0 ? (
+        <AdminSurface tone="oatmeal">
+          <AdminEmptyState variant="dashboard">
+            <span aria-hidden="true">🐾</span>
+            <h3>{activeTab === "ready" ? "Nothing to compose yet" : "Everyone has a chat ready"}</h3>
+            <p>
+              {activeTab === "ready"
+                ? "Completed volunteer chats will appear here."
+                : "There are no sponsored companions waiting on volunteers."}
+            </p>
+          </AdminEmptyState>
         </AdminSurface>
       ) : (
-        <div className={styles.composeGrid}>
-          {chatResidents.map((resident) => {
-            const latestChat = resident.checkIns[0];
-            const latestPhoto = latestChat?.photos[0];
+        <div className={styles.updateList}>
+          {residents.map((resident) => {
+            const lastSentAt = resident.sponsorUpdates[0]?.sentAt ?? resident.sponsorUpdates[0]?.createdAt;
 
             return (
-              <AdminSurface className={styles.composeItem} key={resident.id} tone="oatmeal">
+              <AdminSurface className={styles.updateRow} key={resident.id} tone="oatmeal">
                 <PhotoPatch
                   alt={`${resident.name} portrait`}
-                  className={styles.composePhoto}
-                  sizes="(max-width: 720px) 72px, 84px"
-                  src={latestPhoto?.webUrl ?? latestPhoto?.url ?? resident.photoUrls[0]}
+                  className={styles.updatePhoto}
+                  sizes="(max-width: 620px) 64px, 72px"
+                  src={resident.photoUrls[0]}
                 />
-                <div className={styles.composeCopy}>
+                <div className={styles.updateCopy}>
                   <h3>
                     <Link
-                      className={styles.composeName}
+                      className={styles.updateName}
                       href={`/${orgSlug}/admin/companions/${resident.id}`}
                       transitionTypes={["nav-forward"]}
                     >
                       {resident.name}
                     </Link>
                   </h3>
-                  <p className={styles.composeBreed}>{resident.breed}</p>
-                  {latestChat ? <p className={styles.composeNote}>A completed volunteer chat is waiting.</p> : null}
-                  <p className={styles.composeMeta}>
-                    {resident._count.checkIns} {pluralize("volunteer chat", resident._count.checkIns)}
-                    {latestChat && <> · Latest {formatDateTime(latestChat.updatedAt)} UTC</>}
+                  <AdminBadge tone={activeTab === "ready" ? "mustard" : "oatmeal"}>
+                    {resident._count.checkIns} {pluralize("chat", resident._count.checkIns)} collected
+                  </AdminBadge>
+                  <p className={styles.updateMeta}>
+                    {lastSentAt
+                      ? `Last update sent ${relativeSentTime(lastSentAt, currentTime)}`
+                      : "No update sent yet"}
                   </p>
                 </div>
-                <ComposeButton orgSlug={orgSlug} residentId={resident.id} residentName={resident.name} />
+                {activeTab === "ready" ? (
+                  <ComposeButton orgSlug={orgSlug} residentId={resident.id} residentName={resident.name} />
+                ) : null}
               </AdminSurface>
             );
           })}
@@ -225,13 +301,13 @@ async function ComposeSection({ orgId, orgSlug }: { orgId: string; orgSlug: stri
   );
 }
 
-function ComposeSectionLoading() {
+function UpdatesSectionLoading() {
   return (
-    <section aria-label="Loading volunteer chats" className={styles.composeSection}>
+    <section aria-label="Loading updates" className={styles.updatesSection}>
       <div className={`${styles.sectionSkeleton} ${styles.skeleton}`} />
-      <div className={styles.composeGrid}>
-        <AdminSurface className={`${styles.composeItem} ${styles.skeleton}`} tone="oatmeal" />
-        <AdminSurface className={`${styles.composeItem} ${styles.skeleton}`} tone="oatmeal" />
+      <div className={styles.updateList}>
+        <AdminSurface className={`${styles.updateRow} ${styles.skeleton}`} tone="oatmeal" />
+        <AdminSurface className={`${styles.updateRow} ${styles.skeleton}`} tone="oatmeal" />
       </div>
     </section>
   );
@@ -405,8 +481,9 @@ async function StripeNotice({ orgId, orgSlug }: { orgId: string; orgSlug: string
   );
 }
 
-export default async function AdminPage({ params }: AdminPageProps) {
-  const { orgSlug } = await params;
+export default async function AdminPage({ params, searchParams }: AdminPageProps) {
+  const [{ orgSlug }, query] = await Promise.all([params, searchParams]);
+  const updatesTab: UpdatesTab = query.updates === "waiting" ? "waiting" : "ready";
   const access = await getOrganizationAccessBySlug(await headers(), orgSlug, {
     sponsorUpdate: ["manage"],
   });
@@ -456,8 +533,10 @@ export default async function AdminPage({ params }: AdminPageProps) {
           </Suspense>
         )}
 
-        <Suspense fallback={<SuspenseFallback><ComposeSectionLoading /></SuspenseFallback>}>
-          <SuspenseReveal><ComposeSection orgId={context.orgId} orgSlug={orgSlug} /></SuspenseReveal>
+        <Suspense fallback={<SuspenseFallback><UpdatesSectionLoading /></SuspenseFallback>}>
+          <SuspenseReveal>
+            <UpdatesSection activeTab={updatesTab} orgId={context.orgId} orgSlug={orgSlug} />
+          </SuspenseReveal>
         </Suspense>
 
         <Suspense fallback={<SuspenseFallback><ApprovalQueueLoading /></SuspenseFallback>}>
