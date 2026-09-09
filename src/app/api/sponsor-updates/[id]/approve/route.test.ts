@@ -71,7 +71,6 @@ function dependencies(overrides: Record<string, unknown> = {}) {
     async getConnectorStatus() { return { connected: true, type: "gmail", fromEmail: "staff@example.com" }; },
     async markSent() { return { id: updateId, status: "sent" }; },
     now: () => new Date("2026-09-06T20:00:00Z"),
-    async pauseCollection() {},
     async renderMessage() {
       return { subject: "Biscuit has been adopted", bodyHtml: "<p>Adopted</p>", bodyText: "Adopted" };
     },

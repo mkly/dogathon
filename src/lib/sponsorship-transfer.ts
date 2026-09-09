@@ -6,7 +6,7 @@ import { SponsorshipChoiceEmail } from "@/emails/sponsorship-choice-email";
 import { createOrganizationEmailSender } from "@/lib/email-connectors";
 import { prisma } from "@/lib/prisma";
 import { revalidatePublicRoster } from "@/lib/public-roster-cache";
-import { cancelStripeSubscription, resumeStripeCollection } from "@/lib/stripe-billing";
+import { cancelStripeSubscription } from "@/lib/stripe-billing";
 
 export type SponsorshipTransferErrorCode = "not_awaiting" | "resident_unavailable";
 
@@ -30,19 +30,13 @@ type ChoiceResult = {
 type SponsorshipTransferDependencies = {
   cancel: typeof cancelStripeSubscription;
   revalidateRoster: () => void;
-  resume: typeof resumeStripeCollection;
   sendEmail: typeof sendChoiceEmail;
   transaction: <T>(operation: (tx: Prisma.TransactionClient) => Promise<T>) => Promise<T>;
 };
 
-function nextChargeDate(subscription: Awaited<ReturnType<typeof resumeStripeCollection>>) {
-  const periods = subscription?.items.data.map((item) => item.current_period_end) ?? [];
-  return periods.length ? new Date(Math.min(...periods) * 1000) : undefined;
-}
-
 async function sendChoiceEmail(
   result: ChoiceResult,
-  input: { companionName?: string; nextChargeDate?: Date; type: "transferred" | "ended" },
+  input: { companionName?: string; type: "transferred" | "ended" },
 ) {
   const subject = input.type === "transferred"
     ? `Your sponsorship now supports ${input.companionName}`
@@ -63,7 +57,6 @@ async function sendChoiceEmail(
 const defaultDependencies: SponsorshipTransferDependencies = {
   cancel: cancelStripeSubscription,
   revalidateRoster: revalidatePublicRoster,
-  resume: resumeStripeCollection,
   sendEmail: sendChoiceEmail,
   transaction: (operation) => prisma.$transaction(operation, { timeout: 20_000 }),
 };
@@ -109,18 +102,12 @@ export async function transferSponsorship(
     });
     if (claimed.count !== 1) throw new SponsorshipTransferError("not_awaiting");
 
-    const subscription = await dependencies.resume({
-      stripeAccountId: sponsorship.organization.stripeAccountId,
-      subscriptionId: sponsorship.stripeSubscriptionId,
-      now: new Date(),
-    });
-    return { ...sponsorship, companionName: resident.name, nextChargeDate: nextChargeDate(subscription) };
+    return { ...sponsorship, companionName: resident.name };
   });
 
   dependencies.revalidateRoster();
   await dependencies.sendEmail(result, {
     companionName: result.companionName,
-    nextChargeDate: result.nextChargeDate,
     type: "transferred",
   });
   return result;
