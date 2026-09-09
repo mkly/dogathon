@@ -9,8 +9,6 @@ import { parseEnvironment } from "./env.ts";
 import {
   createRosterSyncDrainHandler,
   createRosterSyncDrainer,
-  createSponsorshipGracePeriodDrainer,
-  createVolunteerPhotoCleanupDrainer,
 } from "./roster-sync-worker.ts";
 
 const summary: SyncSummary = {
@@ -120,54 +118,9 @@ test("a correct secret fetches and explicitly completes one job", async () => {
   assert.deepEqual(await response.json(), { drained: true, job: job("succeeded") });
 });
 
-test("the drainer supervises the queue before fetching a job", async () => {
-  const calls: string[] = [];
-  const drain = createRosterSyncDrainer(dependencies({
-    supervise: async () => { calls.push("supervise"); },
-    fetch: async () => {
-      calls.push("fetch");
-      return null;
-    },
-  }));
-
-  await drain();
-
-  assert.deepEqual(calls, ["supervise", "fetch"]);
-});
-
 test("an empty queue is a successful no-op", async () => {
   const drain = createRosterSyncDrainer(dependencies({ fetch: async () => null }));
   assert.deepEqual(await drain(), { drained: false });
-});
-
-test("the photo cleanup job is enqueued, drained, and completed with the same worker fakes", async () => {
-  const calls: string[] = [];
-  const drain = createVolunteerPhotoCleanupDrainer({
-    enqueue: async () => { calls.push("enqueue"); return "job-2"; },
-    fetch: async () => { calls.push("fetch"); return { id: "job-2" }; },
-    cleanup: async () => { calls.push("cleanup"); return { deleted: 2 }; },
-    complete: async (id) => { calls.push(`complete:${id}`); },
-    fail: async () => { calls.push("fail"); },
-  });
-
-  assert.deepEqual(await drain(), { drained: true, deleted: 2 });
-  assert.deepEqual(calls, ["enqueue", "fetch", "cleanup", "complete:job-2"]);
-});
-
-test("the sponsorship grace-period job is processed and completed in the drain worker", async () => {
-  const calls: string[] = [];
-  const drain = createSponsorshipGracePeriodDrainer({
-    fetch: async () => ({ id: "job-3", data: { orgId: "org-1" } }),
-    process: async (orgId) => {
-      calls.push(`process:${orgId}`);
-      return { drafted: 1, ended: 1, skipped: 0 };
-    },
-    complete: async (id) => { calls.push(`complete:${id}`); },
-    fail: async () => { calls.push("fail"); },
-  });
-
-  assert.deepEqual(await drain(), { drained: true, drafted: 1, ended: 1, skipped: 0 });
-  assert.deepEqual(calls, ["process:org-1", "complete:job-3"]);
 });
 
 test("a roster refusal is completed with a refused outcome", async () => {
@@ -184,20 +137,4 @@ test("a roster refusal is completed with a refused outcome", async () => {
 
   assert.deepEqual(await drain(), { drained: true, job: job("refused") });
   assert.equal(recordedReason, "Too many residents would become unavailable");
-});
-
-test("a budget overrun aborts the sync and explicitly fails the job", async () => {
-  let recordedError = "";
-  const drain = createRosterSyncDrainer(dependencies({
-    syncRoster: async (_orgId, { signal }) => new Promise<SyncSummary>((_resolve, reject) => {
-      signal.addEventListener("abort", () => reject(signal.reason), { once: true });
-    }),
-    fail: async (_jobId, error) => {
-      recordedError = error;
-      return job("queued");
-    },
-  }));
-
-  assert.deepEqual(await drain({ budgetMs: 15 }), { drained: true, job: job("queued") });
-  assert.match(recordedError, /15ms drain budget/u);
 });

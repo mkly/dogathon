@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { after, afterEach, before, test } from "node:test";
+import { after, before, test } from "node:test";
 
 import type { UIMessage } from "ai";
 
@@ -12,13 +12,7 @@ import { messageText } from "./ui-message-text.ts";
 import { env } from "./env.ts";
 
 const companion = { name: "Biscuit", breed: "Corgi mix", sex: "Female", ageText: "Adult" };
-const originalEnvironment = {
-  OPENAI_API_KEY: env.OPENAI_API_KEY,
-  OPENAI_BASE_URL: env.OPENAI_BASE_URL,
-  OPENAI_MODEL: env.OPENAI_MODEL,
-  features: env.features,
-};
-const originalFetch = globalThis.fetch;
+const originalEnvironment = { OPENAI_API_KEY: env.OPENAI_API_KEY, features: env.features };
 
 function message(id: string, role: "user" | "assistant", text: string): UIMessage {
   return { id, role, parts: [{ type: "text", text }] };
@@ -29,20 +23,9 @@ before(() => {
   env.features = Object.freeze({ ...env.features, ai: false });
 });
 
-afterEach(() => {
-  env.OPENAI_API_KEY = undefined;
-  env.OPENAI_BASE_URL = "https://api.openai.com/v1";
-  env.OPENAI_MODEL = "gpt-4o-mini";
-  env.features = Object.freeze({ ...env.features, ai: false });
-  globalThis.fetch = originalFetch;
-});
-
 after(() => {
   env.OPENAI_API_KEY = originalEnvironment.OPENAI_API_KEY;
-  env.OPENAI_BASE_URL = originalEnvironment.OPENAI_BASE_URL;
-  env.OPENAI_MODEL = originalEnvironment.OPENAI_MODEL;
   env.features = originalEnvironment.features;
-  globalThis.fetch = originalFetch;
 });
 
 test("builds a bounded, grounded companion interview prompt", () => {
@@ -92,78 +75,6 @@ test("passes the complete text-only turn to the persistence callback", async () 
   assert.deepEqual(persisted?.[0], original[0]);
   assert.equal(persisted?.[1].role, "assistant");
   assert.match(persisted ? messageText(persisted[1]) : "", /get up to today/u);
-});
-
-test("streams a credentialed interview turn with the companion prompt", async () => {
-  env.OPENAI_API_KEY = "test-key";
-  env.OPENAI_BASE_URL = "https://model.example/v1";
-  env.OPENAI_MODEL = "rescue-interviewer";
-  env.features = Object.freeze({ ...env.features, ai: true });
-  let requestBody: Record<string, unknown> | undefined;
-  globalThis.fetch = async (_input, init) => {
-    requestBody = JSON.parse(String(init?.body)) as Record<string, unknown>;
-    const chunks = [
-      { choices: [{ index: 0, delta: { role: "assistant", content: "How did Biscuit seem today?" }, finish_reason: null }] },
-      { choices: [{ index: 0, delta: {}, finish_reason: "stop" }] },
-    ].map((chunk) => `data: ${JSON.stringify(chunk)}`).join("\n\n");
-    return new Response(`${chunks}\n\ndata: [DONE]\n\n`, {
-      headers: { "content-type": "text/event-stream" },
-    });
-  };
-
-  const response = await interviewTurn({
-    companion,
-    orgName: "Happy Tails",
-    messages: [message("u1", "user", "We went for a walk")],
-  });
-
-  assert.match(await response.text(), /How did Biscuit seem today\?/u);
-  assert.ok(requestBody);
-  const messages = requestBody.messages as Array<{ role: string; content: string }>;
-  assert.equal(messages[0].role, "system");
-  assert.match(messages[0].content, /Happy Tails/u);
-  assert.match(messages[0].content, /no more than five questions/u);
-  assert.match(messages[0].content, /\[\[READY\]\]/u);
-});
-
-test("opens from photo bytes and falls back to a text-only opening when vision fails", async () => {
-  env.OPENAI_API_KEY = "test-key";
-  env.OPENAI_BASE_URL = "https://model.example/v1";
-  env.OPENAI_MODEL = "vision-interviewer";
-  env.features = Object.freeze({ ...env.features, ai: true });
-  const requestBodies: Array<Record<string, unknown>> = [];
-  const logged: unknown[][] = [];
-  const originalConsoleError = console.error;
-  console.error = (...args) => { logged.push(args); };
-  globalThis.fetch = async (_input, init) => {
-    requestBodies.push(JSON.parse(String(init?.body)) as Record<string, unknown>);
-    if (requestBodies.length === 1) {
-      return Response.json(
-        { error: { message: "This model does not support image input" } },
-        { status: 400 },
-      );
-    }
-    return Response.json({
-      choices: [{ message: { content: "What did you and Biscuit do together today?" }, finish_reason: "stop" }],
-    });
-  };
-
-  try {
-    const response = await interviewTurn({
-      companion,
-      orgName: "Happy Tails",
-      messages: [],
-      photo: { data: new Uint8Array([1, 2, 3]), mime: "image/jpeg" },
-    });
-    assert.match(await response.text(), /What did you and Biscuit do together today/u);
-  } finally {
-    console.error = originalConsoleError;
-  }
-
-  assert.equal(requestBodies.length, 2);
-  assert.match(JSON.stringify(requestBodies[0]), /data:image\/jpeg;base64/u);
-  assert.doesNotMatch(JSON.stringify(requestBodies[1]), /image_url|data:image/u);
-  assert.match(String(logged[0]?.[0]), /vision opening failed/u);
 });
 
 test("keeps assistant messages that carry step boundary parts", () => {

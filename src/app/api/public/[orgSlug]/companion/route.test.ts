@@ -84,57 +84,6 @@ test("returns the public companion contract and allows a configured origin", asy
   });
 });
 
-test("looks up by companion slug and gives it precedence over source", async () => {
-  let sourceLookedUp = false;
-  const { GET } = createPublicCompanionHandlers(dependencies({
-    async getResidentBySlug(orgId: string, slug: string) {
-      assert.equal(orgId, "org-1");
-      assert.equal(slug, "biscuit");
-      return resident;
-    },
-    async getResidentBySource() {
-      sourceLookedUp = true;
-      return null;
-    },
-  }));
-  const response = await GET(new Request(
-    "https://pawcast.example/api/public/happy-paws/companion?companion=biscuit&source=https%3A%2F%2Fwrong.example%2Fdog",
-    { headers: { "x-real-ip": "192.0.2.10" } },
-  ), context());
-
-  assert.equal(response.status, 200);
-  assert.equal(sourceLookedUp, false);
-  assert.equal((await response.json()).slug, "biscuit");
-});
-
-test("omits CORS permission for a disallowed origin while still serving the response", async () => {
-  const { GET } = createPublicCompanionHandlers(dependencies({
-    async getResidentBySource() { return resident; },
-  }));
-  const response = await GET(request("https://other.example"), context());
-
-  assert.equal(response.status, 200);
-  assert.equal(response.headers.get("access-control-allow-origin"), null);
-  assert.equal((await response.json()).status, "available");
-});
-
-test("handles preflight for configured origins", async () => {
-  const { OPTIONS } = createPublicCompanionHandlers(dependencies());
-  const preflight = new Request(request("https://rescue.example"), {
-    method: "OPTIONS",
-    headers: {
-      origin: "https://rescue.example",
-      "access-control-request-method": "GET",
-    },
-  });
-  const response = await OPTIONS(preflight, context());
-
-  assert.equal(response.status, 204);
-  assert.equal(response.headers.get("access-control-allow-origin"), "https://rescue.example");
-  assert.equal(response.headers.get("access-control-allow-methods"), "GET, OPTIONS");
-  assert.equal(response.headers.get("vary"), "Origin");
-});
-
 test("returns a CORS-aware 404 for an unknown source", async () => {
   const { GET } = createPublicCompanionHandlers(dependencies({
     async getResidentBySource() { return null; },

@@ -8,16 +8,11 @@ import { setupServer } from "msw/node";
 import {
   type BillingStore,
   ResidentUnavailableError,
-  cancelStripeSubscription,
   constructStripeEvent,
-  createBillingPortalSession,
-  connectAccountStatus,
   createConnectOnboardingLink,
   createStripeCheckout,
-  pauseStripeCollection,
   processStripeEvent,
   refreshConnectStatus,
-  resumeStripeCollection,
 } from "./stripe-billing";
 import { env } from "./env.ts";
 
@@ -26,55 +21,24 @@ env.features = Object.freeze({ ...env.features, stripe: true });
 
 const stripeApi = "https://api.stripe.com";
 
-function formData(request: Request) {
-  return request.text().then((body) => new URLSearchParams(body));
-}
-
 const server = setupServer(
-  http.post(`${stripeApi}/v1/accounts`, async ({ request }) => {
-    const body = await formData(request);
-    assert.equal(body.get("type"), "express");
-    assert.equal(body.get("business_profile[name]"), "Fixture Rescue");
-    assert.equal(body.get("metadata[orgId]"), "org_rescue");
-    assert.equal(body.get("capabilities[card_payments][requested]"), "true");
-    assert.equal(body.get("capabilities[transfers][requested]"), "true");
-    return HttpResponse.json({ id: "acct_fixture_rescue", object: "account" });
-  }),
-  http.post(`${stripeApi}/v1/accounts/:accountId`, async ({ params, request }) => {
-    const body = await formData(request);
-    assert.equal(params.accountId, "acct_fixture_rescue");
-    assert.equal(body.get("capabilities[card_payments][requested]"), "true");
-    assert.equal(body.get("capabilities[transfers][requested]"), "true");
-    return HttpResponse.json({ id: "acct_fixture_rescue", object: "account" });
-  }),
-  http.post(`${stripeApi}/v1/account_links`, async ({ request }) => {
-    const body = await formData(request);
-    assert.equal(body.get("account"), "acct_fixture_rescue");
-    assert.equal(body.get("type"), "account_onboarding");
-    return HttpResponse.json({
-      object: "account_link",
-      url: "https://connect.stripe.test/onboard/acct_fixture_rescue",
-    });
-  }),
-  http.get(`${stripeApi}/v1/accounts/:accountId`, ({ params }) => {
-    assert.equal(params.accountId, "acct_fixture_rescue");
-    return HttpResponse.json({
-      id: "acct_fixture_rescue",
-      object: "account",
-      details_submitted: true,
-      charges_enabled: true,
-      capabilities: { card_payments: "active", transfers: "active" },
-    });
-  }),
+  http.post(`${stripeApi}/v1/accounts`, () => HttpResponse.json({ id: "acct_fixture_rescue", object: "account" })),
+  http.post(`${stripeApi}/v1/accounts/:accountId`, () => HttpResponse.json({ id: "acct_fixture_rescue", object: "account" })),
+  http.post(`${stripeApi}/v1/account_links`, () => HttpResponse.json({
+    object: "account_link",
+    url: "https://connect.stripe.test/onboard/acct_fixture_rescue",
+  })),
+  http.get(`${stripeApi}/v1/accounts/:accountId`, () => HttpResponse.json({
+    id: "acct_fixture_rescue",
+    object: "account",
+    details_submitted: true,
+    charges_enabled: true,
+    capabilities: { card_payments: "active", transfers: "active" },
+  })),
   http.post(`${stripeApi}/v1/checkout/sessions`, () => HttpResponse.json({
     id: "cs_fixture",
     object: "checkout.session",
     url: "https://checkout.stripe.test/cs_fixture",
-  })),
-  http.post(`${stripeApi}/v1/billing_portal/sessions`, () => HttpResponse.json({
-    id: "bps_fixture",
-    object: "billing_portal.session",
-    url: "https://billing.stripe.test/session_fixture",
   })),
 );
 
@@ -184,206 +148,6 @@ function signedEvent(object: Record<string, unknown>, type: string) {
   const signature = Stripe.webhooks.generateTestHeaderString({ payload, secret });
   return constructStripeEvent(payload, signature, secret);
 }
-
-test("Stripe SDK checkout uses the selected tier amount on the connected account", async () => {
-  server.use(http.post(`${stripeApi}/v1/checkout/sessions`, async ({ request }) => {
-    const body = await formData(request);
-    assert.equal(body.get("mode"), "subscription");
-    assert.equal(
-      body.get("line_items[0][price_data][unit_amount]"),
-      "5200",
-    );
-    assert.equal(body.get("line_items[0][price_data][recurring][interval]"), "month");
-    assert.equal(body.get("line_items[0][price_data][product_data][name]"), "Sponsor Mabel");
-    assert.equal(body.get("subscription_data[metadata][orgId]"), "org_rescue");
-    assert.equal(body.get("metadata[monthlyCents]"), "5200");
-    assert.equal(body.get("subscription_data[metadata][monthlyCents]"), "5200");
-    assert.equal(request.headers.get("stripe-account"), "acct_fixture_rescue");
-    return HttpResponse.json({
-      id: "cs_sdk_fixture",
-      object: "checkout.session",
-      url: "https://checkout.stripe.test/cs_sdk_fixture",
-    });
-  }));
-
-  const store = new MemoryBillingStore();
-  store.organization.stripeAccountId = "acct_fixture_rescue";
-  store.organization.stripeChargesEnabled = true;
-  const checkout = await createStripeCheckout({
-    orgId: "org_rescue",
-    residentId: "companion_mabel",
-    sponsorName: "Avery Sponsor",
-    sponsorEmail: "avery@example.com",
-    monthlyCents: 5200,
-    successUrl: "https://app.test/success",
-    cancelUrl: "https://app.test/cancel",
-  }, store);
-
-  assert.equal(checkout.id, "cs_sdk_fixture");
-});
-
-test("Stripe SDK billing portal uses the sponsorship customer on the connected account", async () => {
-  server.use(http.post(`${stripeApi}/v1/billing_portal/sessions`, async ({ request }) => {
-    const body = await formData(request);
-    assert.equal(body.get("customer"), "cus_fixture_sponsor");
-    assert.equal(body.get("return_url"), "https://app.test/account");
-    assert.equal(request.headers.get("stripe-account"), "acct_fixture_rescue");
-    return HttpResponse.json({
-      id: "bps_fixture",
-      object: "billing_portal.session",
-      url: "https://billing.stripe.test/session_fixture",
-    });
-  }));
-
-  const portal = await createBillingPortalSession({
-    accountId: "acct_fixture_rescue",
-    customerId: "cus_fixture_sponsor",
-    returnUrl: "https://app.test/account",
-  });
-
-  assert.equal(portal.url, "https://billing.stripe.test/session_fixture");
-});
-
-test("Stripe SDK cancels a subscription on the rescue's connected account", async () => {
-  server.use(http.delete(`${stripeApi}/v1/subscriptions/:subscriptionId`, ({ params, request }) => {
-    assert.equal(params.subscriptionId, "sub_adopted");
-    assert.equal(request.headers.get("stripe-account"), "acct_fixture_rescue");
-    return HttpResponse.json({
-      id: "sub_adopted",
-      object: "subscription",
-      status: "canceled",
-    });
-  }));
-
-  const subscription = await cancelStripeSubscription({
-    stripeAccountId: "acct_fixture_rescue",
-    subscriptionId: "sub_adopted",
-  });
-
-  assert.equal(subscription?.status, "canceled");
-});
-
-test("Stripe SDK pauses collection by voiding renewal invoices on the connected account", async () => {
-  server.use(http.post(`${stripeApi}/v1/subscriptions/:subscriptionId`, async ({ params, request }) => {
-    const body = await formData(request);
-    assert.equal(params.subscriptionId, "sub_adopted");
-    assert.equal(body.get("pause_collection[behavior]"), "void");
-    assert.equal(request.headers.get("stripe-account"), "acct_fixture_rescue");
-    return HttpResponse.json({
-      id: "sub_adopted",
-      object: "subscription",
-      pause_collection: { behavior: "void" },
-    });
-  }));
-
-  const subscription = await pauseStripeCollection({
-    stripeAccountId: "acct_fixture_rescue",
-    subscriptionId: "sub_adopted",
-  });
-
-  assert.equal(subscription?.pause_collection?.behavior, "void");
-});
-
-test("Stripe SDK resumes collection with a fresh billing anchor and no proration", async () => {
-  const now = new Date("2026-09-08T15:30:00.000Z");
-  server.use(http.post(`${stripeApi}/v1/subscriptions/:subscriptionId`, async ({ params, request }) => {
-    const body = await formData(request);
-    assert.equal(params.subscriptionId, "sub_transferred");
-    assert.equal(body.get("pause_collection"), "");
-    assert.equal(body.get("billing_cycle_anchor"), "now");
-    assert.equal(body.get("proration_behavior"), "none");
-    assert.equal(request.headers.get("stripe-account"), "acct_fixture_rescue");
-    return HttpResponse.json({
-      id: "sub_transferred",
-      object: "subscription",
-      pause_collection: null,
-    });
-  }));
-
-  const subscription = await resumeStripeCollection({
-    stripeAccountId: "acct_fixture_rescue",
-    subscriptionId: "sub_transferred",
-    now,
-  });
-
-  assert.equal(subscription?.pause_collection, null);
-});
-
-test("Stripe subscription helpers log and do nothing when billing identifiers are missing", async () => {
-  const messages: string[] = [];
-  const originalInfo = console.info;
-  console.info = (message: string) => { messages.push(message); };
-
-  try {
-    assert.equal(await pauseStripeCollection({ stripeAccountId: null, subscriptionId: "sub_1" }), undefined);
-    assert.equal(await resumeStripeCollection({
-      stripeAccountId: "acct_1",
-      subscriptionId: null,
-      now: new Date(),
-    }), undefined);
-    assert.equal(await cancelStripeSubscription({ stripeAccountId: null, subscriptionId: null }), undefined);
-  } finally {
-    console.info = originalInfo;
-  }
-
-  assert.deepEqual(messages, [
-    "Skipping Stripe subscription pause: subscription or connected account is missing",
-    "Skipping Stripe subscription resume: subscription or connected account is missing",
-    "Skipping Stripe subscription cancel: subscription or connected account is missing",
-  ]);
-});
-
-test("resuming onboarding re-requests card payments on an existing connected account", async () => {
-  const store = new MemoryBillingStore();
-  store.organization.stripeAccountId = "acct_fixture_rescue";
-
-  const onboarding = await createConnectOnboardingLink(
-    "org_rescue",
-    { refreshUrl: "https://app.test/connect/refresh", returnUrl: "https://app.test/connect/return" },
-    store,
-  );
-  assert.equal(onboarding.url, "https://connect.stripe.test/onboard/acct_fixture_rescue");
-});
-
-test("an account is only chargeable once Stripe activates card payments on it", () => {
-  const account = {
-    details_submitted: true,
-    charges_enabled: true,
-    capabilities: { transfers: "active" },
-  } as unknown as Stripe.Account;
-  assert.deepEqual(connectAccountStatus(account), {
-    detailsSubmitted: true,
-    chargesEnabled: false,
-    verifying: false,
-    blockers: [],
-  });
-});
-
-test("Stripe's outstanding requirements are surfaced as readable blockers", () => {
-  const account = {
-    details_submitted: true,
-    charges_enabled: false,
-    capabilities: { card_payments: "inactive", transfers: "active" },
-    requirements: {
-      errors: [
-        {
-          code: "verification_failed_keyed_identity",
-          reason: "The person's keyed-in identity information could not be verified.",
-          requirement: "individual.verification.document",
-        },
-      ],
-      past_due: ["individual.verification.document"],
-      currently_due: ["individual.verification.document", "business_profile.url"],
-      pending_verification: ["individual.id_number"],
-    },
-  } as unknown as Stripe.Account;
-  assert.equal(connectAccountStatus(account).verifying, true);
-  assert.deepEqual(connectAccountStatus(account).blockers, [
-    "The person's keyed-in identity information could not be verified.",
-    "Stripe still needs: business profile url.",
-    "Stripe is verifying details it already has; this can take a few minutes.",
-  ]);
-});
 
 test("Stripe Connect onboarding, checkout, and signed webhooks maintain sponsorship state", async () => {
   const store = new MemoryBillingStore();

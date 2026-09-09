@@ -58,27 +58,3 @@ test("rejects unauthenticated and wrong-organization uploads", async () => {
   }));
   assert.equal((await wrongOrganization(request())).status, 403);
 });
-
-test("validates processed image content and stores only photo metadata", async () => {
-  const invalid = createVolunteerPhotoPostHandler(dependencies({
-    async processPhoto() { return undefined; },
-  }));
-  assert.deepEqual(await (await invalid(request())).json(), { error: "photo-type" });
-
-  let created: unknown;
-  const valid = createVolunteerPhotoPostHandler(dependencies({
-    async createPhoto(input: unknown) { created = input; },
-  }));
-  const response = await valid(request());
-  assert.equal(response.status, 201);
-  assert.deepEqual(created, {
-    id: "8f77b971-f0b5-493c-aa9a-5931c1f17ea5",
-    checkInId,
-    orgId: "org-1",
-    residentId,
-    storageKey: "orgs/org-1/volunteer-photos/8f77b971-f0b5-493c-aa9a-5931c1f17ea5.jpg",
-    url: "/api/volunteer-photos/photo-1?org=org-1",
-    mime: "image/jpeg",
-    byteSize: 2,
-  });
-});

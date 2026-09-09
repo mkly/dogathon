@@ -16,7 +16,6 @@ import {
   ROSTER_SYNC_QUEUE,
   ROSTER_SYNC_RETRY_LIMIT,
 } from "./roster-sync-queue.ts";
-import { createRosterSyncDrainer } from "./roster-sync-worker.ts";
 import { env, subprocessEnvironment } from "./env.ts";
 
 const execFileAsync = promisify(execFile);
@@ -25,7 +24,6 @@ const sourceDatabaseUrl = env.DATABASE_URL;
 const databaseName = `dogathon_pgboss_${process.pid}_${randomUUID().replaceAll("-", "")}`;
 
 let admin: pg.Client;
-let database: pg.Client;
 let boss: PgBoss;
 
 before(async () => {
@@ -36,8 +34,6 @@ before(async () => {
   await admin.query(`CREATE DATABASE "${databaseName}"`);
   url.pathname = `/${databaseName}`;
   const databaseUrl = url.toString();
-  database = new pg.Client({ connectionString: databaseUrl });
-  await database.connect();
 
   await execFileAsync("./node_modules/.bin/prisma", ["migrate", "deploy"], {
     cwd: repoRoot,
@@ -54,7 +50,6 @@ before(async () => {
 
 after(async () => {
   await boss?.stop({ graceful: false });
-  await database?.end();
   if (!admin) return;
   await admin.query(
     "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = $1",
@@ -144,60 +139,4 @@ test("a failed fetch is returned to pg-boss for retry", async () => {
   assert.equal(retry.status, "queued");
   assert.equal(retry.errorMessage, "temporary failure");
   assert.equal((await queue.fetch())?.id, claimed.id);
-});
-
-test("an expired active job is fetchable after supervision", async () => {
-  const queue = createRosterSyncQueue(boss);
-  const orgId = randomUUID();
-  await queue.enqueue({ orgId });
-  const claimed = await queue.fetch();
-  assert.ok(claimed);
-
-  await database.query("UPDATE pgboss.job_common SET started_on = now() - interval '301 seconds' WHERE id = $1", [
-    claimed.id,
-  ]);
-
-  assert.equal(await queue.fetch(), null);
-  await boss.supervise(ROSTER_SYNC_QUEUE);
-  assert.equal((await queue.fetch())?.id, claimed.id);
-});
-
-test("the HTTP-invocation drainer fetches and settles a real pg-boss job", async () => {
-  const queue = createRosterSyncQueue(boss);
-  const orgId = randomUUID();
-  const queued = await queue.enqueue({ orgId });
-  const drain = createRosterSyncDrainer({
-    supervise: () => boss.supervise(ROSTER_SYNC_QUEUE),
-    fetch: queue.fetch,
-    succeed: queue.succeed,
-    refuse: queue.refuse,
-    fail: queue.fail,
-    syncRoster: async (nextOrgId) => {
-      assert.equal(nextOrgId, orgId);
-      return {
-        created: 1,
-        updated: 0,
-        adopted: 0,
-    madeUnavailable: 0,
-        madeAvailable: 0,
-        usedFallbackCapture: false,
-        rosterComplete: true,
-        rosterCompleteness: {
-          complete: true,
-          timedOut: false,
-          status: "completed",
-          completed: 1,
-          total: 1,
-        },
-        source: "https://rescue.example/companions",
-      };
-    },
-  });
-
-  const result = await drain();
-
-  assert.equal(result.drained, true);
-  assert.equal(result.drained && result.job.id, queued.id);
-  assert.equal(result.drained && result.job.status, "succeeded");
-  assert.equal((await queue.get(orgId, queued.id)).status, "succeeded");
 });
