@@ -9,7 +9,7 @@ import { pushToast } from "@/lib/toast";
 import {
   endStaffAwaitingSponsorship,
   refreshAdminPage,
-  transferAwaitingSponsorship,
+  transferSponsorshipAction,
 } from "../../actions";
 import styles from "../sponsors.module.css";
 
@@ -36,7 +36,7 @@ export function AwaitingSponsorshipControls({
     setPendingAction("transfer");
     startTransition(async () => {
       try {
-        const result = await transferAwaitingSponsorship({
+        const result = await transferSponsorshipAction({
           orgSlug,
           residentId,
           sponsorshipId,

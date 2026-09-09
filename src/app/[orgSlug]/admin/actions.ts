@@ -36,7 +36,7 @@ const awaitingSponsorshipSchema = z.object({
   orgSlug: z.string().trim().min(1),
   sponsorshipId: uuidSchema,
 });
-const transferAwaitingSponsorshipSchema = awaitingSponsorshipSchema.extend({
+const transferSponsorshipSchema = awaitingSponsorshipSchema.extend({
   residentId: uuidSchema,
 });
 
@@ -64,19 +64,19 @@ function refreshSponsorshipDirectories(orgSlug: string, sponsorId: string) {
   revalidatePath(`/${orgSlug}/admin/sponsors/${sponsorId}`);
 }
 
-export async function transferAwaitingSponsorship(
-  input: z.infer<typeof transferAwaitingSponsorshipSchema>,
+export async function transferSponsorshipAction(
+  input: z.infer<typeof transferSponsorshipSchema>,
 ): Promise<AwaitingSponsorshipActionResult> {
-  const parsed = transferAwaitingSponsorshipSchema.safeParse(input);
+  const parsed = transferSponsorshipSchema.safeParse(input);
   if (!parsed.success) notFound();
   const { orgSlug, residentId, sponsorshipId } = parsed.data;
   const orgId = await requireAwaitingSponsorshipAccess(orgSlug);
   const sponsorship = await prisma.sponsorship.findFirst({
-    where: { id: sponsorshipId, orgId, status: "awaiting" },
+    where: { id: sponsorshipId, orgId, status: { in: ["active", "awaiting"] } },
     select: { sponsorId: true },
   });
   if (!sponsorship) {
-    return { ok: false, message: "This sponsorship is no longer awaiting a companion." };
+    return { ok: false, message: "This sponsorship cannot be moved right now." };
   }
 
   try {

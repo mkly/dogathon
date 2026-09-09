@@ -8,12 +8,12 @@ import { prisma } from "@/lib/prisma";
 import { revalidatePublicRoster } from "@/lib/public-roster-cache";
 import { cancelStripeSubscription } from "@/lib/stripe-billing";
 
-export type SponsorshipTransferErrorCode = "not_awaiting" | "resident_unavailable";
+export type SponsorshipTransferErrorCode = "not_transferable" | "resident_unavailable";
 
 export class SponsorshipTransferError extends Error {
   constructor(public readonly code: SponsorshipTransferErrorCode) {
-    super(code === "not_awaiting"
-      ? "This sponsorship is no longer awaiting a companion"
+    super(code === "not_transferable"
+      ? "This sponsorship cannot be moved right now"
       : "This companion is no longer available");
     this.name = "SponsorshipTransferError";
   }
@@ -74,13 +74,13 @@ export async function transferSponsorship(
         sponsor: { select: { email: true, name: true } },
       },
     });
-    if (!sponsorship || sponsorship.status !== "awaiting") {
-      throw new SponsorshipTransferError("not_awaiting");
+    if (!sponsorship || !["active", "awaiting"].includes(sponsorship.status)) {
+      throw new SponsorshipTransferError("not_transferable");
     }
 
     const resident = await tx.resident.findFirst({
       where: {
-        id: residentId,
+        id: { equals: residentId, not: sponsorship.residentId },
         orgId: sponsorship.orgId,
         available: true,
         sponsorships: { none: { status: "active" } },
@@ -90,7 +90,7 @@ export async function transferSponsorship(
     if (!resident) throw new SponsorshipTransferError("resident_unavailable");
 
     const claimed = await tx.sponsorship.updateMany({
-      where: { id: sponsorship.id, status: "awaiting" },
+      where: { id: sponsorship.id, status: { in: ["active", "awaiting"] } },
       data: {
         residentId: resident.id,
         status: "active",
@@ -100,7 +100,7 @@ export async function transferSponsorship(
         endedReason: null,
       },
     });
-    if (claimed.count !== 1) throw new SponsorshipTransferError("not_awaiting");
+    if (claimed.count !== 1) throw new SponsorshipTransferError("not_transferable");
 
     return { ...sponsorship, companionName: resident.name };
   });
@@ -127,7 +127,7 @@ export async function endAwaitingSponsorship(
       },
     });
     if (!sponsorship || sponsorship.status !== "awaiting") {
-      throw new SponsorshipTransferError("not_awaiting");
+      throw new SponsorshipTransferError("not_transferable");
     }
 
     const endedAt = new Date();
@@ -135,7 +135,7 @@ export async function endAwaitingSponsorship(
       where: { id: sponsorship.id, status: "awaiting" },
       data: { status: "ended", endedAt, endedReason: reason },
     });
-    if (claimed.count !== 1) throw new SponsorshipTransferError("not_awaiting");
+    if (claimed.count !== 1) throw new SponsorshipTransferError("not_transferable");
 
     await dependencies.cancel({
       stripeAccountId: sponsorship.organization.stripeAccountId,

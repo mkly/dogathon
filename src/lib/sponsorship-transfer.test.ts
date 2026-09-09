@@ -28,20 +28,33 @@ const sponsorship = {
   sponsor: { email: "pat@example.com", name: "Pat" },
 };
 
-function harness(options: { claimed?: number; resident?: { id: string; name: string } | null } = {}) {
-  const calls = { cancel: 0, email: 0, revalidate: 0, update: undefined as unknown };
+function harness(options: {
+  claimed?: number;
+  resident?: { id: string; name: string } | null;
+  sponsorshipStatus?: "active" | "awaiting";
+} = {}) {
+  const calls = {
+    cancel: 0,
+    email: 0,
+    resident: undefined as unknown,
+    revalidate: 0,
+    update: undefined as unknown,
+  };
   const tx = {
     sponsorship: {
-      findUnique: async () => sponsorship,
+      findUnique: async () => ({ ...sponsorship, status: options.sponsorshipStatus ?? sponsorship.status }),
       updateMany: async (input: unknown) => {
         calls.update = input;
         return { count: options.claimed ?? 1 };
       },
     },
     resident: {
-      findFirst: async () => options.resident === null
-        ? null
-        : (options.resident ?? { id: "00000000-0000-4000-8000-000000000005", name: "Mochi" }),
+      findFirst: async (input: unknown) => {
+        calls.resident = input;
+        return options.resident === null
+          ? null
+          : (options.resident ?? { id: "00000000-0000-4000-8000-000000000005", name: "Mochi" });
+      },
     },
   } as unknown as Prisma.TransactionClient;
   const dependencies = {
@@ -65,7 +78,41 @@ test("transfers one awaiting sponsorship without changing billing and sends conf
   assert.equal(calls.email, 1);
   assert.equal(calls.revalidate, 1);
   assert.deepEqual(calls.update, {
-    where: { id: sponsorship.id, status: "awaiting" },
+    where: { id: sponsorship.id, status: { in: ["active", "awaiting"] } },
+    data: {
+      residentId: "00000000-0000-4000-8000-000000000005",
+      status: "active",
+      awaitingSince: null,
+      awaitingReminderDraftedAt: null,
+      endedAt: null,
+      endedReason: null,
+    },
+  });
+});
+
+test("transfers an active sponsorship and releases its former companion", async () => {
+  const { calls, dependencies } = harness({ sponsorshipStatus: "active" });
+  const result = await transferSponsorship(
+    sponsorship.id,
+    "00000000-0000-4000-8000-000000000005",
+    dependencies,
+  );
+
+  assert.equal(result.companionName, "Mochi");
+  assert.deepEqual(calls.resident, {
+    where: {
+      id: {
+        equals: "00000000-0000-4000-8000-000000000005",
+        not: sponsorship.residentId,
+      },
+      orgId: sponsorship.orgId,
+      available: true,
+      sponsorships: { none: { status: "active" } },
+    },
+    select: { id: true, name: true },
+  });
+  assert.deepEqual(calls.update, {
+    where: { id: sponsorship.id, status: { in: ["active", "awaiting"] } },
     data: {
       residentId: "00000000-0000-4000-8000-000000000005",
       status: "active",
@@ -81,12 +128,21 @@ test("a lost transfer claim never sends a confirmation", async () => {
   const { calls, dependencies } = harness({ claimed: 0 });
   await assert.rejects(
     transferSponsorship(sponsorship.id, "00000000-0000-4000-8000-000000000005", dependencies),
-    (error) => error instanceof SponsorshipTransferError && error.code === "not_awaiting",
+    (error) => error instanceof SponsorshipTransferError && error.code === "not_transferable",
   );
   assert.equal(calls.email, 0);
 });
 
-test("refuses an unavailable resident before changing the sponsorship", async () => {
+test("refuses the current resident before changing the sponsorship", async () => {
+  const { calls, dependencies } = harness({ resident: null, sponsorshipStatus: "active" });
+  await assert.rejects(
+    transferSponsorship(sponsorship.id, sponsorship.residentId, dependencies),
+    (error) => error instanceof SponsorshipTransferError && error.code === "resident_unavailable",
+  );
+  assert.equal(calls.update, undefined);
+});
+
+test("refuses a resident with an active sponsorship before changing the sponsorship", async () => {
   const { calls, dependencies } = harness({ resident: null });
   await assert.rejects(
     transferSponsorship(sponsorship.id, "00000000-0000-4000-8000-000000000005", dependencies),
