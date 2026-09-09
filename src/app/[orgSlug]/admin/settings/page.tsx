@@ -30,12 +30,12 @@ import { DEFAULT_SPONSORSHIP_MONTHLY_CENTS } from "@/lib/rescue-settings";
 import pawcastWordmark from "../../../../../public/brand/pawcast-wordmark.png";
 
 import { beginStripeOnboarding, refreshStripeConnection } from "../actions";
-import {
-  EmailConnectorSettings,
-  RosterSyncSettings,
-} from "../admin-controls";
+import { EmailConnectorSettings, RosterSyncSettings } from "../admin-controls";
 import { EMAIL_CONNECTOR_NOTICE_ID } from "../gmail-notice";
-import { STRIPE_CONNECT_NOTICE_ID, stripeNotReadyReason } from "../stripe-notice";
+import {
+  STRIPE_CONNECT_NOTICE_ID,
+  stripeNotReadyReason,
+} from "../stripe-notice";
 import styles from "../admin.module.css";
 import { ConnectorResultNotice } from "./connector-result-notice";
 import { PostscriptSettingsForm } from "./postscript-settings-form";
@@ -74,9 +74,10 @@ async function StripeConnection({
   const organization = await loadStripeConnection(orgId);
   const stripeNotReady = stripeNotReadyReason(organization);
   const monthlyAmount = formatMonthlyAmount(
-    organization?.sponsorshipTiers.find((tier) => tier.isDefault)?.monthlyCents
-      ?? organization?.sponsorshipTiers[0]?.monthlyCents
-      ?? DEFAULT_SPONSORSHIP_MONTHLY_CENTS,
+    organization?.sponsorshipTiers.find((tier) => tier.isDefault)
+      ?.monthlyCents ??
+      organization?.sponsorshipTiers[0]?.monthlyCents ??
+      DEFAULT_SPONSORSHIP_MONTHLY_CENTS,
   );
   const stripeBadge = stripeNotReady
     ? { tone: "brick" as const, label: "Not ready for payments" }
@@ -107,9 +108,16 @@ async function StripeConnection({
         className={styles.stripeConnectReveal}
         show={Boolean(stripeNotReady) && canOnboard}
       >
-        <form action={beginStripeOnboarding} className={styles.stripeConnectForm}>
+        <form
+          action={beginStripeOnboarding}
+          className={styles.stripeConnectForm}
+        >
           <input name="orgSlug" type="hidden" value={orgSlug} />
-          <PendingAdminSubmitButton pendingLabel="Opening Stripe…" tone="brick" type="submit">
+          <PendingAdminSubmitButton
+            pendingLabel="Opening Stripe…"
+            tone="brick"
+            type="submit"
+          >
             {organization?.stripeDetailsSubmitted
               ? "Update Stripe details"
               : organization?.stripeAccountId
@@ -119,9 +127,16 @@ async function StripeConnection({
         </form>
       </MotionReveal>
       {organization?.stripeAccountId && canOnboard ? (
-        <form action={refreshStripeConnection} className={styles.stripeConnectForm}>
+        <form
+          action={refreshStripeConnection}
+          className={styles.stripeConnectForm}
+        >
           <input name="orgSlug" type="hidden" value={orgSlug} />
-          <PendingAdminSubmitButton pendingLabel="Refreshing…" tone="oatmeal" type="submit">
+          <PendingAdminSubmitButton
+            pendingLabel="Refreshing…"
+            tone="oatmeal"
+            type="submit"
+          >
             Refresh Stripe status
           </PendingAdminSubmitButton>
         </form>
@@ -130,32 +145,55 @@ async function StripeConnection({
   );
 }
 
-async function EmailSettings({ orgId, orgSlug }: { orgId: string; orgSlug: string }) {
+async function EmailSettings({
+  orgId,
+  orgSlug,
+}: {
+  orgId: string;
+  orgSlug: string;
+}) {
   const emailConnector = await getEmailConnectorStatus(orgId);
 
   return (
     <section id={EMAIL_CONNECTOR_NOTICE_ID}>
-      <EmailConnectorSettings initialConnector={emailConnector} orgSlug={orgSlug} />
+      <EmailConnectorSettings
+        initialConnector={emailConnector}
+        orgSlug={orgSlug}
+      />
     </section>
   );
 }
 
-async function RescueSettings({ orgId, orgSlug }: { orgId: string; orgSlug: string }) {
+async function RescueSettings({
+  orgId,
+  orgSlug,
+}: {
+  orgId: string;
+  orgSlug: string;
+}) {
   const [storedSettings, storedTiers] = await Promise.all([
     prisma.rescueSettings.findUnique({ where: { orgId } }),
-    prisma.sponsorshipTier.findMany({ where: { orgId }, orderBy: { position: "asc" } }),
+    prisma.sponsorshipTier.findMany({
+      where: { orgId },
+      orderBy: { position: "asc" },
+    }),
   ]);
   const settings = storedSettings ?? {
     allowedOrigins: [],
     pinnedPostscript: "",
     sourceUrl: "",
   };
-  const sponsorshipTiers = storedTiers.length > 0 ? storedTiers : [{
-    id: "default",
-    monthlyCents: DEFAULT_SPONSORSHIP_MONTHLY_CENTS,
-    description: "",
-    isDefault: true,
-  }];
+  const sponsorshipTiers =
+    storedTiers.length > 0
+      ? storedTiers
+      : [
+          {
+            id: "default",
+            monthlyCents: DEFAULT_SPONSORSHIP_MONTHLY_CENTS,
+            description: "",
+            isDefault: true,
+          },
+        ];
 
   return (
     <>
@@ -164,11 +202,14 @@ async function RescueSettings({ orgId, orgSlug }: { orgId: string; orgSlug: stri
           <AdminEyebrow tone="denim">Email postscript</AdminEyebrow>
           <h2>Added to every sponsor update email</h2>
           <p>
-            This note rides at the bottom of every update sent to sponsors, for every
-            companion, until you change or clear it.
+            This note rides at the bottom of every update sent to sponsors, for
+            every companion, until you change or clear it.
           </p>
         </div>
-        <PostscriptSettingsForm orgSlug={orgSlug} pinnedPostscript={settings.pinnedPostscript} />
+        <PostscriptSettingsForm
+          orgSlug={orgSlug}
+          pinnedPostscript={settings.pinnedPostscript}
+        />
       </AdminSurface>
 
       <AdminSurface className={styles.settings} tone="moss">
@@ -176,11 +217,15 @@ async function RescueSettings({ orgId, orgSlug }: { orgId: string; orgSlug: stri
           <AdminEyebrow>Roster sync</AdminEyebrow>
           <h2>Keep the adoption roster current</h2>
           <p id="roster-sync-description">
-            Save the adoption-page source and we will sync its companions into the staff roster
-            every night. Use Sync now to run the same sync right away.
+            Save the adoption-page source and we will sync its companions into
+            the staff roster every night. Use Sync now to run the same sync
+            right away.
           </p>
         </div>
-        <RosterSyncSettings initialSourceUrl={settings.sourceUrl} orgSlug={orgSlug} />
+        <RosterSyncSettings
+          initialSourceUrl={settings.sourceUrl}
+          orgSlug={orgSlug}
+        />
       </AdminSurface>
 
       <AdminSurface className={styles.settings} tone="brick">
@@ -188,8 +233,8 @@ async function RescueSettings({ orgId, orgSlug }: { orgId: string; orgSlug: stri
           <AdminEyebrow tone="brick">Sponsorship options</AdminEyebrow>
           <h2>Sponsorship tiers</h2>
           <p>
-            Offer up to six monthly sponsorship tiers, choose their order, and pick the option
-            sponsors see selected first.
+            Offer up to six monthly sponsorship tiers, choose their order, and
+            pick the option sponsors see selected first.
           </p>
         </div>
         <SponsorshipTiersForm
@@ -203,21 +248,37 @@ async function RescueSettings({ orgId, orgSlug }: { orgId: string; orgSlug: stri
           <AdminEyebrow>Public embeds</AdminEyebrow>
           <h2>Trusted rescue sites</h2>
           <p>
-            List the exact rescue-site origins allowed to show public sponsorship embeds and start
-            checkout.
+            List the exact website origins allowed to show public sponsorship
+            embeds and start checkout. This will typically be your website.
           </p>
         </div>
-        <TrustedOriginsForm allowedOrigins={settings.allowedOrigins} orgSlug={orgSlug} />
+        <TrustedOriginsForm
+          allowedOrigins={settings.allowedOrigins}
+          orgSlug={orgSlug}
+        />
       </AdminSurface>
     </>
   );
 }
 
-function SettingsCardLoading({ tone }: { tone: "brick" | "denim" | "moss" | "mustard" | "oatmeal" }) {
-  return <AdminSurface aria-label="Loading settings" className={`${styles.settings} ${styles.settingsSkeleton}`} tone={tone} />;
+function SettingsCardLoading({
+  tone,
+}: {
+  tone: "brick" | "denim" | "moss" | "mustard" | "oatmeal";
+}) {
+  return (
+    <AdminSurface
+      aria-label="Loading settings"
+      className={`${styles.settings} ${styles.settingsSkeleton}`}
+      tone={tone}
+    />
+  );
 }
 
-export default async function AdminSettingsPage({ params, searchParams }: AdminSettingsPageProps) {
+export default async function AdminSettingsPage({
+  params,
+  searchParams,
+}: AdminSettingsPageProps) {
   const [{ orgSlug }, query] = await Promise.all([params, searchParams]);
   const connectorResult =
     query.emailConnector === "connected" || query.emailConnector === "error"
@@ -230,7 +291,11 @@ export default async function AdminSettingsPage({ params, searchParams }: AdminS
   if (!access) notFound();
   if (!access.context) {
     const next = encodeURIComponent(`/${orgSlug}/admin/settings`);
-    redirect(access.authenticated ? "/staff/organizations" : `/staff/sign-in?next=${next}`);
+    redirect(
+      access.authenticated
+        ? "/staff/organizations"
+        : `/staff/sign-in?next=${next}`,
+    );
   }
   const { context } = access;
 
@@ -240,30 +305,71 @@ export default async function AdminSettingsPage({ params, searchParams }: AdminS
         <AdminHeader
           actions={
             <>
-              <AdminLink href={`/${orgSlug}/admin`} tone="oatmeal" transitionTypes={["nav-back"]}>
+              <AdminLink
+                href={`/${orgSlug}/admin`}
+                tone="oatmeal"
+                transitionTypes={["nav-back"]}
+              >
                 Back to staff room
               </AdminLink>
               <SignOutButton />
             </>
           }
-          brand={<Link href={`/${orgSlug}`} transitionTypes={["nav-back"]}>
-            <Image alt="Pawcast" preload src={pawcastWordmark} />
-          </Link>}
+          brand={
+            <Link href={`/${orgSlug}`} transitionTypes={["nav-back"]}>
+              <Image alt="Pawcast" preload src={pawcastWordmark} />
+            </Link>
+          }
           title="Staff settings"
         />
 
         <div className={styles.settingsStack}>
-          {connectorResult ? <ConnectorResultNotice result={connectorResult} /> : null}
-          <Suspense fallback={<SuspenseFallback><SettingsCardLoading tone="mustard" /></SuspenseFallback>}>
-            <SuspenseReveal><StripeConnection canOnboard={context.role === "owner"} orgId={context.orgId} orgSlug={orgSlug} /></SuspenseReveal>
+          {connectorResult ? (
+            <ConnectorResultNotice result={connectorResult} />
+          ) : null}
+          <Suspense
+            fallback={
+              <SuspenseFallback>
+                <SettingsCardLoading tone="mustard" />
+              </SuspenseFallback>
+            }
+          >
+            <SuspenseReveal>
+              <StripeConnection
+                canOnboard={context.role === "owner"}
+                orgId={context.orgId}
+                orgSlug={orgSlug}
+              />
+            </SuspenseReveal>
           </Suspense>
 
-          <Suspense fallback={<SuspenseFallback><SettingsCardLoading tone="oatmeal" /></SuspenseFallback>}>
-            <SuspenseReveal><EmailSettings orgId={context.orgId} orgSlug={orgSlug} /></SuspenseReveal>
+          <Suspense
+            fallback={
+              <SuspenseFallback>
+                <SettingsCardLoading tone="oatmeal" />
+              </SuspenseFallback>
+            }
+          >
+            <SuspenseReveal>
+              <EmailSettings orgId={context.orgId} orgSlug={orgSlug} />
+            </SuspenseReveal>
           </Suspense>
 
-          <Suspense fallback={<SuspenseFallback><><SettingsCardLoading tone="denim" /><SettingsCardLoading tone="moss" /><SettingsCardLoading tone="brick" /><SettingsCardLoading tone="oatmeal" /></></SuspenseFallback>}>
-            <SuspenseReveal><RescueSettings orgId={context.orgId} orgSlug={orgSlug} /></SuspenseReveal>
+          <Suspense
+            fallback={
+              <SuspenseFallback>
+                <>
+                  <SettingsCardLoading tone="denim" />
+                  <SettingsCardLoading tone="moss" />
+                  <SettingsCardLoading tone="brick" />
+                  <SettingsCardLoading tone="oatmeal" />
+                </>
+              </SuspenseFallback>
+            }
+          >
+            <SuspenseReveal>
+              <RescueSettings orgId={context.orgId} orgSlug={orgSlug} />
+            </SuspenseReveal>
           </Suspense>
         </div>
 
