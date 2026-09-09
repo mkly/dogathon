@@ -10,11 +10,17 @@ type SponsorshipChoiceEmailProps = {
   type: "transferred" | "ended";
 };
 
-export function SponsorshipChoiceEmail(input: SponsorshipChoiceEmailProps) {
-  const transferred = input.type === "transferred";
-  const subject = transferred
+export function sponsorshipChoiceEmailSubject(
+  input: Pick<SponsorshipChoiceEmailProps, "companionName" | "organizationName" | "type">,
+) {
+  return input.type === "transferred"
     ? `You are now following ${input.companionName}`
     : `Thank you for sponsoring with ${input.organizationName}`;
+}
+
+export function SponsorshipChoiceEmail(input: SponsorshipChoiceEmailProps) {
+  const transferred = input.type === "transferred";
+  const subject = sponsorshipChoiceEmailSubject(input);
 
   return (
     <Html lang="en">
