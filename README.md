@@ -132,8 +132,8 @@ The embed depends on these public endpoint contracts:
 
 - `GET /api/public/{orgSlug}/companion` accepts either `source={absolutePageUrl}` or
   `companion={residentSlug}`; `companion` wins when both are present. It returns `{ id, name, slug,
-  sourceUrl, breed, ageText, sex, photoUrl, tiers, monthlyCents, currency, status, companionUrl,
-  sponsorUrl }`, where `tiers` is the ordered array of
+sourceUrl, breed, ageText, sex, photoUrl, tiers, monthlyCents, currency, status, companionUrl,
+sponsorUrl }`, where `tiers` is the ordered array of
   `{ id, monthlyCents, description, isDefault }` with exactly one default, and `monthlyCents`
   matches that entry. `status` is `available`, `sponsored`, or `adopted`; an
   unknown organization, source, or slug returns `404` with `{ error }`.
@@ -181,6 +181,17 @@ Photo uploads and volunteer check-in AI requests are limited to 20 requests per 
 - Route pages compose primitives and keep a module only for page-specific layout.
 - Keep tokens, resets, tone utilities, and focus rules only in `src/app/globals.css` and `src/app/felt.css`.
 - Never restyle a primitive with a descendant selector from another module; pass `className` or a prop instead.
+
+## Code formatting
+
+Prettier defines and enforces repository formatting across supported files. Check or format files with:
+
+```bash
+npm run format:check
+npm run format
+```
+
+Formatting configuration is defined in `.prettierrc` and ignored paths (dependencies, generated Prisma code, and build outputs) are listed in `.prettierignore`. Linting continues to run via `npm run lint`.
 
 ## Deploy to Vercel
 

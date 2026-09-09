@@ -3,7 +3,10 @@ import {
   enqueueRosterSyncJobWithResult,
   type EnqueueRosterSyncJobResult,
 } from "./roster-sync-queue.ts";
-import { isAuthorizedSchedulerRequest, type SchedulerEnvironment } from "./scheduler-auth.ts";
+import {
+  isAuthorizedSchedulerRequest,
+  type SchedulerEnvironment,
+} from "./scheduler-auth.ts";
 import { env as appEnv } from "./env.ts";
 
 const DEFAULT_ROSTER_SYNC_STAGGER_MS = 5 * 60 * 1000;
@@ -22,8 +25,11 @@ type ScheduleDependencies = {
   now?: () => Date;
 };
 
-export function createRosterSyncScheduleHandler(dependencies: ScheduleDependencies = {}) {
-  const listOrganizations = dependencies.listOrganizations ?? defaultOrganizations;
+export function createRosterSyncScheduleHandler(
+  dependencies: ScheduleDependencies = {},
+) {
+  const listOrganizations =
+    dependencies.listOrganizations ?? defaultOrganizations;
   const enqueue = dependencies.enqueue ?? enqueueRosterSyncJobWithResult;
   const environment = dependencies.env ?? appEnv;
   const now = dependencies.now ?? (() => new Date());
@@ -53,14 +59,25 @@ export function createRosterSyncScheduleHandler(dependencies: ScheduleDependenci
           else skipped += 1;
         } catch (error) {
           failed += 1;
-          console.error(`Could not schedule roster sync for organization ${organization.orgId}`, error);
+          console.error(
+            `Could not schedule roster sync for organization ${organization.orgId}`,
+            error,
+          );
         }
       }
 
-      return Response.json({ eligible: organizations.length, enqueued, skipped, failed });
+      return Response.json({
+        eligible: organizations.length,
+        enqueued,
+        skipped,
+        failed,
+      });
     } catch (error) {
       console.error("Roster sync scheduling failed", error);
-      return Response.json({ error: "Roster sync scheduling failed" }, { status: 500 });
+      return Response.json(
+        { error: "Roster sync scheduling failed" },
+        { status: 500 },
+      );
     }
   };
 }

@@ -1,35 +1,65 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Dogathon sponsor embed demo</title>
     <style>
-      body { max-width: 48rem; margin: 3rem auto; padding: 0 1rem; background: #f5f1e8; font-family: system-ui, sans-serif; }
-      code { background: #fff; padding: .1rem .25rem; }
+      body {
+        max-width: 48rem;
+        margin: 3rem auto;
+        padding: 0 1rem;
+        background: #f5f1e8;
+        font-family: system-ui, sans-serif;
+      }
+      code {
+        background: #fff;
+        padding: 0.1rem 0.25rem;
+      }
     </style>
   </head>
   <body>
     <h1>Sponsor embed demo</h1>
     <p>
-      Add <code>?org=organization-slug&amp;source=https://rescue.example/dogs/name&amp;photo=hide&amp;name=hide&amp;details=hide&amp;intro=Custom+intro</code>
-      to test a synced companion. Without a matching source, the embed shows a notice and keeps you on this page.
-      Use <code>&amp;mode=cta&amp;info=https://rescue.example/sponsor</code> to test call-to-action mode, and
-      <code>&amp;roster=https://rescue.example/adopt</code> to add the roster link to the not-found notice.
+      Add
+      <code
+        >?org=organization-slug&amp;source=https://rescue.example/dogs/name&amp;photo=hide&amp;name=hide&amp;details=hide&amp;intro=Custom+intro</code
+      >
+      to test a synced companion. Without a matching source, the embed shows a
+      notice and keeps you on this page. Use
+      <code>&amp;mode=cta&amp;info=https://rescue.example/sponsor</code> to test
+      call-to-action mode, and
+      <code>&amp;roster=https://rescue.example/adopt</code> to add the roster
+      link to the not-found notice.
     </p>
     <div id="sponsor-demo" data-sponsor-org="maple-street"></div>
     <script>
       const demo = document.querySelector("#sponsor-demo");
       const demoParameters = new URL(window.location.href).searchParams;
-      if (demoParameters.get("org")) demo.setAttribute("data-sponsor-org", demoParameters.get("org"));
-      if (demoParameters.get("source")) demo.setAttribute("data-sponsor-source", demoParameters.get("source"));
-      if (demoParameters.get("mode")) demo.setAttribute("data-sponsor-mode", demoParameters.get("mode"));
-      if (demoParameters.get("info")) demo.setAttribute("data-sponsor-info-url", demoParameters.get("info"));
-      if (demoParameters.get("roster")) demo.setAttribute("data-sponsor-roster-url", demoParameters.get("roster"));
-      if (demoParameters.get("photo")) demo.setAttribute("data-sponsor-photo", demoParameters.get("photo"));
-      if (demoParameters.get("name")) demo.setAttribute("data-sponsor-name", demoParameters.get("name"));
-      if (demoParameters.get("details")) demo.setAttribute("data-sponsor-details", demoParameters.get("details"));
-      if (demoParameters.has("intro")) demo.setAttribute("data-sponsor-intro", demoParameters.get("intro"));
+      if (demoParameters.get("org"))
+        demo.setAttribute("data-sponsor-org", demoParameters.get("org"));
+      if (demoParameters.get("source"))
+        demo.setAttribute("data-sponsor-source", demoParameters.get("source"));
+      if (demoParameters.get("mode"))
+        demo.setAttribute("data-sponsor-mode", demoParameters.get("mode"));
+      if (demoParameters.get("info"))
+        demo.setAttribute("data-sponsor-info-url", demoParameters.get("info"));
+      if (demoParameters.get("roster"))
+        demo.setAttribute(
+          "data-sponsor-roster-url",
+          demoParameters.get("roster"),
+        );
+      if (demoParameters.get("photo"))
+        demo.setAttribute("data-sponsor-photo", demoParameters.get("photo"));
+      if (demoParameters.get("name"))
+        demo.setAttribute("data-sponsor-name", demoParameters.get("name"));
+      if (demoParameters.get("details"))
+        demo.setAttribute(
+          "data-sponsor-details",
+          demoParameters.get("details"),
+        );
+      if (demoParameters.has("intro"))
+        demo.setAttribute("data-sponsor-intro", demoParameters.get("intro"));
     </script>
     <script src="/embed.js"></script>
   </body>

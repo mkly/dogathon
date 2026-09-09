@@ -4,7 +4,8 @@ import test from "node:test";
 import type { SponsorshipCheckoutDependencies } from "@/lib/sponsorship-checkout";
 import type { SponsorshipCheckout } from "@/lib/stripe-billing";
 
-process.env.DATABASE_URL ??= "postgresql://dogathon:dogathon@localhost:5432/dogathon";
+process.env.DATABASE_URL ??=
+  "postgresql://dogathon:dogathon@localhost:5432/dogathon";
 
 const { createPublicCheckoutPostHandler } = await import("./route.ts");
 
@@ -25,7 +26,8 @@ type DependencyOptions = {
 
 function dependencies(options: DependencyOptions = {}) {
   let checkoutInput: SponsorshipCheckout | undefined;
-  const findOrganization = async (slug: string) => slug === "fixture-rescue" ? organization : null;
+  const findOrganization = async (slug: string) =>
+    slug === "fixture-rescue" ? organization : null;
   const checkoutDependencies: SponsorshipCheckoutDependencies = {
     async createCheckout(input) {
       checkoutInput = input;
@@ -35,7 +37,9 @@ function dependencies(options: DependencyOptions = {}) {
     async findResidentBySource(orgId, normalizedSource) {
       assert.equal(orgId, organization.id);
       assert.equal(normalizedSource, "https://rescue.example/dogs/mabel");
-      return options.resident === undefined ? { id: "resident_mabel" } : options.resident;
+      return options.resident === undefined
+        ? { id: "resident_mabel" }
+        : options.resident;
     },
     async rateLimit() {
       return { allowed: !options.rateLimited, retryAfterSeconds: 30 };
@@ -44,7 +48,9 @@ function dependencies(options: DependencyOptions = {}) {
   return {
     checkoutDependencies,
     findOrganization,
-    get checkoutInput() { return checkoutInput; },
+    get checkoutInput() {
+      return checkoutInput;
+    },
   };
 }
 
@@ -52,7 +58,10 @@ function context(orgSlug = "fixture-rescue") {
   return { params: Promise.resolve({ orgSlug }) };
 }
 
-function jsonRequest(payload: Record<string, unknown>, origin = "https://rescue.example") {
+function jsonRequest(
+  payload: Record<string, unknown>,
+  origin = "https://rescue.example",
+) {
   return new Request("http://localhost/api/public/fixture-rescue/checkout", {
     method: "POST",
     headers: { "Content-Type": "application/json", Origin: origin },
@@ -60,10 +69,16 @@ function jsonRequest(payload: Record<string, unknown>, origin = "https://rescue.
   });
 }
 
-function formRequest(payload: Record<string, string>, origin = "https://rescue.example") {
+function formRequest(
+  payload: Record<string, string>,
+  origin = "https://rescue.example",
+) {
   return new Request("http://localhost/api/public/fixture-rescue/checkout", {
     method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded", Origin: origin },
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+      Origin: origin,
+    },
     body: new URLSearchParams(payload),
   });
 }
@@ -83,9 +98,14 @@ test("JSON checkout returns the Stripe URL, applies CORS, and preserves return q
   );
 
   assert.equal(response.status, 200);
-  assert.equal(response.headers.get("access-control-allow-origin"), "https://rescue.example");
+  assert.equal(
+    response.headers.get("access-control-allow-origin"),
+    "https://rescue.example",
+  );
   assert.equal(response.headers.get("vary"), "Origin");
-  assert.deepEqual(await response.json(), { url: "https://checkout.stripe.test/session" });
+  assert.deepEqual(await response.json(), {
+    url: "https://checkout.stripe.test/session",
+  });
   assert.equal(deps.checkoutInput?.residentId, "resident_mabel");
   assert.equal(deps.checkoutInput?.monthlyCents, 5000);
   assert.equal(
@@ -113,7 +133,10 @@ test("a foreign tier returns the invalid-tier error without creating checkout", 
 test("a return URL outside the rescue's configured origins is rejected", async () => {
   const deps = dependencies();
   const response = await createPublicCheckoutPostHandler(deps)(
-    jsonRequest({ ...validPayload, returnTo: "https://attacker.example/collect" }),
+    jsonRequest({
+      ...validPayload,
+      returnTo: "https://attacker.example/collect",
+    }),
     context(),
   );
 

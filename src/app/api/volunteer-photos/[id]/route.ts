@@ -17,7 +17,9 @@ const photoQuerySchema = z.object({
  */
 export async function GET(request: Request, { params }: RouteContext) {
   const { id } = await params;
-  const query = photoQuerySchema.safeParse(Object.fromEntries(new URL(request.url).searchParams));
+  const query = photoQuerySchema.safeParse(
+    Object.fromEntries(new URL(request.url).searchParams),
+  );
   if (!uuidSchema.safeParse(id).success || !query.success) {
     return Response.json({ error: "Photo not found" }, { status: 404 });
   }
@@ -31,7 +33,8 @@ export async function GET(request: Request, { params }: RouteContext) {
     return Response.json({ error: "Photo not found" }, { status: 404 });
   }
 
-  const storageKey = query.data.variant === "web" ? photo.webStorageKey : photo.storageKey;
+  const storageKey =
+    query.data.variant === "web" ? photo.webStorageKey : photo.storageKey;
   const url = query.data.variant === "web" ? photo.webUrl : photo.url;
   if (!storageKey || !url) {
     return Response.json({ error: "Photo not found" }, { status: 404 });
@@ -42,7 +45,8 @@ export async function GET(request: Request, { params }: RouteContext) {
   if (env.features.s3 && URL.canParse(url)) return Response.redirect(url, 308);
 
   const stored = await getPhoto(storageKey);
-  if (!stored) return Response.json({ error: "Photo not found" }, { status: 404 });
+  if (!stored)
+    return Response.json({ error: "Photo not found" }, { status: 404 });
 
   return new Response(Uint8Array.from(stored.data).buffer, {
     headers: {

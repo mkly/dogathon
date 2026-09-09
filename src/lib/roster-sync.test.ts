@@ -43,7 +43,10 @@ test("only a page that yielded one companion names it", () => {
     { ...rosterCompanion("Unknown page", false), sourceUrl: "" },
   ]);
 
-  assert.deepEqual(companions.map((companion) => companion.sourceUrl), ["", "", detail, ""]);
+  assert.deepEqual(
+    companions.map((companion) => companion.sourceUrl),
+    ["", "", detail, ""],
+  );
 });
 
 test("resident slugs normalize names and suffix collisions inside an organization", () => {
@@ -59,32 +62,56 @@ test("a source URL match updates a renamed companion", async () => {
   const writes: unknown[] = [];
   const tx = {
     resident: {
-      findMany: async () => [{
-        name: "Biscuit",
-        slug: "biscuit",
-        sourceUrl: "https://rescue.example/dogs/biscuit",
-      }],
+      findMany: async () => [
+        {
+          name: "Biscuit",
+          slug: "biscuit",
+          sourceUrl: "https://rescue.example/dogs/biscuit",
+        },
+      ],
       findFirst: async () => ({ id: "resident-1", unavailabilityReason: null }),
-      update: async (input: unknown) => { writes.push(input); },
-      upsert: async () => { throw new Error("existing companion should not be created"); },
+      update: async (input: unknown) => {
+        writes.push(input);
+      },
+      upsert: async () => {
+        throw new Error("existing companion should not be created");
+      },
     },
   } as unknown as SyncTransaction;
 
-  await upsertCompanions(tx, "org-rescue", [{
-    ...rosterCompanion("Renamed Biscuit", false),
-    species: "Puppies",
-    sourceUrl: "HTTPS://RESCUE.EXAMPLE/dogs/biscuit/?utm_source=newsletter",
-  }], true);
+  await upsertCompanions(
+    tx,
+    "org-rescue",
+    [
+      {
+        ...rosterCompanion("Renamed Biscuit", false),
+        species: "Puppies",
+        sourceUrl: "HTTPS://RESCUE.EXAMPLE/dogs/biscuit/?utm_source=newsletter",
+      },
+    ],
+    true,
+  );
 
-  assert.deepEqual(writes, [{
-    where: { id_orgId: { id: "resident-1", orgId: "org-rescue" } },
-    data: {
-      name: "Renamed Biscuit",
-      species: "dog", breed: "", dobText: "", ageText: "", sex: "", weightText: "", personality: "",
-      careNotes: [], photoUrls: [], sourceUrl: "https://rescue.example/dogs/biscuit",
-      available: true, unavailabilityReason: null,
+  assert.deepEqual(writes, [
+    {
+      where: { id_orgId: { id: "resident-1", orgId: "org-rescue" } },
+      data: {
+        name: "Renamed Biscuit",
+        species: "dog",
+        breed: "",
+        dobText: "",
+        ageText: "",
+        sex: "",
+        weightText: "",
+        personality: "",
+        careNotes: [],
+        photoUrls: [],
+        sourceUrl: "https://rescue.example/dogs/biscuit",
+        available: true,
+        unavailabilityReason: null,
+      },
     },
-  }]);
+  ]);
 });
 
 test("live upserts restore unavailable residents but preserve adopted residents", async () => {
@@ -92,12 +119,13 @@ test("live upserts restore unavailable residents but preserve adopted residents"
   const tx = {
     resident: {
       findMany: async () => [],
-      findFirst: async (input: { where: { name?: string } }) => (
+      findFirst: async (input: { where: { name?: string } }) =>
         input.where.name === "Hattie"
           ? { id: "resident-unavailable", unavailabilityReason: "unavailable" }
-          : { id: "resident-adopted", unavailabilityReason: "adopted" }
-      ),
-      update: async (input: unknown) => { writes.push(input); },
+          : { id: "resident-adopted", unavailabilityReason: "adopted" },
+      update: async (input: unknown) => {
+        writes.push(input);
+      },
     },
   } as unknown as SyncTransaction;
 
@@ -108,9 +136,17 @@ test("live upserts restore unavailable residents but preserve adopted residents"
     true,
   );
 
-  const updates = writes as Array<{ where: { id_orgId: { id: string } }; data: Record<string, unknown> }>;
-  const restored = updates.find((update) => update.where.id_orgId.id === "resident-unavailable")?.data ?? {};
-  const preserved = updates.find((update) => update.where.id_orgId.id === "resident-adopted")?.data ?? {};
+  const updates = writes as Array<{
+    where: { id_orgId: { id: string } };
+    data: Record<string, unknown>;
+  }>;
+  const restored =
+    updates.find(
+      (update) => update.where.id_orgId.id === "resident-unavailable",
+    )?.data ?? {};
+  const preserved =
+    updates.find((update) => update.where.id_orgId.id === "resident-adopted")
+      ?.data ?? {};
   assert.equal(restored.available, true);
   assert.equal(restored.unavailabilityReason, null);
   assert.equal("available" in preserved, false);
@@ -156,21 +192,47 @@ test("adoption changes only resident availability and drafts one notice per acti
     },
   } as unknown as SyncTransaction;
 
-  const closed = await markResidentAdopted(
-    tx,
-    "org-rescue",
-    { id: "resident-1", name: "Hattie", photoUrls: ["/residents/hattie.jpg"] },
-  );
+  const closed = await markResidentAdopted(tx, "org-rescue", {
+    id: "resident-1",
+    name: "Hattie",
+    photoUrls: ["/residents/hattie.jpg"],
+  });
 
   assert.equal(closed, 2);
-  assert.deepEqual(residentUpdates, [{
-    where: { id_orgId: { id: "resident-1", orgId: "org-rescue" } },
-    data: { available: false, unavailabilityReason: "adopted" },
-  }]);
+  assert.deepEqual(residentUpdates, [
+    {
+      where: { id_orgId: { id: "resident-1", orgId: "org-rescue" } },
+      data: { available: false, unavailabilityReason: "adopted" },
+    },
+  ]);
   assert.equal(drafts.length, 2);
   assert.deepEqual(drafts, [
-    { data: { ...adoptionDraft("resident-1", "sponsorship-1", "Hattie", "Sam", "adopted", "/uploads/latest.jpg"), orgId: "org-rescue" } },
-    { data: { ...adoptionDraft("resident-1", "sponsorship-2", "Hattie", "Lee", "adopted", "/uploads/latest.jpg"), orgId: "org-rescue" } },
+    {
+      data: {
+        ...adoptionDraft(
+          "resident-1",
+          "sponsorship-1",
+          "Hattie",
+          "Sam",
+          "adopted",
+          "/uploads/latest.jpg",
+        ),
+        orgId: "org-rescue",
+      },
+    },
+    {
+      data: {
+        ...adoptionDraft(
+          "resident-1",
+          "sponsorship-2",
+          "Hattie",
+          "Lee",
+          "adopted",
+          "/uploads/latest.jpg",
+        ),
+        orgId: "org-rescue",
+      },
+    },
   ]);
 });
 
@@ -278,8 +340,9 @@ test("unavailability drafts say the companion is no longer at the rescue", () =>
 test("refuses a live sync that would mark most available residents unavailable", () => {
   assert.throws(
     () => assertPlausibleUnavailableCount(10, 6, false),
-    (error) => error instanceof RosterSyncRefusal
-      && /mark 6 of 10 available residents unavailable/.test(error.reason),
+    (error) =>
+      error instanceof RosterSyncRefusal &&
+      /mark 6 of 10 available residents unavailable/.test(error.reason),
   );
 });
 
@@ -337,10 +400,16 @@ test("an incomplete crawl does not restore an unavailable resident", () => {
 
 test("a complete live roster restores an unavailable resident and not an adopted resident", () => {
   const unavailable = {
-    id: "resident-1", name: "Hattie", available: false, unavailabilityReason: "unavailable" as const,
+    id: "resident-1",
+    name: "Hattie",
+    available: false,
+    unavailabilityReason: "unavailable" as const,
   };
   const adopted = {
-    id: "resident-2", name: "Walnut", available: false, unavailabilityReason: "adopted" as const,
+    id: "resident-2",
+    name: "Walnut",
+    available: false,
+    unavailabilityReason: "adopted" as const,
   };
   const changes = planRosterAvailabilityChanges(
     [unavailable, adopted],

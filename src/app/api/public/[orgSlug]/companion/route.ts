@@ -10,7 +10,10 @@ import {
   RATE_LIMITS,
   rateLimitResponse,
 } from "@/lib/rate-limit";
-import { DEFAULT_SPONSORSHIP_MONTHLY_CENTS, isAllowedOrigin } from "@/lib/rescue-settings";
+import {
+  DEFAULT_SPONSORSHIP_MONTHLY_CENTS,
+  isAllowedOrigin,
+} from "@/lib/rescue-settings";
 import { normalizeSourceUrl } from "@/lib/source-url";
 
 const CACHE_CONTROL = "public, max-age=60, stale-while-revalidate=300";
@@ -44,9 +47,17 @@ type PublicResident = {
 
 type PublicCompanionDependencies = {
   getOrganization: (slug: string) => Promise<PublicOrganization | null>;
-  getResidentBySlug: (orgId: string, slug: string) => Promise<PublicResident | null>;
-  getResidentBySource: (orgId: string, sourceUrl: string) => Promise<PublicResident | null>;
-  rateLimit: (requestHeaders: Headers) => Promise<{ allowed: boolean; retryAfterSeconds: number }>;
+  getResidentBySlug: (
+    orgId: string,
+    slug: string,
+  ) => Promise<PublicResident | null>;
+  getResidentBySource: (
+    orgId: string,
+    sourceUrl: string,
+  ) => Promise<PublicResident | null>;
+  rateLimit: (
+    requestHeaders: Headers,
+  ) => Promise<{ allowed: boolean; retryAfterSeconds: number }>;
 };
 
 type RouteContext = { params: Promise<{ orgSlug: string }> };
@@ -64,13 +75,20 @@ const dependencies: PublicCompanionDependencies = {
   },
 };
 
-function corsHeaders(request: Request, organization: PublicOrganization | null) {
+function corsHeaders(
+  request: Request,
+  organization: PublicOrganization | null,
+) {
   const headers = new Headers({
     "Cache-Control": CACHE_CONTROL,
     Vary: "Origin",
   });
   const origin = request.headers.get("origin");
-  if (origin && organization?.settings && isAllowedOrigin(organization.settings, origin)) {
+  if (
+    origin &&
+    organization?.settings &&
+    isAllowedOrigin(organization.settings, origin)
+  ) {
     headers.set("Access-Control-Allow-Origin", origin);
   }
   return headers;
@@ -118,16 +136,24 @@ export function createPublicCompanionHandlers(
 
     const searchParams = new URL(request.url).searchParams;
     const companionSlug = searchParams.get("companion");
-    const sourceUrl = companionSlug === null
-      ? normalizeSourceUrl(searchParams.get("source") ?? "")
-      : "";
-    const resident = companionSlug !== null
-      ? companionSlug
-        ? await publicDependencies.getResidentBySlug(organization.id, companionSlug)
-        : null
-      : sourceUrl
-        ? await publicDependencies.getResidentBySource(organization.id, sourceUrl)
-        : null;
+    const sourceUrl =
+      companionSlug === null
+        ? normalizeSourceUrl(searchParams.get("source") ?? "")
+        : "";
+    const resident =
+      companionSlug !== null
+        ? companionSlug
+          ? await publicDependencies.getResidentBySlug(
+              organization.id,
+              companionSlug,
+            )
+          : null
+        : sourceUrl
+          ? await publicDependencies.getResidentBySource(
+              organization.id,
+              sourceUrl,
+            )
+          : null;
     if (!resident || !isPublicResidentSponsorable(resident)) {
       return notFound(request, organization);
     }
@@ -141,8 +167,9 @@ export function createPublicCompanionHandlers(
     const sponsorUrl = new URL(`/${encodedSlug}/sponsor`, routeBase);
     sponsorUrl.searchParams.set("source", resident.sourceUrl);
 
-    const defaultTier = organization.sponsorshipTiers.find((tier) => tier.isDefault)
-      ?? organization.sponsorshipTiers[0];
+    const defaultTier =
+      organization.sponsorshipTiers.find((tier) => tier.isDefault) ??
+      organization.sponsorshipTiers[0];
     const response = Response.json({
       id: resident.id,
       name: resident.name,
@@ -153,13 +180,16 @@ export function createPublicCompanionHandlers(
       ageText: resident.ageText,
       sex: resident.sex,
       photoUrl: resident.photoUrls[0] ?? null,
-      tiers: organization.sponsorshipTiers.map(({ id, monthlyCents, description, isDefault }) => ({
-        id,
-        monthlyCents,
-        description,
-        isDefault,
-      })),
-      monthlyCents: defaultTier?.monthlyCents ?? DEFAULT_SPONSORSHIP_MONTHLY_CENTS,
+      tiers: organization.sponsorshipTiers.map(
+        ({ id, monthlyCents, description, isDefault }) => ({
+          id,
+          monthlyCents,
+          description,
+          isDefault,
+        }),
+      ),
+      monthlyCents:
+        defaultTier?.monthlyCents ?? DEFAULT_SPONSORSHIP_MONTHLY_CENTS,
       currency: "usd",
       status: "available",
       companionUrl: companionUrl.toString(),

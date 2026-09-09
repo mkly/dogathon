@@ -1,0 +1,28 @@
+# dependencies
+node_modules/
+
+# generated prisma code
+src/generated/
+
+# next.js and build outputs
+.next/
+out/
+build/
+next-env.d.ts
+*.tsbuildinfo
+.vercel/
+
+# package lockfile
+package-lock.json
+
+# local uploads
+public/uploads/
+.photos/
+
+# environment and agent files
+.env*
+AGENTS.md
+CLAUDE.md
+NOTES.md
+npm-debug.log*
+.DS_Store

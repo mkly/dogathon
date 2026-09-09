@@ -5,11 +5,16 @@ import { createRosterSyncScheduleHandler } from "./roster-sync-schedule.ts";
 import type { RosterSyncJobView } from "./roster-sync-client.ts";
 import { parseEnvironment } from "./env.ts";
 
-const request = new Request("https://app.example/api/jobs/schedule-roster-sync", {
-  headers: { authorization: "Bearer scheduler-secret" },
-});
+const request = new Request(
+  "https://app.example/api/jobs/schedule-roster-sync",
+  {
+    headers: { authorization: "Bearer scheduler-secret" },
+  },
+);
 
-function schedulerEnvironment(overrides: Record<string, string | undefined> = {}) {
+function schedulerEnvironment(
+  overrides: Record<string, string | undefined> = {},
+) {
   return parseEnvironment({
     DATABASE_URL: "postgresql://dogathon:dogathon@localhost:5432/dogathon",
     ...overrides,
@@ -44,7 +49,11 @@ test("the schedule route requires the same bearer secret as the drain route", as
 });
 
 test("eligible organizations are staggered and existing work is skipped", async () => {
-  const inputs: Array<{ orgId: string; trigger: "scheduled"; startAfter: Date }> = [];
+  const inputs: Array<{
+    orgId: string;
+    trigger: "scheduled";
+    startAfter: Date;
+  }> = [];
   const handler = createRosterSyncScheduleHandler({
     env: schedulerEnvironment({ CRON_SECRET: "scheduler-secret" }),
     now: () => new Date("2026-09-02T08:00:00.000Z"),
@@ -62,7 +71,12 @@ test("eligible organizations are staggered and existing work is skipped", async 
   const response = await handler(request);
 
   assert.equal(response.status, 200);
-  assert.deepEqual(await response.json(), { eligible: 3, enqueued: 2, skipped: 1, failed: 0 });
+  assert.deepEqual(await response.json(), {
+    eligible: 3,
+    enqueued: 2,
+    skipped: 1,
+    failed: 0,
+  });
   assert.deepEqual(
     inputs.map(({ orgId, trigger, startAfter }) => ({
       orgId,
@@ -70,9 +84,21 @@ test("eligible organizations are staggered and existing work is skipped", async 
       startAfter: startAfter.toISOString(),
     })),
     [
-      { orgId: "org-1", trigger: "scheduled", startAfter: "2026-09-02T08:00:00.000Z" },
-      { orgId: "org-2", trigger: "scheduled", startAfter: "2026-09-02T08:05:00.000Z" },
-      { orgId: "org-3", trigger: "scheduled", startAfter: "2026-09-02T08:10:00.000Z" },
+      {
+        orgId: "org-1",
+        trigger: "scheduled",
+        startAfter: "2026-09-02T08:00:00.000Z",
+      },
+      {
+        orgId: "org-2",
+        trigger: "scheduled",
+        startAfter: "2026-09-02T08:05:00.000Z",
+      },
+      {
+        orgId: "org-3",
+        trigger: "scheduled",
+        startAfter: "2026-09-02T08:10:00.000Z",
+      },
     ],
   );
 });
@@ -97,7 +123,12 @@ test("one enqueue failure does not prevent later organizations", async () => {
   console.error = () => {};
   try {
     const response = await handler(request);
-    assert.deepEqual(await response.json(), { eligible: 3, enqueued: 2, skipped: 0, failed: 1 });
+    assert.deepEqual(await response.json(), {
+      eligible: 3,
+      enqueued: 2,
+      skipped: 0,
+      failed: 1,
+    });
   } finally {
     console.error = originalError;
   }

@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-process.env.DATABASE_URL ??= "postgresql://dogathon:dogathon@localhost:5432/dogathon";
+process.env.DATABASE_URL ??=
+  "postgresql://dogathon:dogathon@localhost:5432/dogathon";
 
 const { createVolunteerPhotoPostHandler } = await import("./route.ts");
 const residentId = "5af589d8-dc5f-4bc7-9ce3-2ca9f06833c8";
@@ -12,18 +13,28 @@ function request(photo = new File([Uint8Array.from([1, 2])], "walk.jpg")) {
   formData.set("orgSlug", "huffy-puff");
   formData.set("checkInId", checkInId);
   formData.set("photo", photo);
-  return new Request("http://localhost/api/volunteer-photos", { method: "POST", body: formData });
+  return new Request("http://localhost/api/volunteer-photos", {
+    method: "POST",
+    body: formData,
+  });
 }
 
 function dependencies(overrides: Record<string, unknown> = {}) {
   return {
     async createPhoto() {},
     async deletePhoto() {},
-    async findCheckIn() { return residentId; },
+    async findCheckIn() {
+      return residentId;
+    },
     async getAccess() {
       return {
         authenticated: true,
-        context: { memberId: "member-1", orgId: "org-1", role: "volunteer", userId: "user-1" },
+        context: {
+          memberId: "member-1",
+          orgId: "org-1",
+          role: "volunteer",
+          userId: "user-1",
+        },
         organization: { id: "org-1", name: "Huffy Puff", slug: "huffy-puff" },
       };
     },
@@ -38,31 +49,37 @@ function dependencies(overrides: Record<string, unknown> = {}) {
     async putPhoto({ key }: { key: string }) {
       return { url: `/stored/${key}` };
     },
-    async rateLimit() { return { allowed: true, retryAfterSeconds: 60 }; },
+    async rateLimit() {
+      return { allowed: true, retryAfterSeconds: 60 };
+    },
     ...overrides,
   } as never;
 }
 
 test("rejects unauthenticated and wrong-organization uploads", async () => {
-  const unauthenticated = createVolunteerPhotoPostHandler(dependencies({
-    async getAccess() {
-      return {
-        authenticated: false,
-        context: null,
-        organization: { id: "org-1", name: "Huffy Puff", slug: "huffy-puff" },
-      };
-    },
-  }));
+  const unauthenticated = createVolunteerPhotoPostHandler(
+    dependencies({
+      async getAccess() {
+        return {
+          authenticated: false,
+          context: null,
+          organization: { id: "org-1", name: "Huffy Puff", slug: "huffy-puff" },
+        };
+      },
+    }),
+  );
   assert.equal((await unauthenticated(request())).status, 401);
 
-  const wrongOrganization = createVolunteerPhotoPostHandler(dependencies({
-    async getAccess() {
-      return {
-        authenticated: true,
-        context: null,
-        organization: { id: "org-1", name: "Huffy Puff", slug: "huffy-puff" },
-      };
-    },
-  }));
+  const wrongOrganization = createVolunteerPhotoPostHandler(
+    dependencies({
+      async getAccess() {
+        return {
+          authenticated: true,
+          context: null,
+          organization: { id: "org-1", name: "Huffy Puff", slug: "huffy-puff" },
+        };
+      },
+    }),
+  );
   assert.equal((await wrongOrganization(request())).status, 403);
 });

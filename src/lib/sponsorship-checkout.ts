@@ -2,17 +2,30 @@ import { z } from "zod";
 
 import { prisma } from "@/lib/prisma";
 import { getPublicResidentBySource } from "@/lib/public-roster-cache";
-import { checkRateLimit, getRateLimitIdentity, RATE_LIMITS } from "@/lib/rate-limit";
+import {
+  checkRateLimit,
+  getRateLimitIdentity,
+  RATE_LIMITS,
+} from "@/lib/rate-limit";
 import { DEFAULT_SPONSORSHIP_MONTHLY_CENTS } from "@/lib/rescue-settings";
 import { normalizeSourceUrl } from "@/lib/source-url";
-import { createStripeCheckout, ResidentUnavailableError } from "@/lib/stripe-billing";
+import {
+  createStripeCheckout,
+  ResidentUnavailableError,
+} from "@/lib/stripe-billing";
 import { uuidSchema } from "@/lib/uuid";
 
 const routeSchema = z.object({
   orgSlug: z.string().trim().min(1),
   target: z.discriminatedUnion("kind", [
-    z.object({ kind: z.literal("resident-id"), value: z.string().trim().min(1) }),
-    z.object({ kind: z.literal("source"), value: z.string().trim().min(1).max(2048) }),
+    z.object({
+      kind: z.literal("resident-id"),
+      value: z.string().trim().min(1),
+    }),
+    z.object({
+      kind: z.literal("source"),
+      value: z.string().trim().min(1).max(2048),
+    }),
   ]),
 });
 
@@ -22,16 +35,16 @@ const detailsSchema = z.object({
 });
 
 export type SponsorshipCheckoutErrorCode =
-  | "invalid"
-  | "invalid-tier"
-  | "rate-limited"
-  | "unavailable"
-  | "billing";
+  "invalid" | "invalid-tier" | "rate-limited" | "unavailable" | "billing";
 
 export type SponsorshipOrganization = {
   id: string;
   settings: { allowedOrigins: string[] } | null;
-  sponsorshipTiers: Array<{ id: string; monthlyCents: number; isDefault: boolean }>;
+  sponsorshipTiers: Array<{
+    id: string;
+    monthlyCents: number;
+    isDefault: boolean;
+  }>;
 };
 
 type CheckoutDestination = {
@@ -69,10 +82,17 @@ export type SponsorshipCheckoutResult =
     };
 
 export type SponsorshipCheckoutDependencies = {
-  createCheckout(input: Parameters<typeof createStripeCheckout>[0]): Promise<{ url: string | null }>;
+  createCheckout(
+    input: Parameters<typeof createStripeCheckout>[0],
+  ): Promise<{ url: string | null }>;
   findOrganization(slug: string): Promise<SponsorshipOrganization | null>;
-  findResidentBySource(orgId: string, sourceUrl: string): Promise<{ id: string } | null>;
-  rateLimit(requestHeaders: Headers): Promise<{ allowed: boolean; retryAfterSeconds: number }>;
+  findResidentBySource(
+    orgId: string,
+    sourceUrl: string,
+  ): Promise<{ id: string } | null>;
+  rateLimit(
+    requestHeaders: Headers,
+  ): Promise<{ allowed: boolean; retryAfterSeconds: number }>;
 };
 
 const defaultDependencies: SponsorshipCheckoutDependencies = {
@@ -129,11 +149,17 @@ export async function startSponsorshipCheckout(
   } = {},
 ): Promise<SponsorshipCheckoutResult> {
   const dependencies = options.dependencies ?? defaultDependencies;
-  const route = routeSchema.safeParse({ orgSlug: input.orgSlug, target: input.target });
+  const route = routeSchema.safeParse({
+    orgSlug: input.orgSlug,
+    target: input.target,
+  });
   if (!route.success) return { ok: false, reason: "invalid-route" };
 
   const { orgSlug, target } = route.data;
-  if (target.kind === "resident-id" && !uuidSchema.safeParse(target.value).success) {
+  if (
+    target.kind === "resident-id" &&
+    !uuidSchema.safeParse(target.value).success
+  ) {
     return { ok: false, reason: "not-found" };
   }
 
@@ -145,7 +171,8 @@ export async function startSponsorshipCheckout(
     });
   }
 
-  const organization = options.organization ?? await dependencies.findOrganization(orgSlug);
+  const organization =
+    options.organization ?? (await dependencies.findOrganization(orgSlug));
   if (!organization) return { ok: false, reason: "not-found" };
 
   const destination = buildDestination({ organization, orgSlug });
@@ -158,13 +185,16 @@ export async function startSponsorshipCheckout(
 
   // An organization that has never saved its sponsorship settings has no tiers, and every
   // other price read falls back to the default, so an unspecified tier does too.
-  const monthlyCents = input.tier === undefined
-    ? organization.sponsorshipTiers.find((tier) => tier.isDefault)?.monthlyCents
-      ?? organization.sponsorshipTiers[0]?.monthlyCents
-      ?? DEFAULT_SPONSORSHIP_MONTHLY_CENTS
-    : typeof input.tier === "string"
-      ? organization.sponsorshipTiers.find(({ id }) => id === input.tier)?.monthlyCents
-      : undefined;
+  const monthlyCents =
+    input.tier === undefined
+      ? (organization.sponsorshipTiers.find((tier) => tier.isDefault)
+          ?.monthlyCents ??
+        organization.sponsorshipTiers[0]?.monthlyCents ??
+        DEFAULT_SPONSORSHIP_MONTHLY_CENTS)
+      : typeof input.tier === "string"
+        ? organization.sponsorshipTiers.find(({ id }) => id === input.tier)
+            ?.monthlyCents
+        : undefined;
   if (monthlyCents === undefined) {
     return checkoutError("invalid-tier", {
       destination,
@@ -189,8 +219,12 @@ export async function startSponsorshipCheckout(
   } else {
     const sourceUrl = normalizeSourceUrl(target.value);
     if (!sourceUrl) return checkoutError("invalid", { destination, orgSlug });
-    const resident = await dependencies.findResidentBySource(organization.id, sourceUrl);
-    if (!resident) return checkoutError("unavailable", { destination, orgSlug });
+    const resident = await dependencies.findResidentBySource(
+      organization.id,
+      sourceUrl,
+    );
+    if (!resident)
+      return checkoutError("unavailable", { destination, orgSlug });
     residentId = resident.id;
   }
 
@@ -204,7 +238,8 @@ export async function startSponsorshipCheckout(
       successUrl: destination.successUrl,
       cancelUrl: destination.cancelUrl,
     });
-    if (!session.url) return checkoutError("billing", { destination, orgSlug, residentId });
+    if (!session.url)
+      return checkoutError("billing", { destination, orgSlug, residentId });
     return { ok: true, url: session.url };
   } catch (error) {
     if (error instanceof ResidentUnavailableError) {

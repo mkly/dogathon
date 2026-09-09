@@ -75,12 +75,18 @@ export async function inviteOrganizationMember(input: {
     return { ok: false, message: "Enter a valid email address." };
   }
   if (!ASSIGNABLE_ROLES.includes(input.role)) {
-    return { ok: false, message: "Choose admin, member, or volunteer as the role." };
+    return {
+      ok: false,
+      message: "Choose admin, member, or volunteer as the role.",
+    };
   }
 
   const context = await invitationContext(input.orgSlug);
   if (!context) {
-    return { ok: false, message: "You no longer have permission to invite people here." };
+    return {
+      ok: false,
+      message: "You no longer have permission to invite people here.",
+    };
   }
 
   try {
@@ -91,7 +97,10 @@ export async function inviteOrganizationMember(input: {
   } catch (error) {
     return {
       ok: false,
-      message: invitationApiErrorMessage(error, "The invitation could not be sent. Try again."),
+      message: invitationApiErrorMessage(
+        error,
+        "The invitation could not be sent. Try again.",
+      ),
     };
   }
 
@@ -105,7 +114,10 @@ export async function cancelOrganizationInvitation(input: {
 }): Promise<InvitationActionResult> {
   const context = await invitationContext(input.orgSlug);
   if (!context) {
-    return { ok: false, message: "You no longer have permission to manage invitations here." };
+    return {
+      ok: false,
+      message: "You no longer have permission to manage invitations here.",
+    };
   }
 
   try {
@@ -113,9 +125,9 @@ export async function cancelOrganizationInvitation(input: {
       headers: context.headers,
       query: { organizationId: context.organizationId },
     });
-    const invitation = invitations.find((item) => (
-      item.id === input.invitationId && item.status === "pending"
-    ));
+    const invitation = invitations.find(
+      (item) => item.id === input.invitationId && item.status === "pending",
+    );
     if (!invitation) {
       return { ok: false, message: "That invitation is no longer pending." };
     }
@@ -127,7 +139,10 @@ export async function cancelOrganizationInvitation(input: {
   } catch (error) {
     return {
       ok: false,
-      message: invitationApiErrorMessage(error, "The invitation could not be cancelled. Try again."),
+      message: invitationApiErrorMessage(
+        error,
+        "The invitation could not be cancelled. Try again.",
+      ),
     };
   }
 
@@ -141,7 +156,10 @@ export async function resendOrganizationInvitation(input: {
 }): Promise<InvitationActionResult> {
   const context = await invitationContext(input.orgSlug);
   if (!context) {
-    return { ok: false, message: "You no longer have permission to manage invitations here." };
+    return {
+      ok: false,
+      message: "You no longer have permission to manage invitations here.",
+    };
   }
 
   try {
@@ -149,9 +167,9 @@ export async function resendOrganizationInvitation(input: {
       headers: context.headers,
       query: { organizationId: context.organizationId },
     });
-    const invitation = invitations.find((item) => (
-      item.id === input.invitationId && item.status === "pending"
-    ));
+    const invitation = invitations.find(
+      (item) => item.id === input.invitationId && item.status === "pending",
+    );
     if (!invitation) {
       return { ok: false, message: "That invitation is no longer pending." };
     }
@@ -168,7 +186,10 @@ export async function resendOrganizationInvitation(input: {
   } catch (error) {
     return {
       ok: false,
-      message: invitationApiErrorMessage(error, "The invitation could not be resent. Try again."),
+      message: invitationApiErrorMessage(
+        error,
+        "The invitation could not be resent. Try again.",
+      ),
     };
   }
 
@@ -196,7 +217,10 @@ export async function updateOrganizationMemberRole(input: {
   role: AssignableRole;
 }): Promise<MemberActionResult> {
   if (!ASSIGNABLE_ROLES.includes(input.role)) {
-    return { ok: false, message: "Choose admin, member, or volunteer as the new role." };
+    return {
+      ok: false,
+      message: "Choose admin, member, or volunteer as the new role.",
+    };
   }
 
   let context: Awaited<ReturnType<typeof mutationContext>>;
@@ -205,11 +229,17 @@ export async function updateOrganizationMemberRole(input: {
   } catch (error) {
     return {
       ok: false,
-      message: apiErrorMessage(error, "The members list could not be verified. Try again."),
+      message: apiErrorMessage(
+        error,
+        "The members list could not be verified. Try again.",
+      ),
     };
   }
   if (!context) {
-    return { ok: false, message: "You no longer have permission to manage this member." };
+    return {
+      ok: false,
+      message: "You no longer have permission to manage this member.",
+    };
   }
 
   try {
@@ -222,7 +252,13 @@ export async function updateOrganizationMemberRole(input: {
       headers: context.headers,
     });
   } catch (error) {
-    return { ok: false, message: apiErrorMessage(error, "The role could not be changed. Try again.") };
+    return {
+      ok: false,
+      message: apiErrorMessage(
+        error,
+        "The role could not be changed. Try again.",
+      ),
+    };
   }
 
   revalidatePath(`/${input.orgSlug}/admin/members`);
@@ -239,21 +275,40 @@ export async function removeOrganizationMember(input: {
   } catch (error) {
     return {
       ok: false,
-      message: apiErrorMessage(error, "The members list could not be verified. Try again."),
+      message: apiErrorMessage(
+        error,
+        "The members list could not be verified. Try again.",
+      ),
     };
   }
   if (!context) {
-    return { ok: false, message: "You no longer have permission to manage this member." };
+    return {
+      ok: false,
+      message: "You no longer have permission to manage this member.",
+    };
   }
-  if (input.memberId === context.actorMemberId) return { ok: false, message: "You cannot remove yourself from the members list." };
+  if (input.memberId === context.actorMemberId)
+    return {
+      ok: false,
+      message: "You cannot remove yourself from the members list.",
+    };
 
   try {
     await auth.api.removeMember({
-      body: { memberIdOrEmail: input.memberId, organizationId: context.organizationId },
+      body: {
+        memberIdOrEmail: input.memberId,
+        organizationId: context.organizationId,
+      },
       headers: context.headers,
     });
   } catch (error) {
-    return { ok: false, message: apiErrorMessage(error, "The member could not be removed. Try again.") };
+    return {
+      ok: false,
+      message: apiErrorMessage(
+        error,
+        "The member could not be removed. Try again.",
+      ),
+    };
   }
 
   revalidatePath(`/${input.orgSlug}/admin/members`);

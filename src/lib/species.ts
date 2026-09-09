@@ -30,7 +30,11 @@ const SPECIES_LABELS: Record<string, string> = {
 };
 
 export function normalizeSpecies(raw: string): string {
-  const words = raw.trim().toLowerCase().replace(/[_-]+/gu, " ").replace(/\s+/gu, " ");
+  const words = raw
+    .trim()
+    .toLowerCase()
+    .replace(/[_-]+/gu, " ")
+    .replace(/\s+/gu, " ");
   if (!words || !/[\p{L}\p{N}]/u.test(words)) return "";
 
   const singular = pluralize.singular(words);
@@ -43,6 +47,11 @@ export function normalizeSpecies(raw: string): string {
 export function speciesLabel(slug: string): string {
   const normalized = normalizeSpecies(slug);
   if (!normalized) return "";
-  return SPECIES_LABELS[normalized]
-    ?? normalized.split("-").map((word) => word[0].toUpperCase() + word.slice(1)).join(" ");
+  return (
+    SPECIES_LABELS[normalized] ??
+    normalized
+      .split("-")
+      .map((word) => word[0].toUpperCase() + word.slice(1))
+      .join(" ")
+  );
 }

@@ -23,7 +23,8 @@ export type SponsorUpdateEmailProps = {
   type?: "regular" | "graduation";
 };
 
-const FONT = "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif";
+const FONT =
+  "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif";
 const INK = "#1f2933";
 const MUTED = "#5d6873";
 const ACCENT = "#2f6651";
@@ -55,7 +56,9 @@ export function SponsorUpdateEmail(input: SponsorUpdateEmailProps) {
   const companionName = input.companionName.trim();
   const updateSubject = input.updateSubject.trim();
   const graduation = input.type === "graduation";
-  const headline = graduation ? sponsorUpdateEmailSubject(companionName, "graduation") : updateSubject;
+  const headline = graduation
+    ? sponsorUpdateEmailSubject(companionName, "graduation")
+    : updateSubject;
   const preheader = graduation
     ? `${companionName} has been adopted. Read the story from ${rescueName}.`
     : `${companionName} has a new update from ${rescueName}.`;
@@ -170,9 +173,13 @@ export function SponsorUpdateEmail(input: SponsorUpdateEmailProps) {
                     margin: "0 0 18px",
                   }}
                 >
-                  Your sponsorship can continue with another companion who could use your support.
+                  Your sponsorship can continue with another companion who could
+                  use your support.
                 </Text>
-                <Button href={input.sponsorshipSelectionUrl} style={buttonStyle}>
+                <Button
+                  href={input.sponsorshipSelectionUrl}
+                  style={buttonStyle}
+                >
                   Choose a new companion
                 </Button>
               </Section>

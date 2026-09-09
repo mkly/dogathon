@@ -7,7 +7,11 @@ import { FeltLink } from "@/components/felt";
 import { SignOutButton } from "@/components/sign-out-button";
 import { PageViewTransition } from "@/components/page-view-transition";
 import { getSession } from "@/lib/auth-session";
-import { formatDate, formatMonthlyAmount, sponsorshipStatusLabel } from "@/lib/format";
+import {
+  formatDate,
+  formatMonthlyAmount,
+  sponsorshipStatusLabel,
+} from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 import { getSponsorContext } from "@/lib/sponsor-access";
 
@@ -36,8 +40,9 @@ export default async function SponsorAccountPage() {
             <p className={styles.eyebrow}>Sponsor account</p>
             <h1>No sponsorship profile yet</h1>
             <p>
-              We couldn&apos;t match {session.user.email} to a sponsorship. Sign in with
-              the email used at checkout, or contact the rescue for help.
+              We couldn&apos;t match {session.user.email} to a sponsorship. Sign
+              in with the email used at checkout, or contact the rescue for
+              help.
             </p>
             <div className={styles.emptyActions}>
               <SignOutButton redirectTo="/account/sign-in" />
@@ -69,7 +74,9 @@ export default async function SponsorAccountPage() {
           <div>
             <p className={styles.eyebrow}>Sponsor account</p>
             <h1>Welcome, {sponsor.name}</h1>
-            <p>Keep your details current and manage each rescue subscription.</p>
+            <p>
+              Keep your details current and manage each rescue subscription.
+            </p>
           </div>
           <SignOutButton redirectTo="/account/sign-in" />
         </header>
@@ -77,7 +84,9 @@ export default async function SponsorAccountPage() {
         <div className={styles.layout}>
           <AdminSurface className={styles.profile} tone="mustard">
             <h2>Your profile</h2>
-            <p className={styles.profileIntro}>These details are shared with your rescues.</p>
+            <p className={styles.profileIntro}>
+              These details are shared with your rescues.
+            </p>
             <SponsorProfileForm email={sponsor.email} name={sponsor.name} />
           </AdminSurface>
 
@@ -88,26 +97,41 @@ export default async function SponsorAccountPage() {
             </div>
 
             {sponsorships.length === 0 ? (
-              <p className={styles.profileIntro}>No sponsorships are linked yet.</p>
+              <p className={styles.profileIntro}>
+                No sponsorships are linked yet.
+              </p>
             ) : (
               <div className={styles.list}>
                 {sponsorships.map((record) => (
                   <article className={styles.sponsorshipCard} key={record.id}>
                     <div>
                       <h3>{record.resident.name}</h3>
-                      <p className={styles.rescue}>{record.organization.name}</p>
+                      <p className={styles.rescue}>
+                        {record.organization.name}
+                      </p>
                       <div className={styles.details}>
-                        <AdminBadge tone={record.status === "active" ? "moss" : "brick"}>
-                          <span className={styles.status}>{sponsorshipStatusLabel(record.status)}</span>
+                        <AdminBadge
+                          tone={record.status === "active" ? "moss" : "brick"}
+                        >
+                          <span className={styles.status}>
+                            {sponsorshipStatusLabel(record.status)}
+                          </span>
                         </AdminBadge>
                         <span>Started {formatDate(record.createdAt)}</span>
-                        <span>{formatMonthlyAmount(record.monthlyCents)}/month</span>
-                        {record.status === "active" || record.status === "awaiting" ? (
-                          <span>Continues month to month; switch companions or cancel at any time</span>
+                        <span>
+                          {formatMonthlyAmount(record.monthlyCents)}/month
+                        </span>
+                        {record.status === "active" ||
+                        record.status === "awaiting" ? (
+                          <span>
+                            Continues month to month; switch companions or
+                            cancel at any time
+                          </span>
                         ) : null}
                       </div>
                     </div>
-                    {["active", "awaiting"].includes(record.status) || record.stripeCustomerId ? (
+                    {["active", "awaiting"].includes(record.status) ||
+                    record.stripeCustomerId ? (
                       <div className={styles.sponsorshipActions}>
                         {["active", "awaiting"].includes(record.status) ? (
                           <FeltLink

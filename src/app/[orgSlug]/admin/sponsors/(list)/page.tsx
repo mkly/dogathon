@@ -40,7 +40,10 @@ function pageFromQuery(value: string | string[] | undefined) {
   return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : 1;
 }
 
-export default async function SponsorsPage({ params, searchParams }: SponsorsPageProps) {
+export default async function SponsorsPage({
+  params,
+  searchParams,
+}: SponsorsPageProps) {
   const [{ orgSlug }, query] = await Promise.all([params, searchParams]);
   const page = pageFromQuery(query.page);
   const access = await getOrganizationAccessBySlug(await headers(), orgSlug, {
@@ -50,7 +53,11 @@ export default async function SponsorsPage({ params, searchParams }: SponsorsPag
   if (!access) notFound();
   if (!access.context) {
     const next = encodeURIComponent(`/${orgSlug}/admin/sponsors`);
-    redirect(access.authenticated ? "/staff/organizations" : `/staff/sign-in?next=${next}`);
+    redirect(
+      access.authenticated
+        ? "/staff/organizations"
+        : `/staff/sign-in?next=${next}`,
+    );
   }
   const { context } = access;
 
@@ -64,7 +71,9 @@ export default async function SponsorsPage({ params, searchParams }: SponsorsPag
         id: true,
         email: true,
         name: true,
-        _count: { select: { sponsorships: { where: { orgId: context.orgId } } } },
+        _count: {
+          select: { sponsorships: { where: { orgId: context.orgId } } },
+        },
         sponsorships: {
           where: { orgId: context.orgId },
           select: {
@@ -89,9 +98,15 @@ export default async function SponsorsPage({ params, searchParams }: SponsorsPag
     <PageViewTransition>
       <AdminPage variant="directory">
         <AdminHeader
-          actions={<AdminLink className={styles.backLink} href={`/${orgSlug}/admin`} transitionTypes={["nav-back"]}>
-            Back to staff room
-          </AdminLink>}
+          actions={
+            <AdminLink
+              className={styles.backLink}
+              href={`/${orgSlug}/admin`}
+              transitionTypes={["nav-back"]}
+            >
+              Back to staff room
+            </AdminLink>
+          }
           eyebrow="Private staff directory"
           lede="Contact preferences and every companion supported by each sponsor."
           title="Sponsors"
@@ -99,7 +114,10 @@ export default async function SponsorsPage({ params, searchParams }: SponsorsPag
         />
 
         <div className={styles.summary}>
-          <p>{sponsorCount} {pluralize("person", sponsorCount)} · {sponsorshipCount} {pluralize("sponsorship", sponsorshipCount)}</p>
+          <p>
+            {sponsorCount} {pluralize("person", sponsorCount)} ·{" "}
+            {sponsorshipCount} {pluralize("sponsorship", sponsorshipCount)}
+          </p>
           <AdminBadge tone="moss">staff only</AdminBadge>
         </div>
 
@@ -112,19 +130,40 @@ export default async function SponsorsPage({ params, searchParams }: SponsorsPag
             </AdminEmptyState>
           </AdminSurface>
         ) : (
-          <section aria-label="Sponsor directory" className={styles.sponsorList}>
+          <section
+            aria-label="Sponsor directory"
+            className={styles.sponsorList}
+          >
             {sponsors.map((sponsor) => (
-              <AdminSurface className={styles.sponsorCard} key={sponsor.id} tone="oatmeal">
+              <AdminSurface
+                className={styles.sponsorCard}
+                key={sponsor.id}
+                tone="oatmeal"
+              >
                 <div className={styles.sponsorHeading}>
                   <div>
                     <h2>{sponsor.name}</h2>
-                    <AdminBadge tone={sponsor.sponsorships.some(({ status }) => status === "active") ? "moss" : "brick"}>
-                      {sponsor._count.sponsorships} {pluralize("companion", sponsor._count.sponsorships)}
+                    <AdminBadge
+                      tone={
+                        sponsor.sponsorships.some(
+                          ({ status }) => status === "active",
+                        )
+                          ? "moss"
+                          : "brick"
+                      }
+                    >
+                      {sponsor._count.sponsorships}{" "}
+                      {pluralize("companion", sponsor._count.sponsorships)}
                     </AdminBadge>
                   </div>
                   <div className={styles.contact}>
-                    <p><a href={`mailto:${sponsor.email}`}>{sponsor.email}</a></p>
-                    <AdminLink href={`/${orgSlug}/admin/sponsors/${sponsor.id}`} tone="mustard">
+                    <p>
+                      <a href={`mailto:${sponsor.email}`}>{sponsor.email}</a>
+                    </p>
+                    <AdminLink
+                      href={`/${orgSlug}/admin/sponsors/${sponsor.id}`}
+                      tone="mustard"
+                    >
                       View sponsor
                     </AdminLink>
                   </div>
@@ -142,15 +181,21 @@ export default async function SponsorsPage({ params, searchParams }: SponsorsPag
                     {sponsor.sponsorships.map((record) => (
                       <tr key={record.id}>
                         <td>{record.resident.name}</td>
-                        <td><AdminStatus>{sponsorshipStatusLabel(record.status)}</AdminStatus></td>
+                        <td>
+                          <AdminStatus>
+                            {sponsorshipStatusLabel(record.status)}
+                          </AdminStatus>
+                        </td>
                         <td>{formatDate(record.createdAt)}</td>
                       </tr>
                     ))}
                   </tbody>
                 </AdminTable>
-                {sponsor._count.sponsorships > SPONSORSHIPS_PER_SPONSOR_LIMIT ? (
+                {sponsor._count.sponsorships >
+                SPONSORSHIPS_PER_SPONSOR_LIMIT ? (
                   <p className={styles.limitNotice}>
-                    Showing the first {SPONSORSHIPS_PER_SPONSOR_LIMIT} sponsorships.
+                    Showing the first {SPONSORSHIPS_PER_SPONSOR_LIMIT}{" "}
+                    sponsorships.
                   </p>
                 ) : null}
               </AdminSurface>
@@ -159,16 +204,31 @@ export default async function SponsorsPage({ params, searchParams }: SponsorsPag
         )}
 
         {(hasPreviousPage || hasNextPage) && (
-          <nav aria-label="Sponsor directory pages" className={styles.pagination}>
+          <nav
+            aria-label="Sponsor directory pages"
+            className={styles.pagination}
+          >
             {hasPreviousPage ? (
-              <AdminLink href={page === 2 ? `/${orgSlug}/admin/sponsors` : `/${orgSlug}/admin/sponsors?page=${page - 1}`}>
+              <AdminLink
+                href={
+                  page === 2
+                    ? `/${orgSlug}/admin/sponsors`
+                    : `/${orgSlug}/admin/sponsors?page=${page - 1}`
+                }
+              >
                 Previous page
               </AdminLink>
-            ) : <span />}
+            ) : (
+              <span />
+            )}
             <span>Page {page}</span>
             {hasNextPage ? (
-              <AdminLink href={`/${orgSlug}/admin/sponsors?page=${page + 1}`}>Next page</AdminLink>
-            ) : <span />}
+              <AdminLink href={`/${orgSlug}/admin/sponsors?page=${page + 1}`}>
+                Next page
+              </AdminLink>
+            ) : (
+              <span />
+            )}
           </nav>
         )}
       </AdminPage>

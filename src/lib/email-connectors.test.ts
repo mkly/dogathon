@@ -40,7 +40,9 @@ test("routes organization email through the platform sender when no connector ex
     "APP_SMTP_PASSWORD",
     "APP_EMAIL_FROM",
   ] as const;
-  const smtpEnvironment = smtpEnvironmentKeys.map((key) => [key, env[key]] as const);
+  const smtpEnvironment = smtpEnvironmentKeys.map(
+    (key) => [key, env[key]] as const,
+  );
   for (const [key] of smtpEnvironment) {
     env[key] = undefined;
   }
@@ -83,7 +85,11 @@ test("routes organization email through the platform sender when its connector i
       throw new Error("an unverified connector must not be used");
     },
   });
-  await send({ to: "sponsor@example.com", subject: "Biscuit update", body: "Hello" });
+  await send({
+    to: "sponsor@example.com",
+    subject: "Biscuit update",
+    body: "Hello",
+  });
 
   assert.equal(usedPlatformSender, true);
 });
@@ -102,7 +108,11 @@ test("routes organization email through its verified connector", async () => {
       return null;
     },
   });
-  await send({ to: "sponsor@example.com", subject: "Biscuit update", body: "Hello" });
+  await send({
+    to: "sponsor@example.com",
+    subject: "Biscuit update",
+    body: "Hello",
+  });
 
   assert.equal(usedConnector, verified);
 });

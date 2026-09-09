@@ -21,7 +21,11 @@ const subscribeToHydration = () => () => undefined;
 export function PhotoSlideshow({ companionName, photos }: PhotoSlideshowProps) {
   const [viewportRef, emblaApi] = useEmblaCarousel({ loop: true });
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const enhanced = useSyncExternalStore(subscribeToHydration, () => true, () => false);
+  const enhanced = useSyncExternalStore(
+    subscribeToHydration,
+    () => true,
+    () => false,
+  );
 
   const updateSelection = useCallback(() => {
     if (emblaApi) setSelectedIndex(emblaApi.selectedScrollSnap());
@@ -79,7 +83,9 @@ export function PhotoSlideshow({ companionName, photos }: PhotoSlideshowProps) {
                   src={photo.src}
                   width={1400}
                 />
-                {photo.caption ? <figcaption>{photo.caption}</figcaption> : null}
+                {photo.caption ? (
+                  <figcaption>{photo.caption}</figcaption>
+                ) : null}
               </figure>
             </li>
           ))}
@@ -88,10 +94,18 @@ export function PhotoSlideshow({ companionName, photos }: PhotoSlideshowProps) {
 
       <div aria-hidden={!enhanced} className={styles.slideshowControls}>
         <div className={styles.arrowButtons}>
-          <button aria-label="Previous photo" onClick={() => emblaApi?.scrollPrev()} type="button">
+          <button
+            aria-label="Previous photo"
+            onClick={() => emblaApi?.scrollPrev()}
+            type="button"
+          >
             ←
           </button>
-          <button aria-label="Next photo" onClick={() => emblaApi?.scrollNext()} type="button">
+          <button
+            aria-label="Next photo"
+            onClick={() => emblaApi?.scrollNext()}
+            type="button"
+          >
             →
           </button>
         </div>

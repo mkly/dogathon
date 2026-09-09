@@ -3,31 +3,39 @@ import "server-only";
 import { z } from "zod";
 
 const optionalString = z.preprocess(
-  (value) => typeof value === "string" && value.trim() === "" ? undefined : value,
+  (value) =>
+    typeof value === "string" && value.trim() === "" ? undefined : value,
   z.string().optional(),
 );
 
 const optionalTrimmedString = z.preprocess(
-  (value) => typeof value === "string" && value.trim() === "" ? undefined : value,
+  (value) =>
+    typeof value === "string" && value.trim() === "" ? undefined : value,
   z.string().trim().min(1).optional(),
 );
 
 function urlWithDefault(fallback: string) {
-  return z.preprocess(
-    (value) => typeof value === "string" && value.trim() === "" ? undefined : value,
-    z.url().default(fallback),
-  ).transform((value) => value.replace(/\/+$/u, ""));
+  return z
+    .preprocess(
+      (value) =>
+        typeof value === "string" && value.trim() === "" ? undefined : value,
+      z.url().default(fallback),
+    )
+    .transform((value) => value.replace(/\/+$/u, ""));
 }
 
 const core = {
-  NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
+  NODE_ENV: z
+    .enum(["development", "test", "production"])
+    .default("development"),
   DATABASE_URL: z.url({ error: "is required and must be a valid URL" }),
 };
 
 // In development and tests, absent auth secrets permit local startup. Production rejects them.
 const auth = {
   BETTER_AUTH_SECRET: z.preprocess(
-    (value) => typeof value === "string" && value.trim() === "" ? undefined : value,
+    (value) =>
+      typeof value === "string" && value.trim() === "" ? undefined : value,
     z.string().min(32, "must contain at least 32 characters").optional(),
   ),
   BETTER_AUTH_URL: urlWithDefault("http://localhost:3000"),
@@ -38,7 +46,8 @@ const ai = {
   OPENAI_API_KEY: optionalTrimmedString,
   OPENAI_BASE_URL: urlWithDefault("https://api.openai.com/v1"),
   OPENAI_MODEL: z.preprocess(
-    (value) => typeof value === "string" && value.trim() === "" ? undefined : value,
+    (value) =>
+      typeof value === "string" && value.trim() === "" ? undefined : value,
     z.string().trim().min(1).default("gpt-4o-mini"),
   ),
 };
@@ -66,25 +75,29 @@ const photoStorage = {
   AWS_ACCESS_KEY_ID: optionalTrimmedString,
   AWS_SECRET_ACCESS_KEY: optionalTrimmedString,
   S3_USE_AMBIENT_CREDENTIALS: z.preprocess(
-    (value) => typeof value === "string" ? value.trim() || undefined : value,
+    (value) => (typeof value === "string" ? value.trim() || undefined : value),
     z.stringbool().default(false),
   ),
   S3_PHOTO_BUCKET: optionalTrimmedString,
-  S3_PUBLIC_BASE_URL: z.preprocess(
-    (value) => typeof value === "string" && value.trim() === "" ? undefined : value,
-    z.url().optional(),
-  ).transform((value) => value?.replace(/\/+$/u, "")),
+  S3_PUBLIC_BASE_URL: z
+    .preprocess(
+      (value) =>
+        typeof value === "string" && value.trim() === "" ? undefined : value,
+      z.url().optional(),
+    )
+    .transform((value) => value?.replace(/\/+$/u, "")),
 };
 
 // Without a complete SMTP configuration, platform mail is described rather than sent.
 const platformSmtp = {
   APP_SMTP_HOST: optionalTrimmedString,
   APP_SMTP_PORT: z.preprocess(
-    (value) => typeof value === "string" && value.trim() === "" ? undefined : value,
+    (value) =>
+      typeof value === "string" && value.trim() === "" ? undefined : value,
     z.coerce.number().int().min(1).max(65_535).optional(),
   ),
   APP_SMTP_SECURE: z.preprocess(
-    (value) => typeof value === "string" ? value.trim() || undefined : value,
+    (value) => (typeof value === "string" ? value.trim() || undefined : value),
     z.stringbool().optional(),
   ),
   APP_SMTP_USER: optionalTrimmedString,
@@ -95,117 +108,142 @@ const platformSmtp = {
 // Without encryption and OAuth credentials, connector setup is disabled and sends are described.
 const emailConnectors = {
   EMAIL_CONNECTOR_ENCRYPTION_KEY: z.preprocess(
-    (value) => typeof value === "string" && value.trim() === "" ? undefined : value,
-    z.base64().refine(
-      (value) => Buffer.from(value, "base64").length === 32,
-      "must be 32 random bytes encoded as base64",
-    ).optional(),
+    (value) =>
+      typeof value === "string" && value.trim() === "" ? undefined : value,
+    z
+      .base64()
+      .refine(
+        (value) => Buffer.from(value, "base64").length === 32,
+        "must be 32 random bytes encoded as base64",
+      )
+      .optional(),
   ),
   GOOGLE_CLIENT_ID: optionalTrimmedString,
   GOOGLE_CLIENT_SECRET: optionalString,
   MICROSOFT_CLIENT_ID: optionalTrimmedString,
   MICROSOFT_CLIENT_SECRET: optionalString,
   MICROSOFT_TENANT_ID: z.preprocess(
-    (value) => typeof value === "string" && value.trim() === "" ? undefined : value,
+    (value) =>
+      typeof value === "string" && value.trim() === "" ? undefined : value,
     z.string().trim().min(1).default("common"),
   ),
 };
 
-const environmentSchema = z.object({
-  ...core,
-  ...auth,
-  ...ai,
-  ...firecrawl,
-  ...scheduler,
-  ...stripe,
-  ...photoStorage,
-  ...platformSmtp,
-  ...emailConnectors,
-}).superRefine((environment, context) => {
-  if (environment.NODE_ENV === "production" && !environment.BETTER_AUTH_SECRET) {
-    context.addIssue({
-      code: "custom",
-      path: ["BETTER_AUTH_SECRET"],
-      message: "is required in production",
-    });
-  }
-  if (environment.NODE_ENV === "production" && !environment.EMAIL_CONNECTOR_ENCRYPTION_KEY) {
-    context.addIssue({
-      code: "custom",
-      path: ["EMAIL_CONNECTOR_ENCRYPTION_KEY"],
-      message: "is required in production",
-    });
-  }
-  if (environment.NODE_ENV === "production" && !environment.S3_PHOTO_BUCKET) {
-    context.addIssue({
-      code: "custom",
-      path: ["S3_PHOTO_BUCKET"],
-      message: "is required in production",
-    });
-  }
-  if (environment.NODE_ENV === "production" && !environment.AWS_REGION) {
-    context.addIssue({
-      code: "custom",
-      path: ["AWS_REGION"],
-      message: "is required in production",
-    });
-  }
-  if (environment.NODE_ENV === "production" && !environment.CRON_SECRET) {
-    context.addIssue({
-      code: "custom",
-      path: ["CRON_SECRET"],
-      message: "is required in production",
-    });
-  }
-  if (
-    environment.NODE_ENV === "production"
-    && environment.S3_PHOTO_BUCKET
-    && !environment.S3_USE_AMBIENT_CREDENTIALS
-    && (!environment.AWS_ACCESS_KEY_ID || !environment.AWS_SECRET_ACCESS_KEY)
-  ) {
-    context.addIssue({
-      code: "custom",
-      path: ["AWS_ACCESS_KEY_ID"],
-      message: "and AWS_SECRET_ACCESS_KEY are required for S3 in production unless S3_USE_AMBIENT_CREDENTIALS is enabled",
-    });
-  }
-}).transform((environment) => ({
-  ...environment,
-  features: Object.freeze({
-    ai: Boolean(environment.OPENAI_API_KEY),
-    firecrawl: Boolean(environment.FIRECRAWL_API_KEY),
-    stripe: Boolean(environment.STRIPE_SECRET_KEY),
-    s3: Boolean(environment.S3_PHOTO_BUCKET && environment.AWS_REGION),
-    scheduler: Boolean(environment.CRON_SECRET),
-    platformSmtp: Boolean(
-      environment.APP_SMTP_HOST
-      && environment.APP_SMTP_PORT
-      && environment.APP_EMAIL_FROM
-    ),
-    googleOAuth: Boolean(environment.GOOGLE_CLIENT_ID && environment.GOOGLE_CLIENT_SECRET),
-    microsoftOAuth: Boolean(
-      environment.MICROSOFT_CLIENT_ID && environment.MICROSOFT_CLIENT_SECRET
-    ),
-    connectorEncryption: Boolean(environment.EMAIL_CONNECTOR_ENCRYPTION_KEY),
-  }),
-}));
+const environmentSchema = z
+  .object({
+    ...core,
+    ...auth,
+    ...ai,
+    ...firecrawl,
+    ...scheduler,
+    ...stripe,
+    ...photoStorage,
+    ...platformSmtp,
+    ...emailConnectors,
+  })
+  .superRefine((environment, context) => {
+    if (
+      environment.NODE_ENV === "production" &&
+      !environment.BETTER_AUTH_SECRET
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["BETTER_AUTH_SECRET"],
+        message: "is required in production",
+      });
+    }
+    if (
+      environment.NODE_ENV === "production" &&
+      !environment.EMAIL_CONNECTOR_ENCRYPTION_KEY
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["EMAIL_CONNECTOR_ENCRYPTION_KEY"],
+        message: "is required in production",
+      });
+    }
+    if (environment.NODE_ENV === "production" && !environment.S3_PHOTO_BUCKET) {
+      context.addIssue({
+        code: "custom",
+        path: ["S3_PHOTO_BUCKET"],
+        message: "is required in production",
+      });
+    }
+    if (environment.NODE_ENV === "production" && !environment.AWS_REGION) {
+      context.addIssue({
+        code: "custom",
+        path: ["AWS_REGION"],
+        message: "is required in production",
+      });
+    }
+    if (environment.NODE_ENV === "production" && !environment.CRON_SECRET) {
+      context.addIssue({
+        code: "custom",
+        path: ["CRON_SECRET"],
+        message: "is required in production",
+      });
+    }
+    if (
+      environment.NODE_ENV === "production" &&
+      environment.S3_PHOTO_BUCKET &&
+      !environment.S3_USE_AMBIENT_CREDENTIALS &&
+      (!environment.AWS_ACCESS_KEY_ID || !environment.AWS_SECRET_ACCESS_KEY)
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["AWS_ACCESS_KEY_ID"],
+        message:
+          "and AWS_SECRET_ACCESS_KEY are required for S3 in production unless S3_USE_AMBIENT_CREDENTIALS is enabled",
+      });
+    }
+  })
+  .transform((environment) => ({
+    ...environment,
+    features: Object.freeze({
+      ai: Boolean(environment.OPENAI_API_KEY),
+      firecrawl: Boolean(environment.FIRECRAWL_API_KEY),
+      stripe: Boolean(environment.STRIPE_SECRET_KEY),
+      s3: Boolean(environment.S3_PHOTO_BUCKET && environment.AWS_REGION),
+      scheduler: Boolean(environment.CRON_SECRET),
+      platformSmtp: Boolean(
+        environment.APP_SMTP_HOST &&
+        environment.APP_SMTP_PORT &&
+        environment.APP_EMAIL_FROM,
+      ),
+      googleOAuth: Boolean(
+        environment.GOOGLE_CLIENT_ID && environment.GOOGLE_CLIENT_SECRET,
+      ),
+      microsoftOAuth: Boolean(
+        environment.MICROSOFT_CLIENT_ID && environment.MICROSOFT_CLIENT_SECRET,
+      ),
+      connectorEncryption: Boolean(environment.EMAIL_CONNECTOR_ENCRYPTION_KEY),
+    }),
+  }));
 
 export type AppEnvironment = z.infer<typeof environmentSchema>;
 
-export function parseEnvironment(source: Record<string, string | undefined>): AppEnvironment {
+export function parseEnvironment(
+  source: Record<string, string | undefined>,
+): AppEnvironment {
   const result = environmentSchema.safeParse(source);
   if (result.success) return result.data;
 
   const details = result.error.issues
-    .map((issue) => `${issue.path.join(".") || "environment"}: ${issue.message}`)
+    .map(
+      (issue) => `${issue.path.join(".") || "environment"}: ${issue.message}`,
+    )
     .join("; ");
-  throw new Error(`Invalid environment variables: ${details}`, { cause: result.error });
+  throw new Error(`Invalid environment variables: ${details}`, {
+    cause: result.error,
+  });
 }
 
 /** Server-only environment, parsed exactly once when this module is loaded. */
 export const env = parseEnvironment(process.env);
 
 /** Preserve the host process environment when a test launches a configured child process. */
-export function subprocessEnvironment(overrides: Record<string, string | undefined>) {
+export function subprocessEnvironment(
+  overrides: Record<string, string | undefined>,
+) {
   return { ...process.env, ...overrides };
 }

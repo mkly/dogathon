@@ -23,10 +23,20 @@ export type SponsorshipTierInput = {
 
 export type OriginSettings = { allowedOrigins: string[] };
 
-export function isAllowedOrigin(settings: OriginSettings, origin: string): boolean {
+export function isAllowedOrigin(
+  settings: OriginSettings,
+  origin: string,
+): boolean {
   try {
     const url = new URL(origin);
-    if (url.username || url.password || url.pathname !== "/" || url.search || url.hash) return false;
+    if (
+      url.username ||
+      url.password ||
+      url.pathname !== "/" ||
+      url.search ||
+      url.hash
+    )
+      return false;
     return settings.allowedOrigins.includes(url.origin);
   } catch {
     return false;
@@ -42,13 +52,20 @@ type ParsedSettingsForm =
       settings: RescueSettingsPatch;
     };
 
-const httpSourceSchema = z.url({ protocol: /^https?$/ })
+const httpSourceSchema = z
+  .url({ protocol: /^https?$/ })
   .refine(isPublicHttpUrl)
   .transform((value) => new URL(value).toString());
 // A local capture path: no scheme, relative, no traversal, and an HTML file.
-const localSourceSchema = z.string()
+const localSourceSchema = z
+  .string()
   .refine((value) => !/^[a-z][a-z0-9+.-]*:/i.test(value))
-  .refine((value) => !value.startsWith("/") && !value.includes("..") && /\.html?$/i.test(value));
+  .refine(
+    (value) =>
+      !value.startsWith("/") &&
+      !value.includes("..") &&
+      /\.html?$/i.test(value),
+  );
 const sourceSchema = z.union([httpSourceSchema, localSourceSchema]);
 const settingsFormSchema = z.object({
   pinnedPostscript: z.string().optional(),
@@ -60,28 +77,38 @@ function parseMonthlyCents(value: string): number | null {
   if (!/^\d+(?:\.\d{1,2})?$/u.test(normalized)) return null;
   const [dollars, cents = ""] = normalized.split(".");
   const amount = Number(dollars) * 100 + Number(cents.padEnd(2, "0"));
-  return Number.isSafeInteger(amount) && amount >= 100 && amount <= 1_000_000 ? amount : null;
+  return Number.isSafeInteger(amount) && amount >= 100 && amount <= 1_000_000
+    ? amount
+    : null;
 }
 
-export function parseAllowedOrigins(value: string, production = process.env.NODE_ENV === "production") {
+export function parseAllowedOrigins(
+  value: string,
+  production = process.env.NODE_ENV === "production",
+) {
   const origins: string[] = [];
-  for (const input of value.split(/\r?\n/u).map((line) => line.trim()).filter(Boolean)) {
+  for (const input of value
+    .split(/\r?\n/u)
+    .map((line) => line.trim())
+    .filter(Boolean)) {
     let url: URL;
     try {
       url = new URL(input);
     } catch {
       return null;
     }
-    const localhost = url.hostname === "localhost" || url.hostname.endsWith(".localhost");
+    const localhost =
+      url.hostname === "localhost" || url.hostname.endsWith(".localhost");
     if (
-      url.username
-      || url.password
-      || url.hostname.includes("*")
-      || (url.pathname !== "/" && url.pathname !== "")
-      || url.search
-      || url.hash
-      || (url.protocol !== "https:" && !(localhost && !production && url.protocol === "http:"))
-      || (localhost && production)
+      url.username ||
+      url.password ||
+      url.hostname.includes("*") ||
+      (url.pathname !== "/" && url.pathname !== "") ||
+      url.search ||
+      url.hash ||
+      (url.protocol !== "https:" &&
+        !(localhost && !production && url.protocol === "http:")) ||
+      (localhost && production)
     ) {
       return null;
     }
@@ -109,7 +136,8 @@ export function parseSettingsForm(formData: FormData): ParsedSettingsForm {
     if (pinnedPostscript.length > POSTSCRIPT_MAX_LENGTH) {
       return { ok: false, message: postscriptOverLimitMessage() };
     }
-    settings.pinnedPostscript = neutralizeUnsafeMarkdownDestinations(pinnedPostscript);
+    settings.pinnedPostscript =
+      neutralizeUnsafeMarkdownDestinations(pinnedPostscript);
   }
 
   if (!savesSourceUrl) {
@@ -125,7 +153,8 @@ export function parseSettingsForm(formData: FormData): ParsedSettingsForm {
   if (!sourceUrl.success) {
     return {
       ok: false,
-      message: "Enter a public http(s) adoption-page URL or a local capture path like seed/dogs-page-A.html.",
+      message:
+        "Enter a public http(s) adoption-page URL or a local capture path like seed/dogs-page-A.html.",
     };
   }
 
@@ -138,18 +167,26 @@ export function parseSettingsForm(formData: FormData): ParsedSettingsForm {
   };
 }
 
-export function parseSponsorshipTiersForm(formData: FormData):
+export function parseSponsorshipTiersForm(
+  formData: FormData,
+):
   | { ok: false; message: string }
   | { ok: true; message: string; sponsorshipTiers: SponsorshipTierInput[] } {
   const tierAmounts = formData.getAll("tierMonthlyDollars");
   const tierDescriptions = formData.getAll("tierDescription");
   const tierDefault = formData.get("tierDefault");
 
-  if (tierAmounts.length === 0 || tierAmounts.length !== tierDescriptions.length) {
+  if (
+    tierAmounts.length === 0 ||
+    tierAmounts.length !== tierDescriptions.length
+  ) {
     return { ok: false, message: "Enter at least one sponsorship tier." };
   }
   if (tierAmounts.length > MAX_SPONSORSHIP_TIERS) {
-    return { ok: false, message: `Enter no more than ${MAX_SPONSORSHIP_TIERS} sponsorship tiers.` };
+    return {
+      ok: false,
+      message: `Enter no more than ${MAX_SPONSORSHIP_TIERS} sponsorship tiers.`,
+    };
   }
 
   const sponsorshipTiers: SponsorshipTierInput[] = [];
@@ -161,29 +198,45 @@ export function parseSponsorshipTiersForm(formData: FormData):
     }
     const monthlyCents = parseMonthlyCents(amount);
     if (monthlyCents === null) {
-      return { ok: false, message: "Enter tier prices from $1 to $10,000 with at most two decimal places." };
+      return {
+        ok: false,
+        message:
+          "Enter tier prices from $1 to $10,000 with at most two decimal places.",
+      };
     }
-    const description = rawDescription.replace(/\s*(?:\r\n?|\n)\s*/gu, " ").trim();
+    const description = rawDescription
+      .replace(/\s*(?:\r\n?|\n)\s*/gu, " ")
+      .trim();
     if (description.length > 200) {
-      return { ok: false, message: "Keep each tier description to 200 characters or fewer." };
+      return {
+        ok: false,
+        message: "Keep each tier description to 200 characters or fewer.",
+      };
     }
     if (/[<>]/u.test(description)) {
-      return { ok: false, message: "Tier descriptions must be plain text without markup." };
+      return {
+        ok: false,
+        message: "Tier descriptions must be plain text without markup.",
+      };
     }
     sponsorshipTiers.push({ monthlyCents, description, isDefault: false });
   }
 
-  const parsedDefault = typeof tierDefault === "string" && /^\d+$/u.test(tierDefault)
-    ? Number(tierDefault)
-    : 0;
-  const defaultIndex = parsedDefault >= 0 && parsedDefault < sponsorshipTiers.length
-    ? parsedDefault
-    : 0;
+  const parsedDefault =
+    typeof tierDefault === "string" && /^\d+$/u.test(tierDefault)
+      ? Number(tierDefault)
+      : 0;
+  const defaultIndex =
+    parsedDefault >= 0 && parsedDefault < sponsorshipTiers.length
+      ? parsedDefault
+      : 0;
   sponsorshipTiers[defaultIndex].isDefault = true;
   return { ok: true, message: "Sponsorship tiers saved.", sponsorshipTiers };
 }
 
-export function parseAllowedOriginsForm(formData: FormData):
+export function parseAllowedOriginsForm(
+  formData: FormData,
+):
   | { ok: false; message: string }
   | { ok: true; message: string; allowedOrigins: string[] } {
   const value = formData.get("allowedOrigins");
@@ -192,7 +245,11 @@ export function parseAllowedOriginsForm(formData: FormData):
   }
   const allowedOrigins = parseAllowedOrigins(value);
   if (allowedOrigins === null) {
-    return { ok: false, message: "Enter one HTTPS origin per line with no path, query, or wildcard." };
+    return {
+      ok: false,
+      message:
+        "Enter one HTTPS origin per line with no path, query, or wildcard.",
+    };
   }
   return { ok: true, message: "Trusted rescue sites saved.", allowedOrigins };
 }

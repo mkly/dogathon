@@ -13,11 +13,17 @@ test("a found source redirects to its companion page with a normalized identity"
     },
     async (orgId, sourceUrl) => {
       calls.push([orgId, sourceUrl]);
-      return { id: "resident-id", available: true, _count: { sponsorships: 0 } };
+      return {
+        id: "resident-id",
+        available: true,
+        _count: { sponsorships: 0 },
+      };
     },
   );
 
-  assert.deepEqual(calls, [["rescue-id", "https://rescue.example/dogs/biscuit"]]);
+  assert.deepEqual(calls, [
+    ["rescue-id", "https://rescue.example/dogs/biscuit"],
+  ]);
   assert.deepEqual(result, {
     href: "/happy-paws/companions/resident-id",
     kind: "redirect",
@@ -25,12 +31,22 @@ test("a found source redirects to its companion page with a normalized identity"
 });
 
 for (const [condition, resident] of [
-  ["unavailable", { id: "unavailable-id", available: false, _count: { sponsorships: 0 } }],
-  ["already sponsored", { id: "sponsored-id", available: true, _count: { sponsorships: 1 } }],
+  [
+    "unavailable",
+    { id: "unavailable-id", available: false, _count: { sponsorships: 0 } },
+  ],
+  [
+    "already sponsored",
+    { id: "sponsored-id", available: true, _count: { sponsorships: 1 } },
+  ],
 ] as const) {
   test(`a resident that is ${condition} renders the unavailable path`, async () => {
     const result = await resolveSponsorDestination(
-      { orgId: "rescue-id", orgSlug: "happy-paws", source: "https://rescue.example/dogs/fern" },
+      {
+        orgId: "rescue-id",
+        orgSlug: "happy-paws",
+        source: "https://rescue.example/dogs/fern",
+      },
       async () => resident,
     );
 
@@ -40,7 +56,11 @@ for (const [condition, resident] of [
 
 test("an unknown source renders the unavailable path", async () => {
   const result = await resolveSponsorDestination(
-    { orgId: "rescue-id", orgSlug: "happy-paws", source: "https://rescue.example/dogs/new" },
+    {
+      orgId: "rescue-id",
+      orgSlug: "happy-paws",
+      source: "https://rescue.example/dogs/new",
+    },
     async () => null,
   );
 

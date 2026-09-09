@@ -28,10 +28,15 @@ const defaultDependencies: Dependencies = {
 };
 
 export function createEnqueueRosterSyncHandler(
-  dependencies: Pick<Dependencies, "authorize" | "enqueue"> = defaultDependencies,
+  dependencies: Pick<
+    Dependencies,
+    "authorize" | "enqueue"
+  > = defaultDependencies,
 ) {
   return async function POST(request: Request) {
-    const access = await dependencies.authorize(request.headers, { roster: ["manage"] });
+    const access = await dependencies.authorize(request.headers, {
+      roster: ["manage"],
+    });
     if (!access.ok) return access.response;
 
     const job = await dependencies.enqueue({
@@ -47,14 +52,21 @@ export function createGetRosterSyncJobHandler(
   dependencies: Pick<Dependencies, "authorize" | "get"> = defaultDependencies,
 ) {
   return async function GET(request: Request, jobId: string) {
-    const access = await dependencies.authorize(request.headers, { roster: ["manage"] });
+    const access = await dependencies.authorize(request.headers, {
+      roster: ["manage"],
+    });
     if (!access.ok) return access.response;
 
     try {
-      return Response.json(publicJob(await dependencies.get(access.context.orgId, jobId)));
+      return Response.json(
+        publicJob(await dependencies.get(access.context.orgId, jobId)),
+      );
     } catch (error) {
       if (error instanceof RosterSyncJobNotFoundError) {
-        return Response.json({ error: "Roster sync job not found" }, { status: 404 });
+        return Response.json(
+          { error: "Roster sync job not found" },
+          { status: 404 },
+        );
       }
       throw error;
     }

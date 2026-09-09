@@ -23,7 +23,11 @@ export type InterviewRouteContext = {
 };
 
 type InterviewRouteDependencies = {
-  findCheckIn: (orgId: string, userId: string, checkInId: string) => Promise<{
+  findCheckIn: (
+    orgId: string,
+    userId: string,
+    checkInId: string,
+  ) => Promise<{
     companion: InterviewRouteContext["companion"];
     photoStorageKey: string | null;
     transcript: unknown;
@@ -46,29 +50,38 @@ const interviewRouteDependencies: InterviewRouteDependencies = {
           select: { storageKey: true },
           take: 1,
         },
-        resident: { select: { name: true, breed: true, sex: true, ageText: true } },
+        resident: {
+          select: { name: true, breed: true, sex: true, ageText: true },
+        },
         transcript: true,
       },
     });
-    return checkIn ? {
-      companion: checkIn.resident,
-      photoStorageKey: checkIn.photos[0]?.storageKey ?? null,
-      transcript: checkIn.transcript,
-    } : null;
+    return checkIn
+      ? {
+          companion: checkIn.resident,
+          photoStorageKey: checkIn.photos[0]?.storageKey ?? null,
+          transcript: checkIn.transcript,
+        }
+      : null;
   },
   getAccess: getOrganizationAccessBySlug,
 };
 
 export async function parseInterviewRouteRequest(
   request: Request,
-): Promise<{ ok: false; response: Response } | { ok: true; input: InterviewRequest }> {
+): Promise<
+  { ok: false; response: Response } | { ok: true; input: InterviewRequest }
+> {
   let body: unknown;
   try {
     body = await request.json();
   } catch {
     return {
       ok: false,
-      response: Response.json({ error: "Request body must be valid JSON" }, { status: 400 }),
+      response: Response.json(
+        { error: "Request body must be valid JSON" },
+        { status: 400 },
+      ),
     };
   }
 
@@ -77,7 +90,9 @@ export async function parseInterviewRouteRequest(
     return {
       ok: false,
       response: Response.json(
-        { error: "orgSlug, checkInId, and up to 40 valid messages are required" },
+        {
+          error: "orgSlug, checkInId, and up to 40 valid messages are required",
+        },
         { status: 400 },
       ),
     };
@@ -86,22 +101,41 @@ export async function parseInterviewRouteRequest(
   return { ok: true, input: parsed.data };
 }
 
-export function createGetInterviewRouteContext(dependencies: InterviewRouteDependencies) {
+export function createGetInterviewRouteContext(
+  dependencies: InterviewRouteDependencies,
+) {
   return async function getRouteContext(
     request: Request,
     input: InterviewRequest,
-  ): Promise<{ ok: false; response: Response } | { ok: true; context: InterviewRouteContext }> {
-    const access = await dependencies.getAccess(request.headers, input.orgSlug, {
-      roster: ["contribute"],
-    });
+  ): Promise<
+    | { ok: false; response: Response }
+    | { ok: true; context: InterviewRouteContext }
+  > {
+    const access = await dependencies.getAccess(
+      request.headers,
+      input.orgSlug,
+      {
+        roster: ["contribute"],
+      },
+    );
     if (!access) {
-      return { ok: false, response: Response.json({ error: "Organization not found" }, { status: 404 }) };
+      return {
+        ok: false,
+        response: Response.json(
+          { error: "Organization not found" },
+          { status: 404 },
+        ),
+      };
     }
     if (!access.context) {
       return {
         ok: false,
         response: Response.json(
-          { error: access.authenticated ? "Organization membership required" : "Sign-in required" },
+          {
+            error: access.authenticated
+              ? "Organization membership required"
+              : "Sign-in required",
+          },
           { status: access.authenticated ? 403 : 401 },
         ),
       };
@@ -113,26 +147,37 @@ export function createGetInterviewRouteContext(dependencies: InterviewRouteDepen
       input.checkInId,
     );
     if (!checkIn) {
-      return { ok: false, response: Response.json({ error: "Check-in not found" }, { status: 404 }) };
+      return {
+        ok: false,
+        response: Response.json(
+          { error: "Check-in not found" },
+          { status: 404 },
+        ),
+      };
     }
     const stored = interviewTranscriptSchema.safeParse(checkIn.transcript);
-    const storedMessages = stored.success ? textOnlyTranscript(stored.data) : null;
+    const storedMessages = stored.success
+      ? textOnlyTranscript(stored.data)
+      : null;
     const incoming = textOnlyTranscript(input.messages);
     const expectedPrefix = incoming.slice(0, -1);
     const nextMessage = incoming.at(-1);
-    const isOpeningTurn = incoming.length === 0
-      && storedMessages?.length === 0
-      && Boolean(checkIn.photoStorageKey);
+    const isOpeningTurn =
+      incoming.length === 0 &&
+      storedMessages?.length === 0 &&
+      Boolean(checkIn.photoStorageKey);
     if (
-      !storedMessages
-      || (!isOpeningTurn && (
-        nextMessage?.role !== "user"
-        || JSON.stringify(storedMessages) !== JSON.stringify(expectedPrefix)
-      ))
+      !storedMessages ||
+      (!isOpeningTurn &&
+        (nextMessage?.role !== "user" ||
+          JSON.stringify(storedMessages) !== JSON.stringify(expectedPrefix)))
     ) {
       return {
         ok: false,
-        response: Response.json({ error: "Check-in transcript is out of date" }, { status: 409 }),
+        response: Response.json(
+          { error: "Check-in transcript is out of date" },
+          { status: 409 },
+        ),
       };
     }
 
@@ -151,4 +196,6 @@ export function createGetInterviewRouteContext(dependencies: InterviewRouteDepen
   };
 }
 
-export const getInterviewRouteContext = createGetInterviewRouteContext(interviewRouteDependencies);
+export const getInterviewRouteContext = createGetInterviewRouteContext(
+  interviewRouteDependencies,
+);

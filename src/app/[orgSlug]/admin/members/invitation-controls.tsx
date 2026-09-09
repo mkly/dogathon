@@ -1,9 +1,20 @@
 "use client";
 
 import * as AlertDialog from "@radix-ui/react-alert-dialog";
-import { FormEvent, useOptimistic, useRef, useState, useTransition } from "react";
+import {
+  FormEvent,
+  useOptimistic,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 
-import { AdminBadge, AdminButton, AdminField, AdminSurface } from "@/components/admin-ui";
+import {
+  AdminBadge,
+  AdminButton,
+  AdminField,
+  AdminSurface,
+} from "@/components/admin-ui";
 import {
   AnimatePresence,
   motion,
@@ -53,10 +64,15 @@ export function InvitationManager({
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<InvitationView["role"]>("member");
   const [message, setMessage] = useState("");
-  const [copyingInvitationId, setCopyingInvitationId] = useState<string | null>(null);
-  const [visibleInviteUrlId, setVisibleInviteUrlId] = useState<string | null>(null);
+  const [copyingInvitationId, setCopyingInvitationId] = useState<string | null>(
+    null,
+  );
+  const [visibleInviteUrlId, setVisibleInviteUrlId] = useState<string | null>(
+    null,
+  );
   const [invitePending, setInvitePending] = useState(false);
-  const [invitationToCancel, setInvitationToCancel] = useState<InvitationView | null>(null);
+  const [invitationToCancel, setInvitationToCancel] =
+    useState<InvitationView | null>(null);
   const [pendingInvitationActions, setPendingInvitationActions] = useState<
     Record<string, "cancel" | "resend">
   >({});
@@ -93,7 +109,9 @@ export function InvitationManager({
       updateOptimisticInvitations({
         invitation: {
           email: email.trim().toLowerCase(),
-          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+          expiresAt: new Date(
+            Date.now() + 7 * 24 * 60 * 60 * 1000,
+          ).toISOString(),
           id: `pending-${crypto.randomUUID()}`,
           inviteUrl: "",
           inviter: "You",
@@ -132,7 +150,8 @@ export function InvitationManager({
         setMessage(result.message);
         pushToast(result.ok ? "success" : "error", result.message);
       } catch {
-        const failure = "The cancellation could not reach the server. Try again.";
+        const failure =
+          "The cancellation could not reach the server. Try again.";
         setMessage(failure);
         pushToast("error", failure);
       } finally {
@@ -167,7 +186,10 @@ export function InvitationManager({
 
     if (typeof navigator.clipboard?.writeText !== "function") {
       setVisibleInviteUrlId(invitation.id);
-      pushToast("error", "Copying is unavailable. Use the invite link shown below.");
+      pushToast(
+        "error",
+        "Copying is unavailable. Use the invite link shown below.",
+      );
       setCopyingInvitationId(null);
       return;
     }
@@ -178,7 +200,10 @@ export function InvitationManager({
       pushToast("success", "Invite link copied.");
     } catch {
       setVisibleInviteUrlId(invitation.id);
-      pushToast("error", "The invite link could not be copied. Use the link shown below.");
+      pushToast(
+        "error",
+        "The invite link could not be copied. Use the link shown below.",
+      );
     } finally {
       setCopyingInvitationId(null);
     }
@@ -201,7 +226,9 @@ export function InvitationManager({
           <AdminField>
             <select
               aria-label="Invitation role"
-              onChange={(event) => setRole(event.target.value as InvitationView["role"])}
+              onChange={(event) =>
+                setRole(event.target.value as InvitationView["role"])
+              }
               value={role}
             >
               <option value="member">Member</option>
@@ -218,7 +245,9 @@ export function InvitationManager({
             {invitePending ? "Sending…" : "Send invitation"}
           </AdminButton>
         </form>
-        <p aria-live="polite" className={styles.invitationMessage}>{message}</p>
+        <p aria-live="polite" className={styles.invitationMessage}>
+          {message}
+        </p>
       </AdminSurface>
 
       <div className={styles.invitationList} ref={listRef} tabIndex={-1}>
@@ -235,76 +264,88 @@ export function InvitationManager({
             >
               There are no pending invitations.
             </motion.p>
-          ) : optimisticInvitations.map((invitation) => (
-            <MotionAdminSurface
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              className={styles.invitationRow}
-              exit={{ opacity: 0, scale: 0.98, y: -8 }}
-              initial={{ opacity: 0, scale: 0.98, y: 8 }}
-              key={invitation.id}
-              layout
-              tone="oatmeal"
-              transition={motionTransition}
-            >
-              <div className={styles.identity}>
-                <h3>{invitation.email}</h3>
-                <p>Invited by {invitation.inviter}</p>
-              </div>
-              <div className={styles.memberMeta}>
-                <AdminBadge tone={ROLE_TONES[invitation.role]}>{invitation.role}</AdminBadge>
-                <span>
-                  {invitation.pending
-                    ? "Sending…"
-                    : `Expires ${formatDateTime(invitation.expiresAt)} UTC`}
-                </span>
-              </div>
-              <div className={styles.invitationActions}>
-                {!invitation.pending ? <div className={styles.invitationControls}>
-                  <AdminButton
-                    className={styles.copyButton}
-                    disabled={copyingInvitationId === invitation.id}
-                    onClick={() => copyInviteLink(invitation)}
-                    tone="denim"
+          ) : (
+            optimisticInvitations.map((invitation) => (
+              <MotionAdminSurface
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                className={styles.invitationRow}
+                exit={{ opacity: 0, scale: 0.98, y: -8 }}
+                initial={{ opacity: 0, scale: 0.98, y: 8 }}
+                key={invitation.id}
+                layout
+                tone="oatmeal"
+                transition={motionTransition}
+              >
+                <div className={styles.identity}>
+                  <h3>{invitation.email}</h3>
+                  <p>Invited by {invitation.inviter}</p>
+                </div>
+                <div className={styles.memberMeta}>
+                  <AdminBadge tone={ROLE_TONES[invitation.role]}>
+                    {invitation.role}
+                  </AdminBadge>
+                  <span>
+                    {invitation.pending
+                      ? "Sending…"
+                      : `Expires ${formatDateTime(invitation.expiresAt)} UTC`}
+                  </span>
+                </div>
+                <div className={styles.invitationActions}>
+                  {!invitation.pending ? (
+                    <div className={styles.invitationControls}>
+                      <AdminButton
+                        className={styles.copyButton}
+                        disabled={copyingInvitationId === invitation.id}
+                        onClick={() => copyInviteLink(invitation)}
+                        tone="denim"
+                      >
+                        {copyingInvitationId === invitation.id
+                          ? "Copying…"
+                          : "Copy invite link"}
+                      </AdminButton>
+                      <AdminButton
+                        className={styles.resendButton}
+                        disabled={
+                          pendingInvitationActions[invitation.id] !== undefined
+                        }
+                        onClick={() => resend(invitation)}
+                        tone="moss"
+                      >
+                        {pendingInvitationActions[invitation.id] === "resend"
+                          ? "Resending…"
+                          : "Resend"}
+                      </AdminButton>
+                      <AdminButton
+                        className={styles.cancelButton}
+                        disabled={
+                          pendingInvitationActions[invitation.id] !== undefined
+                        }
+                        onClick={() => setInvitationToCancel(invitation)}
+                        tone="brick"
+                      >
+                        {pendingInvitationActions[invitation.id] === "cancel"
+                          ? "Cancelling…"
+                          : "Cancel"}
+                      </AdminButton>
+                    </div>
+                  ) : null}
+                  <MotionReveal
+                    className={styles.inviteLinkReveal}
+                    show={visibleInviteUrlId === invitation.id}
                   >
-                    {copyingInvitationId === invitation.id ? "Copying…" : "Copy invite link"}
-                  </AdminButton>
-                  <AdminButton
-                    className={styles.resendButton}
-                    disabled={pendingInvitationActions[invitation.id] !== undefined}
-                    onClick={() => resend(invitation)}
-                    tone="moss"
-                  >
-                    {pendingInvitationActions[invitation.id] === "resend"
-                      ? "Resending…"
-                      : "Resend"}
-                  </AdminButton>
-                  <AdminButton
-                    className={styles.cancelButton}
-                    disabled={pendingInvitationActions[invitation.id] !== undefined}
-                    onClick={() => setInvitationToCancel(invitation)}
-                    tone="brick"
-                  >
-                    {pendingInvitationActions[invitation.id] === "cancel"
-                      ? "Cancelling…"
-                      : "Cancel"}
-                  </AdminButton>
-                </div> : null}
-                <MotionReveal
-                  className={styles.inviteLinkReveal}
-                  show={visibleInviteUrlId === invitation.id}
-                >
-                  <AdminField>
-                    <input
-                      aria-label={`Invite link for ${invitation.email}`}
-                      onFocus={(event) => event.currentTarget.select()}
-                      readOnly
-                      value={invitation.inviteUrl}
-                    />
-                  </AdminField>
-                </MotionReveal>
-              </div>
-            </MotionAdminSurface>
-          ))}
+                    <AdminField>
+                      <input
+                        aria-label={`Invite link for ${invitation.email}`}
+                        onFocus={(event) => event.currentTarget.select()}
+                        readOnly
+                        value={invitation.inviteUrl}
+                      />
+                    </AdminField>
+                  </MotionReveal>
+                </div>
+              </MotionAdminSurface>
+            ))
+          )}
         </AnimatePresence>
       </div>
       <AlertDialog.Root
@@ -350,12 +391,16 @@ export function InvitationManager({
                     <AlertDialog.Title asChild>
                       <h2>Cancel invitation?</h2>
                     </AlertDialog.Title>
-                    <AlertDialog.Description className={styles.dialogDescription}>
+                    <AlertDialog.Description
+                      className={styles.dialogDescription}
+                    >
                       Cancel the invitation for {invitationToCancel.email}?
                     </AlertDialog.Description>
                     <div className={styles.dialogActions}>
                       <AlertDialog.Cancel asChild>
-                        <AdminButton tone="oatmeal">Keep invitation</AdminButton>
+                        <AdminButton tone="oatmeal">
+                          Keep invitation
+                        </AdminButton>
                       </AlertDialog.Cancel>
                       <AlertDialog.Action asChild>
                         <AdminButton

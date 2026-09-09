@@ -8,11 +8,7 @@ import { prisma } from "./prisma.ts";
 import { interviewTranscriptSchema } from "./volunteer-interview-request.ts";
 
 export type GraduationCompositionResult =
-  | "composed"
-  | "no-pending-chats"
-  | "not-adopted"
-  | "not-found"
-  | "conflict";
+  "composed" | "no-pending-chats" | "not-adopted" | "not-found" | "conflict";
 
 function conversationLines(transcript: unknown): string[] | undefined {
   const parsed = interviewTranscriptSchema.safeParse(transcript);
@@ -23,7 +19,10 @@ function conversationLines(transcript: unknown): string[] | undefined {
       text: messageText(message).replace("[[READY]]", "").trim(),
     }))
     .filter(({ text }) => text)
-    .map(({ role, text }) => `${role === "user" ? "Volunteer" : "Interviewer"}: ${text}`);
+    .map(
+      ({ role, text }) =>
+        `${role === "user" ? "Volunteer" : "Interviewer"}: ${text}`,
+    );
   return lines.length > 0 ? lines : undefined;
 }
 
@@ -47,7 +46,12 @@ export async function composeGraduationDraft(
                 transcript: true,
                 photos: {
                   orderBy: [{ createdAt: "asc" }, { id: "asc" }],
-                  select: { id: true, url: true, webUrl: true, createdAt: true },
+                  select: {
+                    id: true,
+                    url: true,
+                    webUrl: true,
+                    createdAt: true,
+                  },
                 },
               },
             },
@@ -63,16 +67,20 @@ export async function composeGraduationDraft(
   if (draft.resident.unavailabilityReason !== "adopted") return "not-adopted";
   if (draft.resident.checkIns.length === 0) return "no-pending-chats";
 
-  const photos = draft.resident.checkIns.flatMap((checkIn) => checkIn.photos).map((photo) => ({
-    id: photo.id,
-    url: photo.webUrl ?? photo.url,
-    takenAt: photo.createdAt,
-  }));
+  const photos = draft.resident.checkIns
+    .flatMap((checkIn) => checkIn.photos)
+    .map((photo) => ({
+      id: photo.id,
+      url: photo.webUrl ?? photo.url,
+      takenAt: photo.createdAt,
+    }));
   const sponsorshipPostscript = [
     "Your monthly sponsorship continues month to month.",
     "You can switch companions or cancel at any time from your sponsorship page.",
     settings?.pinnedPostscript,
-  ].filter(Boolean).join("\n\n");
+  ]
+    .filter(Boolean)
+    .join("\n\n");
   const composed = await composeSponsorUpdate({
     companion: {
       name: draft.resident.name,
@@ -101,46 +109,63 @@ export async function composeGraduationDraft(
     ),
   });
 
-  const checkInIds = draft.resident.checkIns.map(({ id: checkInId }) => checkInId);
+  const checkInIds = draft.resident.checkIns.map(
+    ({ id: checkInId }) => checkInId,
+  );
   const photoIds = new Set(photos.map(({ id: photoId }) => photoId));
-  return prisma.$transaction(async (tx) => {
-    const updated = await tx.sponsorUpdate.updateMany({
-      where: { id, orgId, status: "draft", type: "graduation" },
-      data: {
-        subject: composed.subject,
-        teaser: composed.teaser,
-        bodyText: composed.bodyText,
-        heroPhotoUrl: photos.find(({ id: photoId }) => photoId === composed.heroPhotoId)?.url
-          ?? draft.heroPhotoUrl
-          ?? draft.resident.photoUrls[0]
-          ?? null,
-      },
-    });
-    if (updated.count !== 1) return "conflict";
+  return prisma
+    .$transaction(
+      async (tx) => {
+        const updated = await tx.sponsorUpdate.updateMany({
+          where: { id, orgId, status: "draft", type: "graduation" },
+          data: {
+            subject: composed.subject,
+            teaser: composed.teaser,
+            bodyText: composed.bodyText,
+            heroPhotoUrl:
+              photos.find(({ id: photoId }) => photoId === composed.heroPhotoId)
+                ?.url ??
+              draft.heroPhotoUrl ??
+              draft.resident.photoUrls[0] ??
+              null,
+          },
+        });
+        if (updated.count !== 1) return "conflict";
 
-    const claimed = await tx.checkIn.updateMany({
-      where: {
-        id: { in: checkInIds },
-        orgId,
-        residentId: draft.resident.id,
-        status: "completed",
-        sponsorUpdateId: null,
-      },
-      data: { sponsorUpdateId: id },
-    });
-    if (claimed.count !== checkInIds.length) throw new Error("Graduation chats were claimed elsewhere");
+        const claimed = await tx.checkIn.updateMany({
+          where: {
+            id: { in: checkInIds },
+            orgId,
+            residentId: draft.resident.id,
+            status: "completed",
+            sponsorUpdateId: null,
+          },
+          data: { sponsorUpdateId: id },
+        });
+        if (claimed.count !== checkInIds.length)
+          throw new Error("Graduation chats were claimed elsewhere");
 
-    await Promise.all(composed.captions
-      .filter(({ photoId }) => photoIds.has(photoId))
-      .map(({ photoId, caption }) => tx.volunteerPhoto.update({
-        where: { id: photoId },
-        data: { caption },
-      })));
-    return "composed";
-  }, { timeout: 20_000 }).catch((error) => {
-    if (error instanceof Error && error.message === "Graduation chats were claimed elsewhere") {
-      return "conflict" as const;
-    }
-    throw error;
-  });
+        await Promise.all(
+          composed.captions
+            .filter(({ photoId }) => photoIds.has(photoId))
+            .map(({ photoId, caption }) =>
+              tx.volunteerPhoto.update({
+                where: { id: photoId },
+                data: { caption },
+              }),
+            ),
+        );
+        return "composed";
+      },
+      { timeout: 20_000 },
+    )
+    .catch((error) => {
+      if (
+        error instanceof Error &&
+        error.message === "Graduation chats were claimed elsewhere"
+      ) {
+        return "conflict" as const;
+      }
+      throw error;
+    });
 }

@@ -56,7 +56,11 @@ export function MagicLinkForm() {
         />
       </FeltField>
 
-      {error && <p className={styles.error} role="alert">{error}</p>}
+      {error && (
+        <p className={styles.error} role="alert">
+          {error}
+        </p>
+      )}
 
       <FeltButton
         className={styles.submit}

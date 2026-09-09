@@ -81,7 +81,13 @@ export function AuthForm({
           <>
             <label htmlFor="name">Name</label>
             <FeltField>
-              <input autoComplete="name" id="name" minLength={2} name="name" required />
+              <input
+                autoComplete="name"
+                id="name"
+                minLength={2}
+                name="name"
+                required
+              />
             </FeltField>
           </>
         )}
@@ -102,7 +108,9 @@ export function AuthForm({
         <label htmlFor="password">Password</label>
         <FeltField>
           <input
-            autoComplete={mode === "sign-up" ? "new-password" : "current-password"}
+            autoComplete={
+              mode === "sign-up" ? "new-password" : "current-password"
+            }
             id="password"
             minLength={8}
             name="password"
@@ -111,7 +119,11 @@ export function AuthForm({
           />
         </FeltField>
 
-        {error && <p className={styles.error} role="alert">{error}</p>}
+        {error && (
+          <p className={styles.error} role="alert">
+            {error}
+          </p>
+        )}
 
         <FeltButton
           className={styles.submit}
@@ -122,7 +134,9 @@ export function AuthForm({
           {pending
             ? "Please wait…"
             : mode === "sign-up"
-              ? hiddenTabs ? "Create your account" : "Create account"
+              ? hiddenTabs
+                ? "Create your account"
+                : "Create account"
               : "Sign in"}
         </FeltButton>
       </form>

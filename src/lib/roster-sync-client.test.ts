@@ -11,7 +11,7 @@ const summary = {
   created: 1,
   updated: 2,
   adopted: 0,
-    madeUnavailable: 0,
+  madeUnavailable: 0,
   madeAvailable: 0,
   usedFallbackCapture: false,
   rosterComplete: true,
@@ -42,7 +42,10 @@ test("scheduled jobs are identified as automatic in the staff room", () => {
     rosterSyncStatusLabel(job({ status: "running", trigger: "scheduled" })),
     "Automatic roster sync running",
   );
-  assert.equal(rosterSyncStatusLabel(job({ status: "queued" })), "Roster sync queued");
+  assert.equal(
+    rosterSyncStatusLabel(job({ status: "queued" })),
+    "Roster sync queued",
+  );
 });
 
 test("a successful job preserves the existing live and fallback result meanings", () => {
@@ -54,10 +57,16 @@ test("a successful job preserves the existing live and fallback result meanings"
     },
   );
   assert.deepEqual(
-    rosterSyncResultToast(job({
-      status: "succeeded",
-      summary: { ...summary, usedFallbackCapture: true, source: "dogs-page-A.html" },
-    })),
+    rosterSyncResultToast(
+      job({
+        status: "succeeded",
+        summary: {
+          ...summary,
+          usedFallbackCapture: true,
+          source: "dogs-page-A.html",
+        },
+      }),
+    ),
     {
       tone: "warning",
       text: "Roster synced from bundled capture (dogs-page-A.html).",
@@ -67,10 +76,13 @@ test("a successful job preserves the existing live and fallback result meanings"
 
 test("a refused job is presented as a refusal with its reason", () => {
   assert.deepEqual(
-    rosterSyncResultToast(job({
-      status: "refused",
-      refusalReason: "The parsed roster would mark most residents unavailable.",
-    })),
+    rosterSyncResultToast(
+      job({
+        status: "refused",
+        refusalReason:
+          "The parsed roster would mark most residents unavailable.",
+      }),
+    ),
     {
       tone: "error",
       text: "Unable to sync at this time. The parsed roster would mark most residents unavailable.",
@@ -80,25 +92,28 @@ test("a refused job is presented as a refusal with its reason", () => {
 
 test("an incomplete crawl is presented as a partial sync that left residents alone", () => {
   assert.deepEqual(
-    rosterSyncResultToast(job({
-      status: "succeeded",
-      summary: {
-        ...summary,
-        rosterComplete: false,
-        rosterCompleteness: {
-          complete: false,
-          timedOut: true,
-          status: "scraping",
-          completed: 2,
-          total: 5,
+    rosterSyncResultToast(
+      job({
+        status: "succeeded",
+        summary: {
+          ...summary,
+          rosterComplete: false,
+          rosterCompleteness: {
+            complete: false,
+            timedOut: true,
+            status: "scraping",
+            completed: 2,
+            total: 5,
+          },
         },
-      },
-    })),
+      }),
+    ),
     {
       tone: "warning",
-      text: "Partial roster synced from https://rescue.example/companions."
-        + " About 3 of 5 expected pages were not fetched."
-        + " Missing residents were left unchanged.",
+      text:
+        "Partial roster synced from https://rescue.example/companions." +
+        " About 3 of 5 expected pages were not fetched." +
+        " Missing residents were left unchanged.",
     },
   );
 });

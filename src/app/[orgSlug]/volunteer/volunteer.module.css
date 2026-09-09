@@ -154,7 +154,9 @@
   justify-content: center;
   opacity: 0.45;
   cursor: pointer;
-  transition: opacity 120ms ease, background-color 120ms ease;
+  transition:
+    opacity 120ms ease,
+    background-color 120ms ease;
 }
 
 .discardButton svg {
@@ -687,12 +689,24 @@
   animation: typing-dot 1.1s infinite ease-in-out;
 }
 
-.typing span:nth-child(2) { animation-delay: 0.18s; }
-.typing span:nth-child(3) { animation-delay: 0.36s; }
+.typing span:nth-child(2) {
+  animation-delay: 0.18s;
+}
+.typing span:nth-child(3) {
+  animation-delay: 0.36s;
+}
 
 @keyframes typing-dot {
-  0%, 70%, 100% { translate: 0 0; opacity: 0.35; }
-  35% { translate: 0 -0.25rem; opacity: 0.85; }
+  0%,
+  70%,
+  100% {
+    translate: 0 0;
+    opacity: 0.35;
+  }
+  35% {
+    translate: 0 -0.25rem;
+    opacity: 0.85;
+  }
 }
 
 /* ---------- dock ---------- */
@@ -846,9 +860,13 @@
 }
 
 .confirmationThumbnail img,
-.confirmationThumbnail [role="img"] { aspect-ratio: 1; }
+.confirmationThumbnail [role="img"] {
+  aspect-ratio: 1;
+}
 
-.confirmationThumbnail [role="img"] small { display: none; }
+.confirmationThumbnail [role="img"] small {
+  display: none;
+}
 
 .againLink {
   display: inline-flex;

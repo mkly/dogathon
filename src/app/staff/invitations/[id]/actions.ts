@@ -28,10 +28,11 @@ export async function acceptInvitation(invitationIdInput: string) {
     },
   });
   if (
-    !invitation
-    || invitation.status !== "pending"
-    || invitation.expiresAt.getTime() <= Date.now()
-    || invitation.email.trim().toLowerCase() !== session.user.email.trim().toLowerCase()
+    !invitation ||
+    invitation.status !== "pending" ||
+    invitation.expiresAt.getTime() <= Date.now() ||
+    invitation.email.trim().toLowerCase() !==
+      session.user.email.trim().toLowerCase()
   ) {
     redirect(returnPath);
   }

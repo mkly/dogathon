@@ -9,17 +9,22 @@ import { requireApiOrganization } from "@/lib/organization-access";
 import { env } from "@/lib/env";
 import { NextResponse, type NextRequest } from "next/server";
 
-const oauthProviderSchema = z.enum(["gmail", "microsoft"] satisfies Array<Exclude<EmailConnectorKind, "smtp">>);
+const oauthProviderSchema = z.enum(["gmail", "microsoft"] satisfies Array<
+  Exclude<EmailConnectorKind, "smtp">
+>);
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ provider: string }> },
 ) {
-  const access = await requireApiOrganization(request.headers, { settings: ["manage"] });
+  const access = await requireApiOrganization(request.headers, {
+    settings: ["manage"],
+  });
   if (!access.ok) return access.response;
 
   const provider = oauthProviderSchema.safeParse((await params).provider);
-  if (!provider.success) return Response.json({ error: "Unknown email connector" }, { status: 404 });
+  if (!provider.success)
+    return Response.json({ error: "Unknown email connector" }, { status: 404 });
 
   try {
     const authorization = await createEmailConnectorAuthorization(
@@ -37,7 +42,8 @@ export async function POST(
     });
     return response;
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Email connector setup failed";
+    const message =
+      error instanceof Error ? error.message : "Email connector setup failed";
     return Response.json({ error: message }, { status: 503 });
   }
 }

@@ -29,7 +29,14 @@ type OrganizationHomeProps = {
 };
 
 const rosterQuerySchema = z.object({
-  species: z.string().trim().min(1).max(100).transform(normalizeSpecies).optional().catch(undefined),
+  species: z
+    .string()
+    .trim()
+    .min(1)
+    .max(100)
+    .transform(normalizeSpecies)
+    .optional()
+    .catch(undefined),
 });
 
 export async function generateStaticParams() {
@@ -37,20 +44,28 @@ export async function generateStaticParams() {
   return organizations.map(({ slug }) => ({ orgSlug: slug }));
 }
 
-export default async function OrganizationHome({ params, searchParams }: OrganizationHomeProps) {
+export default async function OrganizationHome({
+  params,
+  searchParams,
+}: OrganizationHomeProps) {
   const { orgSlug } = await params;
   const organization = await getPublicOrganization(orgSlug);
   if (!organization) notFound();
-  const { species: requestedSpecies } = rosterQuerySchema.parse(await searchParams);
+  const { species: requestedSpecies } = rosterQuerySchema.parse(
+    await searchParams,
+  );
   const speciesCounts = await getPublicSpeciesCounts(organization.id);
-  const activeSpecies = speciesCounts.some(({ species }) => species === requestedSpecies)
+  const activeSpecies = speciesCounts.some(
+    ({ species }) => species === requestedSpecies,
+  )
     ? requestedSpecies
     : undefined;
   const residents = await getPublicResidents(organization.id, activeSpecies);
   const monthlyAmount = formatMonthlyAmount(
-    organization.sponsorshipTiers.find((tier) => tier.isDefault)?.monthlyCents
-      ?? organization.sponsorshipTiers[0]?.monthlyCents
-      ?? DEFAULT_SPONSORSHIP_MONTHLY_CENTS,
+    organization.sponsorshipTiers.find((tier) => tier.isDefault)
+      ?.monthlyCents ??
+      organization.sponsorshipTiers[0]?.monthlyCents ??
+      DEFAULT_SPONSORSHIP_MONTHLY_CENTS,
   );
 
   return (
@@ -67,9 +82,9 @@ export default async function OrganizationHome({ params, searchParams }: Organiz
               </span>
             </h1>
             <p className={styles.lede}>
-              Sponsor a resident for {monthlyAmount} a month until they find their
-              forever home. You&apos;ll help with everyday care and get the good news from their
-              journey.
+              Sponsor a resident for {monthlyAmount} a month until they find
+              their forever home. You&apos;ll help with everyday care and get
+              the good news from their journey.
             </p>
           </div>
           {/* decorative: the heading and lede already carry the meaning */}
@@ -77,8 +92,14 @@ export default async function OrganizationHome({ params, searchParams }: Organiz
         </FeltPanel>
 
         {speciesCounts.length > 1 && (
-          <nav aria-label="Filter companions by species" className={styles.speciesFilters}>
-            <Link aria-current={activeSpecies ? undefined : "page"} href={`/${orgSlug}`}>
+          <nav
+            aria-label="Filter companions by species"
+            className={styles.speciesFilters}
+          >
+            <Link
+              aria-current={activeSpecies ? undefined : "page"}
+              href={`/${orgSlug}`}
+            >
               All
             </Link>
             {speciesCounts.map(({ species, count }) => (
@@ -94,7 +115,10 @@ export default async function OrganizationHome({ params, searchParams }: Organiz
         )}
 
         {residents.length ? (
-          <section aria-label="Companions available to sponsor" className={styles.companionGrid}>
+          <section
+            aria-label="Companions available to sponsor"
+            className={styles.companionGrid}
+          >
             {residents.map((resident) => (
               <FeltPanel
                 className={styles.companionCard}
@@ -116,7 +140,9 @@ export default async function OrganizationHome({ params, searchParams }: Organiz
                 </ViewTransition>
                 <div className={styles.cardCopy}>
                   <h2>{resident.name}</h2>
-                  <p>{resident.breed} · {resident.ageText}</p>
+                  <p>
+                    {resident.breed} · {resident.ageText}
+                  </p>
                   <FeltLink
                     className={styles.cardLink}
                     href={`/${orgSlug}/companions/${resident.id}`}
@@ -131,12 +157,16 @@ export default async function OrganizationHome({ params, searchParams }: Organiz
         ) : (
           <FeltPanel className={styles.emptyState} tone="oatmeal">
             <h2>Every companion is tucked in for now.</h2>
-            <p>Check back soon to meet the next residents looking for a sponsor.</p>
+            <p>
+              Check back soon to meet the next residents looking for a sponsor.
+            </p>
           </FeltPanel>
         )}
 
         <footer className={styles.footer}>
-          <Link href={`/${orgSlug}/admin`} transitionTypes={["nav-forward"]}>staff room</Link>
+          <Link href={`/${orgSlug}/admin`} transitionTypes={["nav-forward"]}>
+            staff room
+          </Link>
         </footer>
       </main>
     </PageViewTransition>

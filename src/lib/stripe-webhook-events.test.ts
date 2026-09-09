@@ -21,18 +21,32 @@ function memoryEventStore() {
 
 test("Stripe webhook events are processed once when Stripe retries the same event", async () => {
   let processCount = 0;
-  const event = { id: "evt_checkout_complete", type: "checkout.session.completed" };
+  const event = {
+    id: "evt_checkout_complete",
+    type: "checkout.session.completed",
+  };
   const store = memoryEventStore();
 
-  const processEvent = async () => { processCount += 1; };
+  const processEvent = async () => {
+    processCount += 1;
+  };
 
-  assert.equal(await processStripeWebhookEvent(event as never, store, processEvent), true);
-  assert.equal(await processStripeWebhookEvent(event as never, store, processEvent), false);
+  assert.equal(
+    await processStripeWebhookEvent(event as never, store, processEvent),
+    true,
+  );
+  assert.equal(
+    await processStripeWebhookEvent(event as never, store, processEvent),
+    false,
+  );
   assert.equal(processCount, 1);
 });
 
 test("a Stripe event whose processing fails is retried on the next delivery", async () => {
-  const event = { id: "evt_checkout_failed", type: "checkout.session.completed" };
+  const event = {
+    id: "evt_checkout_failed",
+    type: "checkout.session.completed",
+  };
   const store = memoryEventStore();
   let attempts = 0;
   const processEvent = async () => {
@@ -46,6 +60,9 @@ test("a Stripe event whose processing fails is retried on the next delivery", as
   );
   assert.equal(store.savedEventIds.has(event.id), false);
 
-  assert.equal(await processStripeWebhookEvent(event as never, store, processEvent), true);
+  assert.equal(
+    await processStripeWebhookEvent(event as never, store, processEvent),
+    true,
+  );
   assert.equal(attempts, 2);
 });

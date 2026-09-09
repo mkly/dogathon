@@ -75,7 +75,9 @@ export async function processVolunteerPhoto(
 // and the vision endpoint fails on larger images, so a small copy goes to it.
 export const INTERVIEW_PHOTO_DIMENSION = 512;
 
-export async function shrinkPhotoForInterview(input: Uint8Array): Promise<{ data: Uint8Array; mime: "image/jpeg" }> {
+export async function shrinkPhotoForInterview(
+  input: Uint8Array,
+): Promise<{ data: Uint8Array; mime: "image/jpeg" }> {
   const data = await sharp(input)
     .resize({
       width: INTERVIEW_PHOTO_DIMENSION,

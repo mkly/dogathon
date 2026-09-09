@@ -8,7 +8,10 @@ import {
   parseSettingsForm,
   parseSponsorshipTiersForm,
 } from "./rescue-settings";
-import { POSTSCRIPT_MAX_LENGTH, postscriptOverLimitMessage } from "./postscript";
+import {
+  POSTSCRIPT_MAX_LENGTH,
+  postscriptOverLimitMessage,
+} from "./postscript";
 
 test("the postscript form does not clear the roster source", () => {
   const formData = new FormData();
@@ -23,12 +26,17 @@ test("the postscript form does not clear the roster source", () => {
 
 test("normalizes and neutralizes the saved Markdown postscript", () => {
   const formData = new FormData();
-  formData.set("pinnedPostscript", "  **Bold**\r\n[unsafe](javascript:alert(1))\r[safe](https://example.org)  ");
+  formData.set(
+    "pinnedPostscript",
+    "  **Bold**\r\n[unsafe](javascript:alert(1))\r[safe](https://example.org)  ",
+  );
 
   assert.deepEqual(parseSettingsForm(formData), {
     ok: true,
     message: "Email postscript saved.",
-    settings: { pinnedPostscript: "**Bold**\n[unsafe](#))\n[safe](https://example.org)" },
+    settings: {
+      pinnedPostscript: "**Bold**\n[unsafe](#))\n[safe](https://example.org)",
+    },
   });
 });
 
@@ -60,19 +68,29 @@ test("an invalid roster source is rejected without an update", () => {
 
   assert.deepEqual(parseSettingsForm(formData), {
     ok: false,
-    message: "Enter a public http(s) adoption-page URL or a local capture path like seed/dogs-page-A.html.",
+    message:
+      "Enter a public http(s) adoption-page URL or a local capture path like seed/dogs-page-A.html.",
   });
 });
 
 test("a non-http scheme is rejected rather than read as a local capture path", () => {
-  for (const value of ["file:///etc/passwd.html", "javascript:alert(1).html", "ftp://example.com/dogs.html"]) {
+  for (const value of [
+    "file:///etc/passwd.html",
+    "javascript:alert(1).html",
+    "ftp://example.com/dogs.html",
+  ]) {
     const formData = new FormData();
     formData.set("sourceUrl", value);
 
-    assert.deepEqual(parseSettingsForm(formData), {
-      ok: false,
-      message: "Enter a public http(s) adoption-page URL or a local capture path like seed/dogs-page-A.html.",
-    }, `expected ${value} to be rejected`);
+    assert.deepEqual(
+      parseSettingsForm(formData),
+      {
+        ok: false,
+        message:
+          "Enter a public http(s) adoption-page URL or a local capture path like seed/dogs-page-A.html.",
+      },
+      `expected ${value} to be rejected`,
+    );
   }
 });
 
@@ -88,7 +106,11 @@ test("private and IP-literal roster sources are rejected", () => {
     const formData = new FormData();
     formData.set("sourceUrl", value);
 
-    assert.equal(parseSettingsForm(formData).ok, false, `expected ${value} to be rejected`);
+    assert.equal(
+      parseSettingsForm(formData).ok,
+      false,
+      `expected ${value} to be rejected`,
+    );
   }
 });
 
@@ -105,7 +127,11 @@ test("parses sponsorship tiers without reading allowed origins", () => {
     ok: true,
     message: "Sponsorship tiers saved.",
     sponsorshipTiers: [
-      { monthlyCents: 3250, description: "Everyday care and treats", isDefault: false },
+      {
+        monthlyCents: 3250,
+        description: "Everyday care and treats",
+        isDefault: false,
+      },
       { monthlyCents: 5000, description: "Vet care", isDefault: true },
     ],
   });
@@ -122,7 +148,10 @@ test("uses the first sponsorship tier when no valid default is submitted", () =>
   const parsed = parseSponsorshipTiersForm(formData);
   assert.equal(parsed.ok, true);
   if (!parsed.ok) assert.fail("expected sponsorship settings to parse");
-  assert.deepEqual(parsed.sponsorshipTiers?.map((tier) => tier.isDefault), [true, false]);
+  assert.deepEqual(
+    parsed.sponsorshipTiers?.map((tier) => tier.isDefault),
+    [true, false],
+  );
 });
 
 test("rejects markup and more than six sponsorship tiers", () => {
@@ -141,7 +170,10 @@ test("rejects markup and more than six sponsorship tiers", () => {
 
 test("parses allowed origins without reading sponsorship tiers", () => {
   const formData = new FormData();
-  formData.set("allowedOrigins", "https://rescue.example/\nhttps://rescue.example\nhttps://embed.example:8443");
+  formData.set(
+    "allowedOrigins",
+    "https://rescue.example/\nhttps://rescue.example\nhttps://embed.example:8443",
+  );
   formData.append("tierMonthlyDollars", "invalid");
 
   assert.deepEqual(parseAllowedOriginsForm(formData), {
@@ -152,18 +184,31 @@ test("parses allowed origins without reading sponsorship tiers", () => {
 });
 
 test("allowed origins are exact, scheme-sensitive, and port-sensitive", () => {
-  const settings = { allowedOrigins: ["https://rescue.example", "https://embed.example:8443"] };
+  const settings = {
+    allowedOrigins: ["https://rescue.example", "https://embed.example:8443"],
+  };
 
   assert.equal(isAllowedOrigin(settings, "https://rescue.example"), true);
   assert.equal(isAllowedOrigin(settings, "http://rescue.example"), false);
   assert.equal(isAllowedOrigin(settings, "https://embed.example"), false);
   assert.equal(isAllowedOrigin(settings, "https://embed.example:8443"), true);
-  assert.equal(isAllowedOrigin({ allowedOrigins: ["https://*.example"] }, "https://dogs.example"), false);
+  assert.equal(
+    isAllowedOrigin(
+      { allowedOrigins: ["https://*.example"] },
+      "https://dogs.example",
+    ),
+    false,
+  );
 });
 
 test("rejects paths, wildcards, and production localhost origins", () => {
-  assert.equal(parseAllowedOrigins("https://rescue.example/embed", false), null);
+  assert.equal(
+    parseAllowedOrigins("https://rescue.example/embed", false),
+    null,
+  );
   assert.equal(parseAllowedOrigins("https://*.example", false), null);
   assert.equal(parseAllowedOrigins("http://localhost:3000", true), null);
-  assert.deepEqual(parseAllowedOrigins("http://localhost:3000", false), ["http://localhost:3000"]);
+  assert.deepEqual(parseAllowedOrigins("http://localhost:3000", false), [
+    "http://localhost:3000",
+  ]);
 });

@@ -11,8 +11,11 @@ import styles from "./sign-in.module.css";
 
 export const dynamic = "force-dynamic";
 
-type SignInPageProps = { searchParams: Promise<Record<string, string | string[] | undefined>> };
-const safeNextPathSchema = z.string()
+type SignInPageProps = {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+};
+const safeNextPathSchema = z
+  .string()
   .startsWith("/")
   .refine((value) => !value.startsWith("//"))
   .catch("/staff/organizations");

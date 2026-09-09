@@ -37,14 +37,14 @@ test("magic-link sign-in sends the verification URL through sendAppEmail", async
     }),
     plugins: [
       magicLink({
-        sendMagicLink: (data) => sendMagicLinkEmail(data, { env, transportFactory }),
+        sendMagicLink: (data) =>
+          sendMagicLinkEmail(data, { env, transportFactory }),
       }),
     ],
   });
 
-  const response = await auth.handler(new Request(
-    "http://localhost:3000/api/auth/sign-in/magic-link",
-    {
+  const response = await auth.handler(
+    new Request("http://localhost:3000/api/auth/sign-in/magic-link", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -54,23 +54,34 @@ test("magic-link sign-in sends the verification URL through sendAppEmail", async
         callbackURL: "/account",
         email: "sponsor@example.com",
       }),
-    },
-  ));
+    }),
+  );
 
   assert.equal(response.status, 200);
   assert.equal(sentMessage?.to, "sponsor@example.com");
-  assert.equal(sentMessage?.subject, "Sign in to your Dogathon sponsor account");
-  assert.match(String(sentMessage?.text), /http:\/\/localhost:3000\/api\/auth\/magic-link\/verify\?/);
+  assert.equal(
+    sentMessage?.subject,
+    "Sign in to your Dogathon sponsor account",
+  );
+  assert.match(
+    String(sentMessage?.text),
+    /http:\/\/localhost:3000\/api\/auth\/magic-link\/verify\?/,
+  );
   assert.match(String(sentMessage?.text), /callbackURL=%2Faccount/);
 });
 
 test("redacting an emailed link hides the secret in the query and, when asked, the path", () => {
   assert.equal(
-    redactEmailLink("http://localhost:3000/api/auth/magic-link/verify?token=secret&callbackURL=%2Faccount"),
+    redactEmailLink(
+      "http://localhost:3000/api/auth/magic-link/verify?token=secret&callbackURL=%2Faccount",
+    ),
     "http://localhost:3000/api/auth/magic-link/verify?token=%5Bredacted%5D&callbackURL=%5Bredacted%5D",
   );
   assert.equal(
-    redactEmailLink("http://localhost:3000/staff/invitations/secret-invitation-id", { lastPathSegment: true }),
+    redactEmailLink(
+      "http://localhost:3000/staff/invitations/secret-invitation-id",
+      { lastPathSegment: true },
+    ),
     "http://localhost:3000/staff/invitations/[redacted]",
   );
   assert.equal(redactEmailLink("not-a-url"), "[redacted invalid URL]");

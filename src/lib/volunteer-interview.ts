@@ -34,14 +34,20 @@ type InterviewTurnOptions = {
 
 const SCRIPTED_QUESTIONS = [
   (name: string) => `What did you and ${name} get up to today?`,
-  (name: string) => `What was ${name} like today: playful, sleepy, silly, cuddly?`,
-  (name: string) => `Was there a moment with ${name} that made you smile, something a sponsor would love to hear about?`,
+  (name: string) =>
+    `What was ${name} like today: playful, sleepy, silly, cuddly?`,
+  (name: string) =>
+    `Was there a moment with ${name} that made you smile, something a sponsor would love to hear about?`,
 ] as const;
 
 function scriptedReply(input: InterviewInput): string {
-  const questionsAsked = input.messages.filter((message) =>
-    message.role === "assistant" && SCRIPTED_QUESTIONS.some((question) =>
-      messageText(message) === question(input.companion.name))).length;
+  const questionsAsked = input.messages.filter(
+    (message) =>
+      message.role === "assistant" &&
+      SCRIPTED_QUESTIONS.some(
+        (question) => messageText(message) === question(input.companion.name),
+      ),
+  ).length;
 
   if (questionsAsked < SCRIPTED_QUESTIONS.length) {
     return SCRIPTED_QUESTIONS[questionsAsked](input.companion.name);
@@ -50,7 +56,11 @@ function scriptedReply(input: InterviewInput): string {
   return `Thanks, ${input.companion.name}'s sponsors are going to love hearing about this. [[READY]]`;
 }
 
-function textStreamResponse(text: string, input: InterviewInput, options: InterviewTurnOptions): Response {
+function textStreamResponse(
+  text: string,
+  input: InterviewInput,
+  options: InterviewTurnOptions,
+): Response {
   const stream = createUIMessageStream({
     execute: ({ writer }) => {
       const id = "scripted-response";
@@ -89,20 +99,24 @@ export function buildInterviewSystemPrompt({
 // turn needs; a tight cap shows up as an empty reply.
 const MAX_INTERVIEW_TURN_OUTPUT_TOKENS = 8000;
 
-async function generateOpening(input: InterviewInput, includePhoto: boolean): Promise<string> {
-  const content = includePhoto && input.photo
-    ? [
-        {
-          type: "text" as const,
-          text: "Open the volunteer update from this photo, following the opening-message rules.",
-        },
-        {
-          type: "file" as const,
-          data: input.photo.data,
-          mediaType: input.photo.mime,
-        },
-      ]
-    : "Open the volunteer update now. No photo is available to you, so ask the first question without describing one.";
+async function generateOpening(
+  input: InterviewInput,
+  includePhoto: boolean,
+): Promise<string> {
+  const content =
+    includePhoto && input.photo
+      ? [
+          {
+            type: "text" as const,
+            text: "Open the volunteer update from this photo, following the opening-message rules.",
+          },
+          {
+            type: "file" as const,
+            data: input.photo.data,
+            mediaType: input.photo.mime,
+          },
+        ]
+      : "Open the volunteer update now. No photo is available to you, so ask the first question without describing one.";
   const { text } = await generateText({
     model: createAiModel(),
     instructions: buildInterviewSystemPrompt(input),
@@ -110,25 +124,44 @@ async function generateOpening(input: InterviewInput, includePhoto: boolean): Pr
     maxOutputTokens: MAX_INTERVIEW_TURN_OUTPUT_TOKENS,
     providerOptions: reasoning("low"),
   });
-  if (!text.trim()) throw new Error("The interviewer returned an empty opening turn");
+  if (!text.trim())
+    throw new Error("The interviewer returned an empty opening turn");
   return text;
 }
 
-export async function interviewTurn(input: InterviewInput, options: InterviewTurnOptions = {}): Promise<Response> {
-  if (!hasAiCredentials()) return textStreamResponse(scriptedReply(input), input, options);
+export async function interviewTurn(
+  input: InterviewInput,
+  options: InterviewTurnOptions = {},
+): Promise<Response> {
+  if (!hasAiCredentials())
+    return textStreamResponse(scriptedReply(input), input, options);
 
   if (input.messages.length === 0) {
     if (input.photo) {
       try {
-        return textStreamResponse(await generateOpening(input, true), input, options);
+        return textStreamResponse(
+          await generateOpening(input, true),
+          input,
+          options,
+        );
       } catch (error) {
-        console.error("Volunteer interview vision opening failed; retrying without the photo", error);
+        console.error(
+          "Volunteer interview vision opening failed; retrying without the photo",
+          error,
+        );
       }
     }
     try {
-      return textStreamResponse(await generateOpening(input, false), input, options);
+      return textStreamResponse(
+        await generateOpening(input, false),
+        input,
+        options,
+      );
     } catch (error) {
-      console.error("Volunteer interview text opening failed; using the scripted opening", error);
+      console.error(
+        "Volunteer interview text opening failed; using the scripted opening",
+        error,
+      );
       return textStreamResponse(scriptedReply(input), input, options);
     }
   }

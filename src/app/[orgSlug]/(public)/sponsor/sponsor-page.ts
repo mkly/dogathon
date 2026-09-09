@@ -18,8 +18,7 @@ type FindResidentBySource = (
 ) => Promise<SourceResident | null>;
 
 export type SponsorDestination =
-  | { href: string; kind: "redirect" }
-  | { kind: "unknown" };
+  { href: string; kind: "redirect" } | { kind: "unknown" };
 
 function firstValue(value: SourceSearchParam) {
   return Array.isArray(value) ? value[0] : value;
@@ -34,7 +33,8 @@ export async function resolveSponsorDestination(
   findResidentBySource: FindResidentBySource = getPublicResidentBySource,
 ): Promise<SponsorDestination> {
   const rawSource = firstValue(source);
-  if (!rawSource || rawSource.length > MAX_SOURCE_URL_LENGTH) return { kind: "unknown" };
+  if (!rawSource || rawSource.length > MAX_SOURCE_URL_LENGTH)
+    return { kind: "unknown" };
 
   const normalizedSource = normalizeSourceUrl(rawSource);
   if (!normalizedSource) return { kind: "unknown" };

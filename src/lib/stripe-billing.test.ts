@@ -22,24 +22,34 @@ env.features = Object.freeze({ ...env.features, stripe: true });
 const stripeApi = "https://api.stripe.com";
 
 const server = setupServer(
-  http.post(`${stripeApi}/v1/accounts`, () => HttpResponse.json({ id: "acct_fixture_rescue", object: "account" })),
-  http.post(`${stripeApi}/v1/accounts/:accountId`, () => HttpResponse.json({ id: "acct_fixture_rescue", object: "account" })),
-  http.post(`${stripeApi}/v1/account_links`, () => HttpResponse.json({
-    object: "account_link",
-    url: "https://connect.stripe.test/onboard/acct_fixture_rescue",
-  })),
-  http.get(`${stripeApi}/v1/accounts/:accountId`, () => HttpResponse.json({
-    id: "acct_fixture_rescue",
-    object: "account",
-    details_submitted: true,
-    charges_enabled: true,
-    capabilities: { card_payments: "active", transfers: "active" },
-  })),
-  http.post(`${stripeApi}/v1/checkout/sessions`, () => HttpResponse.json({
-    id: "cs_fixture",
-    object: "checkout.session",
-    url: "https://checkout.stripe.test/cs_fixture",
-  })),
+  http.post(`${stripeApi}/v1/accounts`, () =>
+    HttpResponse.json({ id: "acct_fixture_rescue", object: "account" }),
+  ),
+  http.post(`${stripeApi}/v1/accounts/:accountId`, () =>
+    HttpResponse.json({ id: "acct_fixture_rescue", object: "account" }),
+  ),
+  http.post(`${stripeApi}/v1/account_links`, () =>
+    HttpResponse.json({
+      object: "account_link",
+      url: "https://connect.stripe.test/onboard/acct_fixture_rescue",
+    }),
+  ),
+  http.get(`${stripeApi}/v1/accounts/:accountId`, () =>
+    HttpResponse.json({
+      id: "acct_fixture_rescue",
+      object: "account",
+      details_submitted: true,
+      charges_enabled: true,
+      capabilities: { card_payments: "active", transfers: "active" },
+    }),
+  ),
+  http.post(`${stripeApi}/v1/checkout/sessions`, () =>
+    HttpResponse.json({
+      id: "cs_fixture",
+      object: "checkout.session",
+      url: "https://checkout.stripe.test/cs_fixture",
+    }),
+  ),
 );
 
 before(() => server.listen({ onUnhandledRequest: "error" }));
@@ -102,7 +112,9 @@ class MemoryBillingStore implements BillingStore {
       : null;
   }
 
-  async activateSponsorship(input: Parameters<BillingStore["activateSponsorship"]>[0]) {
+  async activateSponsorship(
+    input: Parameters<BillingStore["activateSponsorship"]>[0],
+  ) {
     const email = input.sponsorEmail.trim().toLowerCase();
     const existing = this.sponsors.get(email);
     const sponsor = existing
@@ -123,9 +135,10 @@ class MemoryBillingStore implements BillingStore {
 
   async endSponsorship(input: Parameters<BillingStore["endSponsorship"]>[0]) {
     const sponsorship = [...this.sponsorships.values()].find(
-      (record) => record.orgId === input.orgId
-        && record.stripeAccountId === input.stripeAccountId
-        && record.stripeSubscriptionId === input.stripeSubscriptionId,
+      (record) =>
+        record.orgId === input.orgId &&
+        record.stripeAccountId === input.stripeAccountId &&
+        record.stripeSubscriptionId === input.stripeSubscriptionId,
     );
     if (sponsorship) sponsorship.status = "ended";
   }
@@ -145,7 +158,10 @@ function signedEvent(object: Record<string, unknown>, type: string) {
     request: null,
     type,
   });
-  const signature = Stripe.webhooks.generateTestHeaderString({ payload, secret });
+  const signature = Stripe.webhooks.generateTestHeaderString({
+    payload,
+    secret,
+  });
   return constructStripeEvent(payload, signature, secret);
 }
 
@@ -154,33 +170,44 @@ test("Stripe Connect onboarding, checkout, and signed webhooks maintain sponsors
 
   const onboarding = await createConnectOnboardingLink(
     "org_rescue",
-    { refreshUrl: "https://app.test/connect/refresh", returnUrl: "https://app.test/connect/return" },
+    {
+      refreshUrl: "https://app.test/connect/refresh",
+      returnUrl: "https://app.test/connect/return",
+    },
     store,
   );
-  assert.equal(onboarding.url, "https://connect.stripe.test/onboard/acct_fixture_rescue");
+  assert.equal(
+    onboarding.url,
+    "https://connect.stripe.test/onboard/acct_fixture_rescue",
+  );
   assert.equal(store.organization.stripeAccountId, "acct_fixture_rescue");
 
   const connected = await refreshConnectStatus("org_rescue", store);
   assert.equal(connected.detailsSubmitted, true);
   assert.equal(store.organization.stripeChargesEnabled, true);
 
-  server.use(http.post(`${stripeApi}/v1/checkout/sessions`, async ({ request }) => {
-    const checkoutRequest = new URLSearchParams(await request.text());
-    assert.equal(
-      checkoutRequest.get("line_items[0][price_data][product_data][name]"),
-      "Sponsorship with Fixture Rescue",
-    );
-    assert.equal(checkoutRequest.get("metadata[residentId]"), "companion_mabel");
-    assert.equal(
-      checkoutRequest.get("subscription_data[metadata][residentId]"),
-      "companion_mabel",
-    );
-    return HttpResponse.json({
-      id: "cs_fixture",
-      object: "checkout.session",
-      url: "https://checkout.stripe.test/cs_fixture",
-    });
-  }));
+  server.use(
+    http.post(`${stripeApi}/v1/checkout/sessions`, async ({ request }) => {
+      const checkoutRequest = new URLSearchParams(await request.text());
+      assert.equal(
+        checkoutRequest.get("line_items[0][price_data][product_data][name]"),
+        "Sponsorship with Fixture Rescue",
+      );
+      assert.equal(
+        checkoutRequest.get("metadata[residentId]"),
+        "companion_mabel",
+      );
+      assert.equal(
+        checkoutRequest.get("subscription_data[metadata][residentId]"),
+        "companion_mabel",
+      );
+      return HttpResponse.json({
+        id: "cs_fixture",
+        object: "checkout.session",
+        url: "https://checkout.stripe.test/cs_fixture",
+      });
+    }),
+  );
 
   const checkout = await createStripeCheckout(
     {
@@ -190,26 +217,33 @@ test("Stripe Connect onboarding, checkout, and signed webhooks maintain sponsors
       sponsorEmail: "avery@example.com",
       monthlyCents: 3750,
       successUrl: "https://app.test/companions/companion_mabel?sponsored=1",
-      cancelUrl: "https://app.test/companions/companion_mabel?checkout=canceled",
+      cancelUrl:
+        "https://app.test/companions/companion_mabel?checkout=canceled",
     },
     store,
   );
   assert.equal(checkout.url, "https://checkout.stripe.test/cs_fixture");
 
-  await processStripeEvent(signedEvent({
-    id: "cs_fixture",
-    object: "checkout.session",
-    customer: "cus_fixture",
-    metadata: {
-      orgId: "org_rescue",
-      residentId: "companion_mabel",
-      sponsorName: "Avery Sponsor",
-      sponsorEmail: "avery@example.com",
-      monthlyCents: "3750",
-    },
-    mode: "subscription",
-    subscription: "sub_fixture",
-  }, "checkout.session.completed"), store);
+  await processStripeEvent(
+    signedEvent(
+      {
+        id: "cs_fixture",
+        object: "checkout.session",
+        customer: "cus_fixture",
+        metadata: {
+          orgId: "org_rescue",
+          residentId: "companion_mabel",
+          sponsorName: "Avery Sponsor",
+          sponsorEmail: "avery@example.com",
+          monthlyCents: "3750",
+        },
+        mode: "subscription",
+        subscription: "sub_fixture",
+      },
+      "checkout.session.completed",
+    ),
+    store,
+  );
 
   assert.deepEqual(store.sponsorships.get("cs_fixture"), {
     orgId: "org_rescue",
@@ -232,18 +266,30 @@ test("Stripe Connect onboarding, checkout, and signed webhooks maintain sponsors
   });
 
   store.sponsorships.get("cs_fixture")!.status = "awaiting";
-  await processStripeEvent(signedEvent({
-    id: "sub_fixture",
-    object: "subscription",
-    metadata: { orgId: "org_rescue", residentId: "companion_mabel" },
-  }, "customer.subscription.deleted"), store);
+  await processStripeEvent(
+    signedEvent(
+      {
+        id: "sub_fixture",
+        object: "subscription",
+        metadata: { orgId: "org_rescue", residentId: "companion_mabel" },
+      },
+      "customer.subscription.deleted",
+    ),
+    store,
+  );
   assert.equal(store.sponsorships.get("cs_fixture")?.status, "ended");
 
-  await processStripeEvent(signedEvent({
-    id: "sub_fixture",
-    object: "subscription",
-    metadata: { orgId: "org_rescue", residentId: "companion_mabel" },
-  }, "customer.subscription.deleted"), store);
+  await processStripeEvent(
+    signedEvent(
+      {
+        id: "sub_fixture",
+        object: "subscription",
+        metadata: { orgId: "org_rescue", residentId: "companion_mabel" },
+      },
+      "customer.subscription.deleted",
+    ),
+    store,
+  );
   assert.equal(store.sponsorships.get("cs_fixture")?.status, "ended");
 });
 
@@ -252,20 +298,26 @@ test("webhooks ignore a connected account that does not belong to the organizati
   store.organization.stripeAccountId = "acct_another_rescue";
   store.organization.stripeChargesEnabled = true;
 
-  await processStripeEvent(signedEvent({
-    id: "cs_wrong_account",
-    object: "checkout.session",
-    customer: "cus_fixture",
-    metadata: {
-      orgId: "org_rescue",
-      residentId: "companion_mabel",
-      sponsorName: "Mallory",
-      sponsorEmail: "mallory@example.com",
-      monthlyCents: "3750",
-    },
-    mode: "subscription",
-    subscription: "sub_wrong_account",
-  }, "checkout.session.completed"), store);
+  await processStripeEvent(
+    signedEvent(
+      {
+        id: "cs_wrong_account",
+        object: "checkout.session",
+        customer: "cus_fixture",
+        metadata: {
+          orgId: "org_rescue",
+          residentId: "companion_mabel",
+          sponsorName: "Mallory",
+          sponsorEmail: "mallory@example.com",
+          monthlyCents: "3750",
+        },
+        mode: "subscription",
+        subscription: "sub_wrong_account",
+      },
+      "checkout.session.completed",
+    ),
+    store,
+  );
 
   assert.equal(store.sponsorships.size, 0);
 });
@@ -299,20 +351,26 @@ test("a resident made unavailable mid-checkout still records the paid sponsorshi
   store.organization.stripeChargesEnabled = true;
   store.residentAvailable = false;
 
-  await processStripeEvent(signedEvent({
-    id: "cs_adopted",
-    object: "checkout.session",
-    customer: "cus_fixture",
-    metadata: {
-      orgId: "org_rescue",
-      residentId: "companion_mabel",
-      sponsorName: "Avery Sponsor",
-      sponsorEmail: "avery@example.com",
-      monthlyCents: "3750",
-    },
-    mode: "subscription",
-    subscription: "sub_adopted",
-  }, "checkout.session.completed"), store);
+  await processStripeEvent(
+    signedEvent(
+      {
+        id: "cs_adopted",
+        object: "checkout.session",
+        customer: "cus_fixture",
+        metadata: {
+          orgId: "org_rescue",
+          residentId: "companion_mabel",
+          sponsorName: "Avery Sponsor",
+          sponsorEmail: "avery@example.com",
+          monthlyCents: "3750",
+        },
+        mode: "subscription",
+        subscription: "sub_adopted",
+      },
+      "checkout.session.completed",
+    ),
+    store,
+  );
 
   assert.equal(store.sponsorships.get("cs_adopted")?.status, "active");
 });
@@ -321,21 +379,30 @@ test("checkout completion reuses a sponsor by normalized email without linking a
   const store = new MemoryBillingStore();
   store.organization.stripeAccountId = "acct_fixture_rescue";
 
-  for (const [sessionId, email] of [["cs_first", "Sponsor@Example.com"], ["cs_second", "sponsor@example.com"]]) {
-    await processStripeEvent(signedEvent({
-      id: sessionId,
-      object: "checkout.session",
-      customer: `cus_${sessionId}`,
-      metadata: {
-        orgId: "org_rescue",
-        residentId: "companion_mabel",
-        sponsorName: "Avery Sponsor",
-        sponsorEmail: email,
-        monthlyCents: "3750",
-      },
-      mode: "subscription",
-      subscription: `sub_${sessionId}`,
-    }, "checkout.session.completed"), store);
+  for (const [sessionId, email] of [
+    ["cs_first", "Sponsor@Example.com"],
+    ["cs_second", "sponsor@example.com"],
+  ]) {
+    await processStripeEvent(
+      signedEvent(
+        {
+          id: sessionId,
+          object: "checkout.session",
+          customer: `cus_${sessionId}`,
+          metadata: {
+            orgId: "org_rescue",
+            residentId: "companion_mabel",
+            sponsorName: "Avery Sponsor",
+            sponsorEmail: email,
+            monthlyCents: "3750",
+          },
+          mode: "subscription",
+          subscription: `sub_${sessionId}`,
+        },
+        "checkout.session.completed",
+      ),
+      store,
+    );
   }
 
   assert.equal(store.sponsors.size, 1);
@@ -354,20 +421,29 @@ test("checkout completion does not overwrite an existing sponsor name", async ()
     userId: null,
   });
 
-  await processStripeEvent(signedEvent({
-    id: "cs_keep_existing_sponsor_name",
-    object: "checkout.session",
-    customer: "cus_fixture",
-    metadata: {
-      orgId: "org_rescue",
-      residentId: "companion_mabel",
-      sponsorName: "Checkout Form Name",
-      sponsorEmail: "Sponsor@Example.com",
-      monthlyCents: "3750",
-    },
-    mode: "subscription",
-    subscription: "sub_keep_existing_sponsor_name",
-  }, "checkout.session.completed"), store);
+  await processStripeEvent(
+    signedEvent(
+      {
+        id: "cs_keep_existing_sponsor_name",
+        object: "checkout.session",
+        customer: "cus_fixture",
+        metadata: {
+          orgId: "org_rescue",
+          residentId: "companion_mabel",
+          sponsorName: "Checkout Form Name",
+          sponsorEmail: "Sponsor@Example.com",
+          monthlyCents: "3750",
+        },
+        mode: "subscription",
+        subscription: "sub_keep_existing_sponsor_name",
+      },
+      "checkout.session.completed",
+    ),
+    store,
+  );
 
-  assert.equal(store.sponsors.get("sponsor@example.com")?.name, "Original Sponsor Name");
+  assert.equal(
+    store.sponsors.get("sponsor@example.com")?.name,
+    "Original Sponsor Name",
+  );
 });

@@ -59,14 +59,25 @@ type RosterSection = {
   photoUrls: string[];
 };
 
-const trimmedString = z.string().catch("").transform((value) => value.trim());
-const trimmedStrings = z.array(z.string()).catch([])
+const trimmedString = z
+  .string()
+  .catch("")
+  .transform((value) => value.trim());
+const trimmedStrings = z
+  .array(z.string())
+  .catch([])
   .transform((values) => values.map((value) => value.trim()).filter(Boolean));
 // The model copies the page's line breaks (sometimes as a literal "\n") into prose
 // fields; the roster stores each as one flowing paragraph, like the offline parser.
-const proseString = z.string().catch("").transform((value) =>
-  value.replace(/\\n|\r?\n/g, " ").replace(/[ \t]{2,}/g, " ").trim(),
-);
+const proseString = z
+  .string()
+  .catch("")
+  .transform((value) =>
+    value
+      .replace(/\\n|\r?\n/g, " ")
+      .replace(/[ \t]{2,}/g, " ")
+      .trim(),
+  );
 const companionRecordSchema = z.object({
   name: trimmedString,
   species: trimmedString,
@@ -102,17 +113,28 @@ export async function parseCompanionRoster(
       results[index] = await parseBatch(batches[index], options);
     }
   };
-  await Promise.all(Array.from({ length: Math.min(MODEL_BATCH_CONCURRENCY, batches.length) }, worker));
+  await Promise.all(
+    Array.from(
+      { length: Math.min(MODEL_BATCH_CONCURRENCY, batches.length) },
+      worker,
+    ),
+  );
   return results.flat();
 }
 
-async function parseBatch(batch: string, options: ParseCompanionRosterOptions): Promise<CompanionRecord[]> {
+async function parseBatch(
+  batch: string,
+  options: ParseCompanionRosterOptions,
+): Promise<CompanionRecord[]> {
   for (let attempt = 0; ; attempt += 1) {
     try {
       return await parseWithModel(batch, options);
     } catch (error) {
       if (attempt >= MODEL_BATCH_RETRIES) throw error;
-      console.warn(`Model roster parsing failed; retrying the batch (attempt ${attempt + 1}).`, error);
+      console.warn(
+        `Model roster parsing failed; retrying the batch (attempt ${attempt + 1}).`,
+        error,
+      );
     }
   }
 }
@@ -124,7 +146,9 @@ function documentBatches(source: string): string[] {
   let currentChars = 0;
   for (const document of documents) {
     const tooMany = current.length >= MAX_MODEL_BATCH_DOCUMENTS;
-    const tooLong = current.length > 0 && currentChars + document.length > MAX_MODEL_BATCH_CHARS;
+    const tooLong =
+      current.length > 0 &&
+      currentChars + document.length > MAX_MODEL_BATCH_CHARS;
     if (tooMany || tooLong) {
       batches.push(current);
       current = [];
@@ -151,26 +175,34 @@ function parseCompanionRosterDeterministic(source: string): CompanionRecord[] {
     const sex = extractField(text, "Sex") || extractField(text, "Gender");
     const weightText = extractField(text, "Weight");
     const personality = extractDescription(text, { heading, careNotes });
-    const statusNotes = extractStatusNotes(text).filter((note) => !careNotes.includes(note));
+    const statusNotes = extractStatusNotes(text).filter(
+      (note) => !careNotes.includes(note),
+    );
 
     // Navigation and footer headings are not roster entries.
-    if (!name || !photoUrls.length || ![species, breed, ageText, sex, weightText, personality].some(Boolean)) {
+    if (
+      !name ||
+      !photoUrls.length ||
+      ![species, breed, ageText, sex, weightText, personality].some(Boolean)
+    ) {
       return [];
     }
 
-    return [{
-      name,
-      species,
-      breed,
-      dobText: extractDob(ageText) ?? "",
-      ageText,
-      sex,
-      weightText,
-      personality,
-      careNotes: [...careNotes, ...statusNotes],
-      photoUrls,
-      adopted,
-    }];
+    return [
+      {
+        name,
+        species,
+        breed,
+        dobText: extractDob(ageText) ?? "",
+        ageText,
+        sex,
+        weightText,
+        personality,
+        careNotes: [...careNotes, ...statusNotes],
+        photoUrls,
+        adopted,
+      },
+    ];
   });
 }
 
@@ -187,34 +219,46 @@ async function parseWithModel(
 
   // A batch of listing or navigation pages legitimately holds no companions; the
   // sync refuses an empty roster as a whole once every batch is in.
-  return output.filter((companion) => companion.name && companion.photoUrls.length);
+  return output.filter(
+    (companion) => companion.name && companion.photoUrls.length,
+  );
 }
 
 function splitHtmlSections(source: string): RosterSection[] {
   const $ = cheerio.load(source);
   addTextBoundaries($);
 
-  return $("h3").toArray().map((heading) => {
-    const $heading = $(heading);
-    const followingSiblings = $heading.nextUntil("h3");
-    // Simple imports place the section content directly after the heading; site
-    // builders instead wrap each heading and its content in a per-companion card,
-    // the outermost ancestor that still covers only this heading.
-    const card = $heading.parents().filter((_index, element) => $(element).find("h3").length === 1);
-    const section = followingSiblings.length ? followingSiblings : card.length ? card.last() : $heading;
-    const images = section.filter("img").add(section.find("img"));
+  return $("h3")
+    .toArray()
+    .map((heading) => {
+      const $heading = $(heading);
+      const followingSiblings = $heading.nextUntil("h3");
+      // Simple imports place the section content directly after the heading; site
+      // builders instead wrap each heading and its content in a per-companion card,
+      // the outermost ancestor that still covers only this heading.
+      const card = $heading
+        .parents()
+        .filter((_index, element) => $(element).find("h3").length === 1);
+      const section = followingSiblings.length
+        ? followingSiblings
+        : card.length
+          ? card.last()
+          : $heading;
+      const images = section.filter("img").add(section.find("img"));
 
-    return {
-      heading: cleanText($heading.text()),
-      text: cleanText(section.text()),
-      careNotes: section.find("li").toArray()
-        .map((item) => cleanText($(item).text()))
-        .filter(Boolean),
-      photoUrls: uniquePhotoUrls(
-        images.toArray().map((image) => $(image).attr("src")),
-      ),
-    };
-  });
+      return {
+        heading: cleanText($heading.text()),
+        text: cleanText(section.text()),
+        careNotes: section
+          .find("li")
+          .toArray()
+          .map((item) => cleanText($(item).text()))
+          .filter(Boolean),
+        photoUrls: uniquePhotoUrls(
+          images.toArray().map((image) => $(image).attr("src")),
+        ),
+      };
+    });
 }
 
 function markdownSections(source: string): RosterSection[] {
@@ -243,7 +287,9 @@ function markdownSections(source: string): RosterSection[] {
   };
   return regions.map((region, index) => {
     const inherited = inherits(index)
-      ? index === 0 ? extractMarkdownPhotoUrls(preamble) : regions[index - 1].tailPhotoUrls
+      ? index === 0
+        ? extractMarkdownPhotoUrls(preamble)
+        : regions[index - 1].tailPhotoUrls
       : [];
     const donated = new Set(inherits(index + 1) ? region.tailPhotoUrls : []);
     return {
@@ -258,8 +304,14 @@ function markdownSections(source: string): RosterSection[] {
   });
 }
 
-const FIELD_LABEL_PATTERN = new RegExp(`\\b(?:${FIELD_NAMES.join("|")})\\s*:`, "iu");
-const BARE_FIELD_LABEL_PATTERN = new RegExp(`^(?:${FIELD_NAMES.join("|")})\\s*:$`, "iu");
+const FIELD_LABEL_PATTERN = new RegExp(
+  `\\b(?:${FIELD_NAMES.join("|")})\\s*:`,
+  "iu",
+);
+const BARE_FIELD_LABEL_PATTERN = new RegExp(
+  `^(?:${FIELD_NAMES.join("|")})\\s*:$`,
+  "iu",
+);
 // A labeled stat and its value, up to the next labeled stat on the same line.
 const STRUCTURED_FIELD_PATTERN = new RegExp(
   `\\b(?:${FIELD_NAMES.join("|")})\\s*:\\s*.*?(?=\\s*\\b(?:${FIELD_NAMES.join("|")})\\s*:|$)`,
@@ -270,9 +322,10 @@ function stripEmphasis(markdown: string): string {
   return markdown.replace(/\*\*/gu, "");
 }
 
-function splitMarkdownSections(
-  source: string,
-): { preamble: string; sections: Array<{ heading: string; body: string; tail: string }> } {
+function splitMarkdownSections(source: string): {
+  preamble: string;
+  sections: Array<{ heading: string; body: string; tail: string }>;
+} {
   const tree = remark().parse(source);
   const headings: Array<{ heading: string; start: number; end: number }> = [];
   const breaks: number[] = [];
@@ -280,7 +333,8 @@ function splitMarkdownSections(
     const start = node.position?.start.offset;
     const end = node.position?.end.offset;
     if (start === undefined || end === undefined) continue;
-    if (node.type === "heading") headings.push({ heading: toString(node), start, end });
+    if (node.type === "heading")
+      headings.push({ heading: toString(node), start, end });
     if (node.type === "thematicBreak") breaks.push(end);
   }
 
@@ -290,7 +344,9 @@ function splitMarkdownSections(
       const end = headings[index + 1]?.start ?? source.length;
       // The tail is whatever follows the last thematic break inside the section:
       // the start of the next crawled document.
-      const lastBreak = breaks.filter((offset) => offset > heading.end && offset <= end).at(-1);
+      const lastBreak = breaks
+        .filter((offset) => offset > heading.end && offset <= end)
+        .at(-1);
       return {
         heading: heading.heading,
         body: source.slice(heading.end, end),
@@ -335,8 +391,13 @@ function extractDescription(
     }
     const trimmed = cleanText(raw.replace(STRUCTURED_FIELD_PATTERN, " "));
     if (!trimmed || notes.has(trimmed)) continue;
-    const isMarkup = /^[-*]\s|^#|^!\[|^\[[^\]]*\]\([^)]*\)$|^\[photo:|^https?:\/\//iu.test(trimmed);
-    const isStatus = STATUS_LABELS.some(([, pattern]) => pattern.test(trimmed) && trimmed.length < 40);
+    const isMarkup =
+      /^[-*]\s|^#|^!\[|^\[[^\]]*\]\([^)]*\)$|^\[photo:|^https?:\/\//iu.test(
+        trimmed,
+      );
+    const isStatus = STATUS_LABELS.some(
+      ([, pattern]) => pattern.test(trimmed) && trimmed.length < 40,
+    );
     if (isMarkup || isStatus) continue;
     const labeled = trimmed.match(/^[A-Za-z][A-Za-z ]{0,30}:\s*(.+)$/u);
     paragraphs.push(labeled ? labeled[1].trim() : trimmed);
@@ -361,19 +422,22 @@ function extractMarkdownCareNotes(body: string): string[] {
 }
 
 function extractMarkdownPhotoUrls(body: string): string[] {
-  const urls = body.match(/https?:\/\/[^"'\s<>]+?\.(?:avif|gif|jpe?g|png|webp)(?:\?[^"'\s<>]*)?/gi) ?? [];
+  const urls =
+    body.match(
+      /https?:\/\/[^"'\s<>]+?\.(?:avif|gif|jpe?g|png|webp)(?:\?[^"'\s<>]*)?/gi,
+    ) ?? [];
   return uniquePhotoUrls(urls);
 }
 
 function extractStatusNotes(text: string): string[] {
-  return STATUS_LABELS.flatMap(([label, pattern]) => pattern.test(text) ? [label] : []);
+  return STATUS_LABELS.flatMap(([label, pattern]) =>
+    pattern.test(text) ? [label] : [],
+  );
 }
 
 function cleanHeading(heading: string): string {
   return cleanText(
-    heading
-      .replace(/\s*\*?\s*adopted\b.*$/i, "")
-      .replace(/^\s*meet\s+/i, ""),
+    heading.replace(/\s*\*?\s*adopted\b.*$/i, "").replace(/^\s*meet\s+/i, ""),
   );
 }
 
@@ -401,13 +465,15 @@ function semanticPageText(source: string): string {
 }
 
 function cleanText(value: string): string {
-  return value
-    .replace(/[\u200B-\u200D\u2060\uFEFF]/g, "")
-    // Cheerio decodes &nbsp; to U+00A0; roster text treats it as an ordinary space.
-    .replace(/[ \t\u00A0]+/g, " ")
-    .replace(/ *\n */g, "\n")
-    .replace(/\n{2,}/g, "\n")
-    .trim();
+  return (
+    value
+      .replace(/[\u200B-\u200D\u2060\uFEFF]/g, "")
+      // Cheerio decodes &nbsp; to U+00A0; roster text treats it as an ordinary space.
+      .replace(/[ \t\u00A0]+/g, " ")
+      .replace(/ *\n */g, "\n")
+      .replace(/\n{2,}/g, "\n")
+      .trim()
+  );
 }
 
 function addTextBoundaries($: cheerio.CheerioAPI): void {
@@ -416,11 +482,17 @@ function addTextBoundaries($: cheerio.CheerioAPI): void {
 }
 
 function uniquePhotoUrls(urls: Array<string | undefined>): string[] {
-  return [...new Set(urls.map(normalizePhotoUrl).filter((url): url is string => Boolean(url)))];
+  return [
+    ...new Set(
+      urls.map(normalizePhotoUrl).filter((url): url is string => Boolean(url)),
+    ),
+  ];
 }
 
 function normalizePhotoUrl(url: string | undefined): string | undefined {
   if (!url || !/^https?:\/\//i.test(url)) return undefined;
   const withoutQuery = url.split("?")[0];
-  return /\.(?:avif|gif|jpe?g|png|webp)$/i.test(withoutQuery) ? withoutQuery : undefined;
+  return /\.(?:avif|gif|jpe?g|png|webp)$/i.test(withoutQuery)
+    ? withoutQuery
+    : undefined;
 }

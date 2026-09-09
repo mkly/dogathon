@@ -12,9 +12,15 @@ export function isPublicHttpUrl(value: string): boolean {
 
   if (url.protocol !== "http:" && url.protocol !== "https:") return false;
 
-  const hostname = url.hostname.replace(/^\[|\]$/gu, "").toLowerCase().replace(/\.$/u, "");
+  const hostname = url.hostname
+    .replace(/^\[|\]$/gu, "")
+    .toLowerCase()
+    .replace(/\.$/u, "");
   if (!hostname || isIP(hostname) !== 0) return false;
-  if (hostname === "localhost" || PRIVATE_HOST_SUFFIXES.some((suffix) => hostname.endsWith(suffix))) {
+  if (
+    hostname === "localhost" ||
+    PRIVATE_HOST_SUFFIXES.some((suffix) => hostname.endsWith(suffix))
+  ) {
     return false;
   }
 

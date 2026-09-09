@@ -48,20 +48,27 @@ let describedLocalFallback = false;
 function describeLocalFallback(log: (message: string) => void) {
   if (describedLocalFallback) return;
   describedLocalFallback = true;
-  log("[photo-storage] S3 is not configured; storing volunteer photos in ./.photos/.");
+  log(
+    "[photo-storage] S3 is not configured; storing volunteer photos in ./.photos/.",
+  );
 }
 
 function storageEnvironment(dependencies: PhotoStorageDependencies) {
   return dependencies.env ?? appEnv;
 }
 
-function s3Client(environment: PhotoStorageEnvironment, dependencies: PhotoStorageDependencies) {
+function s3Client(
+  environment: PhotoStorageEnvironment,
+  dependencies: PhotoStorageDependencies,
+) {
   if (dependencies.s3Client) return dependencies.s3Client;
   if (environment.S3_USE_AMBIENT_CREDENTIALS) {
     return new S3Client({ region: environment.AWS_REGION });
   }
   if (!environment.AWS_ACCESS_KEY_ID || !environment.AWS_SECRET_ACCESS_KEY) {
-    throw new Error("S3 credentials are required unless S3_USE_AMBIENT_CREDENTIALS is enabled.");
+    throw new Error(
+      "S3 credentials are required unless S3_USE_AMBIENT_CREDENTIALS is enabled.",
+    );
   }
   return new S3Client({
     region: environment.AWS_REGION,
@@ -77,19 +84,29 @@ function encodedKey(key: string) {
 }
 
 function publicS3Url(environment: PhotoStorageEnvironment, key: string) {
-  const base = environment.S3_PUBLIC_BASE_URL
-    ?? `https://${environment.S3_PHOTO_BUCKET}.s3.${environment.AWS_REGION}.amazonaws.com`;
+  const base =
+    environment.S3_PUBLIC_BASE_URL ??
+    `https://${environment.S3_PHOTO_BUCKET}.s3.${environment.AWS_REGION}.amazonaws.com`;
   return `${base}/${encodedKey(key)}`;
 }
 
 function localPhotoPath(key: string, dependencies: PhotoStorageDependencies) {
-  if (path.isAbsolute(key) || key.split(/[\\/]/u).some((part) => part === "..")) {
-    throw new Error("Photo storage keys must stay within the configured photo directory.");
+  if (
+    path.isAbsolute(key) ||
+    key.split(/[\\/]/u).some((part) => part === "..")
+  ) {
+    throw new Error(
+      "Photo storage keys must stay within the configured photo directory.",
+    );
   }
-  const root = path.resolve(dependencies.localRoot ?? path.join(process.cwd(), LOCAL_PHOTO_ROOT));
+  const root = path.resolve(
+    dependencies.localRoot ?? path.join(process.cwd(), LOCAL_PHOTO_ROOT),
+  );
   const file = path.resolve(root, key);
   if (file !== root && !file.startsWith(`${root}${path.sep}`)) {
-    throw new Error("Photo storage keys must stay within the configured photo directory.");
+    throw new Error(
+      "Photo storage keys must stay within the configured photo directory.",
+    );
   }
   return file;
 }
@@ -105,20 +122,36 @@ function localPhotoUrl(key: string) {
 
 function isMissingObject(error: unknown) {
   if (!(error instanceof Error)) return false;
-  const status = "$metadata" in error
-    ? (error as Error & { $metadata?: { httpStatusCode?: number } }).$metadata?.httpStatusCode
-    : undefined;
-  return error.name === "NoSuchKey" || error.name === "NotFound" || status === 404;
+  const status =
+    "$metadata" in error
+      ? (error as Error & { $metadata?: { httpStatusCode?: number } }).$metadata
+          ?.httpStatusCode
+      : undefined;
+  return (
+    error.name === "NoSuchKey" || error.name === "NotFound" || status === 404
+  );
 }
 
 function isMissingFile(error: unknown) {
   return error instanceof Error && "code" in error && error.code === "ENOENT";
 }
 
-export function photoKey(input: { orgId: string; photoId: string; ext: string }) {
+export function photoKey(input: {
+  orgId: string;
+  photoId: string;
+  ext: string;
+}) {
   const extension = input.ext.replace(/^\.+/u, "");
-  if (!input.orgId || !input.photoId || !extension || extension.includes("/") || extension.includes("\\")) {
-    throw new Error("Photo keys require an organization ID, photo ID, and file extension.");
+  if (
+    !input.orgId ||
+    !input.photoId ||
+    !extension ||
+    extension.includes("/") ||
+    extension.includes("\\")
+  ) {
+    throw new Error(
+      "Photo keys require an organization ID, photo ID, and file extension.",
+    );
   }
   return `orgs/${input.orgId}/volunteer-photos/${input.photoId}.${extension}`;
 }
@@ -127,7 +160,9 @@ export function webPhotoKey(key: string) {
   const extensionIndex = key.lastIndexOf(".");
   const slashIndex = Math.max(key.lastIndexOf("/"), key.lastIndexOf("\\"));
   if (extensionIndex <= slashIndex + 1) {
-    throw new Error("A photo storage key needs a file extension for its web variant.");
+    throw new Error(
+      "A photo storage key needs a file extension for its web variant.",
+    );
   }
   return `${key.slice(0, extensionIndex)}-web${key.slice(extensionIndex)}`;
 }
@@ -138,13 +173,15 @@ export async function putPhoto(
 ): Promise<{ url: string }> {
   const environment = storageEnvironment(dependencies);
   if (environment.features.s3) {
-    await s3Client(environment, dependencies).send(new PutObjectCommand({
-      Bucket: environment.S3_PHOTO_BUCKET,
-      Key: input.key,
-      Body: input.data,
-      ContentType: input.mime,
-      CacheControl: input.cacheControl ?? DEFAULT_CACHE_CONTROL,
-    }));
+    await s3Client(environment, dependencies).send(
+      new PutObjectCommand({
+        Bucket: environment.S3_PHOTO_BUCKET,
+        Key: input.key,
+        Body: input.data,
+        ContentType: input.mime,
+        CacheControl: input.cacheControl ?? DEFAULT_CACHE_CONTROL,
+      }),
+    );
     return { url: publicS3Url(environment, input.key) };
   }
 
@@ -163,10 +200,12 @@ export async function getPhoto(
   const environment = storageEnvironment(dependencies);
   if (environment.features.s3) {
     try {
-      const response = await s3Client(environment, dependencies).send(new GetObjectCommand({
-        Bucket: environment.S3_PHOTO_BUCKET,
-        Key: key,
-      }));
+      const response = await s3Client(environment, dependencies).send(
+        new GetObjectCommand({
+          Bucket: environment.S3_PHOTO_BUCKET,
+          Key: key,
+        }),
+      );
       if (!response.Body) return null;
       return {
         data: await response.Body.transformToByteArray(),
@@ -202,14 +241,19 @@ export async function deletePhoto(
 ): Promise<void> {
   const environment = storageEnvironment(dependencies);
   if (environment.features.s3) {
-    await s3Client(environment, dependencies).send(new DeleteObjectCommand({
-      Bucket: environment.S3_PHOTO_BUCKET,
-      Key: key,
-    }));
+    await s3Client(environment, dependencies).send(
+      new DeleteObjectCommand({
+        Bucket: environment.S3_PHOTO_BUCKET,
+        Key: key,
+      }),
+    );
     return;
   }
 
   describeLocalFallback(dependencies.log ?? console.info);
   const file = localPhotoPath(key, dependencies);
-  await Promise.all([rm(file, { force: true }), rm(`${file}.json`, { force: true })]);
+  await Promise.all([
+    rm(file, { force: true }),
+    rm(`${file}.json`, { force: true }),
+  ]);
 }

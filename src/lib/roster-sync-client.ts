@@ -1,6 +1,7 @@
 import type { SyncSummary } from "./roster-sync.ts";
 
-export type RosterSyncJobStatus = "queued" | "running" | "succeeded" | "failed" | "refused";
+export type RosterSyncJobStatus =
+  "queued" | "running" | "succeeded" | "failed" | "refused";
 export type RosterSyncJobTrigger = "admin" | "scheduled";
 
 export type RosterSyncJobView = {
@@ -14,14 +15,22 @@ export type RosterSyncJobView = {
 
 type Toast = { tone: "error" | "success" | "warning"; text: string };
 
-export function rosterSyncStatusLabel(job: Pick<RosterSyncJobView, "status" | "trigger">) {
-  const prefix = job.trigger === "scheduled" ? "Automatic roster sync" : "Roster sync";
+export function rosterSyncStatusLabel(
+  job: Pick<RosterSyncJobView, "status" | "trigger">,
+) {
+  const prefix =
+    job.trigger === "scheduled" ? "Automatic roster sync" : "Roster sync";
   switch (job.status) {
-    case "queued": return `${prefix} queued`;
-    case "running": return `${prefix} running`;
-    case "succeeded": return `${prefix} completed`;
-    case "refused": return `${prefix} refused`;
-    case "failed": return `${prefix} failed`;
+    case "queued":
+      return `${prefix} queued`;
+    case "running":
+      return `${prefix} running`;
+    case "succeeded":
+      return `${prefix} completed`;
+    case "refused":
+      return `${prefix} refused`;
+    case "failed":
+      return `${prefix} failed`;
   }
 }
 
@@ -40,7 +49,10 @@ export function rosterSyncResultToast(job: RosterSyncJobView): Toast | null {
   if (job.status === "succeeded" && job.summary) {
     const summary = job.summary;
     if (summary.usedFallbackCapture) {
-      return { tone: "warning", text: `Roster synced from bundled capture (${summary.source}).` };
+      return {
+        tone: "warning",
+        text: `Roster synced from bundled capture (${summary.source}).`,
+      };
     }
     if (!summary.rosterComplete) {
       return {
@@ -48,7 +60,10 @@ export function rosterSyncResultToast(job: RosterSyncJobView): Toast | null {
         text: `Partial roster synced from ${summary.source}.${incompleteDetail(summary.rosterCompleteness)} Missing residents were left unchanged.`,
       };
     }
-    return { tone: "success", text: `Roster synced from live source (${summary.source}).` };
+    return {
+      tone: "success",
+      text: `Roster synced from live source (${summary.source}).`,
+    };
   }
   if (job.status === "refused") {
     const detail = job.refusalReason ? ` ${job.refusalReason}` : "";

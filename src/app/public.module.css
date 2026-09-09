@@ -363,7 +363,8 @@
   border: 2px dashed var(--felt-ink);
   border-radius: 14px;
   cursor: pointer;
-  transition: background-color var(--motion-duration-fast) var(--motion-ease-standard),
+  transition:
+    background-color var(--motion-duration-fast) var(--motion-ease-standard),
     box-shadow var(--motion-duration-fast) var(--motion-ease-standard);
 }
 

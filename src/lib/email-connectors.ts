@@ -58,7 +58,10 @@ type Fetcher = typeof fetch;
 function protectedResourceFetcher(fetcher: Fetcher) {
   return (
     url: string,
-    options: oauth.CustomFetchOptions<string, oauth.ProtectedResourceRequestBody>,
+    options: oauth.CustomFetchOptions<
+      string,
+      oauth.ProtectedResourceRequestBody
+    >,
   ) => fetcher(url, options as unknown as RequestInit);
 }
 
@@ -80,7 +83,8 @@ export type TransportFactory = (options: {
 }) => MailTransport;
 
 const GMAIL_SCOPE = "openid email https://www.googleapis.com/auth/gmail.send";
-const MICROSOFT_SCOPE = "openid email profile offline_access User.Read Mail.Send";
+const MICROSOFT_SCOPE =
+  "openid email profile offline_access User.Read Mail.Send";
 export const EMAIL_CONNECTOR_OAUTH_COOKIE = "dogathon-email-connector-oauth";
 export const EMAIL_CONNECTOR_OAUTH_COOKIE_PATH = "/api/email-connectors/";
 const OAUTH_COOKIE_LIFETIME_SECONDS = 10 * 60;
@@ -96,7 +100,9 @@ function encryptionKey(): Uint8Array {
 
   const key = Buffer.from(encoded, "base64");
   if (key.length !== 32) {
-    throw new Error("EMAIL_CONNECTOR_ENCRYPTION_KEY must be 32 random bytes encoded as base64");
+    throw new Error(
+      "EMAIL_CONNECTOR_ENCRYPTION_KEY must be 32 random bytes encoded as base64",
+    );
   }
   return key;
 }
@@ -134,14 +140,18 @@ type OAuthSession = {
 function isOAuthSession(value: unknown): value is OAuthSession {
   if (!value || typeof value !== "object") return false;
   const session = value as Partial<OAuthSession>;
-  return (session.provider === "gmail" || session.provider === "microsoft")
-    && typeof session.state === "string"
-    && typeof session.codeVerifier === "string"
-    && typeof session.orgId === "string"
-    && typeof session.expiresAt === "number";
+  return (
+    (session.provider === "gmail" || session.provider === "microsoft") &&
+    typeof session.state === "string" &&
+    typeof session.codeVerifier === "string" &&
+    typeof session.orgId === "string" &&
+    typeof session.expiresAt === "number"
+  );
 }
 
-export async function decryptEmailConnectorOAuthSession(value: string): Promise<OAuthSession> {
+export async function decryptEmailConnectorOAuthSession(
+  value: string,
+): Promise<OAuthSession> {
   const decoded = JSON.parse(await decryptEmailSecret(value)) as unknown;
   if (!isOAuthSession(decoded) || decoded.expiresAt <= Date.now()) {
     throw new Error("Email connector OAuth session is invalid or expired");
@@ -167,12 +177,16 @@ function oauthCredentials(provider: Exclude<EmailConnectorKind, "smtp">) {
   }
 
   if (!env.features.microsoftOAuth) {
-    throw new Error("MICROSOFT_CLIENT_ID and MICROSOFT_CLIENT_SECRET are required");
+    throw new Error(
+      "MICROSOFT_CLIENT_ID and MICROSOFT_CLIENT_SECRET are required",
+    );
   }
   const clientId = env.MICROSOFT_CLIENT_ID;
   const clientSecret = env.MICROSOFT_CLIENT_SECRET;
   if (!clientId || !clientSecret) {
-    throw new Error("MICROSOFT_CLIENT_ID and MICROSOFT_CLIENT_SECRET are required");
+    throw new Error(
+      "MICROSOFT_CLIENT_ID and MICROSOFT_CLIENT_SECRET are required",
+    );
   }
   return { clientId, clientSecret };
 }
@@ -188,8 +202,12 @@ function withoutIdToken(fetcher: Fetcher): Fetcher {
   return async (input, init) => {
     const response = await fetcher(input, init);
     if (!response.ok) return response;
-    const body = await response.clone().json().catch(() => null) as Record<string, unknown> | null;
-    if (!body || typeof body !== "object" || body.id_token === undefined) return response;
+    const body = (await response
+      .clone()
+      .json()
+      .catch(() => null)) as Record<string, unknown> | null;
+    if (!body || typeof body !== "object" || body.id_token === undefined)
+      return response;
     delete body.id_token;
     return Response.json(body, { status: response.status });
   };
@@ -198,22 +216,22 @@ function withoutIdToken(fetcher: Fetcher): Fetcher {
 function oauthConfiguration(provider: Exclude<EmailConnectorKind, "smtp">) {
   const { clientId, clientSecret } = oauthCredentials(provider);
   const tenant = microsoftTenant();
-  const authorizationServer: oauth.AuthorizationServer = provider === "gmail"
-    ? {
-        issuer: "https://accounts.google.com",
-        authorization_endpoint: "https://accounts.google.com/o/oauth2/v2/auth",
-        token_endpoint: "https://oauth2.googleapis.com/token",
-        userinfo_endpoint: "https://openidconnect.googleapis.com/v1/userinfo",
-      }
-    : {
-        // Microsoft common/organizations tenants do not have a stable issuer
-        // suitable for discovery, so keep the provider metadata explicit.
-        issuer: `https://login.microsoftonline.com/${tenant}/v2.0`,
-        authorization_endpoint:
-          `https://login.microsoftonline.com/${encodeURIComponent(tenant)}/oauth2/v2.0/authorize`,
-        token_endpoint:
-          `https://login.microsoftonline.com/${encodeURIComponent(tenant)}/oauth2/v2.0/token`,
-      };
+  const authorizationServer: oauth.AuthorizationServer =
+    provider === "gmail"
+      ? {
+          issuer: "https://accounts.google.com",
+          authorization_endpoint:
+            "https://accounts.google.com/o/oauth2/v2/auth",
+          token_endpoint: "https://oauth2.googleapis.com/token",
+          userinfo_endpoint: "https://openidconnect.googleapis.com/v1/userinfo",
+        }
+      : {
+          // Microsoft common/organizations tenants do not have a stable issuer
+          // suitable for discovery, so keep the provider metadata explicit.
+          issuer: `https://login.microsoftonline.com/${tenant}/v2.0`,
+          authorization_endpoint: `https://login.microsoftonline.com/${encodeURIComponent(tenant)}/oauth2/v2.0/authorize`,
+          token_endpoint: `https://login.microsoftonline.com/${encodeURIComponent(tenant)}/oauth2/v2.0/token`,
+        };
   return {
     authorizationServer,
     client: { client_id: clientId } satisfies oauth.Client,
@@ -222,7 +240,10 @@ function oauthConfiguration(provider: Exclude<EmailConnectorKind, "smtp">) {
   };
 }
 
-function describeSend(connector: StoredEmailConnector, input: EmailInput): DescribedSend {
+function describeSend(
+  connector: StoredEmailConnector,
+  input: EmailInput,
+): DescribedSend {
   return {
     dryRun: true,
     connector: connector.type,
@@ -237,15 +258,21 @@ function describeSend(connector: StoredEmailConnector, input: EmailInput): Descr
 function smtpCredentialsPresent(connector: StoredEmailConnector): boolean {
   return Boolean(
     connector.smtpHost &&
-      connector.smtpPort &&
-      connector.smtpSecure !== null &&
-      connector.smtpUser &&
-      connector.smtpPasswordEncrypted,
+    connector.smtpPort &&
+    connector.smtpSecure !== null &&
+    connector.smtpUser &&
+    connector.smtpPasswordEncrypted,
   );
 }
 
-function oauthCallbackUrl(origin: string, provider: Exclude<EmailConnectorKind, "smtp">) {
-  return new URL(`/api/email-connectors/${provider}/callback`, origin).toString();
+function oauthCallbackUrl(
+  origin: string,
+  provider: Exclude<EmailConnectorKind, "smtp">,
+) {
+  return new URL(
+    `/api/email-connectors/${provider}/callback`,
+    origin,
+  ).toString();
 }
 
 export async function createEmailConnectorAuthorization(
@@ -268,16 +295,22 @@ export async function createEmailConnectorAuthorization(
     code_challenge: codeChallenge,
     code_challenge_method: "S256",
     ...(provider === "gmail"
-      ? { access_type: "offline", include_granted_scopes: "true", prompt: "consent" }
+      ? {
+          access_type: "offline",
+          include_granted_scopes: "true",
+          prompt: "consent",
+        }
       : { response_mode: "query" }),
   }).toString();
-  const cookie = await encryptEmailSecret(JSON.stringify({
-    provider,
-    state,
-    codeVerifier,
-    orgId,
-    expiresAt: Date.now() + OAUTH_COOKIE_LIFETIME_SECONDS * 1000,
-  } satisfies OAuthSession));
+  const cookie = await encryptEmailSecret(
+    JSON.stringify({
+      provider,
+      state,
+      codeVerifier,
+      orgId,
+      expiresAt: Date.now() + OAUTH_COOKIE_LIFETIME_SECONDS * 1000,
+    } satisfies OAuthSession),
+  );
   return { url: url.toString(), cookie };
 }
 
@@ -291,7 +324,9 @@ type OAuthTokens = {
 async function jsonResponse<T>(response: Response, action: string): Promise<T> {
   if (!response.ok) {
     const detail = await response.text();
-    throw new Error(`${action} failed (${response.status})${detail ? `: ${detail}` : ""}`);
+    throw new Error(
+      `${action} failed (${response.status})${detail ? `: ${detail}` : ""}`,
+    );
   }
   return response.json() as Promise<T>;
 }
@@ -303,7 +338,8 @@ export async function exchangeEmailConnectorCode(
   session: OAuthSession,
   fetcher: Fetcher = fetch,
 ): Promise<OAuthTokens> {
-  const { authorizationServer, client, clientAuthentication } = oauthConfiguration(provider);
+  const { authorizationServer, client, clientAuthentication } =
+    oauthConfiguration(provider);
   const redirectUri = oauthCallbackUrl(origin, provider);
   const callbackParameters = oauth.validateAuthResponse(
     authorizationServer,
@@ -318,7 +354,10 @@ export async function exchangeEmailConnectorCode(
     callbackParameters,
     redirectUri,
     session.codeVerifier,
-    { [oauth.customFetch]: provider === "microsoft" ? withoutIdToken(fetcher) : fetcher },
+    {
+      [oauth.customFetch]:
+        provider === "microsoft" ? withoutIdToken(fetcher) : fetcher,
+    },
   );
   const tokens = await oauth.processAuthorizationCodeResponse(
     authorizationServer,
@@ -326,7 +365,9 @@ export async function exchangeEmailConnectorCode(
     tokenResponse,
   );
   if (!tokens.refresh_token) {
-    throw new Error(`${provider} did not return both access and refresh tokens`);
+    throw new Error(
+      `${provider} did not return both access and refresh tokens`,
+    );
   }
 
   let fromEmail: string | null | undefined;
@@ -344,11 +385,16 @@ export async function exchangeEmailConnectorCode(
     );
     fromEmail = profile.email;
   } else {
-    const profile = await jsonResponse<{ mail?: string | null; userPrincipalName?: string }>(
+    const profile = await jsonResponse<{
+      mail?: string | null;
+      userPrincipalName?: string;
+    }>(
       await oauth.protectedResourceRequest(
         tokens.access_token,
         "GET",
-        new URL("https://graph.microsoft.com/v1.0/me?$select=mail,userPrincipalName"),
+        new URL(
+          "https://graph.microsoft.com/v1.0/me?$select=mail,userPrincipalName",
+        ),
         undefined,
         undefined,
         { [oauth.customFetch]: protectedResourceFetcher(fetcher) },
@@ -358,7 +404,9 @@ export async function exchangeEmailConnectorCode(
     fromEmail = profile.mail ?? profile.userPrincipalName;
   }
   if (!fromEmail || !fromEmail.includes("@")) {
-    throw new Error(`${provider} account did not return a sender email address`);
+    throw new Error(
+      `${provider} account did not return a sender email address`,
+    );
   }
 
   return {
@@ -378,15 +426,20 @@ async function refreshAccessToken(
   }
   const { authorizationServer, client, clientAuthentication, scope } =
     oauthConfiguration(connector.type);
-  const currentRefreshToken = await decryptEmailSecret(connector.refreshTokenEncrypted);
+  const currentRefreshToken = await decryptEmailSecret(
+    connector.refreshTokenEncrypted,
+  );
   const tokenResponse = await oauth.refreshTokenGrantRequest(
     authorizationServer,
     client,
     clientAuthentication,
     currentRefreshToken,
     {
-      ...(connector.type === "microsoft" ? { additionalParameters: { scope } } : {}),
-      [oauth.customFetch]: connector.type === "microsoft" ? withoutIdToken(fetcher) : fetcher,
+      ...(connector.type === "microsoft"
+        ? { additionalParameters: { scope } }
+        : {}),
+      [oauth.customFetch]:
+        connector.type === "microsoft" ? withoutIdToken(fetcher) : fetcher,
     },
   );
   const response = await oauth.processRefreshTokenResponse(
@@ -401,11 +454,15 @@ async function refreshAccessToken(
   };
 }
 
-function defaultTransportFactory(options: Parameters<TransportFactory>[0]): MailTransport {
+function defaultTransportFactory(
+  options: Parameters<TransportFactory>[0],
+): MailTransport {
   return nodemailer.createTransport(options);
 }
 
-async function smtpConfiguration(connector: StoredEmailConnector): Promise<SmtpConfiguration> {
+async function smtpConfiguration(
+  connector: StoredEmailConnector,
+): Promise<SmtpConfiguration> {
   if (
     connector.type !== "smtp" ||
     !connector.smtpHost ||
@@ -426,7 +483,10 @@ async function smtpConfiguration(connector: StoredEmailConnector): Promise<SmtpC
   };
 }
 
-function smtpTransport(config: SmtpConfiguration, factory: TransportFactory): MailTransport {
+function smtpTransport(
+  config: SmtpConfiguration,
+  factory: TransportFactory,
+): MailTransport {
   return factory({
     host: config.host,
     port: config.port,
@@ -438,7 +498,11 @@ function smtpTransport(config: SmtpConfiguration, factory: TransportFactory): Ma
 }
 
 export function validateEmailHeaders(input: EmailInput, from: string): void {
-  if (!input.to.includes("@") || /[\r\n]/u.test(input.to) || /[\r\n]/u.test(from)) {
+  if (
+    !input.to.includes("@") ||
+    /[\r\n]/u.test(input.to) ||
+    /[\r\n]/u.test(from)
+  ) {
     throw new Error("Email connector received an invalid email address");
   }
   if (/[\r\n]/u.test(input.subject)) {
@@ -455,7 +519,9 @@ export async function sendSmtpEmail(
     from: config.fromEmail,
     to: input.to,
     subject: input.subject,
-    ...(input.contentType === "html" ? { html: input.body } : { text: input.body }),
+    ...(input.contentType === "html"
+      ? { html: input.body }
+      : { text: input.body }),
   });
 }
 
@@ -477,15 +543,17 @@ export async function sendEmailWithConnector(
   if (!env.features.connectorEncryption) return describeSend(connector, input);
 
   if (connector.type === "smtp") {
-    if (!smtpCredentialsPresent(connector)) return describeSend(connector, input);
+    if (!smtpCredentialsPresent(connector))
+      return describeSend(connector, input);
     const config = await smtpConfiguration(connector);
     await sendSmtpEmail(config, input, dependencies.transportFactory);
     return null;
   }
 
-  const hasOAuthCredentials = connector.type === "gmail"
-    ? env.features.googleOAuth
-    : env.features.microsoftOAuth;
+  const hasOAuthCredentials =
+    connector.type === "gmail"
+      ? env.features.googleOAuth
+      : env.features.microsoftOAuth;
   if (!hasOAuthCredentials || !connector.refreshTokenEncrypted) {
     return describeSend(connector, input);
   }
@@ -499,8 +567,12 @@ export async function sendEmailWithConnector(
       from: connector.fromEmail,
       to: input.to,
       subject: input.subject,
-      ...(input.contentType === "html" ? { html: input.body } : { text: input.body }),
-    }).compile().build();
+      ...(input.contentType === "html"
+        ? { html: input.body }
+        : { text: input.body }),
+    })
+      .compile()
+      .build();
     const raw = message.toString("base64url");
     await jsonResponse(
       await oauth.protectedResourceRequest(
@@ -535,7 +607,9 @@ export async function sendEmailWithConnector(
   );
   if (!response.ok) {
     const detail = await response.text();
-    throw new Error(`Microsoft send failed (${response.status})${detail ? `: ${detail}` : ""}`);
+    throw new Error(
+      `Microsoft send failed (${response.status})${detail ? `: ${detail}` : ""}`,
+    );
   }
   return null;
 }
@@ -547,24 +621,29 @@ type OrganizationEmailSenderDependencies = {
     connector: StoredEmailConnector,
     input: EmailInput,
   ) => Promise<DescribedSend | null>;
-  prepareConnector?: (connector: StoredEmailConnector) => Promise<StoredEmailConnector>;
+  prepareConnector?: (
+    connector: StoredEmailConnector,
+  ) => Promise<StoredEmailConnector>;
 };
 
 async function prepareEmailConnector(
   connector: StoredEmailConnector,
   fetcher: Fetcher = fetch,
 ): Promise<StoredEmailConnector> {
-  if (connector.type === "smtp" || !env.features.connectorEncryption) return connector;
+  if (connector.type === "smtp" || !env.features.connectorEncryption)
+    return connector;
 
-  const hasOAuthCredentials = connector.type === "gmail"
-    ? env.features.googleOAuth
-    : env.features.microsoftOAuth;
-  if (!hasOAuthCredentials || !connector.refreshTokenEncrypted) return connector;
+  const hasOAuthCredentials =
+    connector.type === "gmail"
+      ? env.features.googleOAuth
+      : env.features.microsoftOAuth;
+  if (!hasOAuthCredentials || !connector.refreshTokenEncrypted)
+    return connector;
 
   if (
-    connector.accessTokenEncrypted
-    && connector.accessTokenExpiresAt
-    && connector.accessTokenExpiresAt > new Date(Date.now() + 60_000)
+    connector.accessTokenEncrypted &&
+    connector.accessTokenExpiresAt &&
+    connector.accessTokenExpiresAt > new Date(Date.now() + 60_000)
   ) {
     return connector;
   }
@@ -599,17 +678,21 @@ export async function createOrganizationEmailSender(
   orgId: string,
   dependencies: OrganizationEmailSenderDependencies = {},
 ): Promise<(input: EmailInput) => Promise<DescribedSend | null>> {
-  const findConnector = dependencies.findConnector
-    ?? ((organizationId: string) => prisma.emailConnector.findUnique({
-      where: { orgId: organizationId },
-    }));
+  const findConnector =
+    dependencies.findConnector ??
+    ((organizationId: string) =>
+      prisma.emailConnector.findUnique({
+        where: { orgId: organizationId },
+      }));
   const connector = await findConnector(orgId);
   if (!connector || !connector.verifiedAt) {
     const sender = dependencies.sendAppEmail ?? sendAppEmail;
     return (input) => sender(input);
   }
 
-  const prepared = await (dependencies.prepareConnector ?? prepareEmailConnector)(connector);
+  const prepared = await (
+    dependencies.prepareConnector ?? prepareEmailConnector
+  )(connector);
   const sender = dependencies.sendEmailWithConnector ?? sendEmailWithConnector;
   return (input) => sender(prepared, input);
 }

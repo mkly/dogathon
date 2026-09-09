@@ -11,19 +11,26 @@ import { prisma } from "@/lib/prisma";
 import { uuidSchema } from "@/lib/uuid";
 
 import { acceptInvitation } from "./actions";
-import { describeInvitationRole, invitationState, type InvitationState } from "./invitation-view";
+import {
+  describeInvitationRole,
+  invitationState,
+  type InvitationState,
+} from "./invitation-view";
 import styles from "./page.module.css";
 
 export const dynamic = "force-dynamic";
 
 type InvitationPageProps = { params: Promise<{ id: string }> };
 
-const stateCopy: Record<Exclude<InvitationState, "pending">, {
-  body: string;
-  eyebrow: string;
-  title: string;
-  tone: "brick" | "denim" | "mustard";
-}> = {
+const stateCopy: Record<
+  Exclude<InvitationState, "pending">,
+  {
+    body: string;
+    eyebrow: string;
+    title: string;
+    tone: "brick" | "denim" | "mustard";
+  }
+> = {
   accepted: {
     body: "This invitation has already been used. Sign in with the invited account to open its rescue staff room.",
     eyebrow: "Already joined",
@@ -50,7 +57,11 @@ const stateCopy: Record<Exclude<InvitationState, "pending">, {
   },
 };
 
-function ClosedInvitation({ state }: { state: Exclude<InvitationState, "pending"> }) {
+function ClosedInvitation({
+  state,
+}: {
+  state: Exclude<InvitationState, "pending">;
+}) {
   const copy = stateCopy[state];
   return (
     <FeltPanel className={styles.card} tone={copy.tone}>
@@ -65,7 +76,13 @@ export default async function InvitationPage({ params }: InvitationPageProps) {
   const { id } = await params;
   const parsedId = uuidSchema.safeParse(id);
   if (!parsedId.success) {
-    return <PageViewTransition><main className={styles.page}><ClosedInvitation state="unknown" /></main></PageViewTransition>;
+    return (
+      <PageViewTransition>
+        <main className={styles.page}>
+          <ClosedInvitation state="unknown" />
+        </main>
+      </PageViewTransition>
+    );
   }
 
   const [invitation, session] = await Promise.all([
@@ -80,29 +97,44 @@ export default async function InvitationPage({ params }: InvitationPageProps) {
   ]);
   const state = invitationState(invitation);
   if (!invitation) {
-    return <PageViewTransition><main className={styles.page}><ClosedInvitation state="unknown" /></main></PageViewTransition>;
+    return (
+      <PageViewTransition>
+        <main className={styles.page}>
+          <ClosedInvitation state="unknown" />
+        </main>
+      </PageViewTransition>
+    );
   }
   if (state !== "pending") {
-    return <PageViewTransition><main className={styles.page}><ClosedInvitation state={state} /></main></PageViewTransition>;
+    return (
+      <PageViewTransition>
+        <main className={styles.page}>
+          <ClosedInvitation state={state} />
+        </main>
+      </PageViewTransition>
+    );
   }
 
   const role = describeInvitationRole(invitation.role);
   const returnPath = `/staff/invitations/${invitation.id}`;
   const matchingAccount = session
-    ? session.user.email.trim().toLowerCase() === invitation.email.trim().toLowerCase()
+    ? session.user.email.trim().toLowerCase() ===
+      invitation.email.trim().toLowerCase()
     : false;
   const expiry = formatDateTime(invitation.expiresAt);
   const invitedAccountExists = session
     ? false
-    : Boolean(await prisma.user.findFirst({
-        where: {
-          email: {
-            equals: invitation.email,
-            mode: "insensitive",
+    : Boolean(
+        await prisma.user.findFirst({
+          where: {
+            email: {
+              equals: invitation.email,
+              mode: "insensitive",
+            },
           },
-        },
-        select: { id: true },
-      }));
+          select: { id: true },
+        }),
+      );
   const acceptThisInvitation = acceptInvitation.bind(null, invitation.id);
 
   return (
@@ -112,13 +144,17 @@ export default async function InvitationPage({ params }: InvitationPageProps) {
           <StitchBadge tone="mustard">Rescue invitation</StitchBadge>
           <h1>Join {invitation.organization.name}</h1>
           <p className={styles.lede}>
-            {invitation.inviter.name || invitation.inviter.email} invited you to help this rescue.
+            {invitation.inviter.name || invitation.inviter.email} invited you to
+            help this rescue.
           </p>
 
           <dl className={styles.details}>
             <div>
               <dt>Role</dt>
-              <dd><strong>{role.label}</strong><span>{role.description}</span></dd>
+              <dd>
+                <strong>{role.label}</strong>
+                <span>{role.description}</span>
+              </dd>
             </div>
             <div>
               <dt>Invited email</dt>
@@ -126,17 +162,23 @@ export default async function InvitationPage({ params }: InvitationPageProps) {
             </div>
             <div>
               <dt>Expires</dt>
-              <dd><time dateTime={invitation.expiresAt.toISOString()}>{expiry} UTC</time></dd>
+              <dd>
+                <time dateTime={invitation.expiresAt.toISOString()}>
+                  {expiry} UTC
+                </time>
+              </dd>
             </div>
           </dl>
 
           {!session ? (
             <div className={styles.actionArea}>
               <div>
-                <h2>{invitedAccountExists ? "Sign in" : "Create your account"}</h2>
+                <h2>
+                  {invitedAccountExists ? "Sign in" : "Create your account"}
+                </h2>
                 <p>
-                  You will land in the {invitation.organization.name} staff room as {role.article}{" "}
-                  {role.label.toLowerCase()}.
+                  You will land in the {invitation.organization.name} staff room
+                  as {role.article} {role.label.toLowerCase()}.
                 </p>
               </div>
               <AuthForm
@@ -148,15 +190,19 @@ export default async function InvitationPage({ params }: InvitationPageProps) {
             </div>
           ) : matchingAccount ? (
             <form action={acceptThisInvitation} className={styles.actionArea}>
-              <PendingFeltSubmitButton pendingLabel="Joining…" tone="mustard" type="submit">
+              <PendingFeltSubmitButton
+                pendingLabel="Joining…"
+                tone="mustard"
+                type="submit"
+              >
                 Join {invitation.organization.name}
               </PendingFeltSubmitButton>
             </form>
           ) : (
             <div className={styles.actionArea}>
               <p>
-                This invitation was sent to <strong>{invitation.email}</strong>, but you are signed
-                in as <strong>{session.user.email}</strong>.
+                This invitation was sent to <strong>{invitation.email}</strong>,
+                but you are signed in as <strong>{session.user.email}</strong>.
               </p>
               <p>Sign out, then return here with the invited account.</p>
               <SignOutButton redirectTo={returnPath} />

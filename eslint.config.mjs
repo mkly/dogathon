@@ -7,7 +7,10 @@ export default defineConfig([
   ...nextTypeScript,
   {
     rules: {
-      "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        { argsIgnorePattern: "^_" },
+      ],
     },
   },
   globalIgnores([".next/**", "out/**", "build/**", "src/generated/**"]),

@@ -57,28 +57,33 @@ export class RosterSyncJobNotFoundError extends Error {
 
 async function getRosterSyncBoss(): Promise<PgBoss> {
   if (!globalForRosterSync.rosterSyncBossStart) {
-    const boss = globalForRosterSync.rosterSyncBoss ?? new PgBoss({
-      connectionString: env.DATABASE_URL,
-      supervise: false,
-      schedule: false,
-    });
+    const boss =
+      globalForRosterSync.rosterSyncBoss ??
+      new PgBoss({
+        connectionString: env.DATABASE_URL,
+        supervise: false,
+        schedule: false,
+      });
     boss.on("error", (error) => console.error("pg-boss error", error));
     globalForRosterSync.rosterSyncBoss = boss;
-    globalForRosterSync.rosterSyncBossStart = boss.start().then(async () => {
-      await boss.createQueue(ROSTER_SYNC_QUEUE, {
-        policy: "exclusive",
-        retryLimit: ROSTER_SYNC_RETRY_LIMIT,
-        expireInSeconds: ROSTER_SYNC_EXPIRE_SECONDS,
+    globalForRosterSync.rosterSyncBossStart = boss
+      .start()
+      .then(async () => {
+        await boss.createQueue(ROSTER_SYNC_QUEUE, {
+          policy: "exclusive",
+          retryLimit: ROSTER_SYNC_RETRY_LIMIT,
+          expireInSeconds: ROSTER_SYNC_EXPIRE_SECONDS,
+        });
+        await boss.createQueue(VOLUNTEER_PHOTO_CLEANUP_QUEUE, {
+          retryLimit: ROSTER_SYNC_RETRY_LIMIT,
+          expireInSeconds: ROSTER_SYNC_EXPIRE_SECONDS,
+        });
+        return boss;
+      })
+      .catch((error) => {
+        globalForRosterSync.rosterSyncBossStart = undefined;
+        throw error;
       });
-      await boss.createQueue(VOLUNTEER_PHOTO_CLEANUP_QUEUE, {
-        retryLimit: ROSTER_SYNC_RETRY_LIMIT,
-        expireInSeconds: ROSTER_SYNC_EXPIRE_SECONDS,
-      });
-      return boss;
-    }).catch((error) => {
-      globalForRosterSync.rosterSyncBossStart = undefined;
-      throw error;
-    });
   }
   return globalForRosterSync.rosterSyncBossStart;
 }
@@ -99,7 +104,11 @@ export function createRosterSyncQueue(boss: RosterSyncBoss) {
       startAfter: input.startAfter,
     });
 
-    if (id) return { job: publicRosterSyncJob(await requireJob(boss, id)), enqueued: true };
+    if (id)
+      return {
+        job: publicRosterSyncJob(await requireJob(boss, id)),
+        enqueued: true,
+      };
 
     // A manual request should not remain behind the nightly stagger. pg-boss
     // only updates pre-active jobs here; an already-active sync is untouched.
@@ -110,22 +119,37 @@ export function createRosterSyncQueue(boss: RosterSyncBoss) {
       });
     }
 
-    const existing = (await boss.findJobs<RosterSyncJobData>(ROSTER_SYNC_QUEUE, {
-      key: input.orgId,
-    })).find((job) => job.state === "created" || job.state === "retry" || job.state === "active");
+    const existing = (
+      await boss.findJobs<RosterSyncJobData>(ROSTER_SYNC_QUEUE, {
+        key: input.orgId,
+      })
+    ).find(
+      (job) =>
+        job.state === "created" ||
+        job.state === "retry" ||
+        job.state === "active",
+    );
     if (!existing) {
-      throw new Error(`Roster sync singleton ${input.orgId} disappeared after enqueue`);
+      throw new Error(
+        `Roster sync singleton ${input.orgId} disappeared after enqueue`,
+      );
     }
     return { job: publicRosterSyncJob(existing), enqueued: false };
   }
 
-  async function enqueue(input: EnqueueRosterSyncJobInput): Promise<RosterSyncJobView> {
+  async function enqueue(
+    input: EnqueueRosterSyncJobInput,
+  ): Promise<RosterSyncJobView> {
     return (await enqueueWithResult(input)).job;
   }
 
   async function get(orgId: string, jobId: string): Promise<RosterSyncJobView> {
-    const job = await boss.getJobById<RosterSyncJobData>(ROSTER_SYNC_QUEUE, jobId);
-    if (!job || job.data.orgId !== orgId) throw new RosterSyncJobNotFoundError(jobId);
+    const job = await boss.getJobById<RosterSyncJobData>(
+      ROSTER_SYNC_QUEUE,
+      jobId,
+    );
+    if (!job || job.data.orgId !== orgId)
+      throw new RosterSyncJobNotFoundError(jobId);
     return publicRosterSyncJob(job);
   }
 
@@ -133,18 +157,36 @@ export function createRosterSyncQueue(boss: RosterSyncBoss) {
     return (await boss.fetch<RosterSyncJobData>(ROSTER_SYNC_QUEUE))[0] ?? null;
   }
 
-  async function succeed(jobId: string, summary: SyncSummary): Promise<RosterSyncJobView> {
-    await boss.complete(ROSTER_SYNC_QUEUE, jobId, { status: "succeeded", summary });
+  async function succeed(
+    jobId: string,
+    summary: SyncSummary,
+  ): Promise<RosterSyncJobView> {
+    await boss.complete(ROSTER_SYNC_QUEUE, jobId, {
+      status: "succeeded",
+      summary,
+    });
     return publicRosterSyncJob(await requireJob(boss, jobId));
   }
 
-  async function refuse(jobId: string, refusalReason: string): Promise<RosterSyncJobView> {
-    await boss.complete(ROSTER_SYNC_QUEUE, jobId, { status: "refused", refusalReason });
+  async function refuse(
+    jobId: string,
+    refusalReason: string,
+  ): Promise<RosterSyncJobView> {
+    await boss.complete(ROSTER_SYNC_QUEUE, jobId, {
+      status: "refused",
+      refusalReason,
+    });
     return publicRosterSyncJob(await requireJob(boss, jobId));
   }
 
-  async function fail(jobId: string, errorMessage: string): Promise<RosterSyncJobView> {
-    await boss.fail(ROSTER_SYNC_QUEUE, jobId, { status: "failed", errorMessage });
+  async function fail(
+    jobId: string,
+    errorMessage: string,
+  ): Promise<RosterSyncJobView> {
+    await boss.fail(ROSTER_SYNC_QUEUE, jobId, {
+      status: "failed",
+      errorMessage,
+    });
     return publicRosterSyncJob(await requireJob(boss, jobId));
   }
 
@@ -152,22 +194,28 @@ export function createRosterSyncQueue(boss: RosterSyncBoss) {
 }
 
 async function requireJob(boss: RosterSyncBoss, jobId: string) {
-  const job = await boss.getJobById<RosterSyncJobData>(ROSTER_SYNC_QUEUE, jobId);
+  const job = await boss.getJobById<RosterSyncJobData>(
+    ROSTER_SYNC_QUEUE,
+    jobId,
+  );
   if (!job) throw new RosterSyncJobNotFoundError(jobId);
   return job;
 }
 
-function publicRosterSyncJob(job: JobWithMetadata<RosterSyncJobData>): RosterSyncJobView {
+function publicRosterSyncJob(
+  job: JobWithMetadata<RosterSyncJobData>,
+): RosterSyncJobView {
   const output = (job.output ?? {}) as RosterSyncJobOutput;
-  const status = output.status === "refused"
-    ? "refused"
-    : job.state === "completed"
-      ? "succeeded"
-      : job.state === "failed" || job.state === "cancelled"
-        ? "failed"
-        : job.state === "active"
-          ? "running"
-          : "queued";
+  const status =
+    output.status === "refused"
+      ? "refused"
+      : job.state === "completed"
+        ? "succeeded"
+        : job.state === "failed" || job.state === "cancelled"
+          ? "failed"
+          : job.state === "active"
+            ? "running"
+            : "queued";
 
   return {
     id: job.id,
@@ -187,7 +235,9 @@ export async function enqueueRosterSyncJob(input: EnqueueRosterSyncJobInput) {
   return (await defaultQueue()).enqueue(input);
 }
 
-export async function enqueueRosterSyncJobWithResult(input: EnqueueRosterSyncJobInput) {
+export async function enqueueRosterSyncJobWithResult(
+  input: EnqueueRosterSyncJobInput,
+) {
   return (await defaultQueue()).enqueueWithResult(input);
 }
 
@@ -203,7 +253,10 @@ export async function superviseRosterSyncQueue() {
   await (await getRosterSyncBoss()).supervise(ROSTER_SYNC_QUEUE);
 }
 
-export async function succeedRosterSyncJob(jobId: string, summary: SyncSummary) {
+export async function succeedRosterSyncJob(
+  jobId: string,
+  summary: SyncSummary,
+) {
   return (await defaultQueue()).succeed(jobId, summary);
 }
 
@@ -216,22 +269,35 @@ export async function failRosterSyncJob(jobId: string, error: string) {
 }
 
 export async function enqueueVolunteerPhotoCleanupJob() {
-  return (await getRosterSyncBoss()).send(VOLUNTEER_PHOTO_CLEANUP_QUEUE, {}, {
-    singletonKey: "daily-cleanup",
-    singletonSeconds: 24 * 60 * 60,
-    retryLimit: ROSTER_SYNC_RETRY_LIMIT,
-    expireInSeconds: ROSTER_SYNC_EXPIRE_SECONDS,
-  });
+  return (await getRosterSyncBoss()).send(
+    VOLUNTEER_PHOTO_CLEANUP_QUEUE,
+    {},
+    {
+      singletonKey: "daily-cleanup",
+      singletonSeconds: 24 * 60 * 60,
+      retryLimit: ROSTER_SYNC_RETRY_LIMIT,
+      expireInSeconds: ROSTER_SYNC_EXPIRE_SECONDS,
+    },
+  );
 }
 
 export async function fetchVolunteerPhotoCleanupJob() {
-  return (await getRosterSyncBoss()).fetch<Record<string, never>>(VOLUNTEER_PHOTO_CLEANUP_QUEUE).then((jobs) => jobs[0] ?? null);
+  return (await getRosterSyncBoss())
+    .fetch<Record<string, never>>(VOLUNTEER_PHOTO_CLEANUP_QUEUE)
+    .then((jobs) => jobs[0] ?? null);
 }
 
 export async function completeVolunteerPhotoCleanupJob(jobId: string) {
-  await (await getRosterSyncBoss()).complete(VOLUNTEER_PHOTO_CLEANUP_QUEUE, jobId);
+  await (
+    await getRosterSyncBoss()
+  ).complete(VOLUNTEER_PHOTO_CLEANUP_QUEUE, jobId);
 }
 
-export async function failVolunteerPhotoCleanupJob(jobId: string, error: string) {
-  await (await getRosterSyncBoss()).fail(VOLUNTEER_PHOTO_CLEANUP_QUEUE, jobId, { error });
+export async function failVolunteerPhotoCleanupJob(
+  jobId: string,
+  error: string,
+) {
+  await (
+    await getRosterSyncBoss()
+  ).fail(VOLUNTEER_PHOTO_CLEANUP_QUEUE, jobId, { error });
 }

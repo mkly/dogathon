@@ -16,15 +16,18 @@ export async function createSponsorship(formData: FormData) {
     target: { kind: "resident-id" as const, value: input.residentId },
     tier: input.tier,
   };
-  const result = await startSponsorshipCheckout(checkoutInput, ({ orgSlug }) => {
-    const residentId = String(input.residentId);
-    const companionPath = `/${encodeURIComponent(orgSlug)}/companions/${encodeURIComponent(residentId)}`;
-    return {
-      cancelUrl: `${env.BETTER_AUTH_URL}${companionPath}?checkout=canceled`,
-      errorUrl: (code) => `${companionPath}?error=${code}`,
-      successUrl: `${env.BETTER_AUTH_URL}${companionPath}?sponsored=1&session_id={CHECKOUT_SESSION_ID}`,
-    };
-  });
+  const result = await startSponsorshipCheckout(
+    checkoutInput,
+    ({ orgSlug }) => {
+      const residentId = String(input.residentId);
+      const companionPath = `/${encodeURIComponent(orgSlug)}/companions/${encodeURIComponent(residentId)}`;
+      return {
+        cancelUrl: `${env.BETTER_AUTH_URL}${companionPath}?checkout=canceled`,
+        errorUrl: (code) => `${companionPath}?error=${code}`,
+        successUrl: `${env.BETTER_AUTH_URL}${companionPath}?sponsored=1&session_id={CHECKOUT_SESSION_ID}`,
+      };
+    },
+  );
 
   if (!result.ok) {
     // Without both segments the path collapses to "//companions/..." — a scheme-relative

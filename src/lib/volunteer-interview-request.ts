@@ -35,10 +35,15 @@ export const interviewRequestSchema = z.object({
 
 export type InterviewRequest = z.infer<typeof interviewRequestSchema>;
 
-export function textOnlyTranscript(messages: z.infer<typeof interviewTranscriptSchema>) {
+export function textOnlyTranscript(
+  messages: z.infer<typeof interviewTranscriptSchema>,
+) {
   return messages.map((message) => ({
     id: message.id,
     role: message.role,
-    parts: message.parts.map((part) => ({ type: "text" as const, text: part.text })),
+    parts: message.parts.map((part) => ({
+      type: "text" as const,
+      text: part.text,
+    })),
   }));
 }

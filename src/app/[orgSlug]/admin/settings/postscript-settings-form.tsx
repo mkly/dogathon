@@ -37,7 +37,11 @@ export function PostscriptSettingsForm({
   }, [state]);
 
   return (
-    <form action={formAction} aria-busy={pending} className={styles.settingsForm}>
+    <form
+      action={formAction}
+      aria-busy={pending}
+      className={styles.settingsForm}
+    >
       <input name="orgSlug" type="hidden" value={orgSlug} />
       <label htmlFor="pinnedPostscript" id="pinnedPostscriptLabel">
         Email postscript

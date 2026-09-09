@@ -45,14 +45,22 @@ export type Delivery = {
 type EmailSender = (input: EmailInput) => Promise<DescribedSend | null | void>;
 type EmailSenderFactory = (orgId: string) => Promise<EmailSender>;
 
-export function companionPageUrl(origin: string, orgSlug: string, residentId: string): string {
+export function companionPageUrl(
+  origin: string,
+  orgSlug: string,
+  residentId: string,
+): string {
   return new URL(
     `/${encodeURIComponent(orgSlug)}/companions/${encodeURIComponent(residentId)}`,
     origin,
   ).toString();
 }
 
-export function updatePageUrl(origin: string, orgSlug: string, updateId: string): string {
+export function updatePageUrl(
+  origin: string,
+  orgSlug: string,
+  updateId: string,
+): string {
   return new URL(
     `/${encodeURIComponent(orgSlug)}/updates/${encodeURIComponent(updateId)}`,
     origin,
@@ -64,7 +72,10 @@ export function updatePageUrl(origin: string, orgSlug: string, updateId: string)
  * photos are app-relative assets, so an email hero has to be absolute or the
  * mail client shows a broken image.
  */
-export function emailPhotoUrl(origin: string, photoUrl: string | null | undefined): string | null {
+export function emailPhotoUrl(
+  origin: string,
+  photoUrl: string | null | undefined,
+): string | null {
   if (!photoUrl) return null;
   try {
     return new URL(photoUrl, origin).toString();

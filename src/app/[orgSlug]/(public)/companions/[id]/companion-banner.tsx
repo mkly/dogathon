@@ -16,19 +16,31 @@ export function CompanionBanner({ name }: { name: string }) {
   return (
     <>
       {sponsored && (
-        <FeltPanel className={`${styles.confirmation} ${styles.confirmationTop}`} tone="moss">
+        <FeltPanel
+          className={`${styles.confirmation} ${styles.confirmationTop}`}
+          tone="moss"
+        >
           <StitchBadge tone="cream">You&apos;re a hero!</StitchBadge>
           <h2>Thank you for sponsoring {name}!</h2>
-          <p>Your monthly sponsorship stays active for as long as {name} needs a sponsor.</p>
+          <p>
+            Your monthly sponsorship stays active for as long as {name} needs a
+            sponsor.
+          </p>
           <FeltLink className={styles.cardLink} href="/account/sign-in">
             Create your sponsor account
           </FeltLink>
         </FeltPanel>
       )}
       {checkoutCanceled && (
-        <FeltPanel className={`${styles.confirmation} ${styles.confirmationTop}`} tone="oatmeal">
+        <FeltPanel
+          className={`${styles.confirmation} ${styles.confirmationTop}`}
+          tone="oatmeal"
+        >
           <h2>Checkout canceled</h2>
-          <p>No sponsorship was created. You can try again whenever you&apos;re ready.</p>
+          <p>
+            No sponsorship was created. You can try again whenever you&apos;re
+            ready.
+          </p>
         </FeltPanel>
       )}
     </>
@@ -45,11 +57,11 @@ export function CompanionFormError({ name }: { name: string }) {
         ? `${name} is no longer available to sponsor.`
         : error === "invalid-tier"
           ? "Please choose an available sponsorship tier."
-        : error === "billing"
-          ? "Online sponsorship is not ready for this rescue yet. Please try again later."
-          : error === "rate-limited"
-            ? "Please wait a little before trying to sponsor again."
-          : "Please complete the required fields."}
+          : error === "billing"
+            ? "Online sponsorship is not ready for this rescue yet. Please try again later."
+            : error === "rate-limited"
+              ? "Please wait a little before trying to sponsor again."
+              : "Please complete the required fields."}
     </p>
   );
 }

@@ -13,13 +13,34 @@
   --felt-ground: #ede4d4;
 }
 
-.felt-oatmeal { --felt-color: var(--felt-oatmeal); --felt-contrast: var(--felt-ink); }
-.felt-mustard { --felt-color: var(--felt-mustard); --felt-contrast: var(--felt-ink); }
-.felt-brick { --felt-color: var(--felt-brick); --felt-contrast: var(--felt-cream); }
-.felt-moss { --felt-color: var(--felt-moss); --felt-contrast: var(--felt-cream); }
-.felt-denim { --felt-color: var(--felt-denim); --felt-contrast: var(--felt-cream); }
-.felt-denim-lt { --felt-color: var(--felt-denim-lt); --felt-contrast: var(--felt-cream); }
-.felt-cream { --felt-color: var(--felt-cream); --felt-contrast: var(--felt-ink); }
+.felt-oatmeal {
+  --felt-color: var(--felt-oatmeal);
+  --felt-contrast: var(--felt-ink);
+}
+.felt-mustard {
+  --felt-color: var(--felt-mustard);
+  --felt-contrast: var(--felt-ink);
+}
+.felt-brick {
+  --felt-color: var(--felt-brick);
+  --felt-contrast: var(--felt-cream);
+}
+.felt-moss {
+  --felt-color: var(--felt-moss);
+  --felt-contrast: var(--felt-cream);
+}
+.felt-denim {
+  --felt-color: var(--felt-denim);
+  --felt-contrast: var(--felt-cream);
+}
+.felt-denim-lt {
+  --felt-color: var(--felt-denim-lt);
+  --felt-contrast: var(--felt-cream);
+}
+.felt-cream {
+  --felt-color: var(--felt-cream);
+  --felt-contrast: var(--felt-ink);
+}
 
 :focus-visible {
   outline: 3px solid var(--felt-mustard);

@@ -52,7 +52,9 @@ export async function getSponsorContext(
   const session = await dependencies.getSession(requestHeaders);
   if (!session) return null;
 
-  const linkedSponsor = await dependencies.store.findLinkedSponsor(session.user.id);
+  const linkedSponsor = await dependencies.store.findLinkedSponsor(
+    session.user.id,
+  );
   if (linkedSponsor) return linkedSponsor;
   if (!session.user.emailVerified) return null;
 

@@ -1,4 +1,5 @@
-const TRACKING_PARAMETER = /^(?:utm_|_ga(?:_|$)|gclid$|dclid$|fbclid$|msclkid$|mc_[ce]id$)/iu;
+const TRACKING_PARAMETER =
+  /^(?:utm_|_ga(?:_|$)|gclid$|dclid$|fbclid$|msclkid$|mc_[ce]id$)/iu;
 
 /**
  * Produces a stable, network-free identity for a public companion page.

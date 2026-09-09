@@ -28,7 +28,9 @@ export const metadata: Metadata = {
   description: "Private volunteer update history for a companion.",
 };
 
-type ResidentPageProps = { params: Promise<{ orgSlug: string; residentId: string }> };
+type ResidentPageProps = {
+  params: Promise<{ orgSlug: string; residentId: string }>;
+};
 
 function transcriptMessages(transcript: unknown) {
   const parsed = interviewTranscriptSchema.safeParse(transcript);
@@ -44,11 +46,19 @@ function transcriptMessages(transcript: unknown) {
 export default async function ResidentPage({ params }: ResidentPageProps) {
   const { orgSlug, residentId } = await params;
   if (!uuidSchema.safeParse(residentId).success) notFound();
-  const access = await getOrganizationAccessBySlug(await headers(), orgSlug, { roster: ["manage"] });
+  const access = await getOrganizationAccessBySlug(await headers(), orgSlug, {
+    roster: ["manage"],
+  });
   if (!access) notFound();
   if (!access.context) {
-    const next = encodeURIComponent(`/${orgSlug}/admin/companions/${residentId}`);
-    redirect(access.authenticated ? "/staff/organizations" : `/staff/sign-in?next=${next}`);
+    const next = encodeURIComponent(
+      `/${orgSlug}/admin/companions/${residentId}`,
+    );
+    redirect(
+      access.authenticated
+        ? "/staff/organizations"
+        : `/staff/sign-in?next=${next}`,
+    );
   }
 
   const resident = await prisma.resident.findFirst({
@@ -69,13 +79,21 @@ export default async function ResidentPage({ params }: ResidentPageProps) {
       sponsorUpdates: {
         where: { status: { in: ["draft", "approved", "sent"] } },
         orderBy: { updatedAt: "desc" },
-        select: { id: true, sentAt: true, status: true, subject: true, updatedAt: true },
+        select: {
+          id: true,
+          sentAt: true,
+          status: true,
+          subject: true,
+          updatedAt: true,
+        },
       },
     },
   });
   if (!resident) notFound();
 
-  const previews = resident.sponsorUpdates.filter((update) => update.status !== "sent");
+  const previews = resident.sponsorUpdates.filter(
+    (update) => update.status !== "sent",
+  );
   const sentUpdates = resident.sponsorUpdates
     .filter((update) => update.status === "sent" && update.sentAt)
     .sort((left, right) => right.sentAt!.getTime() - left.sentAt!.getTime());
@@ -84,7 +102,14 @@ export default async function ResidentPage({ params }: ResidentPageProps) {
     <PageViewTransition>
       <AdminPage variant="directory">
         <AdminHeader
-          actions={<AdminLink href={`/${orgSlug}/admin`} transitionTypes={["nav-back"]}>Back to staff room</AdminLink>}
+          actions={
+            <AdminLink
+              href={`/${orgSlug}/admin`}
+              transitionTypes={["nav-back"]}
+            >
+              Back to staff room
+            </AdminLink>
+          }
           eyebrow="Companion record"
           lede="See the volunteer chats waiting to be composed and the updates already shared with sponsors."
           title={resident.name}
@@ -95,7 +120,8 @@ export default async function ResidentPage({ params }: ResidentPageProps) {
           <div className={styles.title}>
             <h2 id="waiting-heading">Waiting to be composed</h2>
             <AdminBadge tone="mustard">
-              {resident.checkIns.length} {pluralize("chat", resident.checkIns.length)}
+              {resident.checkIns.length}{" "}
+              {pluralize("chat", resident.checkIns.length)}
             </AdminBadge>
           </div>
           {resident.checkIns.length ? (
@@ -103,13 +129,22 @@ export default async function ResidentPage({ params }: ResidentPageProps) {
               {resident.checkIns.map((checkIn) => {
                 const messages = transcriptMessages(checkIn.transcript);
                 return (
-                  <AdminSurface className={styles.chat} key={checkIn.id} tone="oatmeal">
+                  <AdminSurface
+                    className={styles.chat}
+                    key={checkIn.id}
+                    tone="oatmeal"
+                  >
                     <div className={styles.chatMeta}>
-                      <p><strong>{checkIn.user.name}</strong></p>
                       <p>
-                        <time dateTime={checkIn.updatedAt.toISOString()}>{formatDateTime(checkIn.updatedAt)} UTC</time>
+                        <strong>{checkIn.user.name}</strong>
+                      </p>
+                      <p>
+                        <time dateTime={checkIn.updatedAt.toISOString()}>
+                          {formatDateTime(checkIn.updatedAt)} UTC
+                        </time>
                         <span aria-hidden="true"> · </span>
-                        {checkIn._count.photos} {pluralize("photo", checkIn._count.photos)}
+                        {checkIn._count.photos}{" "}
+                        {pluralize("photo", checkIn._count.photos)}
                       </p>
                     </div>
                     <details className={styles.transcript}>
@@ -118,19 +153,27 @@ export default async function ResidentPage({ params }: ResidentPageProps) {
                         <ol>
                           {messages.map((message) => (
                             <li key={message.id}>
-                              <strong>{message.role === "user" ? checkIn.user.name : "Interviewer"}</strong>
+                              <strong>
+                                {message.role === "user"
+                                  ? checkIn.user.name
+                                  : "Interviewer"}
+                              </strong>
                               <p>{message.text}</p>
                             </li>
                           ))}
                         </ol>
-                      ) : <p>Transcript unavailable.</p>}
+                      ) : (
+                        <p>Transcript unavailable.</p>
+                      )}
                     </details>
                   </AdminSurface>
                 );
               })}
             </div>
           ) : (
-            <AdminSurface className={styles.empty} tone="oatmeal">No volunteer chats are waiting.</AdminSurface>
+            <AdminSurface className={styles.empty} tone="oatmeal">
+              No volunteer chats are waiting.
+            </AdminSurface>
           )}
         </section>
 
@@ -138,7 +181,8 @@ export default async function ResidentPage({ params }: ResidentPageProps) {
           <div className={styles.title}>
             <h2 id="past-heading">Past updates</h2>
             <AdminBadge tone="mustard">
-              {sentUpdates.length} {pluralize("update", sentUpdates.length)} sent
+              {sentUpdates.length} {pluralize("update", sentUpdates.length)}{" "}
+              sent
             </AdminBadge>
           </div>
 
@@ -152,7 +196,9 @@ export default async function ResidentPage({ params }: ResidentPageProps) {
                       <strong>{update.subject}</strong>
                       <span>Edited {formatDateTime(update.updatedAt)} UTC</span>
                     </div>
-                    <AdminLink href={`/${orgSlug}/updates/${update.id}`}>Preview</AdminLink>
+                    <AdminLink href={`/${orgSlug}/updates/${update.id}`}>
+                      Preview
+                    </AdminLink>
                   </li>
                 ))}
               </ul>
@@ -162,21 +208,40 @@ export default async function ResidentPage({ params }: ResidentPageProps) {
           {sentUpdates.length ? (
             <AdminSurface tone="oatmeal">
               <AdminTable>
-                <thead><tr><th scope="col">Update</th><th scope="col">Sent</th><th scope="col">Status</th><th scope="col">Page</th></tr></thead>
+                <thead>
+                  <tr>
+                    <th scope="col">Update</th>
+                    <th scope="col">Sent</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Page</th>
+                  </tr>
+                </thead>
                 <tbody>
                   {sentUpdates.map((update) => (
                     <tr key={update.id}>
                       <td>{update.subject}</td>
-                      <td><time dateTime={update.sentAt!.toISOString()}>{formatDateTime(update.sentAt!)} UTC</time></td>
-                      <td><AdminStatus>Sent</AdminStatus></td>
-                      <td><AdminLink href={`/${orgSlug}/updates/${update.id}`}>Open update</AdminLink></td>
+                      <td>
+                        <time dateTime={update.sentAt!.toISOString()}>
+                          {formatDateTime(update.sentAt!)} UTC
+                        </time>
+                      </td>
+                      <td>
+                        <AdminStatus>Sent</AdminStatus>
+                      </td>
+                      <td>
+                        <AdminLink href={`/${orgSlug}/updates/${update.id}`}>
+                          Open update
+                        </AdminLink>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </AdminTable>
             </AdminSurface>
           ) : (
-            <AdminSurface className={styles.empty} tone="oatmeal">No updates have been sent yet.</AdminSurface>
+            <AdminSurface className={styles.empty} tone="oatmeal">
+              No updates have been sent yet.
+            </AdminSurface>
           )}
         </section>
       </AdminPage>

@@ -17,7 +17,8 @@ export function ShareUpdateButton({ title }: ShareUpdateButtonProps) {
         await navigator.share({ title, url });
         return;
       } catch (error) {
-        if (error instanceof DOMException && error.name === "AbortError") return;
+        if (error instanceof DOMException && error.name === "AbortError")
+          return;
       }
     }
 
@@ -25,7 +26,10 @@ export function ShareUpdateButton({ title }: ShareUpdateButtonProps) {
       await navigator.clipboard.writeText(url);
       pushToast("success", "Update link copied.");
     } catch {
-      pushToast("error", "The link could not be copied. Copy it from your address bar instead.");
+      pushToast(
+        "error",
+        "The link could not be copied. Copy it from your address bar instead.",
+      );
     }
   }
 

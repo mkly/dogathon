@@ -26,7 +26,8 @@ export function reasoning(effort: ReasoningEffort) {
 
 export function createAiModel(options: AiModelOptions = {}) {
   const apiKey = options.apiKey ?? env.OPENAI_API_KEY;
-  if (!apiKey) throw new Error("OPENAI_API_KEY is not set; the model cannot be reached");
+  if (!apiKey)
+    throw new Error("OPENAI_API_KEY is not set; the model cannot be reached");
 
   const baseURL = options.baseUrl ?? env.OPENAI_BASE_URL;
   const model = options.model ?? env.OPENAI_MODEL;

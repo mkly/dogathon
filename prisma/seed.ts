@@ -122,9 +122,17 @@ async function main() {
       allowedOrigins: ["https://example-rescue.org"],
     },
   });
-  await prisma.sponsorshipTier.deleteMany({ where: { orgId: organization.id } });
+  await prisma.sponsorshipTier.deleteMany({
+    where: { orgId: organization.id },
+  });
   await prisma.sponsorshipTier.create({
-    data: { orgId: organization.id, monthlyCents: 2500, description: "", position: 0, isDefault: true },
+    data: {
+      orgId: organization.id,
+      monthlyCents: 2500,
+      description: "",
+      position: 0,
+      isDefault: true,
+    },
   });
 
   const secondOrganization = await prisma.organization.upsert({
@@ -220,12 +228,22 @@ async function main() {
       allowedOrigins: ["https://happy-tails.example"],
     },
   });
-  await prisma.sponsorshipTier.deleteMany({ where: { orgId: secondOrganization.id } });
+  await prisma.sponsorshipTier.deleteMany({
+    where: { orgId: secondOrganization.id },
+  });
   await prisma.sponsorshipTier.create({
-    data: { orgId: secondOrganization.id, monthlyCents: 3000, description: "", position: 0, isDefault: true },
+    data: {
+      orgId: secondOrganization.id,
+      monthlyCents: 3000,
+      description: "",
+      position: 0,
+      isDefault: true,
+    },
   });
 
-  console.log("Seeded two organizations with distinct rosters, sponsorships, and settings.");
+  console.log(
+    "Seeded two organizations with distinct rosters, sponsorships, and settings.",
+  );
 }
 
 main()

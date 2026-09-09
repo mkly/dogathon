@@ -38,11 +38,15 @@ test("organizationSlugWhileTyping still collapses and trims leading noise", () =
 });
 
 test("isReservedOrganizationSlug rejects every application route and public directory", () => {
-  const applicationSlugs = readdirSync(path.join(process.cwd(), "src/app"), { withFileTypes: true })
+  const applicationSlugs = readdirSync(path.join(process.cwd(), "src/app"), {
+    withFileTypes: true,
+  })
     .filter((entry) => entry.isDirectory())
     .map((entry) => entry.name)
     .filter((name) => !name.startsWith("(") && name !== "[orgSlug]");
-  const publicSlugs = readdirSync(path.join(process.cwd(), "public"), { withFileTypes: true })
+  const publicSlugs = readdirSync(path.join(process.cwd(), "public"), {
+    withFileTypes: true,
+  })
     .filter((entry) => entry.isDirectory())
     .map((entry) => entry.name);
 

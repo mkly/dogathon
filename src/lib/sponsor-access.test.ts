@@ -20,11 +20,13 @@ function sponsor(overrides: Partial<Sponsor> = {}): Sponsor {
   };
 }
 
-function fixture(options: {
-  linked?: Sponsor | null;
-  claimable?: Sponsor | null;
-  emailVerified?: boolean;
-} = {}) {
+function fixture(
+  options: {
+    linked?: Sponsor | null;
+    claimable?: Sponsor | null;
+    emailVerified?: boolean;
+  } = {},
+) {
   const claims: Array<{ email: string; userId: string }> = [];
   const store: SponsorAccessStore = {
     async findLinkedSponsor() {
@@ -66,7 +68,9 @@ test("claims a matching Sponsor for a verified session email", async () => {
   const { claims, dependencies } = fixture({ claimable: claimed });
 
   assert.equal(await getSponsorContext(new Headers(), dependencies), claimed);
-  assert.deepEqual(claims, [{ email: "sponsor@example.com", userId: "user_fixture" }]);
+  assert.deepEqual(claims, [
+    { email: "sponsor@example.com", userId: "user_fixture" },
+  ]);
 });
 
 test("does not claim a Sponsor for an unverified session email", async () => {

@@ -31,15 +31,21 @@ export function formatDateTime(date: Date | string) {
 }
 
 export function formatMonthlyAmount(monthlyCents: number) {
-  const formatter = monthlyCents % 100 === 0 ? wholeUsdFormatter : centsUsdFormatter;
+  const formatter =
+    monthlyCents % 100 === 0 ? wholeUsdFormatter : centsUsdFormatter;
   return formatter.format(monthlyCents / 100);
 }
 
-export function sponsorshipStatusLabel(status: "active" | "awaiting" | "ended") {
+export function sponsorshipStatusLabel(
+  status: "active" | "awaiting" | "ended",
+) {
   switch (status) {
-    case "active": return "Active";
-    case "awaiting": return "Choosing next companion";
-    case "ended": return "Ended";
+    case "active":
+      return "Active";
+    case "awaiting":
+      return "Choosing next companion";
+    case "ended":
+      return "Ended";
   }
 }
 
@@ -47,9 +53,13 @@ export function sponsorshipEndedReasonLabel(
   reason: "adopted" | "unavailable" | "canceled" | null,
 ) {
   switch (reason) {
-    case "adopted": return "Adopted";
-    case "unavailable": return "No longer available";
-    case "canceled": return "Canceled";
-    default: return "—";
+    case "adopted":
+      return "Adopted";
+    case "unavailable":
+      return "No longer available";
+    case "canceled":
+      return "Canceled";
+    default:
+      return "—";
   }
 }

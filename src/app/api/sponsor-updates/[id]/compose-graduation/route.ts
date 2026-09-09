@@ -10,10 +10,15 @@ export async function POST(
 ) {
   const { id } = await params;
   if (!uuidSchema.safeParse(id).success) {
-    return Response.json({ error: "Graduation draft not found" }, { status: 404 });
+    return Response.json(
+      { error: "Graduation draft not found" },
+      { status: 404 },
+    );
   }
 
-  const access = await requireApiOrganization(request.headers, { sponsorUpdate: ["manage"] });
+  const access = await requireApiOrganization(request.headers, {
+    sponsorUpdate: ["manage"],
+  });
   if (!access.ok) return access.response;
   let result: Awaited<ReturnType<typeof composeGraduationDraft>>;
   try {
@@ -31,7 +36,10 @@ export async function POST(
   }
 
   if (result === "not-found") {
-    return Response.json({ error: "Graduation draft not found" }, { status: 404 });
+    return Response.json(
+      { error: "Graduation draft not found" },
+      { status: 404 },
+    );
   }
   if (result === "not-adopted") {
     return Response.json(
@@ -40,10 +48,16 @@ export async function POST(
     );
   }
   if (result === "no-pending-chats") {
-    return Response.json({ error: "There are no pending chats to weave in." }, { status: 409 });
+    return Response.json(
+      { error: "There are no pending chats to weave in." },
+      { status: 409 },
+    );
   }
   if (result === "conflict") {
-    return Response.json({ error: "Those chats were already used in another update." }, { status: 409 });
+    return Response.json(
+      { error: "Those chats were already used in another update." },
+      { status: 409 },
+    );
   }
   return Response.json({ id });
 }

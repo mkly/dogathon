@@ -7,7 +7,10 @@ import { cache } from "react";
 import ReactMarkdown from "react-markdown";
 
 import { formatDateTime } from "@/lib/format";
-import { escapeHtmlInMarkdown, neutralizeUnsafeMarkdownDestinations } from "@/lib/markdown-safety";
+import {
+  escapeHtmlInMarkdown,
+  neutralizeUnsafeMarkdownDestinations,
+} from "@/lib/markdown-safety";
 import { getOrganizationAccessBySlug } from "@/lib/organization-access";
 import { prisma } from "@/lib/prisma";
 import { isPublicResidentSponsorable } from "@/lib/public-roster-cache";
@@ -23,49 +26,62 @@ type UpdatePageProps = {
   params: Promise<{ id: string; orgSlug: string }>;
 };
 
-const getUpdate = cache((orgSlug: string, id: string, publiclyVisibleOnly = false) => (
-  prisma.sponsorUpdate.findFirst({
-    where: {
-      id,
-      organization: { slug: orgSlug },
-      ...(publiclyVisibleOnly ? { status: "sent" as const } : {}),
-    },
-    select: {
-      bodyText: true,
-      heroPhotoUrl: true,
-      sentAt: true,
-      status: true,
-      subject: true,
-      teaser: true,
-      type: true,
-      updatedAt: true,
-      organization: { select: { name: true } },
-      resident: {
-        select: {
-          _count: { select: { sponsorships: { where: { status: "active" } } } },
-          available: true,
-          id: true,
-          name: true,
-          photoUrls: true,
-        },
+const getUpdate = cache(
+  (orgSlug: string, id: string, publiclyVisibleOnly = false) =>
+    prisma.sponsorUpdate.findFirst({
+      where: {
+        id,
+        organization: { slug: orgSlug },
+        ...(publiclyVisibleOnly ? { status: "sent" as const } : {}),
       },
-      checkIns: {
-        select: {
-          photos: {
-            orderBy: { createdAt: "asc" },
-            select: { caption: true, createdAt: true, url: true, webUrl: true },
+      select: {
+        bodyText: true,
+        heroPhotoUrl: true,
+        sentAt: true,
+        status: true,
+        subject: true,
+        teaser: true,
+        type: true,
+        updatedAt: true,
+        organization: { select: { name: true } },
+        resident: {
+          select: {
+            _count: {
+              select: { sponsorships: { where: { status: "active" } } },
+            },
+            available: true,
+            id: true,
+            name: true,
+            photoUrls: true,
+          },
+        },
+        checkIns: {
+          select: {
+            photos: {
+              orderBy: { createdAt: "asc" },
+              select: {
+                caption: true,
+                createdAt: true,
+                url: true,
+                webUrl: true,
+              },
+            },
           },
         },
       },
-    },
-  })
-));
+    }),
+);
 
-function updatePhotos(update: NonNullable<Awaited<ReturnType<typeof getUpdate>>>): UpdatePhoto[] {
+function updatePhotos(
+  update: NonNullable<Awaited<ReturnType<typeof getUpdate>>>,
+): UpdatePhoto[] {
   return update.checkIns
     .flatMap((checkIn) => checkIn.photos)
     .sort((left, right) => left.createdAt.getTime() - right.createdAt.getTime())
-    .map((photo) => ({ caption: photo.caption, src: photo.webUrl ?? photo.url }));
+    .map((photo) => ({
+      caption: photo.caption,
+      src: photo.webUrl ?? photo.url,
+    }));
 }
 
 async function getGraduationCompanions(orgSlug: string, residentId: string) {
@@ -87,21 +103,25 @@ async function getGraduationCompanions(orgSlug: string, residentId: string) {
   });
 
   return residents
-    .sort((left, right) => (
-      left._count.sponsorships - right._count.sponsorships
-      || left.name.localeCompare(right.name)
-    ))
+    .sort(
+      (left, right) =>
+        left._count.sponsorships - right._count.sponsorships ||
+        left.name.localeCompare(right.name),
+    )
     .slice(0, 4);
 }
 
-export async function generateMetadata({ params }: UpdatePageProps): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: UpdatePageProps): Promise<Metadata> {
   const { id, orgSlug } = await params;
   if (!uuidSchema.safeParse(id).success) return { title: "Sponsor update" };
   const update = await getUpdate(orgSlug, id, true);
   if (!update) return { title: "Sponsor update" };
 
   const photos = updatePhotos(update);
-  const heroUrl = update.heroPhotoUrl ?? photos[0]?.src ?? update.resident.photoUrls[0];
+  const heroUrl =
+    update.heroPhotoUrl ?? photos[0]?.src ?? update.resident.photoUrls[0];
   const title = `${update.subject} | ${update.organization.name}`;
 
   return {
@@ -111,7 +131,9 @@ export async function generateMetadata({ params }: UpdatePageProps): Promise<Met
       type: "article",
       title: update.subject,
       description: update.teaser,
-      ...(heroUrl ? { images: [{ alt: update.resident.name, url: heroUrl }] } : {}),
+      ...(heroUrl
+        ? { images: [{ alt: update.resident.name, url: heroUrl }] }
+        : {}),
     },
     twitter: {
       card: heroUrl ? "summary_large_image" : "summary",
@@ -140,18 +162,24 @@ export default async function UpdatePage({ params }: UpdatePageProps) {
   }
 
   const photos = updatePhotos(update);
-  const heroUrl = update.heroPhotoUrl ?? photos[0]?.src ?? update.resident.photoUrls[0];
+  const heroUrl =
+    update.heroPhotoUrl ?? photos[0]?.src ?? update.resident.photoUrls[0];
   const heroCaption = photos.find((photo) => photo.src === heroUrl)?.caption;
-  const safeBody = neutralizeUnsafeMarkdownDestinations(escapeHtmlInMarkdown(update.bodyText));
+  const safeBody = neutralizeUnsafeMarkdownDestinations(
+    escapeHtmlInMarkdown(update.bodyText),
+  );
   const sponsorable = isPublicResidentSponsorable(update.resident);
-  const graduationCompanions = update.type === "graduation"
-    ? await getGraduationCompanions(orgSlug, update.resident.id)
-    : [];
+  const graduationCompanions =
+    update.type === "graduation"
+      ? await getGraduationCompanions(orgSlug, update.resident.id)
+      : [];
 
   return (
     <main className={styles.articleShell}>
       <article>
-        {preview ? <p className={styles.previewBanner}>Draft preview, not sent yet</p> : null}
+        {preview ? (
+          <p className={styles.previewBanner}>Draft preview, not sent yet</p>
+        ) : null}
         <header className={styles.articleHeader}>
           <p className={styles.eyebrow}>
             {update.type === "graduation"
@@ -161,7 +189,9 @@ export default async function UpdatePage({ params }: UpdatePageProps) {
           <h1>{update.subject}</h1>
           <div className={styles.headerDetails}>
             <p>
-              <time dateTime={(update.sentAt ?? update.updatedAt).toISOString()}>
+              <time
+                dateTime={(update.sentAt ?? update.updatedAt).toISOString()}
+              >
                 {formatDateTime(update.sentAt ?? update.updatedAt)}
               </time>
               <span aria-hidden="true"> · </span>
@@ -191,23 +221,40 @@ export default async function UpdatePage({ params }: UpdatePageProps) {
         </div>
 
         {photos.length ? (
-          <section aria-labelledby="photo-heading" className={styles.photoSection}>
+          <section
+            aria-labelledby="photo-heading"
+            className={styles.photoSection}
+          >
             <p className={styles.sectionLabel}>A few moments from the update</p>
             <h2 id="photo-heading">{update.resident.name}, lately</h2>
-            <PhotoSlideshow companionName={update.resident.name} photos={photos} />
+            <PhotoSlideshow
+              companionName={update.resident.name}
+              photos={photos}
+            />
           </section>
         ) : null}
 
-        <footer className={`${styles.articleFooter} ${graduationCompanions.length ? styles.graduationFooter : ""}`}>
+        <footer
+          className={`${styles.articleFooter} ${graduationCompanions.length ? styles.graduationFooter : ""}`}
+        >
           {graduationCompanions.length ? (
-            <section aria-labelledby="graduation-companions-heading" className={styles.graduationCompanions}>
-              <p className={styles.footerHeading} id="graduation-companions-heading">
+            <section
+              aria-labelledby="graduation-companions-heading"
+              className={styles.graduationCompanions}
+            >
+              <p
+                className={styles.footerHeading}
+                id="graduation-companions-heading"
+              >
                 Companions who could use a sponsor
               </p>
               <ul className={styles.graduationCompanionGrid}>
                 {graduationCompanions.map((resident) => (
                   <li key={resident.id}>
-                    <Link className={styles.graduationCompanion} href={`/${orgSlug}/companions/${resident.id}`}>
+                    <Link
+                      className={styles.graduationCompanion}
+                      href={`/${orgSlug}/companions/${resident.id}`}
+                    >
                       {resident.photoUrls[0] ? (
                         <Image
                           alt={resident.name}
@@ -218,13 +265,20 @@ export default async function UpdatePage({ params }: UpdatePageProps) {
                           width={480}
                         />
                       ) : (
-                        <span aria-hidden="true" className={styles.graduationCompanionPlaceholder}>
+                        <span
+                          aria-hidden="true"
+                          className={styles.graduationCompanionPlaceholder}
+                        >
                           🐾
                         </span>
                       )}
                       <span className={styles.graduationCompanionCopy}>
                         <strong>{resident.name}</strong>
-                        <span>{[resident.breed, resident.ageText].filter(Boolean).join(" · ")}</span>
+                        <span>
+                          {[resident.breed, resident.ageText]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </span>
                       </span>
                     </Link>
                   </li>
@@ -233,7 +287,9 @@ export default async function UpdatePage({ params }: UpdatePageProps) {
             </section>
           ) : (
             <div>
-              <p className={styles.footerHeading}>Keep following the good news</p>
+              <p className={styles.footerHeading}>
+                Keep following the good news
+              </p>
               <p>
                 Meet {update.resident.name} again or see who else is waiting at{" "}
                 {update.organization.name}.

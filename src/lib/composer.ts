@@ -67,29 +67,39 @@ const composedSponsorUpdateSchema = z.object({
   subject: z.string().max(60),
   teaser: z.string().max(240),
   bodyText: z.string(),
-  captions: z.array(z.object({
-    photoId: z.string(),
-    caption: z.string().max(90),
-  })),
+  captions: z.array(
+    z.object({
+      photoId: z.string(),
+      caption: z.string().max(90),
+    }),
+  ),
 });
 
 type ModelDraft = z.infer<typeof composedSponsorUpdateSchema>;
 
 function newestChats(chats: SponsorUpdateChat[]) {
   if (chats.length > MAX_CHATS) {
-    console.warn(`Composer received ${chats.length} chats; using the newest ${MAX_CHATS}.`);
+    console.warn(
+      `Composer received ${chats.length} chats; using the newest ${MAX_CHATS}.`,
+    );
   }
   return chats
-    .toSorted((left, right) => left.completedAt.getTime() - right.completedAt.getTime())
+    .toSorted(
+      (left, right) => left.completedAt.getTime() - right.completedAt.getTime(),
+    )
     .slice(-MAX_CHATS);
 }
 
 function newestPhotos(chats: SponsorUpdateChat[]) {
   const photos = chats
     .flatMap((chat) => chat.photos)
-    .toSorted((left, right) => right.takenAt.getTime() - left.takenAt.getTime());
+    .toSorted(
+      (left, right) => right.takenAt.getTime() - left.takenAt.getTime(),
+    );
   if (photos.length > MAX_PHOTOS) {
-    console.warn(`Composer received ${photos.length} photos; using the newest ${MAX_PHOTOS}.`);
+    console.warn(
+      `Composer received ${photos.length} photos; using the newest ${MAX_PHOTOS}.`,
+    );
   }
   return photos.slice(0, MAX_PHOTOS);
 }
@@ -103,14 +113,23 @@ function canSendPhotoUrlDirectly(url: string) {
   return env.features.s3 && /^https?:\/\//u.test(url);
 }
 
-async function imagePart(photo: SponsorUpdatePhoto, companionPageUrl: string): Promise<ComposerMessagePart> {
+async function imagePart(
+  photo: SponsorUpdatePhoto,
+  companionPageUrl: string,
+): Promise<ComposerMessagePart> {
   if (canSendPhotoUrlDirectly(photo.url)) {
-    return { type: "image", image: new URL(photo.url), mediaType: "image/jpeg" };
+    return {
+      type: "image",
+      image: new URL(photo.url),
+      mediaType: "image/jpeg",
+    };
   }
 
   const response = await fetch(new URL(photo.url, companionPageUrl));
   if (!response.ok) {
-    throw new Error(`Could not load composer photo ${photo.id}: HTTP ${response.status}`);
+    throw new Error(
+      `Could not load composer photo ${photo.id}: HTTP ${response.status}`,
+    );
   }
   return {
     type: "image",
@@ -133,7 +152,9 @@ function companionProfile(input: ComposeSponsorUpdateInput) {
 }
 
 /** Build the single multimodal user message consumed by the update composer. */
-export async function buildComposerMessages(input: ComposeSponsorUpdateInput): Promise<ComposerUserMessage> {
+export async function buildComposerMessages(
+  input: ComposeSponsorUpdateInput,
+): Promise<ComposerUserMessage> {
   const { chats, photos } = selectedInput(input);
   const content: ComposerMessagePart[] = [];
 
@@ -148,7 +169,10 @@ export async function buildComposerMessages(input: ComposeSponsorUpdateInput): P
   for (const chat of chats) {
     content.push({
       type: "text",
-      text: [`Chat from the visit on ${formatDate(chat.completedAt)}:`, ...chat.transcript].join("\n"),
+      text: [
+        `Chat from the visit on ${formatDate(chat.completedAt)}:`,
+        ...chat.transcript,
+      ].join("\n"),
     });
   }
 
@@ -174,25 +198,35 @@ function appendPostscript(bodyText: string, postscript: string): string {
   return trimmedBody ? `${trimmedBody}\n\n${postscript}` : postscript;
 }
 
-function deterministicCompose(input: ComposeSponsorUpdateInput): ComposedSponsorUpdate {
+function deterministicCompose(
+  input: ComposeSponsorUpdateInput,
+): ComposedSponsorUpdate {
   const name = input.companion.name.trim();
   const { chats, photos } = selectedInput(input);
   const visitCount = chats.length;
-  const chatBody = chats.map((chat) => [
-    `On ${formatDate(chat.completedAt)}:`,
-    chat.transcript.join("\n"),
-  ].join("\n\n")).join("\n\n");
-  const body = input.type === "graduation"
-    ? [input.previousUpdate?.bodyText.trim(), chatBody].filter(Boolean).join("\n\n")
-    : chatBody;
+  const chatBody = chats
+    .map((chat) =>
+      [`On ${formatDate(chat.completedAt)}:`, chat.transcript.join("\n")].join(
+        "\n\n",
+      ),
+    )
+    .join("\n\n");
+  const body =
+    input.type === "graduation"
+      ? [input.previousUpdate?.bodyText.trim(), chatBody]
+          .filter(Boolean)
+          .join("\n\n")
+      : chatBody;
 
   return {
-    subject: input.type === "graduation"
-      ? `${name} found a home!`
-      : `${name}: news from ${visitCount} recent visits`,
-    teaser: input.type === "graduation"
-      ? `${name} has found a home. Here is a warm look back at the moments that brought them here.`
-      : `${name} has news from ${visitCount} recent visits. Read about the moments volunteers shared with ${name}.`,
+    subject:
+      input.type === "graduation"
+        ? `${name} found a home!`
+        : `${name}: news from ${visitCount} recent visits`,
+    teaser:
+      input.type === "graduation"
+        ? `${name} has found a home. Here is a warm look back at the moments that brought them here.`
+        : `${name} has news from ${visitCount} recent visits. Read about the moments volunteers shared with ${name}.`,
     bodyText: appendPostscript(body, input.pinnedPostscript),
     heroPhotoId: photos[0]?.id ?? null,
     captions: photos.map((photo) => ({
@@ -235,7 +269,9 @@ For a regular update, focus on what happened during the recent visits. Use the p
 
 For a graduation update, tell the companion's adoption story. Open with the adoption news, continue through the recent visits in narrative order, and end warmly without asking for money.`;
 
-async function composeWithModel(input: ComposeSponsorUpdateInput): Promise<ComposedSponsorUpdate> {
+async function composeWithModel(
+  input: ComposeSponsorUpdateInput,
+): Promise<ComposedSponsorUpdate> {
   const { output } = await generateText({
     model: createAiModel(),
     maxOutputTokens: MAX_SPONSOR_UPDATE_OUTPUT_TOKENS,
@@ -252,7 +288,9 @@ async function composeWithModel(input: ComposeSponsorUpdateInput): Promise<Compo
  * Draft a sponsor update. With no API key, this uses a deterministic template
  * so local demos and tests never require network access.
  */
-export async function composeSponsorUpdate(input: ComposeSponsorUpdateInput): Promise<ComposedSponsorUpdate> {
+export async function composeSponsorUpdate(
+  input: ComposeSponsorUpdateInput,
+): Promise<ComposedSponsorUpdate> {
   const name = input.companion.name.trim();
   if (!name) throw new Error("companion.name is required");
   if (input.type !== "regular" && input.type !== "graduation") {
@@ -262,5 +300,7 @@ export async function composeSponsorUpdate(input: ComposeSponsorUpdateInput): Pr
     throw new Error("regular updates require an available companion");
   }
 
-  return hasAiCredentials() ? composeWithModel(input) : deterministicCompose(input);
+  return hasAiCredentials()
+    ? composeWithModel(input)
+    : deterministicCompose(input);
 }

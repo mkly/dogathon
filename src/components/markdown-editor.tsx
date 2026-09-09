@@ -129,7 +129,8 @@ export function MarkdownEditor({
 
   const setLink = () => {
     if (!editor) return;
-    const currentHref = (editor.getAttributes("link").href as string | undefined) ?? "https://";
+    const currentHref =
+      (editor.getAttributes("link").href as string | undefined) ?? "https://";
     const enteredHref = window.prompt(
       "Enter an http, https, or mailto URL. Leave blank to remove the link.",
       currentHref,
@@ -151,7 +152,11 @@ export function MarkdownEditor({
 
   return (
     <div className={classNames.root}>
-      <div aria-label="Formatting" className={classNames.toolbar} role="toolbar">
+      <div
+        aria-label="Formatting"
+        className={classNames.toolbar}
+        role="toolbar"
+      >
         <button
           aria-label="Bold"
           aria-pressed={toolbarState?.bold ?? false}
@@ -177,7 +182,9 @@ export function MarkdownEditor({
           aria-pressed={toolbarState?.heading ?? false}
           className={classNames.toolbarButton}
           disabled={toolbarDisabled}
-          onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()}
+          onClick={() =>
+            editor?.chain().focus().toggleHeading({ level: 2 }).run()
+          }
           type="button"
         >
           H2
@@ -233,9 +240,20 @@ export function MarkdownEditor({
       </div>
 
       <div className={classNames.editorContent}>
-        {editor ? <EditorContent editor={editor} /> : <p className={classNames.loading}>Loading editor…</p>}
+        {editor ? (
+          <EditorContent editor={editor} />
+        ) : (
+          <p className={classNames.loading}>Loading editor…</p>
+        )}
       </div>
-      {name ? <input disabled={overLimit} name={name} type="hidden" value={markdown} /> : null}
+      {name ? (
+        <input
+          disabled={overLimit}
+          name={name}
+          type="hidden"
+          value={markdown}
+        />
+      ) : null}
       <p
         className={`${classNames.counter} ${overLimit ? classNames.counterOverLimit : ""}`}
         role={overLimit ? "alert" : undefined}
@@ -243,7 +261,11 @@ export function MarkdownEditor({
         {markdown.length} / {maxLength} characters
       </p>
 
-      <section aria-labelledby={previewId} aria-live="polite" className={classNames.preview}>
+      <section
+        aria-labelledby={previewId}
+        aria-live="polite"
+        className={classNames.preview}
+      >
         <h3 id={previewId}>Plain-text version</h3>
         <p>{plainText || "Nothing here yet."}</p>
       </section>

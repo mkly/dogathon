@@ -21,7 +21,8 @@ const transferSchema = z.object({ residentId: uuidSchema });
 function destination(orgSlug: string, selection: unknown, error?: string) {
   const params = new URLSearchParams();
   const parsed = sponsorshipSelectionSchema.safeParse(selection);
-  if (parsed.success && parsed.data.token) params.set("token", parsed.data.token);
+  if (parsed.success && parsed.data.token)
+    params.set("token", parsed.data.token);
   else if (parsed.success && parsed.data.sponsorshipId) {
     params.set("sponsorship", parsed.data.sponsorshipId);
   }
@@ -35,8 +36,11 @@ export async function transferSponsorshipAction(
   formData: FormData,
 ) {
   const sponsorship = await resolveSponsorshipSelection(orgSlug, selection);
-  const parsed = transferSchema.safeParse({ residentId: formData.get("residentId") });
-  if (!sponsorship || !parsed.success) redirect(destination(orgSlug, selection, "invalid"));
+  const parsed = transferSchema.safeParse({
+    residentId: formData.get("residentId"),
+  });
+  if (!sponsorship || !parsed.success)
+    redirect(destination(orgSlug, selection, "invalid"));
 
   try {
     await transferSponsorship(sponsorship.id, parsed.data.residentId);

@@ -18,7 +18,9 @@ function configuredPhotoPattern() {
   if (publicBase) {
     const url = new URL(publicBase);
     if (url.protocol !== "https:") {
-      throw new Error("S3_PUBLIC_BASE_URL must use https so uploaded photos can be optimized safely");
+      throw new Error(
+        "S3_PUBLIC_BASE_URL must use https so uploaded photos can be optimized safely",
+      );
     }
     const basePath = url.pathname.replace(/\/+$/u, "");
     return {

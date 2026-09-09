@@ -20,7 +20,12 @@ const queuedJob = {
 function authorized(orgId: string) {
   return async () => ({
     ok: true as const,
-    context: { memberId: "member-1", orgId, role: "admin" as const, userId: "user-1" },
+    context: {
+      memberId: "member-1",
+      orgId,
+      role: "admin" as const,
+      userId: "user-1",
+    },
   });
 }
 
@@ -34,9 +39,11 @@ test("the sync endpoint enqueues for the caller and returns the job immediately"
     },
   });
 
-  const response = await handler(new Request("https://app.example/api/sync", {
-    method: "POST",
-  }));
+  const response = await handler(
+    new Request("https://app.example/api/sync", {
+      method: "POST",
+    }),
+  );
 
   assert.equal(response.status, 202);
   assert.deepEqual(input, { orgId: "org-1", requestedByUserId: "user-1" });
@@ -66,5 +73,7 @@ test("the status endpoint cannot read a job through another organization", async
   );
 
   assert.equal(response.status, 404);
-  assert.deepEqual(await response.json(), { error: "Roster sync job not found" });
+  assert.deepEqual(await response.json(), {
+    error: "Roster sync job not found",
+  });
 });

@@ -1,344 +1,706 @@
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8">
-  <title>Adoptable Companions | Example Rescue</title>
-  <meta name="description" content="Synthetic adoption-page capture used by tests, seeds, and the offline sync fallback. Every companion here is fictional.">
-</head>
-<body>
-  <header>
-    <h3>Example Rescue</h3>
-    <nav><a href="/">Home</a> <a href="/adopt">Adopt</a> <a href="/donate">Donate</a></nav>
-  </header>
-  <main>
-    <h2>Companions looking for a home</h2>
-    <p>Headings marked <em>*Adopted</em> have found their family.</p>
-    <div class="grid">
-      <div class="card" id="companion-1">
-        <h3>Hattie *Adopted</h3>
-        <p><strong>Personality:</strong>&nbsp;sweet, smart<br>
-          <strong>Breed:</strong> heeler mix<br>
-          <strong>Age:</strong> est DOB 3/13/21<br>
-          <strong>Weight:</strong> 36 lbs<br>
-          <strong>Sex:</strong> male</p>
-        <ul><li>Walks well on leash</li><li>Crate trained</li><li>Takes treats gently</li></ul>
-        <img alt="Hattie" src="https://photos.rescue.example/companions/hattie-1.jpg?width=1200"><img alt="Hattie" src="https://photos.rescue.example/companions/hattie-2.jpg?width=1200">
+  <head>
+    <meta charset="utf-8" />
+    <title>Adoptable Companions | Example Rescue</title>
+    <meta
+      name="description"
+      content="Synthetic adoption-page capture used by tests, seeds, and the offline sync fallback. Every companion here is fictional."
+    />
+  </head>
+  <body>
+    <header>
+      <h3>Example Rescue</h3>
+      <nav>
+        <a href="/">Home</a> <a href="/adopt">Adopt</a>
+        <a href="/donate">Donate</a>
+      </nav>
+    </header>
+    <main>
+      <h2>Companions looking for a home</h2>
+      <p>Headings marked <em>*Adopted</em> have found their family.</p>
+      <div class="grid">
+        <div class="card" id="companion-1">
+          <h3>Hattie *Adopted</h3>
+          <p>
+            <strong>Personality:</strong>&nbsp;sweet, smart<br />
+            <strong>Breed:</strong> heeler mix<br />
+            <strong>Age:</strong> est DOB 3/13/21<br />
+            <strong>Weight:</strong> 36 lbs<br />
+            <strong>Sex:</strong> male
+          </p>
+          <ul>
+            <li>Walks well on leash</li>
+            <li>Crate trained</li>
+            <li>Takes treats gently</li>
+          </ul>
+          <img
+            alt="Hattie"
+            src="https://photos.rescue.example/companions/hattie-1.jpg?width=1200"
+          /><img
+            alt="Hattie"
+            src="https://photos.rescue.example/companions/hattie-2.jpg?width=1200"
+          />
+        </div>
+        <div class="card" id="companion-2">
+          <h3>Walnut</h3>
+          <p>
+            <strong>Personality:</strong>&nbsp;snuggly, a little bossy<br />
+            <strong>Breed:</strong> shepherd mix<br />
+            <strong>Age:</strong> est DOB 7/14/19<br />
+            <strong>Weight:</strong> 81 lbs<br />
+            <strong>Sex:</strong> male
+          </p>
+          <ul>
+            <li>Prefers a quiet home</li>
+          </ul>
+          <img
+            alt="Walnut"
+            src="https://photos.rescue.example/companions/walnut-1.jpg?width=1200"
+          />
+        </div>
+        <div class="card" id="companion-3">
+          <h3>June</h3>
+          <p>
+            <strong>Personality:</strong>&nbsp;sweet, smart<br />
+            <strong>Breed:</strong> heeler mix<br />
+            <strong>Age:</strong> est DOB 11/21/20<br />
+            <strong>Weight:</strong> 26 lbs<br />
+            <strong>Sex:</strong> female
+          </p>
+          <ul>
+            <li>Walks well on leash</li>
+            <li>House trained</li>
+            <li>Not a fan of cats</li>
+          </ul>
+          <img
+            alt="June"
+            src="https://photos.rescue.example/companions/june-1.jpg?width=1200"
+          />
+        </div>
+        <div class="card" id="companion-4">
+          <h3>Charlie *Adopted</h3>
+          <p>
+            <strong>Personality:</strong>&nbsp;shy at first, then velcro<br />
+            <strong>Breed:</strong> terrier mix<br />
+            <strong>Age:</strong> est DOB 3/18/22<br />
+            <strong>Weight:</strong> 83 lbs<br />
+            <strong>Sex:</strong> male
+          </p>
+          <ul>
+            <li>Not a fan of cats</li>
+          </ul>
+          <img
+            alt="Charlie"
+            src="https://photos.rescue.example/companions/charlie-1.jpg?width=1200"
+          /><img
+            alt="Charlie"
+            src="https://photos.rescue.example/companions/charlie-2.jpg?width=1200"
+          />
+        </div>
+        <div class="card" id="companion-5">
+          <h3>Jack *Adopted</h3>
+          <p>
+            <strong>Personality:</strong>&nbsp;snuggly, a little bossy<br />
+            <strong>Breed:</strong> collie mix<br />
+            <strong>Age:</strong> est DOB 2/18/21<br />
+            <strong>Weight:</strong> 68 lbs<br />
+            <strong>Sex:</strong> female
+          </p>
+          <ul>
+            <li>Crate trained</li>
+            <li>Walks well on leash</li>
+            <li>Prefers a quiet home</li>
+          </ul>
+          <img
+            alt="Jack"
+            src="https://photos.rescue.example/companions/jack-1.jpg?width=1200"
+          /><img
+            alt="Jack"
+            src="https://photos.rescue.example/companions/jack-2.jpg?width=1200"
+          />
+        </div>
+        <div class="card" id="companion-6">
+          <h3>Romulus *Adopted</h3>
+          <p>
+            <strong>Personality:</strong>&nbsp;calm couch companion<br />
+            <strong>Breed:</strong> heeler mix<br />
+            <strong>Age:</strong> est DOB 5/08/21<br />
+            <strong>Weight:</strong> 72 lbs<br />
+            <strong>Sex:</strong> female
+          </p>
+          <ul>
+            <li>Prefers a quiet home</li>
+          </ul>
+          <img
+            alt="Romulus"
+            src="https://photos.rescue.example/companions/romulus-1.jpg?width=1200"
+          />
+        </div>
+        <div class="card" id="companion-7">
+          <h3>Pickle</h3>
+          <p>
+            <strong>Personality:</strong>&nbsp;curious and brave<br />
+            <strong>Breed:</strong> hound mix<br />
+            <strong>Age:</strong> est DOB 8/10/24<br />
+            <strong>Weight:</strong> 71 lbs<br />
+            <strong>Sex:</strong> female
+          </p>
+          <ul>
+            <li>Crate trained</li>
+            <li>Not a fan of cats</li>
+            <li>House trained</li>
+          </ul>
+          <img
+            alt="Pickle"
+            src="https://photos.rescue.example/companions/pickle-1.jpg?width=1200"
+          />
+        </div>
+        <div class="card" id="companion-8">
+          <h3>Marigold</h3>
+          <p>
+            <strong>Personality:</strong>&nbsp;curious and brave<br />
+            <strong>Breed:</strong> poodle mix<br />
+            <strong>Age:</strong> est DOB 11/03/19<br />
+            <strong>Weight:</strong> 72 lbs<br />
+            <strong>Sex:</strong> female
+          </p>
+          <ul>
+            <li>Not a fan of cats</li>
+            <li>Loves car rides</li>
+            <li>Takes treats gently</li>
+          </ul>
+          <img
+            alt="Marigold"
+            src="https://photos.rescue.example/companions/marigold-1.jpg?width=1200"
+          /><img
+            alt="Marigold"
+            src="https://photos.rescue.example/companions/marigold-2.jpg?width=1200"
+          /><img
+            alt="Marigold"
+            src="https://photos.rescue.example/companions/marigold-3.jpg?width=1200"
+          />
+        </div>
+        <div class="card" id="companion-9">
+          <h3>Otis</h3>
+          <p>
+            <strong>Personality:</strong>&nbsp;calm couch companion<br />
+            <strong>Breed:</strong> poodle mix<br />
+            <strong>Age:</strong> est DOB 2/09/19<br />
+            <strong>Weight:</strong> 66 lbs<br />
+            <strong>Sex:</strong> female
+          </p>
+          <ul>
+            <li>Crate trained</li>
+            <li>Walks well on leash</li>
+          </ul>
+          <img
+            alt="Otis"
+            src="https://photos.rescue.example/companions/otis-1.jpg?width=1200"
+          /><img
+            alt="Otis"
+            src="https://photos.rescue.example/companions/otis-2.jpg?width=1200"
+          /><img
+            alt="Otis"
+            src="https://photos.rescue.example/companions/otis-3.jpg?width=1200"
+          />
+        </div>
+        <div class="card" id="companion-10">
+          <h3>Clementine</h3>
+          <p>
+            <strong>Personality:</strong>&nbsp;shy at first, then velcro<br />
+            <strong>Breed:</strong> poodle mix<br />
+            <strong>Age:</strong> est DOB 7/22/24<br />
+            <strong>Weight:</strong> 23 lbs<br />
+            <strong>Sex:</strong> female
+          </p>
+          <ul>
+            <li>Walks well on leash</li>
+            <li>Still learning stairs</li>
+          </ul>
+          <img
+            alt="Clementine"
+            src="https://photos.rescue.example/companions/clementine-1.jpg?width=1200"
+          /><img
+            alt="Clementine"
+            src="https://photos.rescue.example/companions/clementine-2.jpg?width=1200"
+          />
+        </div>
+        <div class="card" id="companion-11">
+          <h3>Bramble *Adopted</h3>
+          <p>
+            <strong>Personality:</strong>&nbsp;snuggly, a little bossy<br />
+            <strong>Breed:</strong> spaniel mix<br />
+            <strong>Age:</strong> est DOB 4/25/19<br />
+            <strong>Weight:</strong> 19 lbs<br />
+            <strong>Sex:</strong> male
+          </p>
+          <ul>
+            <li>Good with other dogs</li>
+            <li>Prefers a quiet home</li>
+          </ul>
+          <img
+            alt="Bramble"
+            src="https://photos.rescue.example/companions/bramble-1.jpg?width=1200"
+          /><img
+            alt="Bramble"
+            src="https://photos.rescue.example/companions/bramble-2.jpg?width=1200"
+          />
+        </div>
+        <div class="card" id="companion-12">
+          <h3>Tater</h3>
+          <p>
+            <strong>Personality:</strong>&nbsp;calm couch companion<br />
+            <strong>Breed:</strong> beagle mix<br />
+            <strong>Age:</strong> est DOB 7/18/22<br />
+            <strong>Weight:</strong> 54 lbs<br />
+            <strong>Sex:</strong> female
+          </p>
+          <ul>
+            <li>Good with other dogs</li>
+            <li>House trained</li>
+          </ul>
+          <img
+            alt="Tater"
+            src="https://photos.rescue.example/companions/tater-1.jpg?width=1200"
+          /><img
+            alt="Tater"
+            src="https://photos.rescue.example/companions/tater-2.jpg?width=1200"
+          /><img
+            alt="Tater"
+            src="https://photos.rescue.example/companions/tater-3.jpg?width=1200"
+          />
+        </div>
+        <div class="card" id="companion-13">
+          <h3>Winnie</h3>
+          <p>
+            <strong>Personality:</strong>&nbsp;playful, loves fetch<br />
+            <strong>Breed:</strong> shepherd mix<br />
+            <strong>Age:</strong> est DOB 3/03/20<br />
+            <strong>Weight:</strong> 71 lbs<br />
+            <strong>Sex:</strong> male
+          </p>
+          <ul>
+            <li>Good with other dogs</li>
+          </ul>
+          <img
+            alt="Winnie"
+            src="https://photos.rescue.example/companions/winnie-1.jpg?width=1200"
+          />
+        </div>
+        <div class="card" id="companion-14">
+          <h3>Moose</h3>
+          <p>
+            <strong>Personality:</strong>&nbsp;curious and brave<br />
+            <strong>Breed:</strong> poodle mix<br />
+            <strong>Age:</strong> est DOB 5/01/21<br />
+            <strong>Weight:</strong> 81 lbs<br />
+            <strong>Sex:</strong> female
+          </p>
+          <ul>
+            <li>House trained</li>
+          </ul>
+          <img
+            alt="Moose"
+            src="https://photos.rescue.example/companions/moose-1.jpg?width=1200"
+          /><img
+            alt="Moose"
+            src="https://photos.rescue.example/companions/moose-2.jpg?width=1200"
+          /><img
+            alt="Moose"
+            src="https://photos.rescue.example/companions/moose-3.jpg?width=1200"
+          />
+        </div>
+        <div class="card" id="companion-15">
+          <h3>Poppy</h3>
+          <p>
+            <strong>Personality:</strong>&nbsp;snuggly, a little bossy<br />
+            <strong>Breed:</strong> beagle mix<br />
+            <strong>Age:</strong> est DOB 12/28/20<br />
+            <strong>Weight:</strong> 60 lbs<br />
+            <strong>Sex:</strong> female
+          </p>
+          <ul>
+            <li>Not a fan of cats</li>
+            <li>Walks well on leash</li>
+            <li>Still learning stairs</li>
+          </ul>
+          <img
+            alt="Poppy"
+            src="https://photos.rescue.example/companions/poppy-1.jpg?width=1200"
+          /><img
+            alt="Poppy"
+            src="https://photos.rescue.example/companions/poppy-2.jpg?width=1200"
+          /><img
+            alt="Poppy"
+            src="https://photos.rescue.example/companions/poppy-3.jpg?width=1200"
+          />
+        </div>
+        <div class="card" id="companion-16">
+          <h3>Alfie</h3>
+          <p>
+            <strong>Personality:</strong>&nbsp;playful, loves fetch<br />
+            <strong>Breed:</strong> spaniel mix<br />
+            <strong>Age:</strong> est DOB 8/21/19<br />
+            <strong>Weight:</strong> 29 lbs<br />
+            <strong>Sex:</strong> male
+          </p>
+          <ul>
+            <li>Walks well on leash</li>
+            <li>Prefers a quiet home</li>
+          </ul>
+          <img
+            alt="Alfie"
+            src="https://photos.rescue.example/companions/alfie-1.jpg?width=1200"
+          />
+        </div>
+        <div class="card" id="companion-17">
+          <h3>Nutmeg</h3>
+          <p>
+            <strong>Personality:</strong>&nbsp;shy at first, then velcro<br />
+            <strong>Breed:</strong> heeler mix<br />
+            <strong>Age:</strong> est DOB 10/02/21<br />
+            <strong>Weight:</strong> 21 lbs<br />
+            <strong>Sex:</strong> female
+          </p>
+          <ul>
+            <li>Walks well on leash</li>
+          </ul>
+          <img
+            alt="Nutmeg"
+            src="https://photos.rescue.example/companions/nutmeg-1.jpg?width=1200"
+          /><img
+            alt="Nutmeg"
+            src="https://photos.rescue.example/companions/nutmeg-2.jpg?width=1200"
+          /><img
+            alt="Nutmeg"
+            src="https://photos.rescue.example/companions/nutmeg-3.jpg?width=1200"
+          />
+        </div>
+        <div class="card" id="companion-18">
+          <h3>Basil</h3>
+          <p>
+            <strong>Personality:</strong>&nbsp;shy at first, then velcro<br />
+            <strong>Breed:</strong> pit mix<br />
+            <strong>Age:</strong> est DOB 1/03/23<br />
+            <strong>Weight:</strong> 53 lbs<br />
+            <strong>Sex:</strong> female
+          </p>
+          <ul>
+            <li>Not a fan of cats</li>
+          </ul>
+          <img
+            alt="Basil"
+            src="https://photos.rescue.example/companions/basil-1.jpg?width=1200"
+          /><img
+            alt="Basil"
+            src="https://photos.rescue.example/companions/basil-2.jpg?width=1200"
+          />
+        </div>
+        <div class="card" id="companion-19">
+          <h3>Dolly *Adopted</h3>
+          <p>
+            <strong>Personality:</strong>&nbsp;calm couch companion<br />
+            <strong>Breed:</strong> terrier mix<br />
+            <strong>Age:</strong> est DOB 2/04/22<br />
+            <strong>Weight:</strong> 27 lbs<br />
+            <strong>Sex:</strong> male
+          </p>
+          <ul>
+            <li>Still learning stairs</li>
+            <li>Not a fan of cats</li>
+          </ul>
+          <img
+            alt="Dolly"
+            src="https://photos.rescue.example/companions/dolly-1.jpg?width=1200"
+          /><img
+            alt="Dolly"
+            src="https://photos.rescue.example/companions/dolly-2.jpg?width=1200"
+          />
+        </div>
+        <div class="card" id="companion-20">
+          <h3>Rufus</h3>
+          <p>
+            <strong>Personality:</strong>&nbsp;sweet, smart<br />
+            <strong>Breed:</strong> lab mix<br />
+            <strong>Age:</strong> est DOB 6/24/24<br />
+            <strong>Weight:</strong> 76 lbs<br />
+            <strong>Sex:</strong> female
+          </p>
+          <ul>
+            <li>Still learning stairs</li>
+            <li>Good with other dogs</li>
+          </ul>
+          <img
+            alt="Rufus"
+            src="https://photos.rescue.example/companions/rufus-1.jpg?width=1200"
+          /><img
+            alt="Rufus"
+            src="https://photos.rescue.example/companions/rufus-2.jpg?width=1200"
+          /><img
+            alt="Rufus"
+            src="https://photos.rescue.example/companions/rufus-3.jpg?width=1200"
+          />
+        </div>
+        <div class="card" id="companion-21">
+          <h3>Sage</h3>
+          <p>
+            <strong>Personality:</strong>&nbsp;goofy and gentle<br />
+            <strong>Breed:</strong> pit mix<br />
+            <strong>Age:</strong> est DOB 12/18/20<br />
+            <strong>Weight:</strong> 75 lbs<br />
+            <strong>Sex:</strong> female
+          </p>
+          <ul>
+            <li>Takes treats gently</li>
+          </ul>
+          <img
+            alt="Sage"
+            src="https://photos.rescue.example/companions/sage-1.jpg?width=1200"
+          /><img
+            alt="Sage"
+            src="https://photos.rescue.example/companions/sage-2.jpg?width=1200"
+          />
+        </div>
+        <div class="card" id="companion-22">
+          <h3>Pepper</h3>
+          <p>
+            <strong>Personality:</strong>&nbsp;curious and brave<br />
+            <strong>Breed:</strong> lab mix<br />
+            <strong>Age:</strong> est DOB 6/25/20<br />
+            <strong>Weight:</strong> 33 lbs<br />
+            <strong>Sex:</strong> male
+          </p>
+          <ul>
+            <li>Takes treats gently</li>
+          </ul>
+          <img
+            alt="Pepper"
+            src="https://photos.rescue.example/companions/pepper-1.jpg?width=1200"
+          /><img
+            alt="Pepper"
+            src="https://photos.rescue.example/companions/pepper-2.jpg?width=1200"
+          /><img
+            alt="Pepper"
+            src="https://photos.rescue.example/companions/pepper-3.jpg?width=1200"
+          />
+        </div>
+        <div class="card" id="companion-23">
+          <h3>Olive</h3>
+          <p>
+            <strong>Personality:</strong>&nbsp;easygoing with everyone<br />
+            <strong>Breed:</strong> collie mix<br />
+            <strong>Age:</strong> est DOB 7/24/25<br />
+            <strong>Weight:</strong> 12 lbs<br />
+            <strong>Sex:</strong> male
+          </p>
+          <ul>
+            <li>Prefers a quiet home</li>
+          </ul>
+          <img
+            alt="Olive"
+            src="https://photos.rescue.example/companions/olive-1.jpg?width=1200"
+          /><img
+            alt="Olive"
+            src="https://photos.rescue.example/companions/olive-2.jpg?width=1200"
+          /><img
+            alt="Olive"
+            src="https://photos.rescue.example/companions/olive-3.jpg?width=1200"
+          />
+        </div>
+        <div class="card" id="companion-24">
+          <h3>Barnaby</h3>
+          <p>
+            <strong>Personality:</strong>&nbsp;curious and brave<br />
+            <strong>Breed:</strong> collie mix<br />
+            <strong>Age:</strong> est DOB 5/16/25<br />
+            <strong>Weight:</strong> 19 lbs<br />
+            <strong>Sex:</strong> male
+          </p>
+          <ul>
+            <li>Prefers a quiet home</li>
+            <li>Loves car rides</li>
+          </ul>
+          <img
+            alt="Barnaby"
+            src="https://photos.rescue.example/companions/barnaby-1.jpg?width=1200"
+          /><img
+            alt="Barnaby"
+            src="https://photos.rescue.example/companions/barnaby-2.jpg?width=1200"
+          />
+        </div>
+        <div class="card" id="companion-25">
+          <h3>Fig</h3>
+          <p>
+            <strong>Personality:</strong>&nbsp;easygoing with everyone<br />
+            <strong>Breed:</strong> poodle mix<br />
+            <strong>Age:</strong> est DOB 4/16/19<br />
+            <strong>Weight:</strong> 9 lbs<br />
+            <strong>Sex:</strong> female
+          </p>
+          <ul>
+            <li>Loves car rides</li>
+          </ul>
+          <img
+            alt="Fig"
+            src="https://photos.rescue.example/companions/fig-1.jpg?width=1200"
+          />
+        </div>
+        <div class="card" id="companion-26">
+          <h3>Hazel</h3>
+          <p>
+            <strong>Personality:</strong>&nbsp;playful, loves fetch<br />
+            <strong>Breed:</strong> spaniel mix<br />
+            <strong>Age:</strong> est DOB 6/26/24<br />
+            <strong>Weight:</strong> 31 lbs<br />
+            <strong>Sex:</strong> female
+          </p>
+          <ul>
+            <li>Crate trained</li>
+            <li>Not a fan of cats</li>
+            <li>House trained</li>
+          </ul>
+          <img
+            alt="Hazel"
+            src="https://photos.rescue.example/companions/hazel-1.jpg?width=1200"
+          /><img
+            alt="Hazel"
+            src="https://photos.rescue.example/companions/hazel-2.jpg?width=1200"
+          /><img
+            alt="Hazel"
+            src="https://photos.rescue.example/companions/hazel-3.jpg?width=1200"
+          />
+        </div>
+        <div class="card" id="companion-27">
+          <h3>Milo</h3>
+          <p>
+            <strong>Personality:</strong>&nbsp;snuggly, a little bossy<br />
+            <strong>Breed:</strong> terrier mix<br />
+            <strong>Age:</strong> est DOB 11/11/25<br />
+            <strong>Weight:</strong> 29 lbs<br />
+            <strong>Sex:</strong> male
+          </p>
+          <ul>
+            <li>House trained</li>
+          </ul>
+          <img
+            alt="Milo"
+            src="https://photos.rescue.example/companions/milo-1.jpg?width=1200"
+          /><img
+            alt="Milo"
+            src="https://photos.rescue.example/companions/milo-2.jpg?width=1200"
+          />
+        </div>
+        <div class="card" id="companion-28">
+          <h3>Goose</h3>
+          <p>
+            <strong>Personality:</strong>&nbsp;curious and brave<br />
+            <strong>Breed:</strong> hound mix<br />
+            <strong>Age:</strong> est DOB 1/05/20<br />
+            <strong>Weight:</strong> 79 lbs<br />
+            <strong>Sex:</strong> male
+          </p>
+          <ul>
+            <li>Still learning stairs</li>
+            <li>Good with other dogs</li>
+            <li>Not a fan of cats</li>
+          </ul>
+          <img
+            alt="Goose"
+            src="https://photos.rescue.example/companions/goose-1.jpg?width=1200"
+          /><img
+            alt="Goose"
+            src="https://photos.rescue.example/companions/goose-2.jpg?width=1200"
+          /><img
+            alt="Goose"
+            src="https://photos.rescue.example/companions/goose-3.jpg?width=1200"
+          />
+        </div>
+        <div class="card" id="companion-29">
+          <h3>Ivy</h3>
+          <p>
+            <strong>Personality:</strong>&nbsp;playful, loves fetch<br />
+            <strong>Breed:</strong> lab mix<br />
+            <strong>Age:</strong> est DOB 1/26/19<br />
+            <strong>Weight:</strong> 12 lbs<br />
+            <strong>Sex:</strong> female
+          </p>
+          <ul>
+            <li>Crate trained</li>
+            <li>Takes treats gently</li>
+            <li>Good with other dogs</li>
+          </ul>
+          <img
+            alt="Ivy"
+            src="https://photos.rescue.example/companions/ivy-1.jpg?width=1200"
+          /><img
+            alt="Ivy"
+            src="https://photos.rescue.example/companions/ivy-2.jpg?width=1200"
+          />
+        </div>
+        <div class="card" id="companion-30">
+          <h3>Waffles</h3>
+          <p>
+            <strong>Personality:</strong>&nbsp;calm couch companion<br />
+            <strong>Breed:</strong> heeler mix<br />
+            <strong>Age:</strong> est DOB 5/17/20<br />
+            <strong>Weight:</strong> 62 lbs<br />
+            <strong>Sex:</strong> male
+          </p>
+          <ul>
+            <li>Not a fan of cats</li>
+          </ul>
+          <img
+            alt="Waffles"
+            src="https://photos.rescue.example/companions/waffles-1.jpg?width=1200"
+          /><img
+            alt="Waffles"
+            src="https://photos.rescue.example/companions/waffles-2.jpg?width=1200"
+          />
+        </div>
+        <div class="card" id="companion-31">
+          <h3>Scout</h3>
+          <p>
+            <strong>Personality:</strong>&nbsp;shy at first, then velcro<br />
+            <strong>Breed:</strong> heeler mix<br />
+            <strong>Age:</strong> est DOB 12/12/19<br />
+            <strong>Weight:</strong> 28 lbs<br />
+            <strong>Sex:</strong> male
+          </p>
+          <ul>
+            <li>Not a fan of cats</li>
+            <li>Takes treats gently</li>
+          </ul>
+          <img
+            alt="Scout"
+            src="https://photos.rescue.example/companions/scout-1.jpg?width=1200"
+          /><img
+            alt="Scout"
+            src="https://photos.rescue.example/companions/scout-2.jpg?width=1200"
+          />
+        </div>
+        <div class="card" id="companion-32">
+          <h3>Biscotti</h3>
+          <p>
+            <strong>Personality:</strong>&nbsp;shy at first, then velcro<br />
+            <strong>Breed:</strong> hound mix<br />
+            <strong>Age:</strong> est DOB 8/25/25<br />
+            <strong>Weight:</strong> 27 lbs<br />
+            <strong>Sex:</strong> female
+          </p>
+          <ul>
+            <li>Not a fan of cats</li>
+          </ul>
+          <img
+            alt="Biscotti"
+            src="https://photos.rescue.example/companions/biscotti-1.jpg?width=1200"
+          />
+        </div>
       </div>
-      <div class="card" id="companion-2">
-        <h3>Walnut</h3>
-        <p><strong>Personality:</strong>&nbsp;snuggly, a little bossy<br>
-          <strong>Breed:</strong> shepherd mix<br>
-          <strong>Age:</strong> est DOB 7/14/19<br>
-          <strong>Weight:</strong> 81 lbs<br>
-          <strong>Sex:</strong> male</p>
-        <ul><li>Prefers a quiet home</li></ul>
-        <img alt="Walnut" src="https://photos.rescue.example/companions/walnut-1.jpg?width=1200">
-      </div>
-      <div class="card" id="companion-3">
-        <h3>June</h3>
-        <p><strong>Personality:</strong>&nbsp;sweet, smart<br>
-          <strong>Breed:</strong> heeler mix<br>
-          <strong>Age:</strong> est DOB 11/21/20<br>
-          <strong>Weight:</strong> 26 lbs<br>
-          <strong>Sex:</strong> female</p>
-        <ul><li>Walks well on leash</li><li>House trained</li><li>Not a fan of cats</li></ul>
-        <img alt="June" src="https://photos.rescue.example/companions/june-1.jpg?width=1200">
-      </div>
-      <div class="card" id="companion-4">
-        <h3>Charlie *Adopted</h3>
-        <p><strong>Personality:</strong>&nbsp;shy at first, then velcro<br>
-          <strong>Breed:</strong> terrier mix<br>
-          <strong>Age:</strong> est DOB 3/18/22<br>
-          <strong>Weight:</strong> 83 lbs<br>
-          <strong>Sex:</strong> male</p>
-        <ul><li>Not a fan of cats</li></ul>
-        <img alt="Charlie" src="https://photos.rescue.example/companions/charlie-1.jpg?width=1200"><img alt="Charlie" src="https://photos.rescue.example/companions/charlie-2.jpg?width=1200">
-      </div>
-      <div class="card" id="companion-5">
-        <h3>Jack *Adopted</h3>
-        <p><strong>Personality:</strong>&nbsp;snuggly, a little bossy<br>
-          <strong>Breed:</strong> collie mix<br>
-          <strong>Age:</strong> est DOB 2/18/21<br>
-          <strong>Weight:</strong> 68 lbs<br>
-          <strong>Sex:</strong> female</p>
-        <ul><li>Crate trained</li><li>Walks well on leash</li><li>Prefers a quiet home</li></ul>
-        <img alt="Jack" src="https://photos.rescue.example/companions/jack-1.jpg?width=1200"><img alt="Jack" src="https://photos.rescue.example/companions/jack-2.jpg?width=1200">
-      </div>
-      <div class="card" id="companion-6">
-        <h3>Romulus *Adopted</h3>
-        <p><strong>Personality:</strong>&nbsp;calm couch companion<br>
-          <strong>Breed:</strong> heeler mix<br>
-          <strong>Age:</strong> est DOB 5/08/21<br>
-          <strong>Weight:</strong> 72 lbs<br>
-          <strong>Sex:</strong> female</p>
-        <ul><li>Prefers a quiet home</li></ul>
-        <img alt="Romulus" src="https://photos.rescue.example/companions/romulus-1.jpg?width=1200">
-      </div>
-      <div class="card" id="companion-7">
-        <h3>Pickle</h3>
-        <p><strong>Personality:</strong>&nbsp;curious and brave<br>
-          <strong>Breed:</strong> hound mix<br>
-          <strong>Age:</strong> est DOB 8/10/24<br>
-          <strong>Weight:</strong> 71 lbs<br>
-          <strong>Sex:</strong> female</p>
-        <ul><li>Crate trained</li><li>Not a fan of cats</li><li>House trained</li></ul>
-        <img alt="Pickle" src="https://photos.rescue.example/companions/pickle-1.jpg?width=1200">
-      </div>
-      <div class="card" id="companion-8">
-        <h3>Marigold</h3>
-        <p><strong>Personality:</strong>&nbsp;curious and brave<br>
-          <strong>Breed:</strong> poodle mix<br>
-          <strong>Age:</strong> est DOB 11/03/19<br>
-          <strong>Weight:</strong> 72 lbs<br>
-          <strong>Sex:</strong> female</p>
-        <ul><li>Not a fan of cats</li><li>Loves car rides</li><li>Takes treats gently</li></ul>
-        <img alt="Marigold" src="https://photos.rescue.example/companions/marigold-1.jpg?width=1200"><img alt="Marigold" src="https://photos.rescue.example/companions/marigold-2.jpg?width=1200"><img alt="Marigold" src="https://photos.rescue.example/companions/marigold-3.jpg?width=1200">
-      </div>
-      <div class="card" id="companion-9">
-        <h3>Otis</h3>
-        <p><strong>Personality:</strong>&nbsp;calm couch companion<br>
-          <strong>Breed:</strong> poodle mix<br>
-          <strong>Age:</strong> est DOB 2/09/19<br>
-          <strong>Weight:</strong> 66 lbs<br>
-          <strong>Sex:</strong> female</p>
-        <ul><li>Crate trained</li><li>Walks well on leash</li></ul>
-        <img alt="Otis" src="https://photos.rescue.example/companions/otis-1.jpg?width=1200"><img alt="Otis" src="https://photos.rescue.example/companions/otis-2.jpg?width=1200"><img alt="Otis" src="https://photos.rescue.example/companions/otis-3.jpg?width=1200">
-      </div>
-      <div class="card" id="companion-10">
-        <h3>Clementine</h3>
-        <p><strong>Personality:</strong>&nbsp;shy at first, then velcro<br>
-          <strong>Breed:</strong> poodle mix<br>
-          <strong>Age:</strong> est DOB 7/22/24<br>
-          <strong>Weight:</strong> 23 lbs<br>
-          <strong>Sex:</strong> female</p>
-        <ul><li>Walks well on leash</li><li>Still learning stairs</li></ul>
-        <img alt="Clementine" src="https://photos.rescue.example/companions/clementine-1.jpg?width=1200"><img alt="Clementine" src="https://photos.rescue.example/companions/clementine-2.jpg?width=1200">
-      </div>
-      <div class="card" id="companion-11">
-        <h3>Bramble *Adopted</h3>
-        <p><strong>Personality:</strong>&nbsp;snuggly, a little bossy<br>
-          <strong>Breed:</strong> spaniel mix<br>
-          <strong>Age:</strong> est DOB 4/25/19<br>
-          <strong>Weight:</strong> 19 lbs<br>
-          <strong>Sex:</strong> male</p>
-        <ul><li>Good with other dogs</li><li>Prefers a quiet home</li></ul>
-        <img alt="Bramble" src="https://photos.rescue.example/companions/bramble-1.jpg?width=1200"><img alt="Bramble" src="https://photos.rescue.example/companions/bramble-2.jpg?width=1200">
-      </div>
-      <div class="card" id="companion-12">
-        <h3>Tater</h3>
-        <p><strong>Personality:</strong>&nbsp;calm couch companion<br>
-          <strong>Breed:</strong> beagle mix<br>
-          <strong>Age:</strong> est DOB 7/18/22<br>
-          <strong>Weight:</strong> 54 lbs<br>
-          <strong>Sex:</strong> female</p>
-        <ul><li>Good with other dogs</li><li>House trained</li></ul>
-        <img alt="Tater" src="https://photos.rescue.example/companions/tater-1.jpg?width=1200"><img alt="Tater" src="https://photos.rescue.example/companions/tater-2.jpg?width=1200"><img alt="Tater" src="https://photos.rescue.example/companions/tater-3.jpg?width=1200">
-      </div>
-      <div class="card" id="companion-13">
-        <h3>Winnie</h3>
-        <p><strong>Personality:</strong>&nbsp;playful, loves fetch<br>
-          <strong>Breed:</strong> shepherd mix<br>
-          <strong>Age:</strong> est DOB 3/03/20<br>
-          <strong>Weight:</strong> 71 lbs<br>
-          <strong>Sex:</strong> male</p>
-        <ul><li>Good with other dogs</li></ul>
-        <img alt="Winnie" src="https://photos.rescue.example/companions/winnie-1.jpg?width=1200">
-      </div>
-      <div class="card" id="companion-14">
-        <h3>Moose</h3>
-        <p><strong>Personality:</strong>&nbsp;curious and brave<br>
-          <strong>Breed:</strong> poodle mix<br>
-          <strong>Age:</strong> est DOB 5/01/21<br>
-          <strong>Weight:</strong> 81 lbs<br>
-          <strong>Sex:</strong> female</p>
-        <ul><li>House trained</li></ul>
-        <img alt="Moose" src="https://photos.rescue.example/companions/moose-1.jpg?width=1200"><img alt="Moose" src="https://photos.rescue.example/companions/moose-2.jpg?width=1200"><img alt="Moose" src="https://photos.rescue.example/companions/moose-3.jpg?width=1200">
-      </div>
-      <div class="card" id="companion-15">
-        <h3>Poppy</h3>
-        <p><strong>Personality:</strong>&nbsp;snuggly, a little bossy<br>
-          <strong>Breed:</strong> beagle mix<br>
-          <strong>Age:</strong> est DOB 12/28/20<br>
-          <strong>Weight:</strong> 60 lbs<br>
-          <strong>Sex:</strong> female</p>
-        <ul><li>Not a fan of cats</li><li>Walks well on leash</li><li>Still learning stairs</li></ul>
-        <img alt="Poppy" src="https://photos.rescue.example/companions/poppy-1.jpg?width=1200"><img alt="Poppy" src="https://photos.rescue.example/companions/poppy-2.jpg?width=1200"><img alt="Poppy" src="https://photos.rescue.example/companions/poppy-3.jpg?width=1200">
-      </div>
-      <div class="card" id="companion-16">
-        <h3>Alfie</h3>
-        <p><strong>Personality:</strong>&nbsp;playful, loves fetch<br>
-          <strong>Breed:</strong> spaniel mix<br>
-          <strong>Age:</strong> est DOB 8/21/19<br>
-          <strong>Weight:</strong> 29 lbs<br>
-          <strong>Sex:</strong> male</p>
-        <ul><li>Walks well on leash</li><li>Prefers a quiet home</li></ul>
-        <img alt="Alfie" src="https://photos.rescue.example/companions/alfie-1.jpg?width=1200">
-      </div>
-      <div class="card" id="companion-17">
-        <h3>Nutmeg</h3>
-        <p><strong>Personality:</strong>&nbsp;shy at first, then velcro<br>
-          <strong>Breed:</strong> heeler mix<br>
-          <strong>Age:</strong> est DOB 10/02/21<br>
-          <strong>Weight:</strong> 21 lbs<br>
-          <strong>Sex:</strong> female</p>
-        <ul><li>Walks well on leash</li></ul>
-        <img alt="Nutmeg" src="https://photos.rescue.example/companions/nutmeg-1.jpg?width=1200"><img alt="Nutmeg" src="https://photos.rescue.example/companions/nutmeg-2.jpg?width=1200"><img alt="Nutmeg" src="https://photos.rescue.example/companions/nutmeg-3.jpg?width=1200">
-      </div>
-      <div class="card" id="companion-18">
-        <h3>Basil</h3>
-        <p><strong>Personality:</strong>&nbsp;shy at first, then velcro<br>
-          <strong>Breed:</strong> pit mix<br>
-          <strong>Age:</strong> est DOB 1/03/23<br>
-          <strong>Weight:</strong> 53 lbs<br>
-          <strong>Sex:</strong> female</p>
-        <ul><li>Not a fan of cats</li></ul>
-        <img alt="Basil" src="https://photos.rescue.example/companions/basil-1.jpg?width=1200"><img alt="Basil" src="https://photos.rescue.example/companions/basil-2.jpg?width=1200">
-      </div>
-      <div class="card" id="companion-19">
-        <h3>Dolly *Adopted</h3>
-        <p><strong>Personality:</strong>&nbsp;calm couch companion<br>
-          <strong>Breed:</strong> terrier mix<br>
-          <strong>Age:</strong> est DOB 2/04/22<br>
-          <strong>Weight:</strong> 27 lbs<br>
-          <strong>Sex:</strong> male</p>
-        <ul><li>Still learning stairs</li><li>Not a fan of cats</li></ul>
-        <img alt="Dolly" src="https://photos.rescue.example/companions/dolly-1.jpg?width=1200"><img alt="Dolly" src="https://photos.rescue.example/companions/dolly-2.jpg?width=1200">
-      </div>
-      <div class="card" id="companion-20">
-        <h3>Rufus</h3>
-        <p><strong>Personality:</strong>&nbsp;sweet, smart<br>
-          <strong>Breed:</strong> lab mix<br>
-          <strong>Age:</strong> est DOB 6/24/24<br>
-          <strong>Weight:</strong> 76 lbs<br>
-          <strong>Sex:</strong> female</p>
-        <ul><li>Still learning stairs</li><li>Good with other dogs</li></ul>
-        <img alt="Rufus" src="https://photos.rescue.example/companions/rufus-1.jpg?width=1200"><img alt="Rufus" src="https://photos.rescue.example/companions/rufus-2.jpg?width=1200"><img alt="Rufus" src="https://photos.rescue.example/companions/rufus-3.jpg?width=1200">
-      </div>
-      <div class="card" id="companion-21">
-        <h3>Sage</h3>
-        <p><strong>Personality:</strong>&nbsp;goofy and gentle<br>
-          <strong>Breed:</strong> pit mix<br>
-          <strong>Age:</strong> est DOB 12/18/20<br>
-          <strong>Weight:</strong> 75 lbs<br>
-          <strong>Sex:</strong> female</p>
-        <ul><li>Takes treats gently</li></ul>
-        <img alt="Sage" src="https://photos.rescue.example/companions/sage-1.jpg?width=1200"><img alt="Sage" src="https://photos.rescue.example/companions/sage-2.jpg?width=1200">
-      </div>
-      <div class="card" id="companion-22">
-        <h3>Pepper</h3>
-        <p><strong>Personality:</strong>&nbsp;curious and brave<br>
-          <strong>Breed:</strong> lab mix<br>
-          <strong>Age:</strong> est DOB 6/25/20<br>
-          <strong>Weight:</strong> 33 lbs<br>
-          <strong>Sex:</strong> male</p>
-        <ul><li>Takes treats gently</li></ul>
-        <img alt="Pepper" src="https://photos.rescue.example/companions/pepper-1.jpg?width=1200"><img alt="Pepper" src="https://photos.rescue.example/companions/pepper-2.jpg?width=1200"><img alt="Pepper" src="https://photos.rescue.example/companions/pepper-3.jpg?width=1200">
-      </div>
-      <div class="card" id="companion-23">
-        <h3>Olive</h3>
-        <p><strong>Personality:</strong>&nbsp;easygoing with everyone<br>
-          <strong>Breed:</strong> collie mix<br>
-          <strong>Age:</strong> est DOB 7/24/25<br>
-          <strong>Weight:</strong> 12 lbs<br>
-          <strong>Sex:</strong> male</p>
-        <ul><li>Prefers a quiet home</li></ul>
-        <img alt="Olive" src="https://photos.rescue.example/companions/olive-1.jpg?width=1200"><img alt="Olive" src="https://photos.rescue.example/companions/olive-2.jpg?width=1200"><img alt="Olive" src="https://photos.rescue.example/companions/olive-3.jpg?width=1200">
-      </div>
-      <div class="card" id="companion-24">
-        <h3>Barnaby</h3>
-        <p><strong>Personality:</strong>&nbsp;curious and brave<br>
-          <strong>Breed:</strong> collie mix<br>
-          <strong>Age:</strong> est DOB 5/16/25<br>
-          <strong>Weight:</strong> 19 lbs<br>
-          <strong>Sex:</strong> male</p>
-        <ul><li>Prefers a quiet home</li><li>Loves car rides</li></ul>
-        <img alt="Barnaby" src="https://photos.rescue.example/companions/barnaby-1.jpg?width=1200"><img alt="Barnaby" src="https://photos.rescue.example/companions/barnaby-2.jpg?width=1200">
-      </div>
-      <div class="card" id="companion-25">
-        <h3>Fig</h3>
-        <p><strong>Personality:</strong>&nbsp;easygoing with everyone<br>
-          <strong>Breed:</strong> poodle mix<br>
-          <strong>Age:</strong> est DOB 4/16/19<br>
-          <strong>Weight:</strong> 9 lbs<br>
-          <strong>Sex:</strong> female</p>
-        <ul><li>Loves car rides</li></ul>
-        <img alt="Fig" src="https://photos.rescue.example/companions/fig-1.jpg?width=1200">
-      </div>
-      <div class="card" id="companion-26">
-        <h3>Hazel</h3>
-        <p><strong>Personality:</strong>&nbsp;playful, loves fetch<br>
-          <strong>Breed:</strong> spaniel mix<br>
-          <strong>Age:</strong> est DOB 6/26/24<br>
-          <strong>Weight:</strong> 31 lbs<br>
-          <strong>Sex:</strong> female</p>
-        <ul><li>Crate trained</li><li>Not a fan of cats</li><li>House trained</li></ul>
-        <img alt="Hazel" src="https://photos.rescue.example/companions/hazel-1.jpg?width=1200"><img alt="Hazel" src="https://photos.rescue.example/companions/hazel-2.jpg?width=1200"><img alt="Hazel" src="https://photos.rescue.example/companions/hazel-3.jpg?width=1200">
-      </div>
-      <div class="card" id="companion-27">
-        <h3>Milo</h3>
-        <p><strong>Personality:</strong>&nbsp;snuggly, a little bossy<br>
-          <strong>Breed:</strong> terrier mix<br>
-          <strong>Age:</strong> est DOB 11/11/25<br>
-          <strong>Weight:</strong> 29 lbs<br>
-          <strong>Sex:</strong> male</p>
-        <ul><li>House trained</li></ul>
-        <img alt="Milo" src="https://photos.rescue.example/companions/milo-1.jpg?width=1200"><img alt="Milo" src="https://photos.rescue.example/companions/milo-2.jpg?width=1200">
-      </div>
-      <div class="card" id="companion-28">
-        <h3>Goose</h3>
-        <p><strong>Personality:</strong>&nbsp;curious and brave<br>
-          <strong>Breed:</strong> hound mix<br>
-          <strong>Age:</strong> est DOB 1/05/20<br>
-          <strong>Weight:</strong> 79 lbs<br>
-          <strong>Sex:</strong> male</p>
-        <ul><li>Still learning stairs</li><li>Good with other dogs</li><li>Not a fan of cats</li></ul>
-        <img alt="Goose" src="https://photos.rescue.example/companions/goose-1.jpg?width=1200"><img alt="Goose" src="https://photos.rescue.example/companions/goose-2.jpg?width=1200"><img alt="Goose" src="https://photos.rescue.example/companions/goose-3.jpg?width=1200">
-      </div>
-      <div class="card" id="companion-29">
-        <h3>Ivy</h3>
-        <p><strong>Personality:</strong>&nbsp;playful, loves fetch<br>
-          <strong>Breed:</strong> lab mix<br>
-          <strong>Age:</strong> est DOB 1/26/19<br>
-          <strong>Weight:</strong> 12 lbs<br>
-          <strong>Sex:</strong> female</p>
-        <ul><li>Crate trained</li><li>Takes treats gently</li><li>Good with other dogs</li></ul>
-        <img alt="Ivy" src="https://photos.rescue.example/companions/ivy-1.jpg?width=1200"><img alt="Ivy" src="https://photos.rescue.example/companions/ivy-2.jpg?width=1200">
-      </div>
-      <div class="card" id="companion-30">
-        <h3>Waffles</h3>
-        <p><strong>Personality:</strong>&nbsp;calm couch companion<br>
-          <strong>Breed:</strong> heeler mix<br>
-          <strong>Age:</strong> est DOB 5/17/20<br>
-          <strong>Weight:</strong> 62 lbs<br>
-          <strong>Sex:</strong> male</p>
-        <ul><li>Not a fan of cats</li></ul>
-        <img alt="Waffles" src="https://photos.rescue.example/companions/waffles-1.jpg?width=1200"><img alt="Waffles" src="https://photos.rescue.example/companions/waffles-2.jpg?width=1200">
-      </div>
-      <div class="card" id="companion-31">
-        <h3>Scout</h3>
-        <p><strong>Personality:</strong>&nbsp;shy at first, then velcro<br>
-          <strong>Breed:</strong> heeler mix<br>
-          <strong>Age:</strong> est DOB 12/12/19<br>
-          <strong>Weight:</strong> 28 lbs<br>
-          <strong>Sex:</strong> male</p>
-        <ul><li>Not a fan of cats</li><li>Takes treats gently</li></ul>
-        <img alt="Scout" src="https://photos.rescue.example/companions/scout-1.jpg?width=1200"><img alt="Scout" src="https://photos.rescue.example/companions/scout-2.jpg?width=1200">
-      </div>
-      <div class="card" id="companion-32">
-        <h3>Biscotti</h3>
-        <p><strong>Personality:</strong>&nbsp;shy at first, then velcro<br>
-          <strong>Breed:</strong> hound mix<br>
-          <strong>Age:</strong> est DOB 8/25/25<br>
-          <strong>Weight:</strong> 27 lbs<br>
-          <strong>Sex:</strong> female</p>
-        <ul><li>Not a fan of cats</li></ul>
-        <img alt="Biscotti" src="https://photos.rescue.example/companions/biscotti-1.jpg?width=1200">
-      </div>
-    </div>
-  </main>
-  <footer>
-    <h3>Contact</h3>
-    <p>Example Rescue &middot; hello@rescue.example</p>
-  </footer>
-</body>
+    </main>
+    <footer>
+      <h3>Contact</h3>
+      <p>Example Rescue &middot; hello@rescue.example</p>
+    </footer>
+  </body>
 </html>

@@ -22,16 +22,28 @@ const configuredEnvironment = parseEnvironment({
 });
 
 test("rejects header injection in recipients, From addresses, and subjects", async () => {
-  await assert.rejects(() => sendAppEmail({ ...message, to: "valid@example.com\r\nBcc: bad@example.com" }, {
-    env: configuredEnvironment,
-  }));
-  await assert.rejects(() => sendAppEmail(message, {
-    env: {
-      ...configuredEnvironment,
-      APP_EMAIL_FROM: "hello@example.com\nBcc: bad@example.com",
-    },
-  }));
-  await assert.rejects(() => sendAppEmail({ ...message, subject: "Hello\nBcc: bad@example.com" }, {
-    env: configuredEnvironment,
-  }));
+  await assert.rejects(() =>
+    sendAppEmail(
+      { ...message, to: "valid@example.com\r\nBcc: bad@example.com" },
+      {
+        env: configuredEnvironment,
+      },
+    ),
+  );
+  await assert.rejects(() =>
+    sendAppEmail(message, {
+      env: {
+        ...configuredEnvironment,
+        APP_EMAIL_FROM: "hello@example.com\nBcc: bad@example.com",
+      },
+    }),
+  );
+  await assert.rejects(() =>
+    sendAppEmail(
+      { ...message, subject: "Hello\nBcc: bad@example.com" },
+      {
+        env: configuredEnvironment,
+      },
+    ),
+  );
 });

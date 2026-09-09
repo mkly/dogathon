@@ -17,7 +17,11 @@ export function PublicHeader({ organizationName, orgSlug }: PublicHeaderProps) {
   return (
     <header className={styles.header}>
       <Link className={styles.home} href={`/${orgSlug}`}>
-        <Image alt="Pawcast" className={styles.wordmark} src={pawcastWordmark} />
+        <Image
+          alt="Pawcast"
+          className={styles.wordmark}
+          src={pawcastWordmark}
+        />
       </Link>
       <StitchBadge className={styles.rescue} tone="cream">
         <Stitch fine />

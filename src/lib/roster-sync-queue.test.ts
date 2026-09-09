@@ -27,7 +27,10 @@ let admin: pg.Client;
 let boss: PgBoss;
 
 before(async () => {
-  assert.ok(sourceDatabaseUrl, "DATABASE_URL is required for roster sync queue tests");
+  assert.ok(
+    sourceDatabaseUrl,
+    "DATABASE_URL is required for roster sync queue tests",
+  );
   const url = new URL(sourceDatabaseUrl);
   admin = new pg.Client({ connectionString: sourceDatabaseUrl });
   await admin.connect();
@@ -83,7 +86,7 @@ test("a manual enqueue pulls an existing staggered job forward", async () => {
     startAfter: new Date(Date.now() + 60 * 60 * 1000),
   });
 
-  assert.equal((await queue.fetch()), null);
+  assert.equal(await queue.fetch(), null);
   const manual = await queue.enqueueWithResult({ orgId });
   const claimed = await queue.fetch();
 

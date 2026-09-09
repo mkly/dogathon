@@ -37,15 +37,14 @@ import {
   rosterSyncStatusLabel,
   type RosterSyncJobView,
 } from "@/lib/roster-sync-client";
-import { MarkdownEditor, type MarkdownEditorClassNames } from "@/components/markdown-editor";
+import {
+  MarkdownEditor,
+  type MarkdownEditorClassNames,
+} from "@/components/markdown-editor";
 import { SPONSOR_UPDATE_BODY_MAX_LENGTH } from "@/lib/sponsor-update-body";
 import { pushToast } from "@/lib/toast";
 
-import {
-  refreshAdminPage,
-  saveSettings,
-  type SettingsState,
-} from "./actions";
+import { refreshAdminPage, saveSettings, type SettingsState } from "./actions";
 import {
   EMAIL_CONNECTOR_NOTICE_ID,
   emailConnectorBlockedReason,
@@ -62,34 +61,33 @@ const MotionAdminSurface = motion.create(AdminSurface);
 function useApiFetch() {
   const router = useRouter();
 
-  return useCallback(async (
-    input: RequestInfo | URL,
-    init: RequestInit,
-    action: string,
-  ) => {
-    let response: Response;
-    try {
-      response = await fetch(input, init);
-    } catch {
-      throw new Error(`${action} could not reach the server.`);
-    }
-    if (response.ok) return response;
+  return useCallback(
+    async (input: RequestInfo | URL, init: RequestInit, action: string) => {
+      let response: Response;
+      try {
+        response = await fetch(input, init);
+      } catch {
+        throw new Error(`${action} could not reach the server.`);
+      }
+      if (response.ok) return response;
 
-    if (response.status === 401) {
-      const next = `${window.location.pathname}${window.location.search}`;
-      router.push(`/staff/sign-in?next=${encodeURIComponent(next)}`);
-      throw new Error(`${action} needs you to sign in again.`);
-    }
+      if (response.status === 401) {
+        const next = `${window.location.pathname}${window.location.search}`;
+        router.push(`/staff/sign-in?next=${encodeURIComponent(next)}`);
+        throw new Error(`${action} needs you to sign in again.`);
+      }
 
-    const body = (await response.json().catch(() => null)) as {
-      error?: unknown;
-    } | null;
-    if (typeof body?.error === "string" && body.error)
-      throw new Error(body.error);
-    if (response.status === 404)
-      throw new Error(`${action} is not wired up yet (404).`);
-    throw new Error(`${action} failed (${response.status}). Try again.`);
-  }, [router]);
+      const body = (await response.json().catch(() => null)) as {
+        error?: unknown;
+      } | null;
+      if (typeof body?.error === "string" && body.error)
+        throw new Error(body.error);
+      if (response.status === 404)
+        throw new Error(`${action} is not wired up yet (404).`);
+      throw new Error(`${action} failed (${response.status}). Try again.`);
+    },
+    [router],
+  );
 }
 
 export const richTextEditorClassNames: MarkdownEditorClassNames = {
@@ -142,9 +140,9 @@ export function DraftEditor({
   const [editorOpen, setEditorOpen] = useState(false);
   const [denyConfirmOpen, setDenyConfirmOpen] = useState(false);
   const shouldRestoreFocus = useRef(false);
-  const [pending, setPending] = useState<"save" | "compose" | "approve" | "deny" | null>(
-    null,
-  );
+  const [pending, setPending] = useState<
+    "save" | "compose" | "approve" | "deny" | null
+  >(null);
   const motionTransition = useMotionTiming();
   const denyAction = isGraduation ? "Deny adoption notice" : "Discard draft";
 
@@ -337,7 +335,9 @@ export function DraftEditor({
                 className={styles.approveButton}
                 disabled={pending !== null || !emailConnected}
                 onClick={approve}
-                title={emailConnected ? undefined : emailConnectorBlockedReason()}
+                title={
+                  emailConnected ? undefined : emailConnectorBlockedReason()
+                }
                 tone="moss"
               >
                 {pending === "approve" ? "Saving & sending…" : "Approve & send"}
@@ -349,8 +349,12 @@ export function DraftEditor({
                 tone="brick"
               >
                 {pending === "deny"
-                  ? (isGraduation ? "Denying…" : "Discarding…")
-                  : (isGraduation ? "Deny & keep billing" : "Deny & discard")}
+                  ? isGraduation
+                    ? "Denying…"
+                    : "Discarding…"
+                  : isGraduation
+                    ? "Deny & keep billing"
+                    : "Deny & discard"}
               </AdminButton>
               <AdminLink
                 className={styles.previewLink}
@@ -389,10 +393,18 @@ export function DraftEditor({
                         animate={{ opacity: 1, scale: 1, x: "-50%", y: "-50%" }}
                         className={styles.draftDialog}
                         exit={{ opacity: 0, scale: 0.97, x: "-50%", y: "-48%" }}
-                        initial={{ opacity: 0, scale: 0.97, x: "-50%", y: "-48%" }}
+                        initial={{
+                          opacity: 0,
+                          scale: 0.97,
+                          x: "-50%",
+                          y: "-48%",
+                        }}
                         transition={motionTransition}
                       >
-                        <AdminSurface className={styles.dialogPanel} tone="oatmeal">
+                        <AdminSurface
+                          className={styles.dialogPanel}
+                          tone="oatmeal"
+                        >
                           <div className={styles.dialogHeader}>
                             <div>
                               <AdminEyebrow>Draft update</AdminEyebrow>
@@ -408,7 +420,9 @@ export function DraftEditor({
                               ✕
                             </AdminButton>
                           </div>
-                          <Dialog.Description className={styles.dialogDescription}>
+                          <Dialog.Description
+                            className={styles.dialogDescription}
+                          >
                             Review the update copy before saving this draft.
                           </Dialog.Description>
                           <div className={styles.draftEditor}>
@@ -417,7 +431,9 @@ export function DraftEditor({
                               <input
                                 autoFocus
                                 id={`subject-${id}`}
-                                onChange={(event) => setSubject(event.target.value)}
+                                onChange={(event) =>
+                                  setSubject(event.target.value)
+                                }
                                 required
                                 value={subject}
                               />
@@ -428,7 +444,9 @@ export function DraftEditor({
                                 aria-describedby={`teaser-counter-${id}`}
                                 id={`teaser-${id}`}
                                 maxLength={240}
-                                onChange={(event) => setTeaser(event.target.value)}
+                                onChange={(event) =>
+                                  setTeaser(event.target.value)
+                                }
                                 required
                                 value={teaser}
                               />
@@ -440,7 +458,12 @@ export function DraftEditor({
                             >
                               {teaser.length} / 240 characters
                             </small>
-                            <label htmlFor={`body-${id}`} id={`body-label-${id}`}>Body</label>
+                            <label
+                              htmlFor={`body-${id}`}
+                              id={`body-label-${id}`}
+                            >
+                              Body
+                            </label>
                             <AdminField className={styles.richTextEditorField}>
                               <MarkdownEditor
                                 classNames={richTextEditorClassNames}
@@ -464,15 +487,17 @@ export function DraftEditor({
                               <AdminButton
                                 className={styles.saveDraftButton}
                                 disabled={
-                                  pending !== null
-                                  || bodyOverLimit
-                                  || !teaser.trim()
-                                  || !bodyText.trim()
+                                  pending !== null ||
+                                  bodyOverLimit ||
+                                  !teaser.trim() ||
+                                  !bodyText.trim()
                                 }
                                 onClick={save}
                                 tone="mustard"
                               >
-                                {pending === "save" ? "Saving…" : "Save changes"}
+                                {pending === "save"
+                                  ? "Saving…"
+                                  : "Save changes"}
                               </AdminButton>
                             </div>
                           </div>
@@ -518,14 +543,28 @@ export function DraftEditor({
                         animate={{ opacity: 1, scale: 1, x: "-50%", y: "-50%" }}
                         className={styles.alertDialog}
                         exit={{ opacity: 0, scale: 0.96, x: "-50%", y: "-48%" }}
-                        initial={{ opacity: 0, scale: 0.96, x: "-50%", y: "-48%" }}
+                        initial={{
+                          opacity: 0,
+                          scale: 0.96,
+                          x: "-50%",
+                          y: "-48%",
+                        }}
                         transition={motionTransition}
                       >
-                        <AdminSurface className={styles.dialogPanel} tone="oatmeal">
+                        <AdminSurface
+                          className={styles.dialogPanel}
+                          tone="oatmeal"
+                        >
                           <AlertDialog.Title asChild>
-                            <h2>{isGraduation ? "Deny this adoption notice?" : "Discard this draft?"}</h2>
+                            <h2>
+                              {isGraduation
+                                ? "Deny this adoption notice?"
+                                : "Discard this draft?"}
+                            </h2>
                           </AlertDialog.Title>
-                          <AlertDialog.Description className={styles.dialogDescription}>
+                          <AlertDialog.Description
+                            className={styles.dialogDescription}
+                          >
                             {isGraduation
                               ? "The notice will be dismissed and this sponsorship will keep billing as normal."
                               : "The collected chats will go back to Ready to compose."}
@@ -542,7 +581,9 @@ export function DraftEditor({
                                 }}
                                 tone="brick"
                               >
-                                {isGraduation ? "Deny & keep billing" : "Discard draft"}
+                                {isGraduation
+                                  ? "Deny & keep billing"
+                                  : "Discard draft"}
                               </AdminButton>
                             </AlertDialog.Action>
                           </div>
@@ -611,7 +652,11 @@ export function ComposeButton({
       >
         {pending ? "Composing…" : "Compose update"}
       </AdminButton>
-      {pending ? <small className={styles.composeHint}>This can take a minute or two</small> : null}
+      {pending ? (
+        <small className={styles.composeHint}>
+          This can take a minute or two
+        </small>
+      ) : null}
     </div>
   );
 }
@@ -832,7 +877,10 @@ export function EmailConnectorSettings({
       );
       const body = (await response.json()) as { url?: string };
       if (!body.url) {
-        pushToast("error", "This email account did not return an authorization URL.");
+        pushToast(
+          "error",
+          "This email account did not return an authorization URL.",
+        );
         return;
       }
       window.location.assign(body.url);
@@ -902,7 +950,10 @@ export function EmailConnectorSettings({
         "Disconnect email",
       );
       setConnector({ connected: false, type: null, fromEmail: null });
-      pushToast("success", "Sending address disconnected. Updates cannot be sent until a new one is connected.");
+      pushToast(
+        "success",
+        "Sending address disconnected. Updates cannot be sent until a new one is connected.",
+      );
     } catch (error) {
       pushToast(
         "error",
@@ -929,9 +980,9 @@ export function EmailConnectorSettings({
           <AdminEyebrow>Organization email</AdminEyebrow>
           <h2>Send updates from your email address</h2>
           <p>
-            Every update sent to sponsors comes from this address. Connect the Gmail,
-            Microsoft 365, or SMTP mailbox sponsors should see and reply to; connecting
-            a different account replaces the current one.
+            Every update sent to sponsors comes from this address. Connect the
+            Gmail, Microsoft 365, or SMTP mailbox sponsors should see and reply
+            to; connecting a different account replaces the current one.
           </p>
         </div>
         <div className={styles.connectorStatus}>
@@ -1040,12 +1091,18 @@ export function EmailConnectorSettings({
                       </AdminButton>
                     </div>
                     <Dialog.Description className={styles.dialogDescription}>
-                      Enter the mailbox details sponsors should see and reply to.
+                      Enter the mailbox details sponsors should see and reply
+                      to.
                     </Dialog.Description>
                     <form className={styles.smtpForm} onSubmit={saveSmtp}>
                       <label htmlFor="smtpHost">Host</label>
                       <AdminField>
-                        <input autoFocus id="smtpHost" name="smtpHost" required />
+                        <input
+                          autoFocus
+                          id="smtpHost"
+                          name="smtpHost"
+                          required
+                        />
                       </AdminField>
                       <label htmlFor="smtpPort">Port</label>
                       <AdminField>
@@ -1078,7 +1135,9 @@ export function EmailConnectorSettings({
                           type="password"
                         />
                       </AdminField>
-                      <label htmlFor="smtpFromEmail">Address sponsors will see</label>
+                      <label htmlFor="smtpFromEmail">
+                        Address sponsors will see
+                      </label>
                       <AdminField>
                         <input
                           id="smtpFromEmail"
@@ -1088,7 +1147,11 @@ export function EmailConnectorSettings({
                         />
                       </AdminField>
                       <label className={styles.smtpSecure} htmlFor="smtpSecure">
-                        <input id="smtpSecure" name="smtpSecure" type="checkbox" />{" "}
+                        <input
+                          id="smtpSecure"
+                          name="smtpSecure"
+                          type="checkbox"
+                        />{" "}
                         TLS from connection start (usually port 465)
                       </label>
                       <div className={styles.modalActions}>
@@ -1106,7 +1169,9 @@ export function EmailConnectorSettings({
                           tone="mustard"
                           type="submit"
                         >
-                          {pending === "smtp" ? "Verifying…" : "Verify & use this address"}
+                          {pending === "smtp"
+                            ? "Verifying…"
+                            : "Verify & use this address"}
                         </AdminButton>
                       </div>
                     </form>

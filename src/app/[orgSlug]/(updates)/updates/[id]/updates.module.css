@@ -102,7 +102,10 @@
   gap: 0.45rem;
   min-height: 2.75rem;
   padding: 0.65rem 1rem;
-  transition: background 160ms ease, border-color 160ms ease, transform 160ms ease;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    transform 160ms ease;
 }
 
 .shareButton:hover {
@@ -263,7 +266,9 @@
   font-size: 1.1rem;
   height: 2.65rem;
   justify-content: center;
-  transition: background 160ms ease, border-color 160ms ease;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease;
   width: 2.65rem;
 }
 
@@ -330,7 +335,9 @@
   display: block;
   overflow: hidden;
   text-decoration: none;
-  transition: border-color 160ms ease, transform 160ms ease;
+  transition:
+    border-color 160ms ease,
+    transform 160ms ease;
 }
 
 .graduationCompanion:hover {

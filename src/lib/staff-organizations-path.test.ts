@@ -15,7 +15,11 @@ test("staff organizations sign-in path preserves and encodes the full requested 
 
 test("staff organizations path preserves repeated and empty search parameters", () => {
   assert.equal(
-    staffOrganizationsPath({ empty: "", filter: ["new", "urgent"], missing: undefined }),
+    staffOrganizationsPath({
+      empty: "",
+      filter: ["new", "urgent"],
+      missing: undefined,
+    }),
     "/staff/organizations?empty=&filter=new&filter=urgent",
   );
 });

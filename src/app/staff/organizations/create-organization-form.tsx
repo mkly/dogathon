@@ -4,14 +4,20 @@ import { useActionState, useState } from "react";
 
 import { FeltButton, FeltField } from "@/components/felt";
 import styles from "@/components/auth-form.module.css";
-import { organizationSlug, organizationSlugWhileTyping } from "@/lib/organization-slug-client";
+import {
+  organizationSlug,
+  organizationSlugWhileTyping,
+} from "@/lib/organization-slug-client";
 
 import { createOrganization } from "./actions";
 
 const initialState = { error: "" };
 
 export function CreateOrganizationForm() {
-  const [state, formAction, pending] = useActionState(createOrganization, initialState);
+  const [state, formAction, pending] = useActionState(
+    createOrganization,
+    initialState,
+  );
   const [slug, setSlug] = useState("");
   const [slugEdited, setSlugEdited] = useState(false);
 
@@ -23,7 +29,8 @@ export function CreateOrganizationForm() {
           id="organization-name"
           name="name"
           onChange={(event) => {
-            if (!slugEdited) setSlug(organizationSlug(event.currentTarget.value));
+            if (!slugEdited)
+              setSlug(organizationSlug(event.currentTarget.value));
           }}
           required
         />
@@ -35,7 +42,9 @@ export function CreateOrganizationForm() {
           name="slug"
           onBlur={() => setSlug(organizationSlug(slug))}
           onChange={(event) => {
-            const nextSlug = organizationSlugWhileTyping(event.currentTarget.value);
+            const nextSlug = organizationSlugWhileTyping(
+              event.currentTarget.value,
+            );
             setSlug(nextSlug);
             setSlugEdited(nextSlug.length > 0);
           }}
@@ -44,7 +53,11 @@ export function CreateOrganizationForm() {
           value={slug}
         />
       </FeltField>
-      {state.error ? <p className={styles.error} role="alert">{state.error}</p> : null}
+      {state.error ? (
+        <p className={styles.error} role="alert">
+          {state.error}
+        </p>
+      ) : null}
       <FeltButton disabled={pending} tone="moss" type="submit">
         {pending ? "Creating…" : "Create organization"}
       </FeltButton>

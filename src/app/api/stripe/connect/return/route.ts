@@ -8,7 +8,9 @@ import { refreshConnectStatus } from "@/lib/stripe-billing";
 const connectQuerySchema = z.object({ org: z.string().trim().min(1) });
 
 export async function GET(request: Request) {
-  const query = connectQuerySchema.safeParse(Object.fromEntries(new URL(request.url).searchParams));
+  const query = connectQuerySchema.safeParse(
+    Object.fromEntries(new URL(request.url).searchParams),
+  );
   const orgSlug = query.success ? query.data.org : "";
   const access = await getOrganizationAccessBySlug(await headers(), orgSlug, {
     billing: ["manage"],

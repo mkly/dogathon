@@ -11,7 +11,11 @@ import {
   fetchVolunteerPhotoCleanupJob,
 } from "./roster-sync-queue.ts";
 import type { RosterSyncJobView } from "./roster-sync-client.ts";
-import { RosterSyncRefusal, syncRoster, type SyncSummary } from "./roster-sync.ts";
+import {
+  RosterSyncRefusal,
+  syncRoster,
+  type SyncSummary,
+} from "./roster-sync.ts";
 import { isAuthorizedSchedulerRequest } from "./scheduler-auth.ts";
 import { env as appEnv } from "./env.ts";
 import type { SchedulerEnvironment } from "./scheduler-auth.ts";
@@ -25,14 +29,16 @@ type DrainDependencies = {
   succeed: (jobId: string, summary: SyncSummary) => Promise<RosterSyncJobView>;
   refuse: (jobId: string, reason: string) => Promise<RosterSyncJobView>;
   fail: (jobId: string, error: string) => Promise<RosterSyncJobView>;
-  syncRoster: (orgId: string, options: { signal: AbortSignal }) => Promise<SyncSummary>;
+  syncRoster: (
+    orgId: string,
+    options: { signal: AbortSignal },
+  ) => Promise<SyncSummary>;
 };
 
 type DrainOptions = { budgetMs?: number };
 
 export type RosterSyncDrainResult =
-  | { drained: false }
-  | { drained: true; job: RosterSyncJobView };
+  { drained: false } | { drained: true; job: RosterSyncJobView };
 
 const defaultDependencies: DrainDependencies = {
   supervise: superviseRosterSyncQueue,
@@ -43,8 +49,12 @@ const defaultDependencies: DrainDependencies = {
   syncRoster,
 };
 
-export function createRosterSyncDrainer(dependencies: DrainDependencies = defaultDependencies) {
-  return async function drain(options: DrainOptions = {}): Promise<RosterSyncDrainResult> {
+export function createRosterSyncDrainer(
+  dependencies: DrainDependencies = defaultDependencies,
+) {
+  return async function drain(
+    options: DrainOptions = {},
+  ): Promise<RosterSyncDrainResult> {
     const budgetMs = positiveDuration(
       options.budgetMs ?? DEFAULT_ROSTER_SYNC_DRAIN_BUDGET_MS,
       "budgetMs",
@@ -58,16 +68,27 @@ export function createRosterSyncDrainer(dependencies: DrainDependencies = defaul
       ? AbortSignal.any([claimed.signal, budgetSignal])
       : budgetSignal;
     try {
-      const summary = await dependencies.syncRoster(claimed.data.orgId, { signal });
-      return { drained: true, job: await dependencies.succeed(claimed.id, summary) };
+      const summary = await dependencies.syncRoster(claimed.data.orgId, {
+        signal,
+      });
+      return {
+        drained: true,
+        job: await dependencies.succeed(claimed.id, summary),
+      };
     } catch (error) {
       if (error instanceof RosterSyncRefusal) {
-        return { drained: true, job: await dependencies.refuse(claimed.id, error.reason) };
+        return {
+          drained: true,
+          job: await dependencies.refuse(claimed.id, error.reason),
+        };
       }
       const message = budgetSignal.aborted
         ? `Roster sync exceeded its ${budgetMs}ms drain budget`
         : errorMessage(error);
-      return { drained: true, job: await dependencies.fail(claimed.id, message) };
+      return {
+        drained: true,
+        job: await dependencies.fail(claimed.id, message),
+      };
     }
   };
 }
@@ -88,7 +109,9 @@ const photoCleanupDefaults: Required<PhotoCleanupDependencies> = {
   fetch: fetchVolunteerPhotoCleanupJob,
 };
 
-export function createVolunteerPhotoCleanupDrainer(dependencies: PhotoCleanupDependencies = {}) {
+export function createVolunteerPhotoCleanupDrainer(
+  dependencies: PhotoCleanupDependencies = {},
+) {
   const services = { ...photoCleanupDefaults, ...dependencies };
   return async function drain() {
     await services.enqueue();
@@ -99,7 +122,10 @@ export function createVolunteerPhotoCleanupDrainer(dependencies: PhotoCleanupDep
       await services.complete(job.id);
       return { drained: true as const, ...result };
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Volunteer photo cleanup failed";
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Volunteer photo cleanup failed";
       await services.fail(job.id, message);
       throw error;
     }
@@ -111,7 +137,9 @@ type DrainRouteDependencies = {
   env?: SchedulerEnvironment;
 };
 
-export function createRosterSyncDrainHandler(dependencies: DrainRouteDependencies = {}) {
+export function createRosterSyncDrainHandler(
+  dependencies: DrainRouteDependencies = {},
+) {
   const drain = dependencies.drain ?? createRosterSyncDrainer();
   const environment = dependencies.env ?? appEnv;
 
@@ -121,12 +149,17 @@ export function createRosterSyncDrainHandler(dependencies: DrainRouteDependencie
     }
 
     try {
-      return Response.json(await drain({
-        budgetMs: DEFAULT_ROSTER_SYNC_DRAIN_BUDGET_MS,
-      }));
+      return Response.json(
+        await drain({
+          budgetMs: DEFAULT_ROSTER_SYNC_DRAIN_BUDGET_MS,
+        }),
+      );
     } catch (error) {
       console.error("Roster sync drain failed", error);
-      return Response.json({ error: "Roster sync drain failed" }, { status: 500 });
+      return Response.json(
+        { error: "Roster sync drain failed" },
+        { status: 500 },
+      );
     }
   };
 }

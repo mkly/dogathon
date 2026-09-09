@@ -1,6 +1,11 @@
 "use client";
 
-import { type ReactNode, useCallback, useRef, useSyncExternalStore } from "react";
+import {
+  type ReactNode,
+  useCallback,
+  useRef,
+  useSyncExternalStore,
+} from "react";
 
 import type { FeltButtonProps } from "@/components/felt";
 import { PendingFeltSubmitButton } from "@/components/pending-submit-button";
@@ -32,7 +37,12 @@ export function SponsorSubmitButton({
   );
 
   return (
-    <PendingFeltSubmitButton {...props} disabled={!valid || props.disabled} pendingLabel={pendingLabel} ref={ref}>
+    <PendingFeltSubmitButton
+      {...props}
+      disabled={!valid || props.disabled}
+      pendingLabel={pendingLabel}
+      ref={ref}
+    >
       {children}
     </PendingFeltSubmitButton>
   );

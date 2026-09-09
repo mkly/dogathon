@@ -11,14 +11,20 @@ import { prisma } from "@/lib/prisma";
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 
-const oauthProviderSchema = z.enum(["gmail", "microsoft"] satisfies Array<Exclude<EmailConnectorKind, "smtp">>);
+const oauthProviderSchema = z.enum(["gmail", "microsoft"] satisfies Array<
+  Exclude<EmailConnectorKind, "smtp">
+>);
 const oauthCallbackSchema = z.object({
   code: z.string().min(1),
   state: z.string().min(1),
   error: z.string().optional(),
 });
 
-function adminRedirect(request: NextRequest, orgSlug: string | null, result: "connected" | "error") {
+function adminRedirect(
+  request: NextRequest,
+  orgSlug: string | null,
+  result: "connected" | "error",
+) {
   const path = orgSlug
     ? `/${orgSlug}/admin/settings?emailConnector=${result}`
     : `/staff/organizations?emailConnector=${result}`;
@@ -38,9 +44,16 @@ export async function GET(
 ) {
   const provider = oauthProviderSchema.safeParse((await params).provider);
   const url = new URL(request.url);
-  const query = oauthCallbackSchema.safeParse(Object.fromEntries(url.searchParams));
+  const query = oauthCallbackSchema.safeParse(
+    Object.fromEntries(url.searchParams),
+  );
   const cookie = request.cookies.get(EMAIL_CONNECTOR_OAUTH_COOKIE)?.value;
-  if (!provider.success || !cookie || !query.success || query.data.error !== undefined) {
+  if (
+    !provider.success ||
+    !cookie ||
+    !query.success ||
+    query.data.error !== undefined
+  ) {
     return adminRedirect(request, null, "error");
   }
 
@@ -50,7 +63,8 @@ export async function GET(
   } catch {
     return adminRedirect(request, null, "error");
   }
-  if (session.provider !== provider.data) return adminRedirect(request, null, "error");
+  if (session.provider !== provider.data)
+    return adminRedirect(request, null, "error");
 
   const organization = await prisma.organization.findUnique({
     where: { id: session.orgId },
@@ -63,13 +77,20 @@ export async function GET(
   // signed-in user's membership and permission.
   const accessHeaders = new Headers(request.headers);
   accessHeaders.set("x-organization-slug", organization.slug);
-  const access = await requireApiOrganization(accessHeaders, { settings: ["manage"] });
+  const access = await requireApiOrganization(accessHeaders, {
+    settings: ["manage"],
+  });
   if (!access.ok || access.context.orgId !== session.orgId) {
     return adminRedirect(request, organization.slug, "error");
   }
 
   try {
-    const tokens = await exchangeEmailConnectorCode(provider.data, url, url.origin, session);
+    const tokens = await exchangeEmailConnectorCode(
+      provider.data,
+      url,
+      url.origin,
+      session,
+    );
     const accessTokenEncrypted = await encryptEmailSecret(tokens.accessToken);
     const refreshTokenEncrypted = await encryptEmailSecret(tokens.refreshToken);
     await prisma.emailConnector.upsert({

@@ -3,10 +3,15 @@
   min-height: 100vh;
   padding: clamp(2rem, 6vw, 5rem);
   background:
-    radial-gradient(circle at 12% 10%, rgb(217 165 33 / 13%), transparent 28rem),
+    radial-gradient(
+      circle at 12% 10%,
+      rgb(217 165 33 / 13%),
+      transparent 28rem
+    ),
     var(--felt-cream);
   color: var(--felt-ink);
-  font-family: Nunito, ui-rounded, "Arial Rounded MT Bold", system-ui, sans-serif;
+  font-family:
+    Nunito, ui-rounded, "Arial Rounded MT Bold", system-ui, sans-serif;
 }
 
 .header {
@@ -56,8 +61,12 @@
   padding: clamp(2.5rem, 7vw, 5rem);
 }
 
-.hero h2 { max-width: 17ch; }
-.hero p { max-width: 38rem; }
+.hero h2 {
+  max-width: 17ch;
+}
+.hero p {
+  max-width: 38rem;
+}
 
 .sample {
   min-height: 18rem;
@@ -82,6 +91,10 @@
 }
 
 @media (max-width: 760px) {
-  .grid { grid-template-columns: 1fr; }
-  .photoSample { grid-template-columns: 1fr; }
+  .grid {
+    grid-template-columns: 1fr;
+  }
+  .photoSample {
+    grid-template-columns: 1fr;
+  }
 }

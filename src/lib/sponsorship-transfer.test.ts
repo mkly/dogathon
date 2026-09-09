@@ -23,15 +23,21 @@ const sponsorship = {
   stripeCustomerId: "cus_1",
   createdAt: new Date("2026-08-01T00:00:00Z"),
   updatedAt: new Date("2026-09-01T00:00:00Z"),
-  organization: { id: "00000000-0000-4000-8000-000000000002", name: "Best Friends", stripeAccountId: "acct_1" },
+  organization: {
+    id: "00000000-0000-4000-8000-000000000002",
+    name: "Best Friends",
+    stripeAccountId: "acct_1",
+  },
   sponsor: { email: "pat@example.com", name: "Pat" },
 };
 
-function harness(options: {
-  claimed?: number;
-  resident?: { id: string; name: string } | null;
-  sponsorshipStatus?: "active" | "awaiting";
-} = {}) {
+function harness(
+  options: {
+    claimed?: number;
+    resident?: { id: string; name: string } | null;
+    sponsorshipStatus?: "active" | "awaiting";
+  } = {},
+) {
   const calls = {
     cancel: 0,
     email: 0,
@@ -41,7 +47,10 @@ function harness(options: {
   };
   const tx = {
     sponsorship: {
-      findUnique: async () => ({ ...sponsorship, status: options.sponsorshipStatus ?? sponsorship.status }),
+      findUnique: async () => ({
+        ...sponsorship,
+        status: options.sponsorshipStatus ?? sponsorship.status,
+      }),
       updateMany: async (input: unknown) => {
         calls.update = input;
         return { count: options.claimed ?? 1 };
@@ -52,15 +61,27 @@ function harness(options: {
         calls.resident = input;
         return options.resident === null
           ? null
-          : (options.resident ?? { id: "00000000-0000-4000-8000-000000000005", name: "Mochi" });
+          : (options.resident ?? {
+              id: "00000000-0000-4000-8000-000000000005",
+              name: "Mochi",
+            });
       },
     },
   } as unknown as Prisma.TransactionClient;
   const dependencies = {
-    transaction: async <T>(operation: (client: Prisma.TransactionClient) => Promise<T>) => operation(tx),
-    cancel: async () => { calls.cancel += 1; return {} as never; },
-    sendEmail: async () => { calls.email += 1; },
-    revalidateRoster: () => { calls.revalidate += 1; },
+    transaction: async <T>(
+      operation: (client: Prisma.TransactionClient) => Promise<T>,
+    ) => operation(tx),
+    cancel: async () => {
+      calls.cancel += 1;
+      return {} as never;
+    },
+    sendEmail: async () => {
+      calls.email += 1;
+    },
+    revalidateRoster: () => {
+      calls.revalidate += 1;
+    },
   };
   return { calls, dependencies };
 }
@@ -122,17 +143,28 @@ test("transfers an active sponsorship and releases its former companion", async 
 test("a lost transfer claim never sends a confirmation", async () => {
   const { calls, dependencies } = harness({ claimed: 0 });
   await assert.rejects(
-    transferSponsorship(sponsorship.id, "00000000-0000-4000-8000-000000000005", dependencies),
-    (error) => error instanceof SponsorshipTransferError && error.code === "not_transferable",
+    transferSponsorship(
+      sponsorship.id,
+      "00000000-0000-4000-8000-000000000005",
+      dependencies,
+    ),
+    (error) =>
+      error instanceof SponsorshipTransferError &&
+      error.code === "not_transferable",
   );
   assert.equal(calls.email, 0);
 });
 
 test("refuses the current resident before changing the sponsorship", async () => {
-  const { calls, dependencies } = harness({ resident: null, sponsorshipStatus: "active" });
+  const { calls, dependencies } = harness({
+    resident: null,
+    sponsorshipStatus: "active",
+  });
   await assert.rejects(
     transferSponsorship(sponsorship.id, sponsorship.residentId, dependencies),
-    (error) => error instanceof SponsorshipTransferError && error.code === "resident_unavailable",
+    (error) =>
+      error instanceof SponsorshipTransferError &&
+      error.code === "resident_unavailable",
   );
   assert.equal(calls.update, undefined);
 });
@@ -140,15 +172,25 @@ test("refuses the current resident before changing the sponsorship", async () =>
 test("refuses a resident with an active sponsorship before changing the sponsorship", async () => {
   const { calls, dependencies } = harness({ resident: null });
   await assert.rejects(
-    transferSponsorship(sponsorship.id, "00000000-0000-4000-8000-000000000005", dependencies),
-    (error) => error instanceof SponsorshipTransferError && error.code === "resident_unavailable",
+    transferSponsorship(
+      sponsorship.id,
+      "00000000-0000-4000-8000-000000000005",
+      dependencies,
+    ),
+    (error) =>
+      error instanceof SponsorshipTransferError &&
+      error.code === "resident_unavailable",
   );
   assert.equal(calls.update, undefined);
 });
 
 test("ends an awaiting sponsorship and cancels billing once", async () => {
   const { calls, dependencies } = harness();
-  const result = await endAwaitingSponsorship(sponsorship.id, "adopted", dependencies);
+  const result = await endAwaitingSponsorship(
+    sponsorship.id,
+    "adopted",
+    dependencies,
+  );
   assert.equal(result.endedReason, "adopted");
   assert.equal(calls.cancel, 1);
   assert.equal(calls.email, 1);

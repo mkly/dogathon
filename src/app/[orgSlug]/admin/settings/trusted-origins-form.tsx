@@ -17,7 +17,10 @@ export function TrustedOriginsForm({
   allowedOrigins: string[];
   orgSlug: string;
 }) {
-  const [state, formAction, pending] = useActionState(saveAllowedOrigins, initialSettingsState);
+  const [state, formAction, pending] = useActionState(
+    saveAllowedOrigins,
+    initialSettingsState,
+  );
   const [origins, setOrigins] = useState(() => allowedOrigins.join("\n"));
 
   useEffect(() => {
@@ -25,7 +28,11 @@ export function TrustedOriginsForm({
   }, [state]);
 
   return (
-    <form action={formAction} aria-busy={pending} className={styles.settingsForm}>
+    <form
+      action={formAction}
+      aria-busy={pending}
+      className={styles.settingsForm}
+    >
       <input name="orgSlug" type="hidden" value={orgSlug} />
       <label htmlFor="allowedOrigins">Allowed origins</label>
       <AdminField>
@@ -41,8 +48,8 @@ export function TrustedOriginsForm({
         />
       </AdminField>
       <p className={styles.fieldHint}>
-        One HTTPS origin per line, including any non-default port. Localhost is accepted only
-        outside production.
+        One HTTPS origin per line, including any non-default port. Localhost is
+        accepted only outside production.
       </p>
       <div className={styles.saveRow}>
         <AdminButton disabled={pending} tone="mustard" type="submit">

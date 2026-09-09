@@ -2,19 +2,25 @@ import { render } from "@react-email/render";
 import { createElement } from "react";
 
 import type { Prisma } from "@/generated/prisma/client";
-import { SponsorshipChoiceEmail, sponsorshipChoiceEmailSubject } from "@/emails/sponsorship-choice-email";
+import {
+  SponsorshipChoiceEmail,
+  sponsorshipChoiceEmailSubject,
+} from "@/emails/sponsorship-choice-email";
 import { createOrganizationEmailSender } from "@/lib/email-connectors";
 import { prisma } from "@/lib/prisma";
 import { revalidatePublicRoster } from "@/lib/public-roster-cache";
 import { cancelStripeSubscription } from "@/lib/stripe-billing";
 
-export type SponsorshipTransferErrorCode = "not_transferable" | "resident_unavailable";
+export type SponsorshipTransferErrorCode =
+  "not_transferable" | "resident_unavailable";
 
 export class SponsorshipTransferError extends Error {
   constructor(public readonly code: SponsorshipTransferErrorCode) {
-    super(code === "not_transferable"
-      ? "This sponsorship cannot be moved right now"
-      : "This companion is no longer available");
+    super(
+      code === "not_transferable"
+        ? "This sponsorship cannot be moved right now"
+        : "This companion is no longer available",
+    );
     this.name = "SponsorshipTransferError";
   }
 }
@@ -31,7 +37,9 @@ type SponsorshipTransferDependencies = {
   cancel: typeof cancelStripeSubscription;
   revalidateRoster: () => void;
   sendEmail: typeof sendChoiceEmail;
-  transaction: <T>(operation: (tx: Prisma.TransactionClient) => Promise<T>) => Promise<T>;
+  transaction: <T>(
+    operation: (tx: Prisma.TransactionClient) => Promise<T>,
+  ) => Promise<T>;
 };
 
 async function sendChoiceEmail(
@@ -52,14 +60,20 @@ async function sendChoiceEmail(
     render(email),
     createOrganizationEmailSender(result.organization.id),
   ]);
-  await sendEmail({ to: result.sponsor.email, subject, body, contentType: "html" });
+  await sendEmail({
+    to: result.sponsor.email,
+    subject,
+    body,
+    contentType: "html",
+  });
 }
 
 const defaultDependencies: SponsorshipTransferDependencies = {
   cancel: cancelStripeSubscription,
   revalidateRoster: revalidatePublicRoster,
   sendEmail: sendChoiceEmail,
-  transaction: (operation) => prisma.$transaction(operation, { timeout: 20_000 }),
+  transaction: (operation) =>
+    prisma.$transaction(operation, { timeout: 20_000 }),
 };
 
 export async function transferSponsorship(
@@ -71,7 +85,9 @@ export async function transferSponsorship(
     const sponsorship = await tx.sponsorship.findUnique({
       where: { id: sponsorshipId },
       include: {
-        organization: { select: { id: true, name: true, stripeAccountId: true } },
+        organization: {
+          select: { id: true, name: true, stripeAccountId: true },
+        },
         sponsor: { select: { email: true, name: true } },
       },
     });
@@ -99,7 +115,8 @@ export async function transferSponsorship(
         endedReason: null,
       },
     });
-    if (claimed.count !== 1) throw new SponsorshipTransferError("not_transferable");
+    if (claimed.count !== 1)
+      throw new SponsorshipTransferError("not_transferable");
 
     return { ...sponsorship, companionName: resident.name };
   });
@@ -121,7 +138,9 @@ export async function endAwaitingSponsorship(
     const sponsorship = await tx.sponsorship.findUnique({
       where: { id: sponsorshipId },
       include: {
-        organization: { select: { id: true, name: true, stripeAccountId: true } },
+        organization: {
+          select: { id: true, name: true, stripeAccountId: true },
+        },
         sponsor: { select: { email: true, name: true } },
       },
     });
@@ -134,7 +153,8 @@ export async function endAwaitingSponsorship(
       where: { id: sponsorship.id, status: "awaiting" },
       data: { status: "ended", endedAt, endedReason: reason },
     });
-    if (claimed.count !== 1) throw new SponsorshipTransferError("not_transferable");
+    if (claimed.count !== 1)
+      throw new SponsorshipTransferError("not_transferable");
 
     await dependencies.cancel({
       stripeAccountId: sponsorship.organization.stripeAccountId,

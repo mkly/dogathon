@@ -23,10 +23,14 @@ export function organizationInvitationEmail({
   organizationName,
   role,
 }: OrganizationInvitationEmailInput) {
-  const invitationUrl = new URL(`/staff/invitations/${encodeURIComponent(id)}`, baseUrl);
+  const invitationUrl = new URL(
+    `/staff/invitations/${encodeURIComponent(id)}`,
+    baseUrl,
+  );
   const expiryHours = organizationInvitationExpiresInSeconds / (60 * 60);
-  const roleDescription = roleDescriptions[role]
-    ?? "help with the rescue work available to this role";
+  const roleDescription =
+    roleDescriptions[role] ??
+    "help with the rescue work available to this role";
 
   return {
     to: email,

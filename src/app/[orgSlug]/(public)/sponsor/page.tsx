@@ -36,10 +36,14 @@ export default async function SponsorResolverPage({
         <FeltPanel className={styles.emptyState} tone="oatmeal">
           <h1>This companion is not available to sponsor yet.</h1>
           <p>
-            Their page may not be in the rescue&apos;s current roster. Meet the companions who are
-            ready for a little extra support today.
+            Their page may not be in the rescue&apos;s current roster. Meet the
+            companions who are ready for a little extra support today.
           </p>
-          <FeltLink href={`/${orgSlug}`} tone="brick" transitionTypes={["nav-back"]}>
+          <FeltLink
+            href={`/${orgSlug}`}
+            tone="brick"
+            transitionTypes={["nav-back"]}
+          >
             View {organization.name}&apos;s companions
           </FeltLink>
         </FeltPanel>

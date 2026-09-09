@@ -150,9 +150,12 @@ export const auth = betterAuth({
         const describedSend = await sendAppEmail(message);
 
         if (describedSend) {
-          const loggedUrl = env.NODE_ENV === "production"
-            ? redactEmailLink(message.invitationUrl, { lastPathSegment: true })
-            : message.invitationUrl;
+          const loggedUrl =
+            env.NODE_ENV === "production"
+              ? redactEmailLink(message.invitationUrl, {
+                  lastPathSegment: true,
+                })
+              : message.invitationUrl;
           console.info(`Dogathon invitation for ${email}: ${loggedUrl}`);
         }
       },

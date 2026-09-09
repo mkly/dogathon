@@ -8,10 +8,22 @@ import { interviewRequestSchema } from "./volunteer-interview-request.ts";
 import { messageText } from "./ui-message-text.ts";
 import { env } from "./env.ts";
 
-const companion = { name: "Biscuit", breed: "Corgi mix", sex: "Female", ageText: "Adult" };
-const originalEnvironment = { OPENAI_API_KEY: env.OPENAI_API_KEY, features: env.features };
+const companion = {
+  name: "Biscuit",
+  breed: "Corgi mix",
+  sex: "Female",
+  ageText: "Adult",
+};
+const originalEnvironment = {
+  OPENAI_API_KEY: env.OPENAI_API_KEY,
+  features: env.features,
+};
 
-function message(id: string, role: "user" | "assistant", text: string): UIMessage {
+function message(
+  id: string,
+  role: "user" | "assistant",
+  text: string,
+): UIMessage {
   return { id, role, parts: [{ type: "text", text }] };
 }
 
@@ -30,7 +42,11 @@ test("passes the complete text-only turn to the persistence callback", async () 
   let persisted: UIMessage[] | undefined;
   const response = await interviewTurn(
     { companion, orgName: "Happy Tails", messages: original },
-    { onFinish(messages) { persisted = messages; } },
+    {
+      onFinish(messages) {
+        persisted = messages;
+      },
+    },
   );
   await response.text();
 
@@ -49,29 +65,53 @@ test("keeps assistant messages that carry step boundary parts", () => {
       {
         id: "a1",
         role: "assistant",
-        parts: [{ type: "step-start" }, { type: "text", text: "How was her mood?" }],
+        parts: [
+          { type: "step-start" },
+          { type: "text", text: "How was her mood?" },
+        ],
       },
     ],
   });
 
   assert.equal(parsed.success, true);
-  assert.deepEqual(parsed.data?.messages[1].parts, [{ type: "text", text: "How was her mood?" }]);
+  assert.deepEqual(parsed.data?.messages[1].parts, [
+    { type: "text", text: "How was her mood?" },
+  ]);
 });
 
 test("rejects oversized message lists and text parts", () => {
-  const valid = { orgSlug: "happy-tails", checkInId: "3ba9b90a-8b0c-4aeb-9a65-2ea2787fc932" };
+  const valid = {
+    orgSlug: "happy-tails",
+    checkInId: "3ba9b90a-8b0c-4aeb-9a65-2ea2787fc932",
+  };
 
-  assert.equal(interviewRequestSchema.safeParse({
-    ...valid,
-    messages: Array.from({ length: 41 }, (_, index) => message(String(index), "user", "hello")),
-  }).success, false);
-  assert.equal(interviewRequestSchema.safeParse({
-    ...valid,
-    messages: [message("1", "user", "x".repeat(10_001))],
-  }).success, false);
-  assert.equal(interviewRequestSchema.safeParse({
-    ...valid,
-    messages: [{ id: "a1", role: "assistant", parts: [{ type: "step-start" }] }],
-  }).success, false);
-  assert.equal(interviewRequestSchema.safeParse({ ...valid, messages: [] }).success, true);
+  assert.equal(
+    interviewRequestSchema.safeParse({
+      ...valid,
+      messages: Array.from({ length: 41 }, (_, index) =>
+        message(String(index), "user", "hello"),
+      ),
+    }).success,
+    false,
+  );
+  assert.equal(
+    interviewRequestSchema.safeParse({
+      ...valid,
+      messages: [message("1", "user", "x".repeat(10_001))],
+    }).success,
+    false,
+  );
+  assert.equal(
+    interviewRequestSchema.safeParse({
+      ...valid,
+      messages: [
+        { id: "a1", role: "assistant", parts: [{ type: "step-start" }] },
+      ],
+    }).success,
+    false,
+  );
+  assert.equal(
+    interviewRequestSchema.safeParse({ ...valid, messages: [] }).success,
+    true,
+  );
 });

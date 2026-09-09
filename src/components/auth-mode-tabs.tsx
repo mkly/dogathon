@@ -11,7 +11,12 @@ type AuthModeTabsProps = {
   onSelect: (mode: AuthMode) => void;
 };
 
-export function AuthModeTabs({ button: Button, className, mode, onSelect }: AuthModeTabsProps) {
+export function AuthModeTabs({
+  button: Button,
+  className,
+  mode,
+  onSelect,
+}: AuthModeTabsProps) {
   return (
     <div aria-label="Authentication mode" className={className} role="group">
       {(["sign-in", "sign-up"] as const).map((option) => {

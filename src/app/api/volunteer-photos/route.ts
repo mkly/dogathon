@@ -3,9 +3,19 @@ import { randomUUID } from "node:crypto";
 import { processVolunteerPhoto } from "@/app/[orgSlug]/volunteer/photo";
 import { MAX_PHOTO_BYTES } from "@/app/[orgSlug]/volunteer/photo-limits";
 import { getOrganizationAccessBySlug } from "@/lib/organization-access";
-import { deletePhoto, photoKey, putPhoto, webPhotoKey } from "@/lib/photo-storage";
+import {
+  deletePhoto,
+  photoKey,
+  putPhoto,
+  webPhotoKey,
+} from "@/lib/photo-storage";
 import { prisma } from "@/lib/prisma";
-import { checkRateLimit, getRateLimitIdentity, RATE_LIMITS, rateLimitResponse } from "@/lib/rate-limit";
+import {
+  checkRateLimit,
+  getRateLimitIdentity,
+  RATE_LIMITS,
+  rateLimitResponse,
+} from "@/lib/rate-limit";
 import { parseVolunteerPhotoUpload } from "@/lib/volunteer-photo-upload";
 
 function uploadError(error: "photo-size" | "photo-type") {
@@ -26,12 +36,18 @@ type UploadDependencies = {
     byteSize: number;
   }) => Promise<void>;
   deletePhoto: typeof deletePhoto;
-  findCheckIn: (orgId: string, userId: string, checkInId: string) => Promise<string | null>;
+  findCheckIn: (
+    orgId: string,
+    userId: string,
+    checkInId: string,
+  ) => Promise<string | null>;
   getAccess: typeof getOrganizationAccessBySlug;
   newId: () => string;
   processPhoto: typeof processVolunteerPhoto;
   putPhoto: typeof putPhoto;
-  rateLimit: (requestHeaders: Headers) => Promise<{ allowed: boolean; retryAfterSeconds: number }>;
+  rateLimit: (
+    requestHeaders: Headers,
+  ) => Promise<{ allowed: boolean; retryAfterSeconds: number }>;
 };
 
 const uploadDependencies: UploadDependencies = {
@@ -64,7 +80,9 @@ const uploadDependencies: UploadDependencies = {
   },
 };
 
-export function createVolunteerPhotoPostHandler(dependencies: UploadDependencies) {
+export function createVolunteerPhotoPostHandler(
+  dependencies: UploadDependencies,
+) {
   return async function postVolunteerPhoto(request: Request) {
     let formData: FormData;
     try {
@@ -74,13 +92,18 @@ export function createVolunteerPhotoPostHandler(dependencies: UploadDependencies
     }
 
     const parsed = parseVolunteerPhotoUpload(formData);
-    if (!parsed.success) return Response.json({ error: "photo-type" }, { status: 400 });
+    if (!parsed.success)
+      return Response.json({ error: "photo-type" }, { status: 400 });
     const { orgSlug, checkInId, photo } = parsed.data;
 
     const access = await dependencies.getAccess(request.headers, orgSlug, {
       roster: ["contribute"],
     });
-    if (!access) return Response.json({ error: "Organization not found" }, { status: 404 });
+    if (!access)
+      return Response.json(
+        { error: "Organization not found" },
+        { status: 404 },
+      );
     if (!access.context) {
       return Response.json(
         { error: "Organization membership required" },
@@ -89,21 +112,29 @@ export function createVolunteerPhotoPostHandler(dependencies: UploadDependencies
     }
 
     const rateLimit = await dependencies.rateLimit(request.headers);
-    if (!rateLimit.allowed) return rateLimitResponse(rateLimit.retryAfterSeconds);
+    if (!rateLimit.allowed)
+      return rateLimitResponse(rateLimit.retryAfterSeconds);
 
     const residentId = await dependencies.findCheckIn(
       access.context.orgId,
       access.context.userId,
       checkInId,
     );
-    if (!residentId) return Response.json({ error: "Update not found" }, { status: 404 });
+    if (!residentId)
+      return Response.json({ error: "Update not found" }, { status: 404 });
     if (photo.size > MAX_PHOTO_BYTES) return uploadError("photo-size");
 
-    const processed = await dependencies.processPhoto(new Uint8Array(await photo.arrayBuffer()));
+    const processed = await dependencies.processPhoto(
+      new Uint8Array(await photo.arrayBuffer()),
+    );
     if (!processed) return uploadError("photo-type");
 
     const id = dependencies.newId();
-    const storageKey = photoKey({ orgId: access.context.orgId, photoId: id, ext: "jpg" });
+    const storageKey = photoKey({
+      orgId: access.context.orgId,
+      photoId: id,
+      ext: "jpg",
+    });
     const webStorageKey = webPhotoKey(storageKey);
     const uploadedKeys = [storageKey, webStorageKey];
     try {
@@ -131,7 +162,11 @@ export function createVolunteerPhotoPostHandler(dependencies: UploadDependencies
       });
       return Response.json({ id, url, webUrl }, { status: 201 });
     } catch (error) {
-      await Promise.all(uploadedKeys.map((key) => dependencies.deletePhoto(key).catch(() => undefined)));
+      await Promise.all(
+        uploadedKeys.map((key) =>
+          dependencies.deletePhoto(key).catch(() => undefined),
+        ),
+      );
       throw error;
     }
   };

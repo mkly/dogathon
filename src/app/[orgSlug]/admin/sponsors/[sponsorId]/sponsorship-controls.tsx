@@ -30,7 +30,9 @@ export function SponsorshipControls({
 }) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [residentId, setResidentId] = useState(availableResidents[0]?.id ?? "");
-  const [pendingAction, setPendingAction] = useState<"end" | "transfer" | null>(null);
+  const [pendingAction, setPendingAction] = useState<"end" | "transfer" | null>(
+    null,
+  );
   const [, startTransition] = useTransition();
 
   function transfer() {
@@ -57,7 +59,10 @@ export function SponsorshipControls({
     setPendingAction("end");
     startTransition(async () => {
       try {
-        const result = await endStaffAwaitingSponsorship({ orgSlug, sponsorshipId });
+        const result = await endStaffAwaitingSponsorship({
+          orgSlug,
+          sponsorshipId,
+        });
         await refreshAdminPage();
         pushToast(result.ok ? "success" : "error", result.message);
       } catch {
@@ -79,9 +84,13 @@ export function SponsorshipControls({
         >
           {availableResidents.length === 0 ? (
             <option value="">No companions available</option>
-          ) : availableResidents.map((resident) => (
-            <option key={resident.id} value={resident.id}>{resident.name}</option>
-          ))}
+          ) : (
+            availableResidents.map((resident) => (
+              <option key={resident.id} value={resident.id}>
+                {resident.name}
+              </option>
+            ))
+          )}
         </select>
       </AdminField>
       <AdminButton
@@ -92,35 +101,40 @@ export function SponsorshipControls({
         {pendingAction === "transfer" ? "Moving…" : "Move sponsorship"}
       </AdminButton>
 
-      {canEnd ? <AlertDialog.Root onOpenChange={setDialogOpen} open={dialogOpen}>
-        <AlertDialog.Trigger asChild>
-          <AdminButton disabled={pendingAction !== null} tone="brick">
-            {pendingAction === "end" ? "Ending…" : "End"}
-          </AdminButton>
-        </AlertDialog.Trigger>
-        <AlertDialog.Portal>
-          <AlertDialog.Overlay className={styles.dialogOverlay} />
-          <AlertDialog.Content className={styles.alertDialog}>
-            <AdminSurface className={styles.dialogPanel} tone="oatmeal">
-              <AlertDialog.Title asChild>
-                <h2>End this sponsorship?</h2>
-              </AlertDialog.Title>
-              <AlertDialog.Description className={styles.dialogDescription}>
-                The recurring charge will be canceled instead of continuing with a new companion.
-                The sponsor will receive a confirmation email.
-              </AlertDialog.Description>
-              <div className={styles.dialogActions}>
-                <AlertDialog.Cancel asChild>
-                  <AdminButton tone="oatmeal">Keep sponsorship</AdminButton>
-                </AlertDialog.Cancel>
-                <AlertDialog.Action asChild>
-                  <AdminButton onClick={end} tone="brick">End sponsorship</AdminButton>
-                </AlertDialog.Action>
-              </div>
-            </AdminSurface>
-          </AlertDialog.Content>
-        </AlertDialog.Portal>
-      </AlertDialog.Root> : null}
+      {canEnd ? (
+        <AlertDialog.Root onOpenChange={setDialogOpen} open={dialogOpen}>
+          <AlertDialog.Trigger asChild>
+            <AdminButton disabled={pendingAction !== null} tone="brick">
+              {pendingAction === "end" ? "Ending…" : "End"}
+            </AdminButton>
+          </AlertDialog.Trigger>
+          <AlertDialog.Portal>
+            <AlertDialog.Overlay className={styles.dialogOverlay} />
+            <AlertDialog.Content className={styles.alertDialog}>
+              <AdminSurface className={styles.dialogPanel} tone="oatmeal">
+                <AlertDialog.Title asChild>
+                  <h2>End this sponsorship?</h2>
+                </AlertDialog.Title>
+                <AlertDialog.Description className={styles.dialogDescription}>
+                  The recurring charge will be canceled instead of continuing
+                  with a new companion. The sponsor will receive a confirmation
+                  email.
+                </AlertDialog.Description>
+                <div className={styles.dialogActions}>
+                  <AlertDialog.Cancel asChild>
+                    <AdminButton tone="oatmeal">Keep sponsorship</AdminButton>
+                  </AlertDialog.Cancel>
+                  <AlertDialog.Action asChild>
+                    <AdminButton onClick={end} tone="brick">
+                      End sponsorship
+                    </AdminButton>
+                  </AlertDialog.Action>
+                </div>
+              </AdminSurface>
+            </AlertDialog.Content>
+          </AlertDialog.Portal>
+        </AlertDialog.Root>
+      ) : null}
     </div>
   );
 }

@@ -14,10 +14,11 @@ import {
   parseSettingsForm,
   parseSponsorshipTiersForm,
 } from "@/lib/rescue-settings";
+import { markResidentAdopted as retireAdoptedResident } from "@/lib/roster-sync";
 import {
-  markResidentAdopted as retireAdoptedResident,
-} from "@/lib/roster-sync";
-import { createConnectOnboardingLink, refreshConnectStatus } from "@/lib/stripe-billing";
+  createConnectOnboardingLink,
+  refreshConnectStatus,
+} from "@/lib/stripe-billing";
 import {
   endAwaitingSponsorship,
   SponsorshipTransferError,
@@ -31,7 +32,9 @@ export type SettingsState = {
   status: "idle" | "error" | "success";
 };
 const organizationFormSchema = z.object({ orgSlug: z.string().trim().min(1) });
-const residentFormSchema = organizationFormSchema.extend({ residentId: z.string().trim().min(1) });
+const residentFormSchema = organizationFormSchema.extend({
+  residentId: z.string().trim().min(1),
+});
 const awaitingSponsorshipSchema = z.object({
   orgSlug: z.string().trim().min(1),
   sponsorshipId: uuidSchema,
@@ -76,7 +79,10 @@ export async function transferSponsorshipAction(
     select: { sponsorId: true },
   });
   if (!sponsorship) {
-    return { ok: false, message: "This sponsorship cannot be moved right now." };
+    return {
+      ok: false,
+      message: "This sponsorship cannot be moved right now.",
+    };
   }
 
   try {
@@ -109,7 +115,10 @@ export async function endStaffAwaitingSponsorship(
     },
   });
   if (!sponsorship) {
-    return { ok: false, message: "This sponsorship is no longer choosing a next companion." };
+    return {
+      ok: false,
+      message: "This sponsorship is no longer choosing a next companion.",
+    };
   }
 
   try {
@@ -120,7 +129,8 @@ export async function endStaffAwaitingSponsorship(
     refreshSponsorshipDirectories(orgSlug, sponsorship.sponsorId);
     return {
       ok: true,
-      message: "Sponsorship ended. Its recurring charge was canceled and the sponsor was emailed.",
+      message:
+        "Sponsorship ended. Its recurring charge was canceled and the sponsor was emailed.",
     };
   } catch (error) {
     if (error instanceof SponsorshipTransferError) {
@@ -244,7 +254,9 @@ export async function saveSettings(
   return {
     status: "success",
     message: parsed.message,
-    ...(parsed.savedSourceInput ? { savedSourceInput: parsed.savedSourceInput } : {}),
+    ...(parsed.savedSourceInput
+      ? { savedSourceInput: parsed.savedSourceInput }
+      : {}),
   };
 }
 
@@ -259,7 +271,11 @@ export async function saveSponsorshipTiers(
   await prisma.$transaction(async (tx) => {
     await tx.sponsorshipTier.deleteMany({ where: { orgId } });
     await tx.sponsorshipTier.createMany({
-      data: parsed.sponsorshipTiers.map((tier, position) => ({ ...tier, orgId, position })),
+      data: parsed.sponsorshipTiers.map((tier, position) => ({
+        ...tier,
+        orgId,
+        position,
+      })),
     });
   });
   revalidatePublicRoster();

@@ -7,15 +7,30 @@ const now = new Date("2026-09-04T18:00:00.000Z");
 
 test("invitation state distinguishes every public landing-page outcome", () => {
   assert.equal(invitationState(null, now), "unknown");
-  assert.equal(invitationState({ status: "accepted", expiresAt: now }, now), "accepted");
-  assert.equal(invitationState({ status: "canceled", expiresAt: now }, now), "cancelled");
-  assert.equal(invitationState({ status: "rejected", expiresAt: now }, now), "cancelled");
   assert.equal(
-    invitationState({ status: "pending", expiresAt: new Date(now.getTime() - 1) }, now),
+    invitationState({ status: "accepted", expiresAt: now }, now),
+    "accepted",
+  );
+  assert.equal(
+    invitationState({ status: "canceled", expiresAt: now }, now),
+    "cancelled",
+  );
+  assert.equal(
+    invitationState({ status: "rejected", expiresAt: now }, now),
+    "cancelled",
+  );
+  assert.equal(
+    invitationState(
+      { status: "pending", expiresAt: new Date(now.getTime() - 1) },
+      now,
+    ),
     "expired",
   );
   assert.equal(
-    invitationState({ status: "pending", expiresAt: new Date(now.getTime() + 1) }, now),
+    invitationState(
+      { status: "pending", expiresAt: new Date(now.getTime() + 1) },
+      now,
+    ),
     "pending",
   );
 });

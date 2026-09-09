@@ -11,13 +11,7 @@ import { PhotoPatchImage } from "./photo-patch-image";
 import styles from "./felt.module.css";
 
 type FeltTone =
-  | "oatmeal"
-  | "mustard"
-  | "brick"
-  | "moss"
-  | "denim"
-  | "denim-lt"
-  | "cream";
+  "oatmeal" | "mustard" | "brick" | "moss" | "denim" | "denim-lt" | "cream";
 
 // Dashed hand-stitch ring from the sirius-proto mockups: an SVG rect pair
 // (dark offset "shadow" under a thread-colored dash) sized entirely in CSS.

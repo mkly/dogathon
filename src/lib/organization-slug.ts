@@ -1,6 +1,9 @@
 import { reservedSlugs } from "reserved-slugs";
 
-export { organizationSlug, organizationSlugWhileTyping } from "./organization-slug-client";
+export {
+  organizationSlug,
+  organizationSlugWhileTyping,
+} from "./organization-slug-client";
 
 import { organizationSlug } from "./organization-slug-client";
 
@@ -28,7 +31,9 @@ export function reservedOrganizationSlugMessage(slug: string) {
   // suggestion always has to be a slug the user can actually submit.
   const lowercased = slug.trim().toLowerCase();
   const normalized = organizationSlug(slug);
-  const rejectedSlug = RESERVED_ORGANIZATION_SLUGS.has(lowercased) ? lowercased : normalized;
+  const rejectedSlug = RESERVED_ORGANIZATION_SLUGS.has(lowercased)
+    ? lowercased
+    : normalized;
   const suggestion = normalized || rejectedSlug;
   return `The URL /${rejectedSlug} is reserved because it is used or may be needed by Dogathon itself (routes like /support, /login, /api). Pick a different slug, for example ${suggestion}-rescue.`;
 }

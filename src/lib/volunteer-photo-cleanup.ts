@@ -3,7 +3,11 @@ import { prisma } from "./prisma.ts";
 
 export const ORPHAN_PHOTO_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
-type OrphanPhoto = { id: string; storageKey: string; webStorageKey: string | null };
+type OrphanPhoto = {
+  id: string;
+  storageKey: string;
+  webStorageKey: string | null;
+};
 
 // An upload is only ever created against an in-progress check-in, so a photo is
 // stranded when that check-in was abandoned rather than finished or discarded —
@@ -21,7 +25,9 @@ type CleanupDependencies = {
 const defaults: CleanupDependencies = {
   deletePhoto,
   async deleteRows(ids) {
-    await prisma.volunteerPhoto.deleteMany({ where: { id: { in: ids }, ...orphanWhere } });
+    await prisma.volunteerPhoto.deleteMany({
+      where: { id: { in: ids }, ...orphanWhere },
+    });
   },
   async findOrphans(olderThan) {
     return prisma.volunteerPhoto.findMany({
@@ -38,9 +44,13 @@ export async function cleanupVolunteerPhotos(
   now = new Date(),
 ) {
   const services = { ...defaults, ...dependencies };
-  const photos = await services.findOrphans(new Date(now.getTime() - ORPHAN_PHOTO_MAX_AGE_MS));
+  const photos = await services.findOrphans(
+    new Date(now.getTime() - ORPHAN_PHOTO_MAX_AGE_MS),
+  );
   for (const photo of photos) {
-    const keys = [photo.storageKey, photo.webStorageKey].filter((key): key is string => key !== null);
+    const keys = [photo.storageKey, photo.webStorageKey].filter(
+      (key): key is string => key !== null,
+    );
     await Promise.all(keys.map((key) => services.deletePhoto(key)));
   }
   await services.deleteRows(photos.map((photo) => photo.id));

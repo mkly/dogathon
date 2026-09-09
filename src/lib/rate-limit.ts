@@ -10,7 +10,10 @@ export const RATE_LIMITS = {
   volunteerPhotoUpload: { limit: 20, windowMs: 60 * 60 * 1000 },
 } as const;
 
-export type RateLimitStore = { increment(bucket: string, expiresAt: Date): Promise<number>; pruneExpired(now: Date): Promise<void> };
+export type RateLimitStore = {
+  increment(bucket: string, expiresAt: Date): Promise<number>;
+  pruneExpired(now: Date): Promise<void>;
+};
 
 type RateLimitBucketDelegate = {
   deleteMany(args: { where: { expiresAt: { lte: Date } } }): Promise<unknown>;
@@ -23,13 +26,25 @@ type RateLimitBucketDelegate = {
 };
 
 function isUniqueConstraintViolation(error: unknown) {
-  return typeof error === "object" && error !== null && (error as { code?: unknown }).code === "P2002";
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    (error as { code?: unknown }).code === "P2002"
+  );
 }
 
-export function createRateLimitStore(buckets: RateLimitBucketDelegate): RateLimitStore {
+export function createRateLimitStore(
+  buckets: RateLimitBucketDelegate,
+): RateLimitStore {
   return {
     async increment(bucket, expiresAt) {
-      const upsert = () => buckets.upsert({ where: { bucket }, create: { bucket, count: 1, expiresAt }, update: { count: { increment: 1 }, expiresAt }, select: { count: true } });
+      const upsert = () =>
+        buckets.upsert({
+          where: { bucket },
+          create: { bucket, count: 1, expiresAt },
+          update: { count: { increment: 1 }, expiresAt },
+          select: { count: true },
+        });
       try {
         return (await upsert()).count;
       } catch (error) {
@@ -39,33 +54,64 @@ export function createRateLimitStore(buckets: RateLimitBucketDelegate): RateLimi
         return (await upsert()).count;
       }
     },
-    async pruneExpired(now) { await buckets.deleteMany({ where: { expiresAt: { lte: now } } }); },
+    async pruneExpired(now) {
+      await buckets.deleteMany({ where: { expiresAt: { lte: now } } });
+    },
   };
 }
 
 const prismaRateLimitStore = createRateLimitStore(prisma.rateLimitBucket);
 
-type RateLimitOptions = { identity: string; limit: number; now?: Date; scope: string; store?: RateLimitStore; windowMs: number };
+type RateLimitOptions = {
+  identity: string;
+  limit: number;
+  now?: Date;
+  scope: string;
+  store?: RateLimitStore;
+  windowMs: number;
+};
 
-export async function checkRateLimit({ identity, limit, now = new Date(), scope, store = prismaRateLimitStore, windowMs }: RateLimitOptions): Promise<{ allowed: boolean; retryAfterSeconds: number }> {
+export async function checkRateLimit({
+  identity,
+  limit,
+  now = new Date(),
+  scope,
+  store = prismaRateLimitStore,
+  windowMs,
+}: RateLimitOptions): Promise<{ allowed: boolean; retryAfterSeconds: number }> {
   const windowStart = Math.floor(now.getTime() / windowMs) * windowMs;
   const expiresAt = new Date(windowStart + windowMs);
-  const bucket = createHash("sha256").update(`${scope}:${identity}:${windowStart}`).digest("hex");
+  const bucket = createHash("sha256")
+    .update(`${scope}:${identity}:${windowStart}`)
+    .digest("hex");
   const count = await store.increment(bucket, expiresAt);
   // The first request of a window prunes; later ones reuse the row instead of
   // issuing a delete on every call.
   if (count === 1) await store.pruneExpired(now);
-  return { allowed: count <= limit, retryAfterSeconds: Math.max(1, Math.ceil((expiresAt.getTime() - now.getTime()) / 1000)) };
+  return {
+    allowed: count <= limit,
+    retryAfterSeconds: Math.max(
+      1,
+      Math.ceil((expiresAt.getTime() - now.getTime()) / 1000),
+    ),
+  };
 }
 
 export function rateLimitResponse(retryAfterSeconds: number) {
-  return Response.json({ error: "Too many requests. Please try again later." }, { headers: { "Retry-After": String(retryAfterSeconds) }, status: 429 });
+  return Response.json(
+    { error: "Too many requests. Please try again later." },
+    { headers: { "Retry-After": String(retryAfterSeconds) }, status: 429 },
+  );
 }
 
-export function anonymousRateLimitIdentity(requestHeaders: Headers, requestId: string = randomUUID()) {
+export function anonymousRateLimitIdentity(
+  requestHeaders: Headers,
+  requestId: string = randomUUID(),
+) {
   const platformIp = requestHeaders.get("x-real-ip")?.trim();
   if (platformIp) return `ip:${platformIp}`;
-  const forwardedFor = requestHeaders.get("x-forwarded-for")
+  const forwardedFor = requestHeaders
+    .get("x-forwarded-for")
     ?.split(",")
     .map((value) => value.trim())
     .filter(Boolean)
@@ -73,7 +119,9 @@ export function anonymousRateLimitIdentity(requestHeaders: Headers, requestId: s
   return forwardedFor ? `ip:${forwardedFor}` : `request:${requestId}`;
 }
 
-export async function getRateLimitIdentity(requestHeaders: Headers): Promise<string> {
+export async function getRateLimitIdentity(
+  requestHeaders: Headers,
+): Promise<string> {
   const session = await getSession(requestHeaders);
   if (session) return `user:${session.user.id}`;
   return anonymousRateLimitIdentity(requestHeaders);

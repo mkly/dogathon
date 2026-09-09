@@ -33,8 +33,14 @@ import { isRegularSponsorUpdateRecipient } from "@/lib/sponsor-update-delivery";
 import pawcastWordmark from "../../../../../public/brand/pawcast-wordmark.png";
 
 import { ComposeButton, DraftEditor } from "../admin-controls";
-import { EMAIL_CONNECTOR_NOTICE_ID, emailConnectorBlockedReason } from "../gmail-notice";
-import { STRIPE_CONNECT_NOTICE_ID, stripeNotReadyReason } from "../stripe-notice";
+import {
+  EMAIL_CONNECTOR_NOTICE_ID,
+  emailConnectorBlockedReason,
+} from "../gmail-notice";
+import {
+  STRIPE_CONNECT_NOTICE_ID,
+  stripeNotReadyReason,
+} from "../stripe-notice";
 import styles from "../admin.module.css";
 
 export const dynamic = "force-dynamic";
@@ -58,28 +64,35 @@ async function getCurrentTime() {
   return Date.now();
 }
 
-async function DashboardStats({ orgId, orgSlug }: { orgId: string; orgSlug: string }) {
+async function DashboardStats({
+  orgId,
+  orgSlug,
+}: {
+  orgId: string;
+  orgSlug: string;
+}) {
   const thirtyDaysAgo = await getThirtyDaysAgo();
-  const [ongoingSponsorships, sponsoredCompanionCount, sentSponsorUpdateCount] = await Promise.all([
-    prisma.sponsorship.aggregate({
-      where: { orgId, status: { in: ["active", "awaiting"] } },
-      _count: true,
-      _sum: { monthlyCents: true },
-    }),
-    prisma.resident.count({
-      where: {
-        orgId,
-        sponsorships: { some: { orgId, status: "active" } },
-      },
-    }),
-    prisma.sponsorUpdate.count({
-      where: {
-        orgId,
-        status: "sent",
-        sentAt: { gte: thirtyDaysAgo },
-      },
-    }),
-  ]);
+  const [ongoingSponsorships, sponsoredCompanionCount, sentSponsorUpdateCount] =
+    await Promise.all([
+      prisma.sponsorship.aggregate({
+        where: { orgId, status: { in: ["active", "awaiting"] } },
+        _count: true,
+        _sum: { monthlyCents: true },
+      }),
+      prisma.resident.count({
+        where: {
+          orgId,
+          sponsorships: { some: { orgId, status: "active" } },
+        },
+      }),
+      prisma.sponsorUpdate.count({
+        where: {
+          orgId,
+          status: "sent",
+          sentAt: { gte: thirtyDaysAgo },
+        },
+      }),
+    ]);
   const ongoingSponsorshipCount = ongoingSponsorships._count;
   const monthlyRecurring = ongoingSponsorships._sum.monthlyCents ?? 0;
 
@@ -89,7 +102,8 @@ async function DashboardStats({ orgId, orgSlug }: { orgId: string; orgSlug: stri
         <strong>{formatMonthlyAmount(monthlyRecurring)}</strong>
         <span>a month, recurring</span>
         <small>
-          {ongoingSponsorshipCount} ongoing {pluralize("sponsorship", ongoingSponsorshipCount)}
+          {ongoingSponsorshipCount} ongoing{" "}
+          {pluralize("sponsorship", ongoingSponsorshipCount)}
         </small>
       </AdminSurface>
       <Link
@@ -129,14 +143,21 @@ function DashboardStatsLoading() {
   return (
     <section aria-label="Loading program statistics" className={styles.stats}>
       {(["mustard", "moss", "denim", "brick"] as const).map((tone) => (
-        <AdminSurface className={`${styles.stat} ${styles.skeleton}`} key={tone} tone={tone} />
+        <AdminSurface
+          className={`${styles.stat} ${styles.skeleton}`}
+          key={tone}
+          tone={tone}
+        />
       ))}
     </section>
   );
 }
 
 function relativeSentTime(sentAt: Date, currentTime: number) {
-  const elapsedDays = Math.max(0, Math.floor((currentTime - sentAt.getTime()) / 86_400_000));
+  const elapsedDays = Math.max(
+    0,
+    Math.floor((currentTime - sentAt.getTime()) / 86_400_000),
+  );
   if (elapsedDays === 0) return "today";
   if (elapsedDays === 1) return "yesterday";
   if (elapsedDays < 30) return `${elapsedDays} days ago`;
@@ -196,45 +217,59 @@ async function UpdatesSection({
     getCurrentTime(),
   ]);
 
-  const byName = (a: (typeof sponsoredResidents)[number], b: (typeof sponsoredResidents)[number]) =>
-    a.name.localeCompare(b.name) || a.id.localeCompare(b.id);
+  const byName = (
+    a: (typeof sponsoredResidents)[number],
+    b: (typeof sponsoredResidents)[number],
+  ) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id);
   const readyResidents = sponsoredResidents
-    .filter((resident) => resident._count.checkIns > 0 && resident._count.sponsorUpdates === 0)
-    .sort((a, b) =>
-      b._count.checkIns - a._count.checkIns ||
-      (a.checkIns[0]?.updatedAt.getTime() ?? 0) - (b.checkIns[0]?.updatedAt.getTime() ?? 0) ||
-      byName(a, b));
+    .filter(
+      (resident) =>
+        resident._count.checkIns > 0 && resident._count.sponsorUpdates === 0,
+    )
+    .sort(
+      (a, b) =>
+        b._count.checkIns - a._count.checkIns ||
+        (a.checkIns[0]?.updatedAt.getTime() ?? 0) -
+          (b.checkIns[0]?.updatedAt.getTime() ?? 0) ||
+        byName(a, b),
+    );
   const waitingResidents = sponsoredResidents
     .filter((resident) => resident._count.checkIns === 0)
     .sort((a, b) => {
-      const aSentAt = a.sponsorUpdates[0]?.sentAt ?? a.sponsorUpdates[0]?.createdAt;
-      const bSentAt = b.sponsorUpdates[0]?.sentAt ?? b.sponsorUpdates[0]?.createdAt;
+      const aSentAt =
+        a.sponsorUpdates[0]?.sentAt ?? a.sponsorUpdates[0]?.createdAt;
+      const bSentAt =
+        b.sponsorUpdates[0]?.sentAt ?? b.sponsorUpdates[0]?.createdAt;
       if (!aSentAt && bSentAt) return -1;
       if (aSentAt && !bSentAt) return 1;
-      return (aSentAt?.getTime() ?? 0) - (bSentAt?.getTime() ?? 0) || byName(a, b);
+      return (
+        (aSentAt?.getTime() ?? 0) - (bSentAt?.getTime() ?? 0) || byName(a, b)
+      );
     });
-  const activeResidents = activeTab === "ready" ? readyResidents : waitingResidents;
+  const activeResidents =
+    activeTab === "ready" ? readyResidents : waitingResidents;
   const residentsTruncated = activeResidents.length > STAFF_ROOM_LIST_LIMIT;
   const residents = activeResidents.slice(0, STAFF_ROOM_LIST_LIMIT);
 
   return (
     <section className={styles.updatesSection}>
-      <AdminSectionHeader
-        eyebrow="Volunteer chats"
-        title="Updates"
-      />
+      <AdminSectionHeader eyebrow="Volunteer chats" title="Updates" />
 
       <nav aria-label="Update queues" className={styles.updateTabs}>
         <Link
           aria-current={activeTab === "ready" ? "page" : undefined}
-          className={activeTab === "ready" ? styles.updateTabActive : styles.updateTab}
+          className={
+            activeTab === "ready" ? styles.updateTabActive : styles.updateTab
+          }
           href={`/${orgSlug}/admin?updates=ready`}
         >
           Ready to compose ({readyResidents.length})
         </Link>
         <Link
           aria-current={activeTab === "waiting" ? "page" : undefined}
-          className={activeTab === "waiting" ? styles.updateTabActive : styles.updateTab}
+          className={
+            activeTab === "waiting" ? styles.updateTabActive : styles.updateTab
+          }
           href={`/${orgSlug}/admin?updates=waiting`}
         >
           Waiting on volunteers ({waitingResidents.length})
@@ -251,7 +286,11 @@ async function UpdatesSection({
         <AdminSurface tone="oatmeal">
           <AdminEmptyState variant="dashboard">
             <span aria-hidden="true">🐾</span>
-            <h3>{activeTab === "ready" ? "Nothing to compose yet" : "Everyone has a chat ready"}</h3>
+            <h3>
+              {activeTab === "ready"
+                ? "Nothing to compose yet"
+                : "Everyone has a chat ready"}
+            </h3>
             <p>
               {activeTab === "ready"
                 ? "Completed volunteer chats will appear here."
@@ -262,10 +301,16 @@ async function UpdatesSection({
       ) : (
         <div className={styles.updateList}>
           {residents.map((resident) => {
-            const lastSentAt = resident.sponsorUpdates[0]?.sentAt ?? resident.sponsorUpdates[0]?.createdAt;
+            const lastSentAt =
+              resident.sponsorUpdates[0]?.sentAt ??
+              resident.sponsorUpdates[0]?.createdAt;
 
             return (
-              <AdminSurface className={styles.updateRow} key={resident.id} tone="oatmeal">
+              <AdminSurface
+                className={styles.updateRow}
+                key={resident.id}
+                tone="oatmeal"
+              >
                 <PhotoPatch
                   alt={`${resident.name} portrait`}
                   className={styles.updatePhoto}
@@ -282,8 +327,11 @@ async function UpdatesSection({
                       {resident.name}
                     </Link>
                   </h3>
-                  <AdminBadge tone={activeTab === "ready" ? "mustard" : "oatmeal"}>
-                    {resident._count.checkIns} {pluralize("chat", resident._count.checkIns)} collected
+                  <AdminBadge
+                    tone={activeTab === "ready" ? "mustard" : "oatmeal"}
+                  >
+                    {resident._count.checkIns}{" "}
+                    {pluralize("chat", resident._count.checkIns)} collected
                   </AdminBadge>
                   <p className={styles.updateMeta}>
                     {lastSentAt
@@ -292,7 +340,11 @@ async function UpdatesSection({
                   </p>
                 </div>
                 {activeTab === "ready" ? (
-                  <ComposeButton orgSlug={orgSlug} residentId={resident.id} residentName={resident.name} />
+                  <ComposeButton
+                    orgSlug={orgSlug}
+                    residentId={resident.id}
+                    residentName={resident.name}
+                  />
                 ) : null}
               </AdminSurface>
             );
@@ -308,8 +360,14 @@ function UpdatesSectionLoading() {
     <section aria-label="Loading updates" className={styles.updatesSection}>
       <div className={`${styles.sectionSkeleton} ${styles.skeleton}`} />
       <div className={styles.updateList}>
-        <AdminSurface className={`${styles.updateRow} ${styles.skeleton}`} tone="oatmeal" />
-        <AdminSurface className={`${styles.updateRow} ${styles.skeleton}`} tone="oatmeal" />
+        <AdminSurface
+          className={`${styles.updateRow} ${styles.skeleton}`}
+          tone="oatmeal"
+        />
+        <AdminSurface
+          className={`${styles.updateRow} ${styles.skeleton}`}
+          tone="oatmeal"
+        />
       </div>
     </section>
   );
@@ -361,14 +419,19 @@ async function ApprovalQueue({
   return (
     <section className={styles.queueSection}>
       <AdminSectionHeader
-        actions={<AdminBadge tone="brick">{drafts.length} {pluralize("draft", drafts.length)}</AdminBadge>}
+        actions={
+          <AdminBadge tone="brick">
+            {drafts.length} {pluralize("draft", drafts.length)}
+          </AdminBadge>
+        }
         eyebrow="Approval queue"
         title="Waiting for your OK"
       />
 
       {draftsTruncated && (
         <p className={styles.listLimitNotice} role="status">
-          Showing the first {STAFF_ROOM_LIST_LIMIT} drafts in the approval queue.
+          Showing the first {STAFF_ROOM_LIST_LIMIT} drafts in the approval
+          queue.
         </p>
       )}
 
@@ -407,34 +470,55 @@ async function ApprovalQueue({
             const graduation = draft.type === "graduation";
             // Unavailability notices are graduation-typed but hold no adoption
             // story, so they never offer to weave in recent chats.
-            const adoption = graduation
-              && draft.resident.unavailabilityReason === "adopted";
-            const recipientCount = draft.resident.sponsorships.filter((sponsorship) =>
-              isRegularSponsorUpdateRecipient(sponsorship, draft.resident.available)).length;
-            return <DraftEditor
-              bodyText={draft.bodyText}
-              emailConnected={emailConnector.connected}
-              focusTargetId="draft-queue"
-              id={draft.id}
-              isGraduation={graduation}
-              key={draft.id}
-              orgSlug={orgSlug}
-              pendingChatCount={adoption ? draft.resident._count.checkIns : 0}
-              subject={draft.subject}
-              teaser={draft.teaser}
-            >
-              <PhotoPatch alt={`${draft.resident.name} update`} className={styles.photo} sizes="(max-width: 720px) 104px, 120px" src={draft.heroPhotoUrl ?? draft.resident.photoUrls[0]} />
-              <div className={styles.companionSummary}>
-                <AdminBadge tone={draft.type === "graduation" ? "mustard" : "denim"}>{draft.type}</AdminBadge>
-                <h3>{draft.resident.name}</h3>
-                <p>{draft.resident.personality}</p>
-                <small>
-                  {graduation && draft.sponsorship
-                    ? `for ${draft.sponsorship.sponsor.name}`
-                    : <>goes to {recipientCount} {pluralize("sponsor", recipientCount)}</>}
-                </small>
-              </div>
-            </DraftEditor>;
+            const adoption =
+              graduation && draft.resident.unavailabilityReason === "adopted";
+            const recipientCount = draft.resident.sponsorships.filter(
+              (sponsorship) =>
+                isRegularSponsorUpdateRecipient(
+                  sponsorship,
+                  draft.resident.available,
+                ),
+            ).length;
+            return (
+              <DraftEditor
+                bodyText={draft.bodyText}
+                emailConnected={emailConnector.connected}
+                focusTargetId="draft-queue"
+                id={draft.id}
+                isGraduation={graduation}
+                key={draft.id}
+                orgSlug={orgSlug}
+                pendingChatCount={adoption ? draft.resident._count.checkIns : 0}
+                subject={draft.subject}
+                teaser={draft.teaser}
+              >
+                <PhotoPatch
+                  alt={`${draft.resident.name} update`}
+                  className={styles.photo}
+                  sizes="(max-width: 720px) 104px, 120px"
+                  src={draft.heroPhotoUrl ?? draft.resident.photoUrls[0]}
+                />
+                <div className={styles.companionSummary}>
+                  <AdminBadge
+                    tone={draft.type === "graduation" ? "mustard" : "denim"}
+                  >
+                    {draft.type}
+                  </AdminBadge>
+                  <h3>{draft.resident.name}</h3>
+                  <p>{draft.resident.personality}</p>
+                  <small>
+                    {graduation && draft.sponsorship ? (
+                      `for ${draft.sponsorship.sponsor.name}`
+                    ) : (
+                      <>
+                        goes to {recipientCount}{" "}
+                        {pluralize("sponsor", recipientCount)}
+                      </>
+                    )}
+                  </small>
+                </div>
+              </DraftEditor>
+            );
           })
         )}
       </div>
@@ -444,16 +528,28 @@ async function ApprovalQueue({
 
 function ApprovalQueueLoading() {
   return (
-    <section aria-label="Loading approval queue" className={styles.queueSection}>
+    <section
+      aria-label="Loading approval queue"
+      className={styles.queueSection}
+    >
       <div className={`${styles.sectionSkeleton} ${styles.skeleton}`} />
       <div className={styles.queue}>
-        <AdminSurface className={`${styles.queueItem} ${styles.queueSkeleton} ${styles.skeleton}`} tone="oatmeal" />
+        <AdminSurface
+          className={`${styles.queueItem} ${styles.queueSkeleton} ${styles.skeleton}`}
+          tone="oatmeal"
+        />
       </div>
     </section>
   );
 }
 
-async function StripeNotice({ orgId, orgSlug }: { orgId: string; orgSlug: string }) {
+async function StripeNotice({
+  orgId,
+  orgSlug,
+}: {
+  orgId: string;
+  orgSlug: string;
+}) {
   const stripeConnection = await prisma.organization.findUnique({
     where: { id: orgId },
     select: {
@@ -469,7 +565,8 @@ async function StripeNotice({ orgId, orgSlug }: { orgId: string; orgSlug: string
     <p className={styles.queueNotice} role="status">
       <span aria-hidden="true">⚠️</span>
       <span>
-        {stripeNotReady} Sponsors cannot check out until Stripe enables card payments.{" "}
+        {stripeNotReady} Sponsors cannot check out until Stripe enables card
+        payments.{" "}
         <Link
           href={`/${orgSlug}/admin/settings#${STRIPE_CONNECT_NOTICE_ID}`}
           transitionTypes={["nav-forward"]}
@@ -481,9 +578,13 @@ async function StripeNotice({ orgId, orgSlug }: { orgId: string; orgSlug: string
   );
 }
 
-export default async function AdminPage({ params, searchParams }: AdminPageProps) {
+export default async function AdminPage({
+  params,
+  searchParams,
+}: AdminPageProps) {
   const [{ orgSlug }, query] = await Promise.all([params, searchParams]);
-  const updatesTab: UpdatesTab = query.updates === "waiting" ? "waiting" : "ready";
+  const updatesTab: UpdatesTab =
+    query.updates === "waiting" ? "waiting" : "ready";
   const access = await getOrganizationAccessBySlug(await headers(), orgSlug, {
     sponsorUpdate: ["manage"],
   });
@@ -491,10 +592,15 @@ export default async function AdminPage({ params, searchParams }: AdminPageProps
   if (!access) notFound();
   if (!access.context) {
     const next = encodeURIComponent(`/${orgSlug}/admin`);
-    redirect(access.authenticated ? "/staff/organizations" : `/staff/sign-in?next=${next}`);
+    redirect(
+      access.authenticated
+        ? "/staff/organizations"
+        : `/staff/sign-in?next=${next}`,
+    );
   }
   const { context } = access;
-  const canManageStaffArea = context.role === "owner" || context.role === "admin";
+  const canManageStaffArea =
+    context.role === "owner" || context.role === "admin";
 
   return (
     <PageViewTransition>
@@ -515,9 +621,11 @@ export default async function AdminPage({ params, searchParams }: AdminPageProps
               <SignOutButton />
             </>
           }
-          brand={<Link href={`/${orgSlug}`} transitionTypes={["nav-back"]}>
-            <Image alt="Pawcast" preload src={pawcastWordmark} />
-          </Link>}
+          brand={
+            <Link href={`/${orgSlug}`} transitionTypes={["nav-back"]}>
+              <Image alt="Pawcast" preload src={pawcastWordmark} />
+            </Link>
+          }
           title="Staff room"
         />
 
@@ -528,19 +636,49 @@ export default async function AdminPage({ params, searchParams }: AdminPageProps
         )}
 
         {canManageStaffArea && (
-          <Suspense fallback={<SuspenseFallback><DashboardStatsLoading /></SuspenseFallback>}>
-            <SuspenseReveal><DashboardStats orgId={context.orgId} orgSlug={orgSlug} /></SuspenseReveal>
+          <Suspense
+            fallback={
+              <SuspenseFallback>
+                <DashboardStatsLoading />
+              </SuspenseFallback>
+            }
+          >
+            <SuspenseReveal>
+              <DashboardStats orgId={context.orgId} orgSlug={orgSlug} />
+            </SuspenseReveal>
           </Suspense>
         )}
 
-        <Suspense fallback={<SuspenseFallback><UpdatesSectionLoading /></SuspenseFallback>}>
+        <Suspense
+          fallback={
+            <SuspenseFallback>
+              <UpdatesSectionLoading />
+            </SuspenseFallback>
+          }
+        >
           <SuspenseReveal>
-            <UpdatesSection activeTab={updatesTab} orgId={context.orgId} orgSlug={orgSlug} />
+            <UpdatesSection
+              activeTab={updatesTab}
+              orgId={context.orgId}
+              orgSlug={orgSlug}
+            />
           </SuspenseReveal>
         </Suspense>
 
-        <Suspense fallback={<SuspenseFallback><ApprovalQueueLoading /></SuspenseFallback>}>
-          <SuspenseReveal><ApprovalQueue canManageStaffArea={canManageStaffArea} orgId={context.orgId} orgSlug={orgSlug} /></SuspenseReveal>
+        <Suspense
+          fallback={
+            <SuspenseFallback>
+              <ApprovalQueueLoading />
+            </SuspenseFallback>
+          }
+        >
+          <SuspenseReveal>
+            <ApprovalQueue
+              canManageStaffArea={canManageStaffArea}
+              orgId={context.orgId}
+              orgSlug={orgSlug}
+            />
+          </SuspenseReveal>
         </Suspense>
       </AdminPageShell>
     </PageViewTransition>

@@ -61,7 +61,10 @@ type ApprovalUpdate = {
 
 type ApprovalDependencies = {
   claimUpdate: (update: ApprovalUpdate, claimedAt: Date) => Promise<boolean>;
-  composeGraduation: (id: string, orgId: string) => Promise<GraduationCompositionResult>;
+  composeGraduation: (
+    id: string,
+    orgId: string,
+  ) => Promise<GraduationCompositionResult>;
   deliver: typeof deliverSponsorUpdate;
   findUpdate: (id: string, orgId: string) => Promise<ApprovalUpdate | null>;
   getConnectorStatus: typeof getEmailConnectorStatus;
@@ -78,7 +81,9 @@ type ApprovalDependencies = {
 
 function sponsorshipTokenSecret() {
   if (!env.BETTER_AUTH_SECRET) {
-    throw new Error("BETTER_AUTH_SECRET is required for sponsor selection links");
+    throw new Error(
+      "BETTER_AUTH_SECRET is required for sponsor selection links",
+    );
   }
   return env.BETTER_AUTH_SECRET;
 }
@@ -94,41 +99,48 @@ const approvalDependencies: ApprovalDependencies = {
     }
     if (!update.sponsorshipId) return false;
 
-    return prisma.$transaction(async (tx) => {
-      const sponsorship = await tx.sponsorship.updateMany({
-        where: {
-          id: update.sponsorshipId!,
-          orgId: update.orgId,
-          residentId: update.residentId,
-          status: update.awaitingTransitionedAt
-            ? "awaiting"
-            : "active",
-        },
-        data: { status: "awaiting" },
-      });
-      if (sponsorship.count !== 1) return false;
+    return prisma
+      .$transaction(async (tx) => {
+        const sponsorship = await tx.sponsorship.updateMany({
+          where: {
+            id: update.sponsorshipId!,
+            orgId: update.orgId,
+            residentId: update.residentId,
+            status: update.awaitingTransitionedAt ? "awaiting" : "active",
+          },
+          data: { status: "awaiting" },
+        });
+        if (sponsorship.count !== 1) return false;
 
-      const claimed = await tx.sponsorUpdate.updateMany({
-        where: {
-          id: update.id,
-          orgId: update.orgId,
-          status: "draft",
-          sponsorshipId: update.sponsorshipId,
-          awaitingTransitionedAt: update.awaitingTransitionedAt ? { not: null } : null,
-        },
-        data: {
-          status: "approved",
-          ...(!update.awaitingTransitionedAt
-            ? { awaitingTransitionedAt: claimedAt }
-            : {}),
-        },
+        const claimed = await tx.sponsorUpdate.updateMany({
+          where: {
+            id: update.id,
+            orgId: update.orgId,
+            status: "draft",
+            sponsorshipId: update.sponsorshipId,
+            awaitingTransitionedAt: update.awaitingTransitionedAt
+              ? { not: null }
+              : null,
+          },
+          data: {
+            status: "approved",
+            ...(!update.awaitingTransitionedAt
+              ? { awaitingTransitionedAt: claimedAt }
+              : {}),
+          },
+        });
+        if (claimed.count !== 1)
+          throw new Error("Sponsor update approval claim was lost");
+        return true;
+      })
+      .catch((error) => {
+        if (
+          error instanceof Error &&
+          error.message === "Sponsor update approval claim was lost"
+        )
+          return false;
+        throw error;
       });
-      if (claimed.count !== 1) throw new Error("Sponsor update approval claim was lost");
-      return true;
-    }).catch((error) => {
-      if (error instanceof Error && error.message === "Sponsor update approval claim was lost") return false;
-      throw error;
-    });
   },
   composeGraduation: composeGraduationDraft,
   deliver: deliverSponsorUpdate,
@@ -170,23 +182,30 @@ const approvalDependencies: ApprovalDependencies = {
   now: () => new Date(),
   async renderMessage(update, _monthlyCents, renderedAt) {
     const origin = env.BETTER_AUTH_URL;
-    const selectionUrl = update.type === "graduation"
-      ? sponsorshipSelectionUrl(
-        origin,
-        update.organization.slug,
-        update.sponsorshipId!,
-        sponsorshipTokenSecret(),
-        renderedAt,
-      )
-      : null;
-    const emailSubject = sponsorUpdateEmailSubject(update.resident.name, update.type);
+    const selectionUrl =
+      update.type === "graduation"
+        ? sponsorshipSelectionUrl(
+            origin,
+            update.organization.slug,
+            update.sponsorshipId!,
+            sponsorshipTokenSecret(),
+            renderedAt,
+          )
+        : null;
+    const emailSubject = sponsorUpdateEmailSubject(
+      update.resident.name,
+      update.type,
+    );
     const email = createElement(SponsorUpdateEmail, {
       rescueName: update.organization.name,
       companionName: update.resident.name,
       updateSubject: update.subject,
       teaser: update.teaser,
       updatePageUrl: updatePageUrl(origin, update.organization.slug, update.id),
-      photoUrl: emailPhotoUrl(origin, update.heroPhotoUrl ?? update.resident.photoUrls[0]),
+      photoUrl: emailPhotoUrl(
+        origin,
+        update.heroPhotoUrl ?? update.resident.photoUrls[0],
+      ),
       sponsorshipSelectionUrl: selectionUrl,
       type: update.type,
     });
@@ -208,12 +227,18 @@ const approvalDependencies: ApprovalDependencies = {
 function deliveryCounts(deliveries: Delivery[]) {
   return {
     sent: deliveries.filter((delivery) => delivery.status === "sent").length,
-    failed: deliveries.filter((delivery) => delivery.status === "failed").length,
+    failed: deliveries.filter((delivery) => delivery.status === "failed")
+      .length,
   };
 }
 
-export function createApproveSponsorUpdateHandler(dependencies: ApprovalDependencies) {
-  return async function approveSponsorUpdate(request: Request, { params }: RouteContext) {
+export function createApproveSponsorUpdateHandler(
+  dependencies: ApprovalDependencies,
+) {
+  return async function approveSponsorUpdate(
+    request: Request,
+    { params }: RouteContext,
+  ) {
     const { id } = await params;
     if (!uuidSchema.safeParse(id).success) {
       return Response.json({ error: "Update not found" }, { status: 404 });
@@ -230,15 +255,21 @@ export function createApproveSponsorUpdateHandler(dependencies: ApprovalDependen
       return Response.json({ error: "Update not found" }, { status: 404 });
     }
     if (sponsorUpdate.status !== "draft") {
-      return Response.json({ error: "Only draft updates can be approved" }, { status: 409 });
+      return Response.json(
+        { error: "Only draft updates can be approved" },
+        { status: 409 },
+      );
     }
     if (
-      sponsorUpdate.type === "graduation"
-      && (!sponsorUpdate.sponsorshipId
-        || !sponsorUpdate.sponsorship
-        || sponsorUpdate.sponsorship.residentId !== sponsorUpdate.residentId
-        || (sponsorUpdate.sponsorship.status !== "active"
-          && !(sponsorUpdate.sponsorship.status === "awaiting" && sponsorUpdate.awaitingTransitionedAt)))
+      sponsorUpdate.type === "graduation" &&
+      (!sponsorUpdate.sponsorshipId ||
+        !sponsorUpdate.sponsorship ||
+        sponsorUpdate.sponsorship.residentId !== sponsorUpdate.residentId ||
+        (sponsorUpdate.sponsorship.status !== "active" &&
+          !(
+            sponsorUpdate.sponsorship.status === "awaiting" &&
+            sponsorUpdate.awaitingTransitionedAt
+          )))
     ) {
       return Response.json(
         { error: "This sponsorship is no longer active" },
@@ -249,7 +280,10 @@ export function createApproveSponsorUpdateHandler(dependencies: ApprovalDependen
     const emailConnector = await dependencies.getConnectorStatus(orgId);
     if (!emailConnector.connected) {
       return Response.json(
-        { error: "Connect the email address updates are sent from before approving them" },
+        {
+          error:
+            "Connect the email address updates are sent from before approving them",
+        },
         { status: 409 },
       );
     }
@@ -259,7 +293,11 @@ export function createApproveSponsorUpdateHandler(dependencies: ApprovalDependen
       try {
         composition = await dependencies.composeGraduation(id, orgId);
       } catch (error) {
-        console.error("Graduation update composition failed", { id, orgId, error });
+        console.error("Graduation update composition failed", {
+          id,
+          orgId,
+          error,
+        });
         return Response.json(
           { error: "Drafting the graduation story failed. Please try again." },
           { status: 502 },
@@ -272,12 +310,18 @@ export function createApproveSponsorUpdateHandler(dependencies: ApprovalDependen
         );
       }
       if (composition === "not-found") {
-        return Response.json({ error: "Only draft updates can be approved" }, { status: 409 });
+        return Response.json(
+          { error: "Only draft updates can be approved" },
+          { status: 409 },
+        );
       }
       if (composition === "composed") {
         const refreshedUpdate = await dependencies.findUpdate(id, orgId);
         if (!refreshedUpdate || refreshedUpdate.status !== "draft") {
-          return Response.json({ error: "Only draft updates can be approved" }, { status: 409 });
+          return Response.json(
+            { error: "Only draft updates can be approved" },
+            { status: 409 },
+          );
         }
         sponsorUpdate = refreshedUpdate;
       }
@@ -285,25 +329,48 @@ export function createApproveSponsorUpdateHandler(dependencies: ApprovalDependen
 
     const approvedAt = dependencies.now();
     if (!(await dependencies.claimUpdate(sponsorUpdate, approvedAt))) {
-      return Response.json({ error: "Update or sponsorship is no longer available for approval" }, { status: 409 });
+      return Response.json(
+        { error: "Update or sponsorship is no longer available for approval" },
+        { status: 409 },
+      );
     }
 
     try {
-      const sponsorships = sponsorUpdate.type === "graduation"
-        ? [sponsorUpdate.sponsorship!]
-        : sponsorUpdate.resident.sponsorships.filter((sponsorship) =>
-          isRegularSponsorUpdateRecipient(sponsorship, sponsorUpdate.resident.available));
-      const groups = Map.groupBy(sponsorships, ({ monthlyCents }) => monthlyCents);
-      const deliveries = (await Promise.all([...groups].map(async ([monthlyCents, recipients]) => {
-        const message = await dependencies.renderMessage(
-          sponsorUpdate,
-          monthlyCents ?? DEFAULT_SPONSORSHIP_MONTHLY_CENTS,
-          approvedAt,
-        );
-        return dependencies.deliver(orgId, { ...sponsorUpdate, ...message }, recipients);
-      }))).flat();
+      const sponsorships =
+        sponsorUpdate.type === "graduation"
+          ? [sponsorUpdate.sponsorship!]
+          : sponsorUpdate.resident.sponsorships.filter((sponsorship) =>
+              isRegularSponsorUpdateRecipient(
+                sponsorship,
+                sponsorUpdate.resident.available,
+              ),
+            );
+      const groups = Map.groupBy(
+        sponsorships,
+        ({ monthlyCents }) => monthlyCents,
+      );
+      const deliveries = (
+        await Promise.all(
+          [...groups].map(async ([monthlyCents, recipients]) => {
+            const message = await dependencies.renderMessage(
+              sponsorUpdate,
+              monthlyCents ?? DEFAULT_SPONSORSHIP_MONTHLY_CENTS,
+              approvedAt,
+            );
+            return dependencies.deliver(
+              orgId,
+              { ...sponsorUpdate, ...message },
+              recipients,
+            );
+          }),
+        )
+      ).flat();
       const counts = deliveryCounts(deliveries);
-      console.info("Sponsor update delivery completed", { id, orgId, ...counts });
+      console.info("Sponsor update delivery completed", {
+        id,
+        orgId,
+        ...counts,
+      });
 
       if (counts.sent === 0) {
         await dependencies.resetDraft(id, orgId);
@@ -319,7 +386,10 @@ export function createApproveSponsorUpdateHandler(dependencies: ApprovalDependen
     } catch (error) {
       await dependencies.resetDraft(id, orgId);
       console.error("Sponsor update approval failed", { id, orgId, error });
-      return Response.json({ error: "Sending the update failed. Please try again." }, { status: 502 });
+      return Response.json(
+        { error: "Sending the update failed. Please try again." },
+        { status: 502 },
+      );
     }
   };
 }

@@ -39,7 +39,9 @@ export function MarkAdoptedButton({
       } catch (error) {
         pushToast(
           "error",
-          error instanceof Error ? error.message : "Mark adopted could not reach the server.",
+          error instanceof Error
+            ? error.message
+            : "Mark adopted could not reach the server.",
         );
       }
     });
@@ -60,9 +62,10 @@ export function MarkAdoptedButton({
               <h2>Mark {residentName} adopted?</h2>
             </AlertDialog.Title>
             <AlertDialog.Description className={styles.dialogDescription}>
-              {residentName} leaves the public roster and an adoption notice is drafted for each
-              active sponsorship. The sponsorship keeps renewing while staff review the notice and
-              while the sponsor chooses who to follow next.
+              {residentName} leaves the public roster and an adoption notice is
+              drafted for each active sponsorship. The sponsorship keeps
+              renewing while staff review the notice and while the sponsor
+              chooses who to follow next.
             </AlertDialog.Description>
             <div className={styles.modalActions}>
               <AlertDialog.Cancel asChild>

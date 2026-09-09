@@ -11,8 +11,9 @@
   border-radius: 22px;
   background: none;
   color: var(--felt-contrast, var(--felt-ink));
-  filter:
-    drop-shadow(0 calc(5px * var(--drop)) calc(4px * var(--drop)) rgb(0 0 0 / 28%))
+  filter: drop-shadow(
+      0 calc(5px * var(--drop)) calc(4px * var(--drop)) rgb(0 0 0 / 28%)
+    )
     drop-shadow(0 1px calc(1.5px * var(--drop)) rgb(0 0 0 / 18%));
   isolation: isolate;
 }
@@ -40,7 +41,12 @@
   overflow: hidden;
   border-radius: inherit;
   background:
-    radial-gradient(ellipse 90% 80% at 50% 40%, rgb(255 255 255 / 14%), rgb(255 255 255 / 0%) 62%, rgb(0 0 0 / 7%) 100%),
+    radial-gradient(
+      ellipse 90% 80% at 50% 40%,
+      rgb(255 255 255 / 14%),
+      rgb(255 255 255 / 0%) 62%,
+      rgb(0 0 0 / 7%) 100%
+    ),
     linear-gradient(
       180deg,
       rgb(255 255 255 / var(--bw, 0.5)),
@@ -105,8 +111,13 @@ svg.stitch.fine rect {
   rx: 10px;
 }
 
-svg.stitch.fine rect.shadow { stroke-width: 1.8; transform: translateY(1px); }
-svg.stitch.fine rect.thread { stroke-width: 1.4; }
+svg.stitch.fine rect.shadow {
+  stroke-width: 1.8;
+  transform: translateY(1px);
+}
+svg.stitch.fine rect.thread {
+  stroke-width: 1.4;
+}
 
 /* cut-out hole: flat felt, inner shadow hanging from the top edge, stitch ring outside */
 .felt-inset {
@@ -137,10 +148,14 @@ svg.stitch.fine rect.thread { stroke-width: 1.4; }
 }
 
 .felt-inset > svg.stitch rect.shadow,
-.photo-patch > svg.stitch rect.shadow { stroke-width: 1.5; }
+.photo-patch > svg.stitch rect.shadow {
+  stroke-width: 1.5;
+}
 
 .felt-inset > svg.stitch rect.thread,
-.photo-patch > svg.stitch rect.thread { stroke-width: 1.2; }
+.photo-patch > svg.stitch rect.thread {
+  stroke-width: 1.2;
+}
 
 .felt-button {
   --pil: 1;
@@ -159,8 +174,9 @@ svg.stitch.fine rect.thread { stroke-width: 1.4; }
 }
 
 .felt-button:hover:not(:disabled) {
-  filter:
-    drop-shadow(0 calc(5px * var(--drop)) calc(4px * var(--drop)) rgb(0 0 0 / 28%))
+  filter: drop-shadow(
+      0 calc(5px * var(--drop)) calc(4px * var(--drop)) rgb(0 0 0 / 28%)
+    )
     drop-shadow(0 1px calc(1.5px * var(--drop)) rgb(0 0 0 / 18%))
     brightness(1.04);
 }
@@ -220,7 +236,9 @@ svg.stitch.fine rect.thread { stroke-width: 1.4; }
 }
 
 @media (scripting: none) {
-  .photo-patch-image { opacity: 1; }
+  .photo-patch-image {
+    opacity: 1;
+  }
 }
 
 .photo-patch::after {
@@ -243,8 +261,12 @@ svg.stitch.fine rect.thread { stroke-width: 1.4; }
   text-align: center;
 }
 
-.photo-patch-placeholder span { font-size: 2.5rem; }
-.photo-patch-placeholder small { font-weight: 800; }
+.photo-patch-placeholder span {
+  font-size: 2.5rem;
+}
+.photo-patch-placeholder small {
+  font-weight: 800;
+}
 
 /* the control sitting in the hole carries no chrome of its own */
 .felt-field > input,

@@ -47,7 +47,8 @@
 }
 
 ::view-transition-new(.content-reveal) {
-  animation: var(--view-duration-enter) ease-in var(--view-duration-exit) both view-fade;
+  animation: var(--view-duration-enter) ease-in var(--view-duration-exit) both
+    view-fade;
 }
 
 ::view-transition-group(.companion-photo) {
@@ -102,8 +103,16 @@ body {
   margin: 0;
   background-color: var(--felt-ground);
   background-image:
-    radial-gradient(120% 85% at 50% 0%, rgb(255 252 245 / 80%), rgb(255 252 245 / 0%) 60%),
-    radial-gradient(130% 100% at 50% 40%, rgb(61 51 43 / 0%) 50%, rgb(61 51 43 / 10%));
+    radial-gradient(
+      120% 85% at 50% 0%,
+      rgb(255 252 245 / 80%),
+      rgb(255 252 245 / 0%) 60%
+    ),
+    radial-gradient(
+      130% 100% at 50% 40%,
+      rgb(61 51 43 / 0%) 50%,
+      rgb(61 51 43 / 10%)
+    );
   color: var(--felt-ink);
   font-family: Nunito, sans-serif;
 }

@@ -75,13 +75,19 @@ export function AdminHeader({
       {brand ? <div className={styles.brand}>{brand}</div> : null}
       <div>
         {eyebrow ? (
-          variant === "volunteer" ? eyebrow : <AdminEyebrow>{eyebrow}</AdminEyebrow>
+          variant === "volunteer" ? (
+            eyebrow
+          ) : (
+            <AdminEyebrow>{eyebrow}</AdminEyebrow>
+          )
         ) : null}
         <h1 id={titleId}>{title}</h1>
         {lede ? <p className={styles.lede}>{lede}</p> : null}
       </div>
       {actions ? (
-        <div className={clsx(styles.headerActions, actionsClassName)}>{actions}</div>
+        <div className={clsx(styles.headerActions, actionsClassName)}>
+          {actions}
+        </div>
       ) : null}
     </header>
   );
@@ -98,7 +104,11 @@ export function AdminEyebrow({
 }: AdminEyebrowProps) {
   return (
     <p
-      className={clsx(styles.eyebrow, tone === "denim" ? styles.eyebrowDenim : undefined, className)}
+      className={clsx(
+        styles.eyebrow,
+        tone === "denim" ? styles.eyebrowDenim : undefined,
+        className,
+      )}
       {...props}
     />
   );
@@ -184,10 +194,13 @@ export function AdminSurface({
   tone = "oatmeal",
   ...props
 }: AdminSurfaceProps) {
-  return <div className={clsx(styles.surface, styles[tone], className)} {...props} />;
+  return (
+    <div className={clsx(styles.surface, styles[tone], className)} {...props} />
+  );
 }
 
-export type AdminButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & ToneProps;
+export type AdminButtonProps = ButtonHTMLAttributes<HTMLButtonElement> &
+  ToneProps;
 
 export function AdminButton({
   className,
@@ -206,7 +219,12 @@ export function AdminButton({
 
 export type AdminLinkProps = ComponentProps<typeof Link> & ToneProps;
 
-export function AdminLink({ children, className, tone = "denim", ...props }: AdminLinkProps) {
+export function AdminLink({
+  children,
+  className,
+  tone = "denim",
+  ...props
+}: AdminLinkProps) {
   return (
     <Link
       className={clsx(styles.button, styles[tone], className)}
@@ -232,5 +250,7 @@ export function AdminBadge({
   tone = "denim",
   ...props
 }: AdminBadgeProps) {
-  return <span className={clsx(styles.badge, styles[tone], className)} {...props} />;
+  return (
+    <span className={clsx(styles.badge, styles[tone], className)} {...props} />
+  );
 }

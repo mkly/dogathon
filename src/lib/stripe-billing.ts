@@ -43,9 +43,15 @@ export interface BillingStore {
     orgId: string,
     status: { detailsSubmitted: boolean; chargesEnabled: boolean },
   ): Promise<void>;
-  getAvailableResident(orgId: string, residentId: string): Promise<AvailableResident | null>;
+  getAvailableResident(
+    orgId: string,
+    residentId: string,
+  ): Promise<AvailableResident | null>;
   /** Org-scoped lookup that ignores availability, so a resident that became unavailable mid-checkout still records. */
-  getResident(orgId: string, residentId: string): Promise<AvailableResident | null>;
+  getResident(
+    orgId: string,
+    residentId: string,
+  ): Promise<AvailableResident | null>;
   activateSponsorship(input: {
     orgId: string;
     residentId: string;
@@ -79,7 +85,10 @@ const prismaBillingStore: BillingStore = {
   },
 
   async saveStripeAccount(orgId, stripeAccountId) {
-    await prisma.organization.update({ where: { id: orgId }, data: { stripeAccountId } });
+    await prisma.organization.update({
+      where: { id: orgId },
+      data: { stripeAccountId },
+    });
   },
 
   async saveStripeAccountStatus(orgId, status) {
@@ -156,19 +165,27 @@ const prismaBillingStore: BillingStore = {
 let stripeClient: Stripe | undefined;
 
 function stripe() {
-  if (!env.features.stripe) throw new Error("STRIPE_SECRET_KEY is required for billing");
+  if (!env.features.stripe)
+    throw new Error("STRIPE_SECRET_KEY is required for billing");
   const apiKey = env.STRIPE_SECRET_KEY!;
-  stripeClient ??= new Stripe(apiKey, { httpClient: Stripe.createFetchHttpClient() });
+  stripeClient ??= new Stripe(apiKey, {
+    httpClient: Stripe.createFetchHttpClient(),
+  });
   return stripeClient;
 }
 
 export function stripeWebhookSecret() {
   const secret = env.STRIPE_WEBHOOK_SECRET?.trim();
-  if (!secret) throw new Error("STRIPE_WEBHOOK_SECRET is required for billing webhooks");
+  if (!secret)
+    throw new Error("STRIPE_WEBHOOK_SECRET is required for billing webhooks");
   return secret;
 }
 
-export function constructStripeEvent(payload: string, signature: string, secret: string) {
+export function constructStripeEvent(
+  payload: string,
+  signature: string,
+  secret: string,
+) {
   return Stripe.webhooks.constructEvent(payload, signature, secret);
 }
 
@@ -183,7 +200,9 @@ const CONNECT_CAPABILITIES = {
 export function connectAccountStatus(account: Stripe.Account) {
   return {
     detailsSubmitted: account.details_submitted,
-    chargesEnabled: account.charges_enabled && account.capabilities?.card_payments === "active",
+    chargesEnabled:
+      account.charges_enabled &&
+      account.capabilities?.card_payments === "active",
     verifying: (account.requirements?.pending_verification?.length ?? 0) > 0,
     blockers: connectBlockers(account),
   };
@@ -195,15 +214,27 @@ export function connectAccountStatus(account: Stripe.Account) {
 function connectBlockers(account: Stripe.Account): string[] {
   const requirements = account.requirements;
   if (!requirements) return [];
-  const blockers = [...new Set(requirements.errors?.map((error) => error.reason) ?? [])];
+  const blockers = [
+    ...new Set(requirements.errors?.map((error) => error.reason) ?? []),
+  ];
   const outstanding = [
-    ...new Set([...(requirements.past_due ?? []), ...(requirements.currently_due ?? [])]),
-  ].filter((field) => !requirements.errors?.some((error) => error.requirement === field));
+    ...new Set([
+      ...(requirements.past_due ?? []),
+      ...(requirements.currently_due ?? []),
+    ]),
+  ].filter(
+    (field) =>
+      !requirements.errors?.some((error) => error.requirement === field),
+  );
   if (outstanding.length > 0) {
-    blockers.push(`Stripe still needs: ${outstanding.map(describeRequirement).join(", ")}.`);
+    blockers.push(
+      `Stripe still needs: ${outstanding.map(describeRequirement).join(", ")}.`,
+    );
   }
   if (requirements.pending_verification?.length) {
-    blockers.push("Stripe is verifying details it already has; this can take a few minutes.");
+    blockers.push(
+      "Stripe is verifying details it already has; this can take a few minutes.",
+    );
   }
   return blockers;
 }
@@ -225,7 +256,9 @@ export async function createConnectOnboardingLink(
     // Accounts created before capabilities were requested explicitly only carry the
     // platform defaults; requesting again is idempotent and lets onboarding collect
     // whatever card payments still need.
-    await stripe().accounts.update(accountId, { capabilities: CONNECT_CAPABILITIES });
+    await stripe().accounts.update(accountId, {
+      capabilities: CONNECT_CAPABILITIES,
+    });
   } else {
     const account = await stripe().accounts.create({
       type: "express",
@@ -250,8 +283,11 @@ export async function refreshConnectStatus(
   store: BillingStore = prismaBillingStore,
 ) {
   const organization = await store.getOrganization(orgId);
-  if (!organization?.stripeAccountId) throw new Error("Stripe onboarding has not started");
-  const account = await stripe().accounts.retrieve(organization.stripeAccountId);
+  if (!organization?.stripeAccountId)
+    throw new Error("Stripe onboarding has not started");
+  const account = await stripe().accounts.retrieve(
+    organization.stripeAccountId,
+  );
   const status = { id: account.id, ...connectAccountStatus(account) };
   await store.saveStripeAccountStatus(orgId, status);
   return status;
@@ -266,7 +302,9 @@ export async function createStripeCheckout(
     store.getAvailableResident(input.orgId, input.residentId),
   ]);
   if (!organization?.stripeAccountId || !organization.stripeChargesEnabled) {
-    throw new Error("This organization is not ready to accept sponsorship payments");
+    throw new Error(
+      "This organization is not ready to accept sponsorship payments",
+    );
   }
   if (!resident) throw new ResidentUnavailableError();
 
@@ -331,11 +369,15 @@ function hasStripeSubscription(
   input: StripeSubscriptionOperation,
 ): input is { stripeAccountId: string; subscriptionId: string } {
   if (input.stripeAccountId && input.subscriptionId) return true;
-  console.info("Skipping Stripe subscription cancel: subscription or connected account is missing");
+  console.info(
+    "Skipping Stripe subscription cancel: subscription or connected account is missing",
+  );
   return false;
 }
 
-export async function cancelStripeSubscription(input: StripeSubscriptionOperation) {
+export async function cancelStripeSubscription(
+  input: StripeSubscriptionOperation,
+) {
   if (!hasStripeSubscription(input)) return;
 
   return stripe().subscriptions.cancel(
@@ -346,7 +388,7 @@ export async function cancelStripeSubscription(input: StripeSubscriptionOperatio
 }
 
 function id(value: string | { id: string } | null): string | null {
-  return typeof value === "string" ? value : value?.id ?? null;
+  return typeof value === "string" ? value : (value?.id ?? null);
 }
 
 export async function processStripeEvent(
@@ -365,18 +407,24 @@ export async function processStripeEvent(
 
   if (event.type === "checkout.session.completed") {
     const session = event.data.object;
-    const { orgId, residentId, sponsorName, sponsorEmail, monthlyCents: monthlyCentsValue } = session.metadata ?? {};
+    const {
+      orgId,
+      residentId,
+      sponsorName,
+      sponsorEmail,
+      monthlyCents: monthlyCentsValue,
+    } = session.metadata ?? {};
     const subscriptionId = id(session.subscription);
     const monthlyCents = Number(monthlyCentsValue);
     if (
-      !event.account
-      || !orgId
-      || !residentId
-      || !sponsorName
-      || !sponsorEmail
-      || !subscriptionId
-      || !Number.isSafeInteger(monthlyCents)
-      || monthlyCents <= 0
+      !event.account ||
+      !orgId ||
+      !residentId ||
+      !sponsorName ||
+      !sponsorEmail ||
+      !subscriptionId ||
+      !Number.isSafeInteger(monthlyCents) ||
+      monthlyCents <= 0
     ) {
       return;
     }

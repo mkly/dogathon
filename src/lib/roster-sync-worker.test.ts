@@ -15,7 +15,7 @@ const summary: SyncSummary = {
   created: 1,
   updated: 0,
   adopted: 0,
-    madeUnavailable: 0,
+  madeUnavailable: 0,
   madeAvailable: 0,
   usedFallbackCapture: false,
   rosterComplete: true,
@@ -49,7 +49,9 @@ function job(status: RosterSyncJobView["status"]): RosterSyncJobView {
   };
 }
 
-function dependencies(overrides: Partial<Parameters<typeof createRosterSyncDrainer>[0]> = {}) {
+function dependencies(
+  overrides: Partial<Parameters<typeof createRosterSyncDrainer>[0]> = {},
+) {
   return {
     supervise: async () => undefined,
     fetch: async () => claim,
@@ -61,7 +63,9 @@ function dependencies(overrides: Partial<Parameters<typeof createRosterSyncDrain
   };
 }
 
-function schedulerEnvironment(overrides: Record<string, string | undefined> = {}) {
+function schedulerEnvironment(
+  overrides: Record<string, string | undefined> = {},
+) {
   return parseEnvironment({
     DATABASE_URL: "postgresql://dogathon:dogathon@localhost:5432/dogathon",
     ...overrides,
@@ -74,20 +78,27 @@ test("the drain route refuses missing and incorrect secrets without fetching wor
     calls += 1;
     return { drained: false as const };
   };
-  const missingSecret = createRosterSyncDrainHandler({ drain, env: schedulerEnvironment() });
+  const missingSecret = createRosterSyncDrainHandler({
+    drain,
+    env: schedulerEnvironment(),
+  });
   const configured = createRosterSyncDrainHandler({
     drain,
     env: schedulerEnvironment({ CRON_SECRET: "scheduler-secret" }),
   });
 
-  const missingResponse = await missingSecret(new Request("https://app.example/api/jobs/drain", {
-    method: "POST",
-    headers: { authorization: "Bearer scheduler-secret" },
-  }));
-  const wrongResponse = await configured(new Request("https://app.example/api/jobs/drain", {
-    method: "POST",
-    headers: { authorization: "Bearer wrong-secret" },
-  }));
+  const missingResponse = await missingSecret(
+    new Request("https://app.example/api/jobs/drain", {
+      method: "POST",
+      headers: { authorization: "Bearer scheduler-secret" },
+    }),
+  );
+  const wrongResponse = await configured(
+    new Request("https://app.example/api/jobs/drain", {
+      method: "POST",
+      headers: { authorization: "Bearer wrong-secret" },
+    }),
+  );
 
   assert.equal(missingResponse.status, 401);
   assert.equal(wrongResponse.status, 401);
@@ -96,44 +107,57 @@ test("the drain route refuses missing and incorrect secrets without fetching wor
 
 test("a correct secret fetches and explicitly completes one job", async () => {
   let completed = "";
-  const drain = createRosterSyncDrainer(dependencies({
-    succeed: async (jobId, nextSummary) => {
-      completed = jobId;
-      assert.deepEqual(nextSummary, summary);
-      return job("succeeded");
-    },
-  }));
+  const drain = createRosterSyncDrainer(
+    dependencies({
+      succeed: async (jobId, nextSummary) => {
+        completed = jobId;
+        assert.deepEqual(nextSummary, summary);
+        return job("succeeded");
+      },
+    }),
+  );
   const handler = createRosterSyncDrainHandler({
     drain,
     env: schedulerEnvironment({ CRON_SECRET: "scheduler-secret" }),
   });
 
-  const response = await handler(new Request("https://app.example/api/jobs/drain", {
-    method: "POST",
-    headers: { authorization: "Bearer scheduler-secret" },
-  }));
+  const response = await handler(
+    new Request("https://app.example/api/jobs/drain", {
+      method: "POST",
+      headers: { authorization: "Bearer scheduler-secret" },
+    }),
+  );
 
   assert.equal(response.status, 200);
   assert.equal(completed, claim.id);
-  assert.deepEqual(await response.json(), { drained: true, job: job("succeeded") });
+  assert.deepEqual(await response.json(), {
+    drained: true,
+    job: job("succeeded"),
+  });
 });
 
 test("an empty queue is a successful no-op", async () => {
-  const drain = createRosterSyncDrainer(dependencies({ fetch: async () => null }));
+  const drain = createRosterSyncDrainer(
+    dependencies({ fetch: async () => null }),
+  );
   assert.deepEqual(await drain(), { drained: false });
 });
 
 test("a roster refusal is completed with a refused outcome", async () => {
   let recordedReason = "";
-  const drain = createRosterSyncDrainer(dependencies({
-    syncRoster: async () => {
-      throw new RosterSyncRefusal("Too many residents would become unavailable");
-    },
-    refuse: async (_jobId, reason) => {
-      recordedReason = reason;
-      return job("refused");
-    },
-  }));
+  const drain = createRosterSyncDrainer(
+    dependencies({
+      syncRoster: async () => {
+        throw new RosterSyncRefusal(
+          "Too many residents would become unavailable",
+        );
+      },
+      refuse: async (_jobId, reason) => {
+        recordedReason = reason;
+        return job("refused");
+      },
+    }),
+  );
 
   assert.deepEqual(await drain(), { drained: true, job: job("refused") });
   assert.equal(recordedReason, "Too many residents would become unavailable");

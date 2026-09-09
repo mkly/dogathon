@@ -8,7 +8,10 @@ const getRosterSyncJob = createGetRosterSyncJobHandler();
 export async function GET(request: Request, { params }: RouteContext) {
   const { id } = await params;
   if (!uuidSchema.safeParse(id).success) {
-    return Response.json({ error: "Roster sync job not found" }, { status: 404 });
+    return Response.json(
+      { error: "Roster sync job not found" },
+      { status: 404 },
+    );
   }
   return getRosterSyncJob(request, id);
 }

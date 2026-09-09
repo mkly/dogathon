@@ -34,7 +34,10 @@ export function PhotoPatchImage({
       {...(preload ? { preload: true } : { loading: "lazy" as const })}
       alt={alt}
       blurDataURL={blurDataUrl}
-      className={clsx(!preload && [styles["photo-patch-image"], loaded && styles.loaded], className)}
+      className={clsx(
+        !preload && [styles["photo-patch-image"], loaded && styles.loaded],
+        className,
+      )}
       decoding="async"
       height={768}
       onLoad={(event) => {

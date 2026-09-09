@@ -1,4 +1,7 @@
-.backLink { flex: none; text-decoration: none; }
+.backLink {
+  flex: none;
+  text-decoration: none;
+}
 
 .summary {
   display: flex;
@@ -8,10 +11,19 @@
   margin-bottom: 20px;
 }
 
-.summary p { margin: 0; font-size: 0.85rem; font-weight: 750; }
-.sponsorList { display: grid; gap: 14px; }
+.summary p {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 750;
+}
+.sponsorList {
+  display: grid;
+  gap: 14px;
+}
 
-.sponsorCard { padding: 18px; }
+.sponsorCard {
+  padding: 18px;
+}
 
 .sponsorHeading {
   display: grid;
@@ -21,10 +33,22 @@
   margin-bottom: 14px;
 }
 
-.sponsorHeading h2 { margin: 0 0 5px; font-size: 1.35rem; font-weight: 900; }
-.sponsorHeading p { margin: 3px 0; font-size: 0.82rem; font-weight: 700; }
-.sponsorHeading a { color: inherit; }
-.contact { overflow-wrap: anywhere; }
+.sponsorHeading h2 {
+  margin: 0 0 5px;
+  font-size: 1.35rem;
+  font-weight: 900;
+}
+.sponsorHeading p {
+  margin: 3px 0;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+.sponsorHeading a {
+  color: inherit;
+}
+.contact {
+  overflow-wrap: anywhere;
+}
 
 .profile {
   display: grid;
@@ -34,16 +58,58 @@
   padding: 18px;
 }
 
-.profileItem small { display: block; margin-bottom: 6px; font-size: 0.65rem; font-weight: 900; letter-spacing: 0.09em; opacity: 0.72; text-transform: uppercase; }
-.profileItem strong, .profileItem a { color: inherit; font-size: 0.92rem; font-weight: 850; overflow-wrap: anywhere; }
-.historyTitle { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-bottom: 14px; }
-.historyTitle h2 { margin: 0; font-size: 1.55rem; font-weight: 900; }
-.historyPanel { padding: 12px; }
-.awaitingSection { margin-bottom: 30px; }
-.awaitingControls { display: flex; min-width: 410px; align-items: center; gap: 8px; }
-.transferPicker { min-width: 170px; flex: 1; }
-.reason { max-width: 240px; }
-.limitNotice { margin: 10px 0 0; font-size: 0.8rem; font-weight: 750; }
+.profileItem small {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 0.65rem;
+  font-weight: 900;
+  letter-spacing: 0.09em;
+  opacity: 0.72;
+  text-transform: uppercase;
+}
+.profileItem strong,
+.profileItem a {
+  color: inherit;
+  font-size: 0.92rem;
+  font-weight: 850;
+  overflow-wrap: anywhere;
+}
+.historyTitle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 14px;
+}
+.historyTitle h2 {
+  margin: 0;
+  font-size: 1.55rem;
+  font-weight: 900;
+}
+.historyPanel {
+  padding: 12px;
+}
+.awaitingSection {
+  margin-bottom: 30px;
+}
+.awaitingControls {
+  display: flex;
+  min-width: 410px;
+  align-items: center;
+  gap: 8px;
+}
+.transferPicker {
+  min-width: 170px;
+  flex: 1;
+}
+.reason {
+  max-width: 240px;
+}
+.limitNotice {
+  margin: 10px 0 0;
+  font-size: 0.8rem;
+  font-weight: 750;
+}
 
 .dialogOverlay {
   position: fixed;
@@ -66,10 +132,28 @@
   transform: translate(-50%, -50%);
 }
 
-.dialogPanel { padding: 24px; border-radius: 8px; }
-.alertDialog h2 { margin: 0; font-size: 1.5rem; font-weight: 900; letter-spacing: -0.035em; }
-.dialogDescription { margin: 10px 0 22px; font-size: 0.82rem; font-weight: 700; line-height: 1.5; opacity: 0.78; }
-.dialogActions { display: flex; justify-content: flex-end; gap: 10px; }
+.dialogPanel {
+  padding: 24px;
+  border-radius: 8px;
+}
+.alertDialog h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 900;
+  letter-spacing: -0.035em;
+}
+.dialogDescription {
+  margin: 10px 0 22px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  line-height: 1.5;
+  opacity: 0.78;
+}
+.dialogActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
 
 .pagination {
   display: grid;
@@ -82,14 +166,34 @@
   text-align: center;
 }
 
-.pagination > :last-child { justify-self: end; }
+.pagination > :last-child {
+  justify-self: end;
+}
 
 @media (max-width: 720px) {
-  .backLink { text-align: center; }
-  .sponsorHeading { grid-template-columns: 1fr; gap: 12px; }
-  .profile { grid-template-columns: 1fr; gap: 20px; }
-  .awaitingControls { min-width: 300px; flex-wrap: wrap; }
-  .transferPicker { flex-basis: 100%; }
-  .dialogPanel { padding: 22px 18px; }
-  .dialogActions { align-items: stretch; flex-direction: column-reverse; }
+  .backLink {
+    text-align: center;
+  }
+  .sponsorHeading {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .profile {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  .awaitingControls {
+    min-width: 300px;
+    flex-wrap: wrap;
+  }
+  .transferPicker {
+    flex-basis: 100%;
+  }
+  .dialogPanel {
+    padding: 22px 18px;
+  }
+  .dialogActions {
+    align-items: stretch;
+    flex-direction: column-reverse;
+  }
 }

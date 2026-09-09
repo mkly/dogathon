@@ -33,13 +33,20 @@ function dependencies(expectedMonthlyCents = 2500) {
       return slug === "fixture-rescue" ? organization : null;
     },
     async findResidentBySource() {
-      throw new Error("The companion-page action must not resolve by source URL");
+      throw new Error(
+        "The companion-page action must not resolve by source URL",
+      );
     },
     async rateLimit() {
       return { allowed: true, retryAfterSeconds: 60 };
     },
   };
-  return { value, get checkoutCalled() { return checkoutCalled; } };
+  return {
+    value,
+    get checkoutCalled() {
+      return checkoutCalled;
+    },
+  };
 }
 
 function input(overrides: Record<string, unknown> = {}) {
@@ -57,7 +64,8 @@ function destination() {
   return {
     cancelUrl: "https://app.test/companion?checkout=canceled",
     errorUrl: (code: string) => `https://app.test/companion?error=${code}`,
-    successUrl: "https://app.test/companion?sponsored=1&session_id={CHECKOUT_SESSION_ID}",
+    successUrl:
+      "https://app.test/companion?sponsored=1&session_id={CHECKOUT_SESSION_ID}",
   };
 }
 
@@ -67,7 +75,10 @@ test("the existing resident-id checkout path creates a Stripe session at the def
     dependencies: deps.value,
   });
 
-  assert.deepEqual(result, { ok: true, url: "https://checkout.stripe.test/session" });
+  assert.deepEqual(result, {
+    ok: true,
+    url: "https://checkout.stripe.test/session",
+  });
   assert.equal(deps.checkoutCalled, true);
 });
 
@@ -79,20 +90,27 @@ test("checkout uses the selected organization tier", async () => {
     { dependencies: deps.value },
   );
 
-  assert.deepEqual(result, { ok: true, url: "https://checkout.stripe.test/session" });
+  assert.deepEqual(result, {
+    ok: true,
+    url: "https://checkout.stripe.test/session",
+  });
   assert.equal(deps.checkoutCalled, true);
 });
 
 test("an organization with no tiers still checks out at the default price", async () => {
   const deps = dependencies(DEFAULT_SPONSORSHIP_MONTHLY_CENTS);
-  deps.value.findOrganization = async (slug) => (slug === "fixture-rescue"
-    ? { ...organization, sponsorshipTiers: [] }
-    : null);
+  deps.value.findOrganization = async (slug) =>
+    slug === "fixture-rescue"
+      ? { ...organization, sponsorshipTiers: [] }
+      : null;
   const result = await startSponsorshipCheckout(input(), destination, {
     dependencies: deps.value,
   });
 
-  assert.deepEqual(result, { ok: true, url: "https://checkout.stripe.test/session" });
+  assert.deepEqual(result, {
+    ok: true,
+    url: "https://checkout.stripe.test/session",
+  });
   assert.equal(deps.checkoutCalled, true);
 });
 
@@ -105,20 +123,29 @@ test("checkout rejects a tier outside the organization", async () => {
   );
 
   assert.equal(result.ok, false);
-  if (result.ok || result.reason !== "checkout-error") assert.fail("expected checkout error");
+  if (result.ok || result.reason !== "checkout-error")
+    assert.fail("expected checkout error");
   assert.equal(result.code, "invalid-tier");
-  assert.equal(result.errorUrl, "https://app.test/companion?error=invalid-tier");
+  assert.equal(
+    result.errorUrl,
+    "https://app.test/companion?error=invalid-tier",
+  );
   assert.equal(deps.checkoutCalled, false);
 });
 
 test("invalid sponsor details retain the companion context for the server action", async () => {
   const deps = dependencies();
-  const result = await startSponsorshipCheckout(input({ sponsorEmail: "invalid" }), destination, {
-    dependencies: deps.value,
-  });
+  const result = await startSponsorshipCheckout(
+    input({ sponsorEmail: "invalid" }),
+    destination,
+    {
+      dependencies: deps.value,
+    },
+  );
 
   assert.equal(result.ok, false);
-  if (result.ok || result.reason !== "checkout-error") assert.fail("expected checkout error");
+  if (result.ok || result.reason !== "checkout-error")
+    assert.fail("expected checkout error");
   assert.equal(result.code, "invalid");
   assert.equal(result.orgSlug, "fixture-rescue");
   assert.equal(result.residentId, residentId);

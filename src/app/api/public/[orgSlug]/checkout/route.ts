@@ -24,9 +24,16 @@ const defaultDependencies: HandlerDependencies = {
   findOrganization: getPublicOrganization,
 };
 
-function corsHeaders(organization: SponsorshipOrganization | null, origin: string | null) {
+function corsHeaders(
+  organization: SponsorshipOrganization | null,
+  origin: string | null,
+) {
   const headers = new Headers({ Vary: "Origin" });
-  if (origin && organization?.settings && isAllowedOrigin(organization.settings, origin)) {
+  if (
+    origin &&
+    organization?.settings &&
+    isAllowedOrigin(organization.settings, origin)
+  ) {
     headers.set("Access-Control-Allow-Origin", origin);
   }
   return headers;
@@ -41,11 +48,12 @@ function destination(returnTo: unknown, organization: SponsorshipOrganization) {
     return null;
   }
   if (
-    !organization.settings
-    || !isAllowedOrigin(organization.settings, base.origin)
-    || base.username
-    || base.password
-  ) return null;
+    !organization.settings ||
+    !isAllowedOrigin(organization.settings, base.origin) ||
+    base.username ||
+    base.password
+  )
+    return null;
 
   const withQuery = (key: string, value: string) => {
     const url = new URL(base);
@@ -54,10 +62,9 @@ function destination(returnTo: unknown, organization: SponsorshipOrganization) {
   };
   const success = withQuery("sponsored", "1");
   success.searchParams.set("session_id", "{CHECKOUT_SESSION_ID}");
-  const successUrl = success.toString().replace(
-    "%7BCHECKOUT_SESSION_ID%7D",
-    "{CHECKOUT_SESSION_ID}",
-  );
+  const successUrl = success
+    .toString()
+    .replace("%7BCHECKOUT_SESSION_ID%7D", "{CHECKOUT_SESSION_ID}");
 
   return {
     cancelUrl: withQuery("checkout", "canceled").toString(),
@@ -68,8 +75,14 @@ function destination(returnTo: unknown, organization: SponsorshipOrganization) {
   };
 }
 
-async function readPayload(request: Request): Promise<{ format: "form" | "json"; payload: CheckoutPayload } | null> {
-  const contentType = request.headers.get("content-type")?.split(";", 1)[0].trim().toLowerCase();
+async function readPayload(
+  request: Request,
+): Promise<{ format: "form" | "json"; payload: CheckoutPayload } | null> {
+  const contentType = request.headers
+    .get("content-type")
+    ?.split(";", 1)[0]
+    .trim()
+    .toLowerCase();
   try {
     if (contentType === "application/json") {
       const payload: unknown = await request.json();
@@ -78,7 +91,10 @@ async function readPayload(request: Request): Promise<{ format: "form" | "json";
         : null;
     }
     if (contentType === "application/x-www-form-urlencoded") {
-      return { format: "form", payload: Object.fromEntries(await request.formData()) };
+      return {
+        format: "form",
+        payload: Object.fromEntries(await request.formData()),
+      };
     }
   } catch {
     return null;
@@ -86,7 +102,11 @@ async function readPayload(request: Request): Promise<{ format: "form" | "json";
   return null;
 }
 
-function jsonError(code: SponsorshipCheckoutErrorCode, status: number, headers: Headers) {
+function jsonError(
+  code: SponsorshipCheckoutErrorCode,
+  status: number,
+  headers: Headers,
+) {
   return Response.json({ error: code }, { status, headers });
 }
 
@@ -96,7 +116,9 @@ function redirectResponse(url: string, headers: Headers) {
   return new Response(null, { status: 303, headers: redirectHeaders });
 }
 
-export function createPublicCheckoutPostHandler(dependencies: HandlerDependencies = defaultDependencies) {
+export function createPublicCheckoutPostHandler(
+  dependencies: HandlerDependencies = defaultDependencies,
+) {
   return async function post(
     request: Request,
     { params }: { params: Promise<{ orgSlug: string }> },
@@ -106,25 +128,31 @@ export function createPublicCheckoutPostHandler(dependencies: HandlerDependencie
     const organization = await dependencies.findOrganization(orgSlug);
     const responseHeaders = corsHeaders(organization, origin);
     const parsed = await readPayload(request);
-    if (!parsed || !organization) return jsonError("invalid", 400, responseHeaders);
+    if (!parsed || !organization)
+      return jsonError("invalid", 400, responseHeaders);
 
     const urls = destination(parsed.payload.returnTo, organization);
     if (!urls) return jsonError("invalid", 400, responseHeaders);
 
-    const result = await startSponsorshipCheckout({
-      headers: request.headers,
-      orgSlug,
-      sponsorEmail: parsed.payload.sponsorEmail,
-      sponsorName: parsed.payload.sponsorName,
-      target: { kind: "source", value: parsed.payload.source },
-      tier: parsed.payload.tier,
-    }, () => urls, {
-      dependencies: dependencies.checkoutDependencies,
-      organization,
-    });
+    const result = await startSponsorshipCheckout(
+      {
+        headers: request.headers,
+        orgSlug,
+        sponsorEmail: parsed.payload.sponsorEmail,
+        sponsorName: parsed.payload.sponsorName,
+        target: { kind: "source", value: parsed.payload.source },
+        tier: parsed.payload.tier,
+      },
+      () => urls,
+      {
+        dependencies: dependencies.checkoutDependencies,
+        organization,
+      },
+    );
 
     if (result.ok) {
-      if (parsed.format === "form") return redirectResponse(result.url, responseHeaders);
+      if (parsed.format === "form")
+        return redirectResponse(result.url, responseHeaders);
       return Response.json({ url: result.url }, { headers: responseHeaders });
     }
 
@@ -140,14 +168,21 @@ export function createPublicCheckoutPostHandler(dependencies: HandlerDependencie
         responseHeaders,
       );
     }
-    const status = code === "rate-limited"
-      ? 429
-      : code === "unavailable" ? 409 : code === "billing" ? 502 : 400;
+    const status =
+      code === "rate-limited"
+        ? 429
+        : code === "unavailable"
+          ? 409
+          : code === "billing"
+            ? 502
+            : 400;
     return jsonError(code, status, responseHeaders);
   };
 }
 
-export function createPublicCheckoutOptionsHandler(dependencies: HandlerDependencies = defaultDependencies) {
+export function createPublicCheckoutOptionsHandler(
+  dependencies: HandlerDependencies = defaultDependencies,
+) {
   return async function options(
     request: Request,
     { params }: { params: Promise<{ orgSlug: string }> },

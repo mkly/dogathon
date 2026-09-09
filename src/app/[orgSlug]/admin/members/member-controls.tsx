@@ -3,7 +3,12 @@
 import * as AlertDialog from "@radix-ui/react-alert-dialog";
 import { useOptimistic, useRef, useState, useTransition } from "react";
 
-import { AdminBadge, AdminButton, AdminField, AdminSurface } from "@/components/admin-ui";
+import {
+  AdminBadge,
+  AdminButton,
+  AdminField,
+  AdminSurface,
+} from "@/components/admin-ui";
 import {
   AnimatePresence,
   motion,
@@ -13,7 +18,10 @@ import { formatDate } from "@/lib/format";
 import { pushToast } from "@/lib/toast";
 import type { OrganizationRole } from "@/lib/organization-access";
 
-import { removeOrganizationMember, updateOrganizationMemberRole } from "./actions";
+import {
+  removeOrganizationMember,
+  updateOrganizationMemberRole,
+} from "./actions";
 import styles from "./members.module.css";
 
 export type MemberView = {
@@ -68,9 +76,14 @@ export function MemberList({
   );
   const [, startTransition] = useTransition();
   const motionTransition = useMotionTiming();
-  const ownerCount = optimisticMembers.filter((member) => member.role === "owner").length;
+  const ownerCount = optimisticMembers.filter(
+    (member) => member.role === "owner",
+  ).length;
 
-  function setMemberPending(memberId: string, action: "remove" | "role" | null) {
+  function setMemberPending(
+    memberId: string,
+    action: "remove" | "role" | null,
+  ) {
     setPendingMemberActions((current) => {
       const next = { ...current };
       if (action) next[memberId] = action;
@@ -79,15 +92,25 @@ export function MemberList({
     });
   }
 
-  function changeRole(member: MemberView, role: "admin" | "member" | "volunteer") {
+  function changeRole(
+    member: MemberView,
+    role: "admin" | "member" | "volunteer",
+  ) {
     setMemberPending(member.id, "role");
     startTransition(async () => {
       updateOptimisticMembers({ id: member.id, role, type: "role" });
       try {
-        const result = await updateOrganizationMemberRole({ memberId: member.id, orgSlug, role });
+        const result = await updateOrganizationMemberRole({
+          memberId: member.id,
+          orgSlug,
+          role,
+        });
         pushToast(result.ok ? "success" : "error", result.message);
       } catch {
-        pushToast("error", "The role change could not reach the server. Try again.");
+        pushToast(
+          "error",
+          "The role change could not reach the server. Try again.",
+        );
       } finally {
         setMemberPending(member.id, null);
       }
@@ -99,10 +122,16 @@ export function MemberList({
     startTransition(async () => {
       updateOptimisticMembers({ id: member.id, type: "remove" });
       try {
-        const result = await removeOrganizationMember({ memberId: member.id, orgSlug });
+        const result = await removeOrganizationMember({
+          memberId: member.id,
+          orgSlug,
+        });
         pushToast(result.ok ? "success" : "error", result.message);
       } catch {
-        pushToast("error", "The removal could not reach the server. Try again.");
+        pushToast(
+          "error",
+          "The removal could not reach the server. Try again.",
+        );
       } finally {
         setMemberPending(member.id, null);
       }
@@ -114,9 +143,9 @@ export function MemberList({
       <AnimatePresence initial={false} mode="popLayout">
         {optimisticMembers.map((member) => {
           const isSelf = member.userId === actorUserId;
-          const isProtectedOwner = member.role === "owner" && (
-            actorRole === "admin" || ownerCount <= 1
-          );
+          const isProtectedOwner =
+            member.role === "owner" &&
+            (actorRole === "admin" || ownerCount <= 1);
           const pendingAction = pendingMemberActions[member.id];
 
           return (
@@ -138,15 +167,17 @@ export function MemberList({
                 <a href={`mailto:${member.email}`}>{member.email}</a>
               </div>
               <div className={styles.memberMeta}>
-                <AdminBadge tone={ROLE_TONES[member.role]}>{member.role}</AdminBadge>
-                <span>
-                  Joined {formatDate(member.joinedAt)}
-                </span>
+                <AdminBadge tone={ROLE_TONES[member.role]}>
+                  {member.role}
+                </AdminBadge>
+                <span>Joined {formatDate(member.joinedAt)}</span>
               </div>
               <div className={styles.controls}>
                 {isProtectedOwner ? (
                   <p className={styles.protectedNote}>
-                    {ownerCount <= 1 ? "Last owner" : "Only an owner can manage this person"}
+                    {ownerCount <= 1
+                      ? "Last owner"
+                      : "Only an owner can manage this person"}
                   </p>
                 ) : (
                   <AdminField className={styles.roleField}>
@@ -155,21 +186,32 @@ export function MemberList({
                       defaultValue=""
                       disabled={pendingAction !== undefined}
                       onChange={(event) => {
-                        const role = event.target.value as "admin" | "member" | "volunteer";
+                        const role = event.target.value as
+                          "admin" | "member" | "volunteer";
                         if (role) changeRole(member, role);
                         event.target.value = "";
                       }}
                     >
-                      <option disabled value="">Change role…</option>
-                      {member.role !== "admin" ? <option value="admin">Admin</option> : null}
-                      {member.role !== "member" ? <option value="member">Member</option> : null}
-                      {member.role !== "volunteer" ? <option value="volunteer">Volunteer</option> : null}
+                      <option disabled value="">
+                        Change role…
+                      </option>
+                      {member.role !== "admin" ? (
+                        <option value="admin">Admin</option>
+                      ) : null}
+                      {member.role !== "member" ? (
+                        <option value="member">Member</option>
+                      ) : null}
+                      {member.role !== "volunteer" ? (
+                        <option value="volunteer">Volunteer</option>
+                      ) : null}
                     </select>
                   </AdminField>
                 )}
                 <AdminButton
                   className={styles.removeButton}
-                  disabled={pendingAction !== undefined || isSelf || isProtectedOwner}
+                  disabled={
+                    pendingAction !== undefined || isSelf || isProtectedOwner
+                  }
                   onClick={() => {
                     setMemberToRemove(member);
                     setRemoveDialogOpen(true);
@@ -225,8 +267,11 @@ export function MemberList({
                     <AlertDialog.Title asChild>
                       <h2>Remove organization member?</h2>
                     </AlertDialog.Title>
-                    <AlertDialog.Description className={styles.dialogDescription}>
-                      Remove {memberToRemove?.name || memberToRemove?.email} from this organization?
+                    <AlertDialog.Description
+                      className={styles.dialogDescription}
+                    >
+                      Remove {memberToRemove?.name || memberToRemove?.email}{" "}
+                      from this organization?
                     </AlertDialog.Description>
                     <div className={styles.dialogActions}>
                       <AlertDialog.Cancel asChild>

@@ -2,5 +2,9 @@ import { AccountRouteLoading } from "@/components/route-status";
 import { SuspenseFallback } from "@/components/page-view-transition";
 
 export default function Loading() {
-  return <SuspenseFallback><AccountRouteLoading /></SuspenseFallback>;
+  return (
+    <SuspenseFallback>
+      <AccountRouteLoading />
+    </SuspenseFallback>
+  );
 }

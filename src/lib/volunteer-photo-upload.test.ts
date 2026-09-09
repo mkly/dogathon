@@ -9,9 +9,12 @@ test("parses the volunteer photo multipart fields", () => {
   const formData = new FormData();
   formData.set("orgSlug", " huffy-puff ");
   formData.set("checkInId", checkInId);
-  formData.set("photo", new File([Uint8Array.from([1, 2])], "walk.jpg", {
-    type: "image/jpeg",
-  }));
+  formData.set(
+    "photo",
+    new File([Uint8Array.from([1, 2])], "walk.jpg", {
+      type: "image/jpeg",
+    }),
+  );
 
   const result = parseVolunteerPhotoUpload(formData);
   assert.equal(result.success, true);

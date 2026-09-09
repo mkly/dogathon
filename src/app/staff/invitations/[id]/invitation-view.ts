@@ -1,9 +1,5 @@
 export type InvitationState =
-  | "pending"
-  | "expired"
-  | "accepted"
-  | "cancelled"
-  | "unknown";
+  "pending" | "expired" | "accepted" | "cancelled" | "unknown";
 
 type InvitationStateInput = {
   expiresAt: Date;
@@ -21,7 +17,10 @@ export function invitationState(
   return "pending";
 }
 
-const roleDetails: Record<string, { article: "a" | "an"; description: string; label: string }> = {
+const roleDetails: Record<
+  string,
+  { article: "a" | "an"; description: string; label: string }
+> = {
   admin: {
     article: "an",
     description: "Manage staff, rescue settings, and day-to-day rescue work.",
@@ -29,7 +28,8 @@ const roleDetails: Record<string, { article: "a" | "an"; description: string; la
   },
   member: {
     article: "a",
-    description: "Contribute companion updates and help keep rescue records current.",
+    description:
+      "Contribute companion updates and help keep rescue records current.",
     label: "Member",
   },
   volunteer: {
@@ -40,9 +40,11 @@ const roleDetails: Record<string, { article: "a" | "an"; description: string; la
 };
 
 export function describeInvitationRole(role: string) {
-  return roleDetails[role] ?? {
-    article: "a",
-    description: "Help with the rescue work available to this role.",
-    label: role,
-  };
+  return (
+    roleDetails[role] ?? {
+      article: "a",
+      description: "Help with the rescue work available to this role.",
+      label: role,
+    }
+  );
 }

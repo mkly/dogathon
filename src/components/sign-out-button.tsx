@@ -6,7 +6,11 @@ import { useRouter } from "next/navigation";
 import { AdminButton } from "@/components/admin-ui";
 import { authClient } from "@/lib/auth-client";
 
-export function SignOutButton({ redirectTo = "/staff/sign-in" }: { redirectTo?: string }) {
+export function SignOutButton({
+  redirectTo = "/staff/sign-in",
+}: {
+  redirectTo?: string;
+}) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
 

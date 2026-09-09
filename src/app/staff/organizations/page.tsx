@@ -22,7 +22,9 @@ type OrganizationsPageProps = {
   searchParams: Promise<SearchParams>;
 };
 
-export default async function OrganizationsPage({ searchParams }: OrganizationsPageProps) {
+export default async function OrganizationsPage({
+  searchParams,
+}: OrganizationsPageProps) {
   const query = await searchParams;
   const requestHeaders = await headers();
   const session = await getSession(requestHeaders);
@@ -48,8 +50,16 @@ export default async function OrganizationsPage({ searchParams }: OrganizationsP
           <h1>Your rescue organizations</h1>
           {organizations.map((organization) => (
             <form action={setActiveOrganization} key={organization.id}>
-              <input name="organizationId" type="hidden" value={organization.id} />
-              <PendingFeltSubmitButton pendingLabel="Opening…" tone="mustard" type="submit">
+              <input
+                name="organizationId"
+                type="hidden"
+                value={organization.id}
+              />
+              <PendingFeltSubmitButton
+                pendingLabel="Opening…"
+                tone="mustard"
+                type="submit"
+              >
                 Open {organization.name} ({organization.slug})
               </PendingFeltSubmitButton>
             </form>
@@ -65,7 +75,10 @@ export default async function OrganizationsPage({ searchParams }: OrganizationsP
               <p>
                 You were invited as a <strong>{role.label}</strong>.
               </p>
-              <FeltLink href={`/staff/invitations/${pendingInvitation.id}`} tone="moss">
+              <FeltLink
+                href={`/staff/invitations/${pendingInvitation.id}`}
+                tone="moss"
+              >
                 View invitation
               </FeltLink>
             </FeltPanel>

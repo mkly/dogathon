@@ -4,8 +4,7 @@ import type { AppEnvironment } from "./env.ts";
 
 export type SchedulerEnvironment = Pick<
   AppEnvironment,
-  | "CRON_SECRET"
-  | "features"
+  "CRON_SECRET" | "features"
 >;
 
 export function isAuthorizedSchedulerRequest(
