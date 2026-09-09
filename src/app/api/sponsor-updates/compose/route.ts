@@ -149,7 +149,7 @@ export async function POST(request: Request) {
       })));
 
     return draft;
-  });
+  }, { timeout: 20_000 });
 
   return Response.json({ id: sponsorUpdate.id }, { status: 201 });
 }
