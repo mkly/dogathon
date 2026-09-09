@@ -68,6 +68,12 @@ export async function composeGraduationDraft(
     url: photo.webUrl ?? photo.url,
     takenAt: photo.createdAt,
   }));
+  const adoptionChoiceMessage = `Good news: ${draft.resident.name} has been adopted, and you can choose the companion you would like to follow next.`;
+  const sponsorshipPostscript = [
+    "Your monthly sponsorship continues month to month.",
+    "You can switch companions or cancel at any time from your sponsorship page.",
+    settings?.pinnedPostscript,
+  ].filter(Boolean).join("\n\n");
   const composed = await composeSponsorUpdate({
     companion: {
       name: draft.resident.name,
@@ -86,8 +92,8 @@ export async function composeGraduationDraft(
         takenAt: photo.createdAt,
       })),
     })),
-    previousUpdate: { sentAt: draft.createdAt, bodyText: draft.bodyText },
-    pinnedPostscript: settings?.pinnedPostscript ?? "",
+    previousUpdate: { sentAt: draft.createdAt, bodyText: adoptionChoiceMessage },
+    pinnedPostscript: sponsorshipPostscript,
     type: "graduation",
     companionPageUrl: companionPageUrl(
       env.BETTER_AUTH_URL,

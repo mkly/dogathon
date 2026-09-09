@@ -13,7 +13,7 @@ type SponsorshipChoiceEmailProps = {
 export function SponsorshipChoiceEmail(input: SponsorshipChoiceEmailProps) {
   const transferred = input.type === "transferred";
   const subject = transferred
-    ? `Your sponsorship now supports ${input.companionName}`
+    ? `You are now following ${input.companionName}`
     : `Thank you for sponsoring with ${input.organizationName}`;
 
   return (
@@ -30,12 +30,15 @@ export function SponsorshipChoiceEmail(input: SponsorshipChoiceEmailProps) {
             {transferred ? (
               <>
                 <Text style={{ fontSize: "16px", lineHeight: "1.6" }}>
-                  Hi {input.sponsorName}, your {formatMonthlyAmount(input.monthlyCents)} monthly sponsorship now helps care for {input.companionName}.
+                  Hi {input.sponsorName}, you have chosen to follow {input.companionName}. Your {formatMonthlyAmount(input.monthlyCents)} monthly sponsorship with {input.organizationName} continues as usual.
+                </Text>
+                <Text style={{ fontSize: "16px", lineHeight: "1.6" }}>
+                  You can switch companions or cancel at any time from your sponsorship page.
                 </Text>
               </>
             ) : (
               <Text style={{ fontSize: "16px", lineHeight: "1.6" }}>
-                Hi {input.sponsorName}, your sponsorship has ended. Thank you for the care you gave while it was needed.
+                Hi {input.sponsorName}, we have canceled your monthly sponsorship with {input.organizationName}. You will not be charged again. Thank you for supporting the rescue.
               </Text>
             )}
           </Section>

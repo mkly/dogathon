@@ -102,6 +102,9 @@ export default async function SponsorAccountPage() {
                         </AdminBadge>
                         <span>Started {formatDate(record.createdAt)}</span>
                         <span>{formatMonthlyAmount(record.monthlyCents)}/month</span>
+                        {record.status === "active" || record.status === "awaiting" ? (
+                          <span>Continues month to month; switch companions or cancel at any time</span>
+                        ) : null}
                       </div>
                     </div>
                     {["active", "awaiting"].includes(record.status) || record.stripeCustomerId ? (
@@ -111,7 +114,7 @@ export default async function SponsorAccountPage() {
                             href={`/${record.organization.slug}/sponsor/next?sponsorship=${record.id}`}
                             tone="oatmeal"
                           >
-                            Choose a different companion
+                            Switch companions
                           </FeltLink>
                         ) : null}
                         {record.stripeCustomerId ? (
