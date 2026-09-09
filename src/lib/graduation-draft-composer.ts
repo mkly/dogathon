@@ -7,7 +7,12 @@ import { companionPageUrl } from "./sponsor-update-delivery.ts";
 import { prisma } from "./prisma.ts";
 import { interviewTranscriptSchema } from "./volunteer-interview-request.ts";
 
-export type GraduationCompositionResult = "composed" | "no-pending-chats" | "not-found" | "conflict";
+export type GraduationCompositionResult =
+  | "composed"
+  | "no-pending-chats"
+  | "not-adopted"
+  | "not-found"
+  | "conflict";
 
 function conversationLines(transcript: unknown): string[] | undefined {
   const parsed = interviewTranscriptSchema.safeParse(transcript);
@@ -53,6 +58,9 @@ export async function composeGraduationDraft(
     prisma.rescueSettings.findUnique({ where: { orgId } }),
   ]);
   if (!draft) return "not-found";
+  // Unavailability notices share the graduation type but are not adoption
+  // stories, so the adoption-story composer must never rewrite them.
+  if (draft.resident.unavailabilityReason !== "adopted") return "not-adopted";
   if (draft.resident.checkIns.length === 0) return "no-pending-chats";
 
   const photos = draft.resident.checkIns.flatMap((checkIn) => checkIn.photos).map((photo) => ({

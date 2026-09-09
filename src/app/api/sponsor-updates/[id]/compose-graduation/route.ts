@@ -33,6 +33,12 @@ export async function POST(
   if (result === "not-found") {
     return Response.json({ error: "Graduation draft not found" }, { status: 404 });
   }
+  if (result === "not-adopted") {
+    return Response.json(
+      { error: "Only adoption notices can weave in recent chats." },
+      { status: 409 },
+    );
+  }
   if (result === "no-pending-chats") {
     return Response.json({ error: "There are no pending chats to weave in." }, { status: 409 });
   }

@@ -405,6 +405,10 @@ async function ApprovalQueue({
         ) : (
           drafts.map((draft) => {
             const graduation = draft.type === "graduation";
+            // Unavailability notices are graduation-typed but hold no adoption
+            // story, so they never offer to weave in recent chats.
+            const adoption = graduation
+              && draft.resident.unavailabilityReason === "adopted";
             const recipientCount = draft.resident.sponsorships.filter((sponsorship) =>
               isRegularSponsorUpdateRecipient(sponsorship, draft.resident.available)).length;
             const waitingDays = Math.max(
@@ -424,7 +428,7 @@ async function ApprovalQueue({
               isGraduation={graduation}
               key={draft.id}
               orgSlug={orgSlug}
-              pendingChatCount={draft.resident._count.checkIns}
+              pendingChatCount={adoption ? draft.resident._count.checkIns : 0}
               subject={draft.subject}
             >
               <PhotoPatch alt={`${draft.resident.name} portrait`} className={styles.photo} sizes="(max-width: 720px) 104px, 120px" src={draft.resident.photoUrls[0]} />
