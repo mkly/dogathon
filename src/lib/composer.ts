@@ -207,7 +207,24 @@ function finalizeDraft(
   };
 }
 
-const MAX_SPONSOR_UPDATE_OUTPUT_TOKENS = 8000;
+// The configured reasoning model spends this budget on hidden thought as well
+// as the structured draft. Smaller budgets can end before any JSON is emitted
+// for a multimodal update, even though the finished story is short.
+const MAX_SPONSOR_UPDATE_OUTPUT_TOKENS = 32000;
+
+const SPONSOR_UPDATE_SYSTEM_PROMPT = `You write updates for an animal rescue in the rescue's first-person-plural voice ("we" and "our"). The reader sponsors this companion, cares about them, and will probably read on a phone. Write with the specificity and warmth of people who know the animal, not with marketing copy or a technology-brochure voice.
+
+Use only the supplied companion profile, volunteer chats, photos, and previous update. Never invent an event or detail. Do not make medical or behavioral claims beyond what a volunteer actually said. Never say or imply that the reader is the only sponsor or that their sponsorship funds this specific animal. Do not use the terms "care team", "check-in", or "furbaby".
+
+Return:
+- A subject of at most 60 characters. Name the companion and something that actually happened; never use "An update on <name>" or another generic update announcement.
+- A teaser of one or two complete sentences that works as the opening of an email and makes the specific news clear. Keep it comfortably under 240 characters; never cut off a thought to fill the limit.
+- A Markdown body of roughly 200 to 450 words. Tell what changed across the visits in narrative order. Quote or closely paraphrase concrete volunteer observations when they add character. Refer naturally to the supplied photos when relevant. Use no more than two short section headings, and never use a date as a heading. Do not insert photo ids or standalone caption lines in the body; captions are returned separately.
+- Exactly one caption for every supplied photo, using that photo's exact id in the photoId field. Each caption must be at most 90 characters and describe what is visible, informed by the chats without claiming anything the image and chats do not support. Do not repeat the photo id in the caption text.
+
+For a regular update, focus on what happened during the recent visits. Use the profile only for helpful context, and do not repeat the previous update.
+
+For a graduation update, tell the companion's adoption story. Open with the adoption news, continue through the recent visits in narrative order, and end warmly without asking for money.`;
 
 async function composeWithModel(input: ComposeSponsorUpdateInput): Promise<ComposedSponsorUpdate> {
   const { output } = await generateText({
@@ -215,8 +232,7 @@ async function composeWithModel(input: ComposeSponsorUpdateInput): Promise<Compo
     maxOutputTokens: MAX_SPONSOR_UPDATE_OUTPUT_TOKENS,
     providerOptions: reasoning("medium"),
     output: Output.object({ schema: composedSponsorUpdateSchema }),
-    instructions:
-      "Write a warm animal-rescue update grounded only in the supplied companion profile, volunteer chats, and photos. Return a concise subject and teaser, a readable Markdown story, and one factual caption for every photo.",
+    instructions: SPONSOR_UPDATE_SYSTEM_PROMPT,
     messages: [await buildComposerMessages(input)],
   });
 
