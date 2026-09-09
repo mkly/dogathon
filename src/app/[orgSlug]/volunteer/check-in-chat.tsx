@@ -210,7 +210,7 @@ export function CheckInChat({
     if (finishing) return;
     setFinishing(true);
     setFinishError("");
-    // Cut off any reply still streaming; the note is written from what is on
+    // Cut off any reply still streaming; the update is built from what is on
     // screen, so a half-typed question is dropped.
     stop();
     const transcript = messages.filter((message) => messageText(message).trim().length > 0);
@@ -341,7 +341,7 @@ export function CheckInChat({
       <div className={styles.dock}>
         {canFinish ? (
           <div className={styles.finishRow}>
-            <p>That’s plenty for a note. Add more if you like, or wrap up.</p>
+            <p>That’s plenty for an update. Add more if you like, or wrap up.</p>
             <FeltButton
               className={styles.finishButton}
               disabled={finishing || photos.some((photo) => photo.status === "uploading")}

@@ -2,8 +2,8 @@ export const organizationInvitationExpiresInSeconds = 48 * 60 * 60;
 
 const roleDescriptions: Record<string, string> = {
   admin: "manage staff, rescue settings, and day-to-day rescue work",
-  member: "contribute companion notes and help keep rescue records current",
-  volunteer: "share companion care notes and help with the rescue roster",
+  member: "contribute companion updates and help keep rescue records current",
+  volunteer: "share companion updates and help with the rescue roster",
 };
 
 type OrganizationInvitationEmailInput = {

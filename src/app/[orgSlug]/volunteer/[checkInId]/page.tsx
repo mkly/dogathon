@@ -51,7 +51,7 @@ export default async function CheckInPage({ params, searchParams }: CheckInPageP
     select: {
       photos: {
         orderBy: { createdAt: "asc" },
-        select: { id: true, url: true },
+        select: { id: true, url: true, webUrl: true },
       },
       resident: { select: { id: true, name: true, photoUrls: true } },
       status: true,
@@ -70,9 +70,22 @@ export default async function CheckInPage({ params, searchParams }: CheckInPageP
         <AdminPage className={styles.chatPage} variant="volunteer">
           <FeltPanel className={styles.confirmation} tone="moss">
             <PhotoPatch alt="" className={styles.confirmationPhoto} sizes="9rem" src={residentPhoto} />
-            <StitchBadge tone="cream">Note tucked in</StitchBadge>
+            <StitchBadge tone="cream">Update saved</StitchBadge>
             <h1>Thanks for the update on {residentName}!</h1>
-            <p>It goes into the next update for {residentName}’s sponsors.</p>
+            <p>This chat will be part of {residentName}’s next update.</p>
+            {checkIn.photos.length ? (
+              <div aria-label="Photos added to this update" className={styles.confirmationPhotos}>
+                {checkIn.photos.map((photo) => (
+                  <PhotoPatch
+                    alt={`${residentName} from this update`}
+                    className={styles.confirmationThumbnail}
+                    key={photo.id}
+                    sizes="4rem"
+                    src={photo.webUrl ?? photo.url}
+                  />
+                ))}
+              </div>
+            ) : null}
             <FeltLink className={styles.againLink} href={`/${orgSlug}/volunteer`}>
               Share another update
             </FeltLink>
