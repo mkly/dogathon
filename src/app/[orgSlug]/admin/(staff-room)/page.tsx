@@ -144,7 +144,7 @@ function relativeSentTime(sentAt: Date, currentTime: number) {
     return `${elapsedMonths} ${pluralize("month", elapsedMonths)} ago`;
   }
 
-  const elapsedYears = Math.floor(elapsedDays / 365);
+  const elapsedYears = Math.floor(elapsedMonths / 12);
   return `${elapsedYears} ${pluralize("year", elapsedYears)} ago`;
 }
 
