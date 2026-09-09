@@ -23,6 +23,12 @@ test("accepts a recognized image and normalizes its orientation, dimensions, and
   assert.ok(metadata.width <= 2_048);
   assert.ok(metadata.height <= 2_048);
   assert.equal(metadata.orientation, undefined);
+
+  const webMetadata = await sharp(photo.webData).metadata();
+  assert.equal(webMetadata.format, "jpeg");
+  assert.ok(webMetadata.width <= 1_280);
+  assert.ok(webMetadata.height <= 1_280);
+  assert.equal(webMetadata.orientation, undefined);
 });
 
 test("rejects data without an allowed image signature", async () => {

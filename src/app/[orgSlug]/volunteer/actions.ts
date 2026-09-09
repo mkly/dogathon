@@ -73,7 +73,7 @@ export async function discardCheckIn(orgSlug: string, rawCheckInId: unknown) {
         userId: access.context.userId,
       },
     },
-    select: { id: true, storageKey: true },
+    select: { id: true, storageKey: true, webStorageKey: true },
   });
   const deleted = await prisma.checkIn.deleteMany({
     where: {
@@ -85,13 +85,15 @@ export async function discardCheckIn(orgSlug: string, rawCheckInId: unknown) {
   });
   if (deleted.count === 1 && photos.length > 0) {
     await prisma.volunteerPhoto.deleteMany({ where: { id: { in: photos.map((photo) => photo.id) } } });
-    await Promise.all(photos.map(async (photo) => {
-      try {
-        await deletePhoto(photo.storageKey);
-      } catch (error) {
-        console.error("volunteer photo could not be removed from storage", error);
-      }
-    }));
+    await Promise.all(photos.flatMap((photo) => [photo.storageKey, photo.webStorageKey]
+      .filter((key): key is string => key !== null)
+      .map(async (key) => {
+        try {
+          await deletePhoto(key);
+        } catch (error) {
+          console.error("volunteer photo could not be removed from storage", error);
+        }
+      })));
   }
 
   revalidatePath(`/${access.orgSlug}/volunteer`);

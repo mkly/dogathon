@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { processVolunteerPhoto } from "@/app/[orgSlug]/volunteer/photo";
 import { MAX_PHOTO_BYTES } from "@/app/[orgSlug]/volunteer/photo-limits";
 import { getOrganizationAccessBySlug } from "@/lib/organization-access";
-import { deletePhoto, photoKey, putPhoto } from "@/lib/photo-storage";
+import { deletePhoto, photoKey, putPhoto, webPhotoKey } from "@/lib/photo-storage";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit, getRateLimitIdentity, RATE_LIMITS, rateLimitResponse } from "@/lib/rate-limit";
 import { parseVolunteerPhotoUpload } from "@/lib/volunteer-photo-upload";
@@ -20,6 +20,8 @@ type UploadDependencies = {
     residentId: string;
     storageKey: string;
     url: string;
+    webStorageKey: string;
+    webUrl: string;
     mime: string;
     byteSize: number;
   }) => Promise<void>;
@@ -102,12 +104,19 @@ export function createVolunteerPhotoPostHandler(dependencies: UploadDependencies
 
     const id = dependencies.newId();
     const storageKey = photoKey({ orgId: access.context.orgId, photoId: id, ext: "jpg" });
-    const { url } = await dependencies.putPhoto({
-      key: storageKey,
-      data: processed.data,
-      mime: processed.mime,
-    });
+    const webStorageKey = webPhotoKey(storageKey);
+    const uploadedKeys = [storageKey, webStorageKey];
     try {
+      const { url } = await dependencies.putPhoto({
+        key: storageKey,
+        data: processed.data,
+        mime: processed.mime,
+      });
+      const { url: webUrl } = await dependencies.putPhoto({
+        key: webStorageKey,
+        data: processed.webData,
+        mime: processed.mime,
+      });
       await dependencies.createPhoto({
         id,
         checkInId,
@@ -115,15 +124,16 @@ export function createVolunteerPhotoPostHandler(dependencies: UploadDependencies
         residentId,
         storageKey,
         url,
+        webStorageKey,
+        webUrl,
         mime: processed.mime,
         byteSize: processed.data.byteLength,
       });
+      return Response.json({ id, url, webUrl }, { status: 201 });
     } catch (error) {
-      await dependencies.deletePhoto(storageKey).catch(() => undefined);
+      await Promise.all(uploadedKeys.map((key) => dependencies.deletePhoto(key).catch(() => undefined)));
       throw error;
     }
-
-    return Response.json({ id, url }, { status: 201 });
   };
 }
 

@@ -6,15 +6,14 @@ import path from "node:path";
 import test from "node:test";
 
 import { parseEnvironment } from "./env.ts";
-import { deletePhoto, getPhoto, photoKey, putPhoto } from "./photo-storage.ts";
+import { deletePhoto, getPhoto, photoKey, putPhoto, webPhotoKey } from "./photo-storage.ts";
 
 const databaseUrl = "postgresql://dogathon:dogathon@localhost:5432/dogathon";
 
 test("builds the organization-scoped volunteer photo key", () => {
-  assert.equal(
-    photoKey({ orgId: "org-123", photoId: "photo-456", ext: ".jpeg" }),
-    "orgs/org-123/volunteer-photos/photo-456.jpeg",
-  );
+  const key = photoKey({ orgId: "org-123", photoId: "photo-456", ext: ".jpeg" });
+  assert.equal(key, "orgs/org-123/volunteer-photos/photo-456.jpeg");
+  assert.equal(webPhotoKey(key), "orgs/org-123/volunteer-photos/photo-456-web.jpeg");
 });
 
 test("round trips and deletes a photo through the local fallback", async () => {

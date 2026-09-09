@@ -12,14 +12,21 @@ test("orphan photo cleanup removes only uploads older than the grace period", as
   const result = await cleanupVolunteerPhotos({
     async findOrphans(olderThan) {
       cutoff = olderThan;
-      return [{ id: "old-photo", storageKey: "orgs/a/volunteer-photos/old.jpg" }];
+      return [{
+        id: "old-photo",
+        storageKey: "orgs/a/volunteer-photos/old.jpg",
+        webStorageKey: "orgs/a/volunteer-photos/old-web.jpg",
+      }];
     },
     async deletePhoto(key) { deletedKeys.push(key); },
     async deleteRows(ids) { deletedRows = ids; },
   }, now);
 
   assert.equal(cutoff?.getTime(), now.getTime() - ORPHAN_PHOTO_MAX_AGE_MS);
-  assert.deepEqual(deletedKeys, ["orgs/a/volunteer-photos/old.jpg"]);
+  assert.deepEqual(deletedKeys, [
+    "orgs/a/volunteer-photos/old.jpg",
+    "orgs/a/volunteer-photos/old-web.jpg",
+  ]);
   assert.deepEqual(deletedRows, ["old-photo"]);
   assert.deepEqual(result, { deleted: 1 });
 });

@@ -4,6 +4,7 @@ import sharp from "sharp";
 import { MAX_PHOTO_BYTES } from "./photo-limits";
 
 const MAX_PHOTO_DIMENSION = 2048;
+const MAX_WEB_PHOTO_DIMENSION = 1280;
 
 // HEIC/HEIF are absent: sharp's prebuilt libvips carries no HEVC decoder, so
 // accepting them here would only fail later in the re-encode.
@@ -16,6 +17,7 @@ const ALLOWED_PHOTO_MIME_TYPES = new Set([
 
 export type ProcessedVolunteerPhoto = {
   data: Uint8Array<ArrayBuffer>;
+  webData: Uint8Array<ArrayBuffer>;
   mime: "image/jpeg";
 };
 
@@ -36,18 +38,34 @@ export async function processVolunteerPhoto(
   }
 
   try {
-    const data = await sharp(input, { limitInputPixels: 40_000_000 })
-      .rotate()
-      .resize({
-        width: MAX_PHOTO_DIMENSION,
-        height: MAX_PHOTO_DIMENSION,
-        fit: "inside",
-        withoutEnlargement: true,
-      })
-      .jpeg({ quality: 85, mozjpeg: true })
-      .toBuffer();
+    const [data, webData] = await Promise.all([
+      sharp(input, { limitInputPixels: 40_000_000 })
+        .rotate()
+        .resize({
+          width: MAX_PHOTO_DIMENSION,
+          height: MAX_PHOTO_DIMENSION,
+          fit: "inside",
+          withoutEnlargement: true,
+        })
+        .jpeg({ quality: 85, mozjpeg: true })
+        .toBuffer(),
+      sharp(input, { limitInputPixels: 40_000_000 })
+        .rotate()
+        .resize({
+          width: MAX_WEB_PHOTO_DIMENSION,
+          height: MAX_WEB_PHOTO_DIMENSION,
+          fit: "inside",
+          withoutEnlargement: true,
+        })
+        .jpeg({ quality: 80, mozjpeg: true })
+        .toBuffer(),
+    ]);
 
-    return { data: new Uint8Array(data), mime: "image/jpeg" };
+    return {
+      data: new Uint8Array(data),
+      webData: new Uint8Array(webData),
+      mime: "image/jpeg",
+    };
   } catch {
     return undefined;
   }

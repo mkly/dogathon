@@ -28,8 +28,16 @@ function dependencies(overrides: Record<string, unknown> = {}) {
       };
     },
     newId: () => "8f77b971-f0b5-493c-aa9a-5931c1f17ea5",
-    async processPhoto() { return { data: Uint8Array.from([4, 5]), mime: "image/jpeg" as const }; },
-    async putPhoto() { return { url: "/api/volunteer-photos/photo-1?org=org-1" }; },
+    async processPhoto() {
+      return {
+        data: Uint8Array.from([4, 5]),
+        webData: Uint8Array.from([6]),
+        mime: "image/jpeg" as const,
+      };
+    },
+    async putPhoto({ key }: { key: string }) {
+      return { url: `/stored/${key}` };
+    },
     async rateLimit() { return { allowed: true, retryAfterSeconds: 60 }; },
     ...overrides,
   } as never;
@@ -77,8 +85,15 @@ test("validates processed image content and stores only photo metadata", async (
     orgId: "org-1",
     residentId,
     storageKey: "orgs/org-1/volunteer-photos/8f77b971-f0b5-493c-aa9a-5931c1f17ea5.jpg",
-    url: "/api/volunteer-photos/photo-1?org=org-1",
+    url: "/stored/orgs/org-1/volunteer-photos/8f77b971-f0b5-493c-aa9a-5931c1f17ea5.jpg",
+    webStorageKey: "orgs/org-1/volunteer-photos/8f77b971-f0b5-493c-aa9a-5931c1f17ea5-web.jpg",
+    webUrl: "/stored/orgs/org-1/volunteer-photos/8f77b971-f0b5-493c-aa9a-5931c1f17ea5-web.jpg",
     mime: "image/jpeg",
     byteSize: 2,
+  });
+  assert.deepEqual(await response.json(), {
+    id: "8f77b971-f0b5-493c-aa9a-5931c1f17ea5",
+    url: "/stored/orgs/org-1/volunteer-photos/8f77b971-f0b5-493c-aa9a-5931c1f17ea5.jpg",
+    webUrl: "/stored/orgs/org-1/volunteer-photos/8f77b971-f0b5-493c-aa9a-5931c1f17ea5-web.jpg",
   });
 });
