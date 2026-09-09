@@ -4,18 +4,20 @@ import { FeltPanel, PhotoPatch } from "@/components/felt";
 import { PageViewTransition } from "@/components/page-view-transition";
 import { PublicHeader } from "@/components/public-header";
 import { PendingFeltSubmitButton } from "@/components/pending-submit-button";
-import { env } from "@/lib/env";
-import { formatMonthlyAmount } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 import { getPublicOrganization } from "@/lib/public-roster-cache";
-import { verifySponsorshipSelectionToken } from "@/lib/sponsorship-selection-token";
 
 import styles from "../../../../public.module.css";
 import { endSponsorshipAction, transferSponsorshipAction } from "./actions";
+import { resolveSponsorshipSelection } from "./selection";
 
 type NextCompanionPageProps = {
   params: Promise<{ orgSlug: string }>;
-  searchParams: Promise<{ error?: string | string[]; token?: string | string[] }>;
+  searchParams: Promise<{
+    error?: string | string[];
+    sponsorship?: string | string[];
+    token?: string | string[];
+  }>;
 };
 
 function Notice({ children }: { children: React.ReactNode }) {
@@ -26,27 +28,23 @@ export default async function NextCompanionPage({ params, searchParams }: NextCo
   const { orgSlug } = await params;
   const query = await searchParams;
   const token = typeof query.token === "string" ? query.token : "";
-  const verified = env.BETTER_AUTH_SECRET
-    ? verifySponsorshipSelectionToken(token, env.BETTER_AUTH_SECRET)
-    : null;
+  const sponsorshipId = typeof query.sponsorship === "string" ? query.sponsorship : "";
+  const selection = { sponsorshipId, token };
   const organization = await getPublicOrganization(orgSlug);
   if (!organization) notFound();
-  const sponsorship = verified ? await prisma.sponsorship.findFirst({
-    where: { id: verified.sponsorshipId, organization: { slug: orgSlug } },
-    include: {
-      organization: { select: { id: true, name: true } },
-      resident: { select: { name: true } },
-    },
-  }) : null;
+  const sponsorship = await resolveSponsorshipSelection(orgSlug, selection);
 
-  const residents = sponsorship?.status === "awaiting" ? await prisma.resident.findMany({
-    where: {
-      orgId: sponsorship.orgId,
-      available: true,
-      sponsorships: { none: { status: "active" } },
-    },
-    orderBy: { name: "asc" },
-  }) : [];
+  const residents = sponsorship && ["active", "awaiting"].includes(sponsorship.status)
+    ? await prisma.resident.findMany({
+        where: {
+          id: { not: sponsorship.residentId },
+          orgId: sponsorship.orgId,
+          available: true,
+          sponsorships: { none: { status: "active" } },
+        },
+        orderBy: { name: "asc" },
+      })
+    : [];
 
   return (
     <PageViewTransition>
@@ -56,11 +54,6 @@ export default async function NextCompanionPage({ params, searchParams }: NextCo
           <Notice>
             <h1>This link no longer applies</h1>
             <p>It may have expired, or this sponsorship may already have been updated. No changes were made.</p>
-          </Notice>
-        ) : sponsorship.status === "active" ? (
-          <Notice>
-            <h1>You&apos;re now sponsoring {sponsorship.resident.name}</h1>
-            <p>Your {formatMonthlyAmount(sponsorship.monthlyCents)} monthly sponsorship is active again. We sent a confirmation to your email.</p>
           </Notice>
         ) : sponsorship.status === "ended" ? (
           <Notice>
@@ -83,7 +76,7 @@ export default async function NextCompanionPage({ params, searchParams }: NextCo
                     <div className={styles.cardCopy}>
                       <h2>{resident.name}</h2>
                       <p>{resident.breed} · {resident.ageText}</p>
-                      <form action={transferSponsorshipAction.bind(null, orgSlug, token)} className={styles.selectionForm}>
+                      <form action={transferSponsorshipAction.bind(null, orgSlug, selection)} className={styles.selectionForm}>
                         <input name="residentId" type="hidden" value={resident.id} />
                         <PendingFeltSubmitButton pendingLabel="Moving sponsorship…" tone="brick" type="submit">
                           Sponsor {resident.name}
@@ -95,12 +88,14 @@ export default async function NextCompanionPage({ params, searchParams }: NextCo
               </section>
             ) : <Notice><h2>No companions are available right now</h2><p>Please check this page again soon.</p></Notice>}
 
-            <FeltPanel className={styles.stopSponsoring} tone="cream">
-              <div><h2>Prefer to stop?</h2><p>You can end this sponsorship and cancel its recurring charge.</p></div>
-              <form action={endSponsorshipAction.bind(null, orgSlug, token)}>
-                <PendingFeltSubmitButton pendingLabel="Ending sponsorship…" tone="oatmeal" type="submit">Stop sponsoring</PendingFeltSubmitButton>
-              </form>
-            </FeltPanel>
+            {sponsorship.status === "awaiting" ? (
+              <FeltPanel className={styles.stopSponsoring} tone="cream">
+                <div><h2>Prefer to stop?</h2><p>You can end this sponsorship and cancel its recurring charge.</p></div>
+                <form action={endSponsorshipAction.bind(null, orgSlug, selection)}>
+                  <PendingFeltSubmitButton pendingLabel="Ending sponsorship…" tone="oatmeal" type="submit">Stop sponsoring</PendingFeltSubmitButton>
+                </form>
+              </FeltPanel>
+            ) : null}
           </>
         )}
       </main>

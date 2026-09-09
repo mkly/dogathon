@@ -3,9 +3,6 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
-import { env } from "@/lib/env";
-import { prisma } from "@/lib/prisma";
-import { verifySponsorshipSelectionToken } from "@/lib/sponsorship-selection-token";
 import {
   endAwaitingSponsorship,
   SponsorshipTransferError,
@@ -13,54 +10,62 @@ import {
 } from "@/lib/sponsorship-transfer";
 import { uuidSchema } from "@/lib/uuid";
 
+import {
+  resolveSponsorshipSelection,
+  sponsorshipSelectionSchema,
+  type SponsorshipSelection,
+} from "./selection";
+
 const transferSchema = z.object({ residentId: uuidSchema });
 
-function selection(token: string) {
-  if (!env.BETTER_AUTH_SECRET) return null;
-  return verifySponsorshipSelectionToken(token, env.BETTER_AUTH_SECRET);
-}
-
-function destination(orgSlug: string, token: string, error?: string) {
-  const params = new URLSearchParams({ token });
+function destination(orgSlug: string, selection: unknown, error?: string) {
+  const params = new URLSearchParams();
+  const parsed = sponsorshipSelectionSchema.safeParse(selection);
+  if (parsed.success && parsed.data.token) params.set("token", parsed.data.token);
+  else if (parsed.success && parsed.data.sponsorshipId) {
+    params.set("sponsorship", parsed.data.sponsorshipId);
+  }
   if (error) params.set("error", error);
   return `/${encodeURIComponent(orgSlug)}/sponsor/next?${params}`;
 }
 
-export async function transferSponsorshipAction(orgSlug: string, token: string, formData: FormData) {
-  const authorized = selection(token);
+export async function transferSponsorshipAction(
+  orgSlug: string,
+  selection: SponsorshipSelection,
+  formData: FormData,
+) {
+  const sponsorship = await resolveSponsorshipSelection(orgSlug, selection);
   const parsed = transferSchema.safeParse({ residentId: formData.get("residentId") });
-  if (!authorized || !parsed.success) redirect(destination(orgSlug, token, "invalid"));
+  if (!sponsorship || !parsed.success) redirect(destination(orgSlug, selection, "invalid"));
 
   try {
-    await transferSponsorship(authorized.sponsorshipId, parsed.data.residentId);
+    await transferSponsorship(sponsorship.id, parsed.data.residentId);
   } catch (error) {
     if (error instanceof SponsorshipTransferError) {
-      redirect(destination(orgSlug, token, error.code));
+      redirect(destination(orgSlug, selection, error.code));
     }
     throw error;
   }
-  redirect(destination(orgSlug, token));
+  redirect(destination(orgSlug, selection));
 }
 
-export async function endSponsorshipAction(orgSlug: string, token: string) {
-  const authorized = selection(token);
-  if (!authorized) redirect(destination(orgSlug, token, "invalid"));
-  const sponsorship = await prisma.sponsorship.findFirst({
-    where: { id: authorized.sponsorshipId, organization: { slug: orgSlug } },
-    select: { resident: { select: { unavailabilityReason: true } } },
-  });
-  if (!sponsorship) redirect(destination(orgSlug, token, "invalid"));
+export async function endSponsorshipAction(
+  orgSlug: string,
+  selection: SponsorshipSelection,
+) {
+  const sponsorship = await resolveSponsorshipSelection(orgSlug, selection);
+  if (!sponsorship) redirect(destination(orgSlug, selection, "invalid"));
 
   try {
     await endAwaitingSponsorship(
-      authorized.sponsorshipId,
+      sponsorship.id,
       sponsorship.resident.unavailabilityReason ?? "unavailable",
     );
   } catch (error) {
     if (error instanceof SponsorshipTransferError) {
-      redirect(destination(orgSlug, token, error.code));
+      redirect(destination(orgSlug, selection, error.code));
     }
     throw error;
   }
-  redirect(destination(orgSlug, token));
+  redirect(destination(orgSlug, selection));
 }
