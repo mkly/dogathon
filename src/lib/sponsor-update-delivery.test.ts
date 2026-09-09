@@ -4,7 +4,9 @@ import test from "node:test";
 import {
   deliverSponsorUpdate,
   companionPageUrl,
+  emailPhotoUrl,
   isRegularSponsorUpdateRecipient,
+  updatePageUrl,
 } from "./sponsor-update-delivery.ts";
 
 test("builds an organization-scoped companion URL", () => {
@@ -12,6 +14,26 @@ test("builds an organization-scoped companion URL", () => {
     companionPageUrl("https://rescue.example", "second-chance", "companion/one"),
     "https://rescue.example/second-chance/companions/companion%2Fone",
   );
+});
+
+test("builds an organization-scoped update page URL", () => {
+  assert.equal(
+    updatePageUrl("https://rescue.example", "second-chance", "update/one"),
+    "https://rescue.example/second-chance/updates/update%2Fone",
+  );
+});
+
+test("resolves email hero photos against the origin", () => {
+  assert.equal(
+    emailPhotoUrl("https://rescue.example", "/api/volunteer-photos/abc?org=org-1"),
+    "https://rescue.example/api/volunteer-photos/abc?org=org-1",
+  );
+  assert.equal(
+    emailPhotoUrl("https://rescue.example", "https://cdn.example/biscuit.jpg"),
+    "https://cdn.example/biscuit.jpg",
+  );
+  assert.equal(emailPhotoUrl("https://rescue.example", null), null);
+  assert.equal(emailPhotoUrl("https://rescue.example", undefined), null);
 });
 
 const sponsorUpdate = {

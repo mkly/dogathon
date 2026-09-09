@@ -4,79 +4,65 @@ import test from "node:test";
 import { render } from "@react-email/render";
 import { createElement } from "react";
 
-import { SponsorUpdateEmail } from "../emails/sponsor-update-email.tsx";
+import {
+  SponsorUpdateEmail,
+  sponsorUpdateEmailSubject,
+} from "../emails/sponsor-update-email.tsx";
 
 const base = {
+  rescueName: "Huffy Puff Rescue",
   companionName: "Biscuit",
-  subject: "An update from Biscuit",
-  bodyText: "Here is the latest.\n\n## Recent notes\n\n- Took a treat from a stranger.\n- Slept through the night.\n\nThank you.",
-  actionUrl: "https://pawcast.test/companions/abc",
-  monthlyCents: 3250,
-  origin: "https://pawcast.test",
-  photoUrl: "/uploads/biscuit.jpg",
+  updateSubject: "Biscuit discovered the sprinkler",
+  teaser: "Biscuit had a brave, splashy afternoon with the volunteers.",
+  updatePageUrl: "https://pawcast.test/huffy-puff/updates/abc",
+  photoUrl: "https://images.test/biscuit.jpg",
 } as const;
 
-test("renders representative Markdown as themed HTML and plain text", async () => {
-  const email = createElement(SponsorUpdateEmail, base);
-  const [html, plainText] = await Promise.all([
-    render(email),
-    render(email, { plainText: true }),
-  ]);
-
-  assert.match(html, /<ul[^>]*>/u);
-  assert.equal((html.match(/<li(?:\s|>)/gu) ?? []).length, 2);
-  assert.match(html, /Took a treat from a stranger\./u);
-  // the "- " markers are consumed by the list, never printed
-  assert.ok(!html.includes("- Took a treat"));
-  assert.match(html, /RECENT NOTES|Recent notes/iu);
-  assert.match(plainText, /RECENT NOTES/iu);
-  assert.match(plainText, /\* Took a treat from a stranger\./u);
+test("uses a type-specific delivery subject", () => {
+  assert.equal(sponsorUpdateEmailSubject("Biscuit"), "Biscuit has a new update");
+  assert.equal(sponsorUpdateEmailSubject("Biscuit", "graduation"), "Biscuit has been adopted");
 });
 
-test("resolves every asset and link to an absolute URL", async () => {
+test("renders a minimal regular update notice", async () => {
   const html = await render(createElement(SponsorUpdateEmail, base));
 
-  assert.match(html, /https:\/\/pawcast\.test\/uploads\/biscuit\.jpg/u);
-  assert.match(html, /https:\/\/pawcast\.test\/brand\/pawcast-wordmark\.png/u);
-  assert.match(html, /https:\/\/pawcast\.test\/textures\/email\/ground\.jpg/u);
-  assert.match(html, /href="https:\/\/pawcast\.test\/companions\/abc"/u);
+  assert.match(html, /Huffy Puff Rescue/u);
+  assert.match(html, /Biscuit discovered the sprinkler/u);
+  assert.match(html, /Biscuit had a brave, splashy afternoon/u);
+  assert.match(html, /Read the update/u);
+  assert.match(html, /href="https:\/\/pawcast\.test\/huffy-puff\/updates\/abc"/u);
+  assert.equal((html.match(/<img(?:\s|>)/gu) ?? []).length, 1);
+  assert.ok(!html.includes("felt"));
+  assert.ok(!html.includes("stitch"));
 });
 
-test("omits the photo block when the resident has no photo", async () => {
+test("does not include the full update body", async () => {
+  const html = await render(createElement(SponsorUpdateEmail, base));
+
+  assert.ok(!html.includes("Recent notes"));
+  assert.ok(!html.includes("monthly"));
+});
+
+test("omits the hero cleanly when there is no photo", async () => {
   const html = await render(createElement(SponsorUpdateEmail, { ...base, photoUrl: null }));
 
-  assert.ok(!html.includes("/uploads/"));
-  assert.match(html, /An update from Biscuit/u);
+  assert.equal((html.match(/<img(?:\s|>)/gu) ?? []).length, 0);
+  assert.match(html, /Biscuit discovered the sprinkler/u);
 });
 
-test("escapes sponsor-facing copy instead of injecting it as markup", async () => {
+test("renders the graduation story and sponsorship choices", async () => {
   const html = await render(createElement(SponsorUpdateEmail, {
     ...base,
-    companionName: "Biscuit <script>",
-    bodyText: "A note with <b>tags</b> & an ampersand.",
+    type: "graduation",
+    sponsorshipSelectionUrl: "https://pawcast.test/huffy-puff/sponsor/choose",
   }));
 
-  assert.ok(!html.includes("<script>"));
-  assert.match(html, /&lt;b&gt;tags&lt;\/b&gt; &amp; an ampersand/u);
-});
-
-test("switches the hero to the mustard adoption treatment", async () => {
-  const regular = await render(createElement(SponsorUpdateEmail, base));
-  const graduation = await render(createElement(SponsorUpdateEmail, { ...base, type: "graduation" }));
-
-  assert.match(regular, /A new update/u);
-  assert.match(regular, /felt-moss\.jpg/u);
-  assert.match(graduation, /Adoption day/u);
-  assert.match(graduation, /felt-mustard\.jpg/u);
-  assert.match(graduation, /Choose your next companion/u);
-});
-
-test("neutralizes unsafe markdown link destinations", async () => {
-  const html = await render(createElement(SponsorUpdateEmail, {
-    ...base,
-    bodyText: "[click](javascript:alert(1)) and [safe](https://pawcast.test/x)",
-  }));
-
-  assert.ok(!html.includes("javascript:"));
-  assert.match(html, /href="https:\/\/pawcast\.test\/x"/u);
+  assert.match(html, /Biscuit has been adopted/u);
+  assert.match(html, /Biscuit discovered the sprinkler/u);
+  assert.match(html, /Read Biscuit(?:&#x27;|')s story/u);
+  assert.match(html, /Your sponsorship can continue with another companion/u);
+  assert.match(html, /Choose a new companion/u);
+  assert.match(html, /href="https:\/\/pawcast\.test\/huffy-puff\/sponsor\/choose"/u);
+  assert.ok(!html.includes("25.00"));
+  assert.ok(!html.includes("only sponsor"));
 });
