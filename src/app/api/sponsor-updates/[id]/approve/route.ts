@@ -1,11 +1,14 @@
-import { SponsorUpdateEmail } from "@/emails/sponsor-update-email";
+import {
+  SponsorUpdateEmail,
+  sponsorUpdateEmailSubject,
+} from "@/emails/sponsor-update-email";
 import { getEmailConnectorStatus } from "@/lib/email-connectors";
 import { env } from "@/lib/env";
 import { requireApiOrganization } from "@/lib/organization-access";
 import {
   deliverSponsorUpdate,
-  companionPageUrl,
   isRegularSponsorUpdateRecipient,
+  updatePageUrl,
   type Delivery,
   type DeliverySponsorship,
   type SponsorUpdateType,
@@ -33,6 +36,7 @@ type ApprovalUpdate = {
   residentId: string;
   type: SponsorUpdateType;
   subject: string;
+  teaser: string;
   bodyText: string;
   heroPhotoUrl: string | null;
   status: "draft" | "approved" | "sent" | "dismissed";
@@ -40,6 +44,7 @@ type ApprovalUpdate = {
   awaitingTransitionedAt: Date | null;
   isAwaitingReminder: boolean;
   organization: {
+    name: string;
     slug: string;
     stripeAccountId: string | null;
   };
@@ -64,7 +69,7 @@ type ApprovalDependencies = {
     update: ApprovalUpdate,
     monthlyCents: number,
     renderedAt: Date,
-  ) => Promise<{ bodyHtml: string; bodyText: string }>;
+  ) => Promise<{ subject: string; bodyHtml: string; bodyText: string }>;
   requireOrganization: typeof requireApiOrganization;
   resetDraft: (id: string, orgId: string) => Promise<void>;
 };
@@ -137,6 +142,7 @@ const approvalDependencies: ApprovalDependencies = {
       include: {
         organization: {
           select: {
+            name: true,
             slug: true,
             stripeAccountId: true,
           },
@@ -168,9 +174,9 @@ const approvalDependencies: ApprovalDependencies = {
   },
   now: () => new Date(),
   pauseCollection: pauseStripeCollection,
-  async renderMessage(update, monthlyCents, renderedAt) {
+  async renderMessage(update, _monthlyCents, renderedAt) {
     const origin = env.BETTER_AUTH_URL;
-    const actionUrl = update.type === "graduation"
+    const selectionUrl = update.type === "graduation"
       ? sponsorshipSelectionUrl(
         origin,
         update.organization.slug,
@@ -178,22 +184,23 @@ const approvalDependencies: ApprovalDependencies = {
         sponsorshipTokenSecret(),
         renderedAt,
       )
-      : companionPageUrl(origin, update.organization.slug, update.residentId);
+      : null;
+    const emailSubject = sponsorUpdateEmailSubject(update.resident.name, update.type);
     const email = createElement(SponsorUpdateEmail, {
+      rescueName: update.organization.name,
       companionName: update.resident.name,
-      subject: update.subject,
-      bodyText: update.bodyText,
-      actionUrl,
-      monthlyCents,
-      origin,
+      updateSubject: update.subject,
+      teaser: update.teaser,
+      updatePageUrl: updatePageUrl(origin, update.organization.slug, update.id),
       photoUrl: update.heroPhotoUrl ?? update.resident.photoUrls[0] ?? null,
+      sponsorshipSelectionUrl: selectionUrl,
       type: update.type,
     });
     const [bodyHtml, bodyText] = await Promise.all([
       render(email),
       render(email, { plainText: true }),
     ]);
-    return { bodyHtml, bodyText };
+    return { subject: emailSubject, bodyHtml, bodyText };
   },
   requireOrganization: requireApiOrganization,
   async resetDraft(id, orgId) {

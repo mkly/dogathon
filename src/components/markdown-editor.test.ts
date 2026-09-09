@@ -26,8 +26,6 @@ Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", {
 
 const { createElement } = await import("react");
 const { cleanup, render, screen, waitFor } = await import("@testing-library/react");
-const { render: renderEmail } = await import("@react-email/render");
-const { SponsorUpdateEmail } = await import("../emails/sponsor-update-email");
 const { MarkdownEditor } = await import("./markdown-editor");
 
 const classNames = {
@@ -99,65 +97,6 @@ test("shows the configured organization-wide note placeholder", async () => {
     const emptyParagraph = container.querySelector<HTMLElement>("p.is-editor-empty");
     assert.equal(emptyParagraph?.dataset.placeholder, placeholder);
   });
-});
-
-test("keeps the editor preview and sent email plain text in agreement", async () => {
-  const postscript = [
-    "Thanks for helping **Biscuit** feel *safe*.",
-    "",
-    "[See the adoption calendar](https://pawcast.test/events)",
-    "",
-    "## This weekend",
-    "",
-    "- Bring a friend",
-    "- Share Biscuit's story",
-    "",
-    "We hope to see you there.",
-  ].join("\n");
-  const { container } = render(
-    createElement(MarkdownEditor, {
-      classNames,
-      defaultValue: postscript,
-      id: "postscript",
-      maxLength: 2000,
-      name: "pinnedPostscript",
-    }),
-  );
-
-  const previewText = await waitFor(() => {
-    const preview = container.querySelector<HTMLElement>(".preview p");
-    assert.ok(preview?.textContent);
-    assert.match(preview.textContent, /Bring a friend/u);
-    return preview.textContent;
-  });
-  const previewBlocks = previewText.split("\n\n");
-  assert.deepEqual(previewBlocks, [
-    "Thanks for helping Biscuit feel safe.",
-    "See the adoption calendar",
-    "This weekend",
-    "Bring a friend",
-    "Share Biscuit's story",
-    "We hope to see you there.",
-  ]);
-
-  const emailPlainText = await renderEmail(createElement(SponsorUpdateEmail, {
-    companionName: "Biscuit",
-    subject: "An update from Biscuit",
-    bodyText: `Here is the latest.\n\n${postscript}`,
-    actionUrl: "https://pawcast.test/companions/biscuit",
-    monthlyCents: 2500,
-    origin: "https://pawcast.test",
-  }), { plainText: true });
-  const normalizedEmail = emailPlainText.toLocaleLowerCase();
-  let previousIndex = -1;
-  for (const line of previewBlocks) {
-    const index = normalizedEmail.indexOf(line.toLocaleLowerCase(), previousIndex + 1);
-    assert.ok(index > previousIndex, `Expected email text to contain preview line in order: ${line}`);
-    previousIndex = index;
-  }
-  // React Email appends the link URL after the label; the editor preview
-  // intentionally shows only its text, which remains in the same block order.
-  assert.match(emailPlainText, /See the adoption calendar https:\/\/pawcast\.test\/events/u);
 });
 
 test("does not submit Markdown over the character limit", async () => {

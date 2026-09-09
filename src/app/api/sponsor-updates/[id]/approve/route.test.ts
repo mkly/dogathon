@@ -12,13 +12,14 @@ const baseUpdate = {
   residentId: "resident-1",
   type: "graduation" as const,
   subject: "Biscuit found a home!",
+  teaser: "A joyful new chapter begins.",
   bodyText: "Biscuit has been adopted!",
   heroPhotoUrl: null,
   status: "draft" as const,
   sponsorshipId: "active",
   awaitingTransitionedAt: null,
   isAwaitingReminder: false,
-  organization: { slug: "huffy-puff", stripeAccountId: "acct_rescue" },
+  organization: { name: "Huffy Puff Rescue", slug: "huffy-puff", stripeAccountId: "acct_rescue" },
   sponsorship: {
     id: "active",
     monthlyCents: 2500,
@@ -70,7 +71,9 @@ function dependencies(overrides: Record<string, unknown> = {}) {
     async markSent() { return { id: updateId, status: "sent" }; },
     now: () => new Date("2026-09-06T20:00:00Z"),
     async pauseCollection() {},
-    async renderMessage() { return { bodyHtml: "<p>Adopted</p>", bodyText: "Adopted" }; },
+    async renderMessage() {
+      return { subject: "Biscuit has been adopted", bodyHtml: "<p>Adopted</p>", bodyText: "Adopted" };
+    },
     async requireOrganization() {
       return { ok: true, context: { orgId: "org-1" } };
     },
@@ -104,7 +107,7 @@ test("graduation approval transitions, pauses, then delivers only to its linked 
     },
     async renderMessage(_update: unknown, monthlyCents: number) {
       renderedMonthlyCents = monthlyCents;
-      return { bodyHtml: "<p>Adopted</p>", bodyText: "Adopted" };
+      return { subject: "Biscuit has been adopted", bodyHtml: "<p>Adopted</p>", bodyText: "Adopted" };
     },
     async markSent() {
       markedSent = true;
