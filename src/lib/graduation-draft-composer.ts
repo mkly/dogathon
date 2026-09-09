@@ -33,7 +33,7 @@ export async function composeGraduationDraft(
 ): Promise<GraduationCompositionResult> {
   const [draft, settings] = await Promise.all([
     prisma.sponsorUpdate.findFirst({
-      where: { id, orgId, status: "draft", type: "graduation", isAwaitingReminder: false },
+      where: { id, orgId, status: "draft", type: "graduation" },
       include: {
         organization: { select: { slug: true } },
         resident: {
@@ -100,7 +100,7 @@ export async function composeGraduationDraft(
   const photoIds = new Set(photos.map(({ id: photoId }) => photoId));
   return prisma.$transaction(async (tx) => {
     const updated = await tx.sponsorUpdate.updateMany({
-      where: { id, orgId, status: "draft", type: "graduation", isAwaitingReminder: false },
+      where: { id, orgId, status: "draft", type: "graduation" },
       data: {
         subject: composed.subject,
         teaser: composed.teaser,

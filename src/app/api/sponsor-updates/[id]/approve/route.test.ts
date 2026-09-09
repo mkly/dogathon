@@ -18,7 +18,6 @@ const baseUpdate = {
   status: "draft" as const,
   sponsorshipId: "active",
   awaitingTransitionedAt: null,
-  isAwaitingReminder: false,
   organization: { name: "Huffy Puff Rescue", slug: "huffy-puff", stripeAccountId: "acct_rescue" },
   sponsorship: {
     id: "active",

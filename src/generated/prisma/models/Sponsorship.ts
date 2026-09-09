@@ -43,8 +43,6 @@ export type SponsorshipMinAggregateOutputType = {
   status: $Enums.SponsorshipStatus | null
   endedReason: $Enums.SponsorshipEndedReason | null
   endedAt: Date | null
-  awaitingSince: Date | null
-  awaitingReminderDraftedAt: Date | null
   stripeCheckoutSessionId: string | null
   stripeSubscriptionId: string | null
   stripeCustomerId: string | null
@@ -61,8 +59,6 @@ export type SponsorshipMaxAggregateOutputType = {
   status: $Enums.SponsorshipStatus | null
   endedReason: $Enums.SponsorshipEndedReason | null
   endedAt: Date | null
-  awaitingSince: Date | null
-  awaitingReminderDraftedAt: Date | null
   stripeCheckoutSessionId: string | null
   stripeSubscriptionId: string | null
   stripeCustomerId: string | null
@@ -79,8 +75,6 @@ export type SponsorshipCountAggregateOutputType = {
   status: number
   endedReason: number
   endedAt: number
-  awaitingSince: number
-  awaitingReminderDraftedAt: number
   stripeCheckoutSessionId: number
   stripeSubscriptionId: number
   stripeCustomerId: number
@@ -107,8 +101,6 @@ export type SponsorshipMinAggregateInputType = {
   status?: true
   endedReason?: true
   endedAt?: true
-  awaitingSince?: true
-  awaitingReminderDraftedAt?: true
   stripeCheckoutSessionId?: true
   stripeSubscriptionId?: true
   stripeCustomerId?: true
@@ -125,8 +117,6 @@ export type SponsorshipMaxAggregateInputType = {
   status?: true
   endedReason?: true
   endedAt?: true
-  awaitingSince?: true
-  awaitingReminderDraftedAt?: true
   stripeCheckoutSessionId?: true
   stripeSubscriptionId?: true
   stripeCustomerId?: true
@@ -143,8 +133,6 @@ export type SponsorshipCountAggregateInputType = {
   status?: true
   endedReason?: true
   endedAt?: true
-  awaitingSince?: true
-  awaitingReminderDraftedAt?: true
   stripeCheckoutSessionId?: true
   stripeSubscriptionId?: true
   stripeCustomerId?: true
@@ -248,8 +236,6 @@ export type SponsorshipGroupByOutputType = {
   status: $Enums.SponsorshipStatus
   endedReason: $Enums.SponsorshipEndedReason | null
   endedAt: Date | null
-  awaitingSince: Date | null
-  awaitingReminderDraftedAt: Date | null
   stripeCheckoutSessionId: string | null
   stripeSubscriptionId: string | null
   stripeCustomerId: string | null
@@ -289,8 +275,6 @@ export type SponsorshipWhereInput = {
   status?: Prisma.EnumSponsorshipStatusFilter<"Sponsorship"> | $Enums.SponsorshipStatus
   endedReason?: Prisma.EnumSponsorshipEndedReasonNullableFilter<"Sponsorship"> | $Enums.SponsorshipEndedReason | null
   endedAt?: Prisma.DateTimeNullableFilter<"Sponsorship"> | Date | string | null
-  awaitingSince?: Prisma.DateTimeNullableFilter<"Sponsorship"> | Date | string | null
-  awaitingReminderDraftedAt?: Prisma.DateTimeNullableFilter<"Sponsorship"> | Date | string | null
   stripeCheckoutSessionId?: Prisma.StringNullableFilter<"Sponsorship"> | string | null
   stripeSubscriptionId?: Prisma.StringNullableFilter<"Sponsorship"> | string | null
   stripeCustomerId?: Prisma.StringNullableFilter<"Sponsorship"> | string | null
@@ -311,8 +295,6 @@ export type SponsorshipOrderByWithRelationInput = {
   status?: Prisma.SortOrder
   endedReason?: Prisma.SortOrderInput | Prisma.SortOrder
   endedAt?: Prisma.SortOrderInput | Prisma.SortOrder
-  awaitingSince?: Prisma.SortOrderInput | Prisma.SortOrder
-  awaitingReminderDraftedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   stripeCheckoutSessionId?: Prisma.SortOrderInput | Prisma.SortOrder
   stripeSubscriptionId?: Prisma.SortOrderInput | Prisma.SortOrder
   stripeCustomerId?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -339,8 +321,6 @@ export type SponsorshipWhereUniqueInput = Prisma.AtLeast<{
   status?: Prisma.EnumSponsorshipStatusFilter<"Sponsorship"> | $Enums.SponsorshipStatus
   endedReason?: Prisma.EnumSponsorshipEndedReasonNullableFilter<"Sponsorship"> | $Enums.SponsorshipEndedReason | null
   endedAt?: Prisma.DateTimeNullableFilter<"Sponsorship"> | Date | string | null
-  awaitingSince?: Prisma.DateTimeNullableFilter<"Sponsorship"> | Date | string | null
-  awaitingReminderDraftedAt?: Prisma.DateTimeNullableFilter<"Sponsorship"> | Date | string | null
   stripeCustomerId?: Prisma.StringNullableFilter<"Sponsorship"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Sponsorship"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Sponsorship"> | Date | string
@@ -359,8 +339,6 @@ export type SponsorshipOrderByWithAggregationInput = {
   status?: Prisma.SortOrder
   endedReason?: Prisma.SortOrderInput | Prisma.SortOrder
   endedAt?: Prisma.SortOrderInput | Prisma.SortOrder
-  awaitingSince?: Prisma.SortOrderInput | Prisma.SortOrder
-  awaitingReminderDraftedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   stripeCheckoutSessionId?: Prisma.SortOrderInput | Prisma.SortOrder
   stripeSubscriptionId?: Prisma.SortOrderInput | Prisma.SortOrder
   stripeCustomerId?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -385,8 +363,6 @@ export type SponsorshipScalarWhereWithAggregatesInput = {
   status?: Prisma.EnumSponsorshipStatusWithAggregatesFilter<"Sponsorship"> | $Enums.SponsorshipStatus
   endedReason?: Prisma.EnumSponsorshipEndedReasonNullableWithAggregatesFilter<"Sponsorship"> | $Enums.SponsorshipEndedReason | null
   endedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Sponsorship"> | Date | string | null
-  awaitingSince?: Prisma.DateTimeNullableWithAggregatesFilter<"Sponsorship"> | Date | string | null
-  awaitingReminderDraftedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Sponsorship"> | Date | string | null
   stripeCheckoutSessionId?: Prisma.StringNullableWithAggregatesFilter<"Sponsorship"> | string | null
   stripeSubscriptionId?: Prisma.StringNullableWithAggregatesFilter<"Sponsorship"> | string | null
   stripeCustomerId?: Prisma.StringNullableWithAggregatesFilter<"Sponsorship"> | string | null
@@ -400,8 +376,6 @@ export type SponsorshipCreateInput = {
   status?: $Enums.SponsorshipStatus
   endedReason?: $Enums.SponsorshipEndedReason | null
   endedAt?: Date | string | null
-  awaitingSince?: Date | string | null
-  awaitingReminderDraftedAt?: Date | string | null
   stripeCheckoutSessionId?: string | null
   stripeSubscriptionId?: string | null
   stripeCustomerId?: string | null
@@ -422,8 +396,6 @@ export type SponsorshipUncheckedCreateInput = {
   status?: $Enums.SponsorshipStatus
   endedReason?: $Enums.SponsorshipEndedReason | null
   endedAt?: Date | string | null
-  awaitingSince?: Date | string | null
-  awaitingReminderDraftedAt?: Date | string | null
   stripeCheckoutSessionId?: string | null
   stripeSubscriptionId?: string | null
   stripeCustomerId?: string | null
@@ -438,8 +410,6 @@ export type SponsorshipUpdateInput = {
   status?: Prisma.EnumSponsorshipStatusFieldUpdateOperationsInput | $Enums.SponsorshipStatus
   endedReason?: Prisma.NullableEnumSponsorshipEndedReasonFieldUpdateOperationsInput | $Enums.SponsorshipEndedReason | null
   endedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  awaitingSince?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  awaitingReminderDraftedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   stripeCheckoutSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -460,8 +430,6 @@ export type SponsorshipUncheckedUpdateInput = {
   status?: Prisma.EnumSponsorshipStatusFieldUpdateOperationsInput | $Enums.SponsorshipStatus
   endedReason?: Prisma.NullableEnumSponsorshipEndedReasonFieldUpdateOperationsInput | $Enums.SponsorshipEndedReason | null
   endedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  awaitingSince?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  awaitingReminderDraftedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   stripeCheckoutSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -479,8 +447,6 @@ export type SponsorshipCreateManyInput = {
   status?: $Enums.SponsorshipStatus
   endedReason?: $Enums.SponsorshipEndedReason | null
   endedAt?: Date | string | null
-  awaitingSince?: Date | string | null
-  awaitingReminderDraftedAt?: Date | string | null
   stripeCheckoutSessionId?: string | null
   stripeSubscriptionId?: string | null
   stripeCustomerId?: string | null
@@ -494,8 +460,6 @@ export type SponsorshipUpdateManyMutationInput = {
   status?: Prisma.EnumSponsorshipStatusFieldUpdateOperationsInput | $Enums.SponsorshipStatus
   endedReason?: Prisma.NullableEnumSponsorshipEndedReasonFieldUpdateOperationsInput | $Enums.SponsorshipEndedReason | null
   endedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  awaitingSince?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  awaitingReminderDraftedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   stripeCheckoutSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -512,8 +476,6 @@ export type SponsorshipUncheckedUpdateManyInput = {
   status?: Prisma.EnumSponsorshipStatusFieldUpdateOperationsInput | $Enums.SponsorshipStatus
   endedReason?: Prisma.NullableEnumSponsorshipEndedReasonFieldUpdateOperationsInput | $Enums.SponsorshipEndedReason | null
   endedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  awaitingSince?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  awaitingReminderDraftedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   stripeCheckoutSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -545,8 +507,6 @@ export type SponsorshipCountOrderByAggregateInput = {
   status?: Prisma.SortOrder
   endedReason?: Prisma.SortOrder
   endedAt?: Prisma.SortOrder
-  awaitingSince?: Prisma.SortOrder
-  awaitingReminderDraftedAt?: Prisma.SortOrder
   stripeCheckoutSessionId?: Prisma.SortOrder
   stripeSubscriptionId?: Prisma.SortOrder
   stripeCustomerId?: Prisma.SortOrder
@@ -567,8 +527,6 @@ export type SponsorshipMaxOrderByAggregateInput = {
   status?: Prisma.SortOrder
   endedReason?: Prisma.SortOrder
   endedAt?: Prisma.SortOrder
-  awaitingSince?: Prisma.SortOrder
-  awaitingReminderDraftedAt?: Prisma.SortOrder
   stripeCheckoutSessionId?: Prisma.SortOrder
   stripeSubscriptionId?: Prisma.SortOrder
   stripeCustomerId?: Prisma.SortOrder
@@ -585,8 +543,6 @@ export type SponsorshipMinOrderByAggregateInput = {
   status?: Prisma.SortOrder
   endedReason?: Prisma.SortOrder
   endedAt?: Prisma.SortOrder
-  awaitingSince?: Prisma.SortOrder
-  awaitingReminderDraftedAt?: Prisma.SortOrder
   stripeCheckoutSessionId?: Prisma.SortOrder
   stripeSubscriptionId?: Prisma.SortOrder
   stripeCustomerId?: Prisma.SortOrder
@@ -759,8 +715,6 @@ export type SponsorshipCreateWithoutOrganizationInput = {
   status?: $Enums.SponsorshipStatus
   endedReason?: $Enums.SponsorshipEndedReason | null
   endedAt?: Date | string | null
-  awaitingSince?: Date | string | null
-  awaitingReminderDraftedAt?: Date | string | null
   stripeCheckoutSessionId?: string | null
   stripeSubscriptionId?: string | null
   stripeCustomerId?: string | null
@@ -779,8 +733,6 @@ export type SponsorshipUncheckedCreateWithoutOrganizationInput = {
   status?: $Enums.SponsorshipStatus
   endedReason?: $Enums.SponsorshipEndedReason | null
   endedAt?: Date | string | null
-  awaitingSince?: Date | string | null
-  awaitingReminderDraftedAt?: Date | string | null
   stripeCheckoutSessionId?: string | null
   stripeSubscriptionId?: string | null
   stripeCustomerId?: string | null
@@ -827,8 +779,6 @@ export type SponsorshipScalarWhereInput = {
   status?: Prisma.EnumSponsorshipStatusFilter<"Sponsorship"> | $Enums.SponsorshipStatus
   endedReason?: Prisma.EnumSponsorshipEndedReasonNullableFilter<"Sponsorship"> | $Enums.SponsorshipEndedReason | null
   endedAt?: Prisma.DateTimeNullableFilter<"Sponsorship"> | Date | string | null
-  awaitingSince?: Prisma.DateTimeNullableFilter<"Sponsorship"> | Date | string | null
-  awaitingReminderDraftedAt?: Prisma.DateTimeNullableFilter<"Sponsorship"> | Date | string | null
   stripeCheckoutSessionId?: Prisma.StringNullableFilter<"Sponsorship"> | string | null
   stripeSubscriptionId?: Prisma.StringNullableFilter<"Sponsorship"> | string | null
   stripeCustomerId?: Prisma.StringNullableFilter<"Sponsorship"> | string | null
@@ -842,8 +792,6 @@ export type SponsorshipCreateWithoutSponsorInput = {
   status?: $Enums.SponsorshipStatus
   endedReason?: $Enums.SponsorshipEndedReason | null
   endedAt?: Date | string | null
-  awaitingSince?: Date | string | null
-  awaitingReminderDraftedAt?: Date | string | null
   stripeCheckoutSessionId?: string | null
   stripeSubscriptionId?: string | null
   stripeCustomerId?: string | null
@@ -862,8 +810,6 @@ export type SponsorshipUncheckedCreateWithoutSponsorInput = {
   status?: $Enums.SponsorshipStatus
   endedReason?: $Enums.SponsorshipEndedReason | null
   endedAt?: Date | string | null
-  awaitingSince?: Date | string | null
-  awaitingReminderDraftedAt?: Date | string | null
   stripeCheckoutSessionId?: string | null
   stripeSubscriptionId?: string | null
   stripeCustomerId?: string | null
@@ -904,8 +850,6 @@ export type SponsorshipCreateWithoutResidentInput = {
   status?: $Enums.SponsorshipStatus
   endedReason?: $Enums.SponsorshipEndedReason | null
   endedAt?: Date | string | null
-  awaitingSince?: Date | string | null
-  awaitingReminderDraftedAt?: Date | string | null
   stripeCheckoutSessionId?: string | null
   stripeSubscriptionId?: string | null
   stripeCustomerId?: string | null
@@ -923,8 +867,6 @@ export type SponsorshipUncheckedCreateWithoutResidentInput = {
   status?: $Enums.SponsorshipStatus
   endedReason?: $Enums.SponsorshipEndedReason | null
   endedAt?: Date | string | null
-  awaitingSince?: Date | string | null
-  awaitingReminderDraftedAt?: Date | string | null
   stripeCheckoutSessionId?: string | null
   stripeSubscriptionId?: string | null
   stripeCustomerId?: string | null
@@ -965,8 +907,6 @@ export type SponsorshipCreateWithoutSponsorUpdatesInput = {
   status?: $Enums.SponsorshipStatus
   endedReason?: $Enums.SponsorshipEndedReason | null
   endedAt?: Date | string | null
-  awaitingSince?: Date | string | null
-  awaitingReminderDraftedAt?: Date | string | null
   stripeCheckoutSessionId?: string | null
   stripeSubscriptionId?: string | null
   stripeCustomerId?: string | null
@@ -986,8 +926,6 @@ export type SponsorshipUncheckedCreateWithoutSponsorUpdatesInput = {
   status?: $Enums.SponsorshipStatus
   endedReason?: $Enums.SponsorshipEndedReason | null
   endedAt?: Date | string | null
-  awaitingSince?: Date | string | null
-  awaitingReminderDraftedAt?: Date | string | null
   stripeCheckoutSessionId?: string | null
   stripeSubscriptionId?: string | null
   stripeCustomerId?: string | null
@@ -1017,8 +955,6 @@ export type SponsorshipUpdateWithoutSponsorUpdatesInput = {
   status?: Prisma.EnumSponsorshipStatusFieldUpdateOperationsInput | $Enums.SponsorshipStatus
   endedReason?: Prisma.NullableEnumSponsorshipEndedReasonFieldUpdateOperationsInput | $Enums.SponsorshipEndedReason | null
   endedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  awaitingSince?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  awaitingReminderDraftedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   stripeCheckoutSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1038,8 +974,6 @@ export type SponsorshipUncheckedUpdateWithoutSponsorUpdatesInput = {
   status?: Prisma.EnumSponsorshipStatusFieldUpdateOperationsInput | $Enums.SponsorshipStatus
   endedReason?: Prisma.NullableEnumSponsorshipEndedReasonFieldUpdateOperationsInput | $Enums.SponsorshipEndedReason | null
   endedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  awaitingSince?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  awaitingReminderDraftedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   stripeCheckoutSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1055,8 +989,6 @@ export type SponsorshipCreateManyOrganizationInput = {
   status?: $Enums.SponsorshipStatus
   endedReason?: $Enums.SponsorshipEndedReason | null
   endedAt?: Date | string | null
-  awaitingSince?: Date | string | null
-  awaitingReminderDraftedAt?: Date | string | null
   stripeCheckoutSessionId?: string | null
   stripeSubscriptionId?: string | null
   stripeCustomerId?: string | null
@@ -1070,8 +1002,6 @@ export type SponsorshipUpdateWithoutOrganizationInput = {
   status?: Prisma.EnumSponsorshipStatusFieldUpdateOperationsInput | $Enums.SponsorshipStatus
   endedReason?: Prisma.NullableEnumSponsorshipEndedReasonFieldUpdateOperationsInput | $Enums.SponsorshipEndedReason | null
   endedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  awaitingSince?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  awaitingReminderDraftedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   stripeCheckoutSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1090,8 +1020,6 @@ export type SponsorshipUncheckedUpdateWithoutOrganizationInput = {
   status?: Prisma.EnumSponsorshipStatusFieldUpdateOperationsInput | $Enums.SponsorshipStatus
   endedReason?: Prisma.NullableEnumSponsorshipEndedReasonFieldUpdateOperationsInput | $Enums.SponsorshipEndedReason | null
   endedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  awaitingSince?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  awaitingReminderDraftedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   stripeCheckoutSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1108,8 +1036,6 @@ export type SponsorshipUncheckedUpdateManyWithoutOrganizationInput = {
   status?: Prisma.EnumSponsorshipStatusFieldUpdateOperationsInput | $Enums.SponsorshipStatus
   endedReason?: Prisma.NullableEnumSponsorshipEndedReasonFieldUpdateOperationsInput | $Enums.SponsorshipEndedReason | null
   endedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  awaitingSince?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  awaitingReminderDraftedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   stripeCheckoutSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1125,8 +1051,6 @@ export type SponsorshipCreateManySponsorInput = {
   status?: $Enums.SponsorshipStatus
   endedReason?: $Enums.SponsorshipEndedReason | null
   endedAt?: Date | string | null
-  awaitingSince?: Date | string | null
-  awaitingReminderDraftedAt?: Date | string | null
   stripeCheckoutSessionId?: string | null
   stripeSubscriptionId?: string | null
   stripeCustomerId?: string | null
@@ -1140,8 +1064,6 @@ export type SponsorshipUpdateWithoutSponsorInput = {
   status?: Prisma.EnumSponsorshipStatusFieldUpdateOperationsInput | $Enums.SponsorshipStatus
   endedReason?: Prisma.NullableEnumSponsorshipEndedReasonFieldUpdateOperationsInput | $Enums.SponsorshipEndedReason | null
   endedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  awaitingSince?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  awaitingReminderDraftedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   stripeCheckoutSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1160,8 +1082,6 @@ export type SponsorshipUncheckedUpdateWithoutSponsorInput = {
   status?: Prisma.EnumSponsorshipStatusFieldUpdateOperationsInput | $Enums.SponsorshipStatus
   endedReason?: Prisma.NullableEnumSponsorshipEndedReasonFieldUpdateOperationsInput | $Enums.SponsorshipEndedReason | null
   endedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  awaitingSince?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  awaitingReminderDraftedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   stripeCheckoutSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1178,8 +1098,6 @@ export type SponsorshipUncheckedUpdateManyWithoutSponsorInput = {
   status?: Prisma.EnumSponsorshipStatusFieldUpdateOperationsInput | $Enums.SponsorshipStatus
   endedReason?: Prisma.NullableEnumSponsorshipEndedReasonFieldUpdateOperationsInput | $Enums.SponsorshipEndedReason | null
   endedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  awaitingSince?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  awaitingReminderDraftedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   stripeCheckoutSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1194,8 +1112,6 @@ export type SponsorshipCreateManyResidentInput = {
   status?: $Enums.SponsorshipStatus
   endedReason?: $Enums.SponsorshipEndedReason | null
   endedAt?: Date | string | null
-  awaitingSince?: Date | string | null
-  awaitingReminderDraftedAt?: Date | string | null
   stripeCheckoutSessionId?: string | null
   stripeSubscriptionId?: string | null
   stripeCustomerId?: string | null
@@ -1209,8 +1125,6 @@ export type SponsorshipUpdateWithoutResidentInput = {
   status?: Prisma.EnumSponsorshipStatusFieldUpdateOperationsInput | $Enums.SponsorshipStatus
   endedReason?: Prisma.NullableEnumSponsorshipEndedReasonFieldUpdateOperationsInput | $Enums.SponsorshipEndedReason | null
   endedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  awaitingSince?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  awaitingReminderDraftedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   stripeCheckoutSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1228,8 +1142,6 @@ export type SponsorshipUncheckedUpdateWithoutResidentInput = {
   status?: Prisma.EnumSponsorshipStatusFieldUpdateOperationsInput | $Enums.SponsorshipStatus
   endedReason?: Prisma.NullableEnumSponsorshipEndedReasonFieldUpdateOperationsInput | $Enums.SponsorshipEndedReason | null
   endedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  awaitingSince?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  awaitingReminderDraftedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   stripeCheckoutSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1245,8 +1157,6 @@ export type SponsorshipUncheckedUpdateManyWithoutResidentInput = {
   status?: Prisma.EnumSponsorshipStatusFieldUpdateOperationsInput | $Enums.SponsorshipStatus
   endedReason?: Prisma.NullableEnumSponsorshipEndedReasonFieldUpdateOperationsInput | $Enums.SponsorshipEndedReason | null
   endedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  awaitingSince?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  awaitingReminderDraftedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   stripeCheckoutSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1294,8 +1204,6 @@ export type SponsorshipSelect<ExtArgs extends runtime.Types.Extensions.InternalA
   status?: boolean
   endedReason?: boolean
   endedAt?: boolean
-  awaitingSince?: boolean
-  awaitingReminderDraftedAt?: boolean
   stripeCheckoutSessionId?: boolean
   stripeSubscriptionId?: boolean
   stripeCustomerId?: boolean
@@ -1317,8 +1225,6 @@ export type SponsorshipSelectCreateManyAndReturn<ExtArgs extends runtime.Types.E
   status?: boolean
   endedReason?: boolean
   endedAt?: boolean
-  awaitingSince?: boolean
-  awaitingReminderDraftedAt?: boolean
   stripeCheckoutSessionId?: boolean
   stripeSubscriptionId?: boolean
   stripeCustomerId?: boolean
@@ -1338,8 +1244,6 @@ export type SponsorshipSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.E
   status?: boolean
   endedReason?: boolean
   endedAt?: boolean
-  awaitingSince?: boolean
-  awaitingReminderDraftedAt?: boolean
   stripeCheckoutSessionId?: boolean
   stripeSubscriptionId?: boolean
   stripeCustomerId?: boolean
@@ -1359,8 +1263,6 @@ export type SponsorshipSelectScalar = {
   status?: boolean
   endedReason?: boolean
   endedAt?: boolean
-  awaitingSince?: boolean
-  awaitingReminderDraftedAt?: boolean
   stripeCheckoutSessionId?: boolean
   stripeSubscriptionId?: boolean
   stripeCustomerId?: boolean
@@ -1368,7 +1270,7 @@ export type SponsorshipSelectScalar = {
   updatedAt?: boolean
 }
 
-export type SponsorshipOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "orgId" | "residentId" | "sponsorId" | "monthlyCents" | "status" | "endedReason" | "endedAt" | "awaitingSince" | "awaitingReminderDraftedAt" | "stripeCheckoutSessionId" | "stripeSubscriptionId" | "stripeCustomerId" | "createdAt" | "updatedAt", ExtArgs["result"]["sponsorship"]>
+export type SponsorshipOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "orgId" | "residentId" | "sponsorId" | "monthlyCents" | "status" | "endedReason" | "endedAt" | "stripeCheckoutSessionId" | "stripeSubscriptionId" | "stripeCustomerId" | "createdAt" | "updatedAt", ExtArgs["result"]["sponsorship"]>
 export type SponsorshipInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   organization?: boolean | Prisma.OrganizationDefaultArgs<ExtArgs>
   resident?: boolean | Prisma.ResidentDefaultArgs<ExtArgs>
@@ -1404,8 +1306,6 @@ export type $SponsorshipPayload<ExtArgs extends runtime.Types.Extensions.Interna
     status: $Enums.SponsorshipStatus
     endedReason: $Enums.SponsorshipEndedReason | null
     endedAt: Date | null
-    awaitingSince: Date | null
-    awaitingReminderDraftedAt: Date | null
     stripeCheckoutSessionId: string | null
     stripeSubscriptionId: string | null
     stripeCustomerId: string | null
@@ -1846,8 +1746,6 @@ export interface SponsorshipFieldRefs {
   readonly status: Prisma.FieldRef<"Sponsorship", 'SponsorshipStatus'>
   readonly endedReason: Prisma.FieldRef<"Sponsorship", 'SponsorshipEndedReason'>
   readonly endedAt: Prisma.FieldRef<"Sponsorship", 'DateTime'>
-  readonly awaitingSince: Prisma.FieldRef<"Sponsorship", 'DateTime'>
-  readonly awaitingReminderDraftedAt: Prisma.FieldRef<"Sponsorship", 'DateTime'>
   readonly stripeCheckoutSessionId: Prisma.FieldRef<"Sponsorship", 'String'>
   readonly stripeSubscriptionId: Prisma.FieldRef<"Sponsorship", 'String'>
   readonly stripeCustomerId: Prisma.FieldRef<"Sponsorship", 'String'>

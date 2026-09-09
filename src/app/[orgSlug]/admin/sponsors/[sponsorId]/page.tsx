@@ -78,10 +78,9 @@ export default async function SponsorDetailPage({ params }: SponsorDetailPagePro
       where: { orgId: context.orgId, sponsorId, status: "awaiting" },
       select: {
         id: true,
-        awaitingSince: true,
         resident: { select: { name: true } },
       },
-      orderBy: [{ awaitingSince: "asc" }, { id: "asc" }],
+      orderBy: { id: "asc" },
     }),
     canManageAwaiting ? prisma.resident.findMany({
       where: {
@@ -127,7 +126,6 @@ export default async function SponsorDetailPage({ params }: SponsorDetailPagePro
                 <thead>
                   <tr>
                     <th scope="col">Former companion</th>
-                    <th scope="col">Awaiting since</th>
                     {canManageAwaiting ? <th scope="col">Resolution</th> : null}
                   </tr>
                 </thead>
@@ -135,7 +133,6 @@ export default async function SponsorDetailPage({ params }: SponsorDetailPagePro
                   {awaitingSponsorships.map((sponsorship) => (
                     <tr key={sponsorship.id}>
                       <td>{sponsorship.resident.name}</td>
-                      <td>{sponsorship.awaitingSince ? formatDate(sponsorship.awaitingSince) : "—"}</td>
                       {canManageAwaiting ? (
                         <td>
                           <AwaitingSponsorshipControls

@@ -36,16 +36,10 @@ type CompanionsCoveredPageProps = {
 
 const DIRECTORY_PAGE_SIZE = 50;
 const SPONSORSHIPS_PER_COMPANION_LIMIT = 100;
-const DAY_IN_MS = 24 * 60 * 60 * 1000;
 
 function pageFromQuery(value: string | string[] | undefined) {
   const parsed = Number(Array.isArray(value) ? value[0] : value);
   return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : 1;
-}
-
-function daysWaiting(awaitingSince: Date | null) {
-  if (!awaitingSince) return 0;
-  return Math.max(0, Math.floor((Date.now() - awaitingSince.getTime()) / DAY_IN_MS));
 }
 
 export default async function CompanionsCoveredPage({ params, searchParams }: CompanionsCoveredPageProps) {
@@ -105,11 +99,10 @@ export default async function CompanionsCoveredPage({ params, searchParams }: Co
       where: { orgId: context.orgId, status: "awaiting" },
       select: {
         id: true,
-        awaitingSince: true,
         resident: { select: { name: true } },
         sponsor: { select: { id: true, name: true } },
       },
-      orderBy: [{ awaitingSince: "asc" }, { id: "asc" }],
+      orderBy: { id: "asc" },
     }),
   ]);
   const hasPreviousPage = page > 1;
@@ -152,27 +145,22 @@ export default async function CompanionsCoveredPage({ params, searchParams }: Co
                   <tr>
                     <th scope="col">Sponsor</th>
                     <th scope="col">Former companion</th>
-                    <th scope="col">Waiting</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {awaitingSponsorships.map((sponsorship) => {
-                    const waitingDays = daysWaiting(sponsorship.awaitingSince);
-                    return (
-                      <tr key={sponsorship.id}>
-                        <td>
-                          <Link
-                            href={`/${orgSlug}/admin/sponsors/${sponsorship.sponsor.id}`}
-                            transitionTypes={["nav-forward"]}
-                          >
-                            {sponsorship.sponsor.name}
-                          </Link>
-                        </td>
-                        <td>{sponsorship.resident.name}</td>
-                        <td>{waitingDays} {pluralize("day", waitingDays)}</td>
-                      </tr>
-                    );
-                  })}
+                  {awaitingSponsorships.map((sponsorship) => (
+                    <tr key={sponsorship.id}>
+                      <td>
+                        <Link
+                          href={`/${orgSlug}/admin/sponsors/${sponsorship.sponsor.id}`}
+                          transitionTypes={["nav-forward"]}
+                        >
+                          {sponsorship.sponsor.name}
+                        </Link>
+                      </td>
+                      <td>{sponsorship.resident.name}</td>
+                    </tr>
+                  ))}
                 </tbody>
               </AdminTable>
             </AdminSurface>

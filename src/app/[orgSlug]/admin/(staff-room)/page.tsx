@@ -322,7 +322,7 @@ async function ApprovalQueue({
   orgId: string;
   orgSlug: string;
 }) {
-  const [draftResults, emailConnector, currentTime] = await Promise.all([
+  const [draftResults, emailConnector] = await Promise.all([
     prisma.sponsorUpdate.findMany({
       where: { orgId, status: "draft" },
       orderBy: [{ createdAt: "asc" }, { id: "asc" }],
@@ -345,7 +345,6 @@ async function ApprovalQueue({
           select: {
             id: true,
             status: true,
-            awaitingSince: true,
             sponsor: { select: { name: true } },
           },
         },
@@ -353,7 +352,6 @@ async function ApprovalQueue({
       take: STAFF_ROOM_LIST_LIMIT + 1,
     }),
     getEmailConnectorStatus(orgId),
-    getCurrentTime(),
   ]);
   const draftsTruncated = draftResults.length > STAFF_ROOM_LIST_LIMIT;
   const drafts = draftResults.slice(0, STAFF_ROOM_LIST_LIMIT);
@@ -411,20 +409,11 @@ async function ApprovalQueue({
               && draft.resident.unavailabilityReason === "adopted";
             const recipientCount = draft.resident.sponsorships.filter((sponsorship) =>
               isRegularSponsorUpdateRecipient(sponsorship, draft.resident.available)).length;
-            const waitingDays = Math.max(
-              0,
-              Math.floor((currentTime - (
-                draft.isAwaitingReminder && draft.sponsorship?.awaitingSince
-                  ? draft.sponsorship.awaitingSince.getTime()
-                  : draft.createdAt.getTime()
-              )) / (24 * 60 * 60 * 1000)),
-            );
             return <DraftEditor
               bodyText={draft.bodyText}
               emailConnected={emailConnector.connected}
               focusTargetId="draft-queue"
               id={draft.id}
-              isAwaitingReminder={draft.isAwaitingReminder}
               isGraduation={graduation}
               key={draft.id}
               orgSlug={orgSlug}
@@ -439,7 +428,7 @@ async function ApprovalQueue({
                 <p>{draft.resident.personality}</p>
                 <small>
                   {graduation && draft.sponsorship
-                    ? `for ${draft.sponsorship.sponsor.name} · waiting ${waitingDays} ${pluralize("day", waitingDays)}`
+                    ? `for ${draft.sponsorship.sponsor.name}`
                     : <>goes to {recipientCount} {pluralize("sponsor", recipientCount)}</>}
                 </small>
               </div>

@@ -110,7 +110,6 @@ export function DraftEditor({
   emailConnected,
   focusTargetId,
   id,
-  isAwaitingReminder,
   isGraduation,
   orgSlug,
   pendingChatCount,
@@ -122,7 +121,6 @@ export function DraftEditor({
   emailConnected: boolean;
   focusTargetId: string;
   id: string;
-  isAwaitingReminder: boolean;
   isGraduation: boolean;
   orgSlug: string;
   pendingChatCount: number;
@@ -148,11 +146,7 @@ export function DraftEditor({
     null,
   );
   const motionTransition = useMotionTiming();
-  const denyAction = isAwaitingReminder
-    ? "Dismiss reminder"
-    : isGraduation
-      ? "Deny adoption notice"
-      : "Discard draft";
+  const denyAction = isGraduation ? "Deny adoption notice" : "Discard draft";
 
   function openEditor() {
     setSubject(savedDraft.subject);
@@ -281,9 +275,7 @@ export function DraftEditor({
         await refreshAdminPage();
         pushToast(
           "success",
-          isAwaitingReminder
-            ? "Reminder dismissed. The sponsorship remains paused."
-            : isGraduation
+          isGraduation
             ? "Adoption notice denied. The sponsorship keeps billing."
             : "Draft discarded.",
         );
@@ -327,7 +319,7 @@ export function DraftEditor({
               >
                 Edit
               </AdminButton>
-              {isGraduation && !isAwaitingReminder && pendingChatCount > 0 ? (
+              {isGraduation && pendingChatCount > 0 ? (
                 <AdminButton
                   disabled={pending !== null}
                   onClick={composeGraduation}
@@ -357,8 +349,8 @@ export function DraftEditor({
                 tone="brick"
               >
                 {pending === "deny"
-                  ? (isAwaitingReminder ? "Dismissing…" : isGraduation ? "Denying…" : "Discarding…")
-                  : (isAwaitingReminder ? "Dismiss reminder" : isGraduation ? "Deny & keep billing" : "Deny & discard")}
+                  ? (isGraduation ? "Denying…" : "Discarding…")
+                  : (isGraduation ? "Deny & keep billing" : "Deny & discard")}
               </AdminButton>
               <AdminLink
                 className={styles.previewLink}
@@ -531,12 +523,10 @@ export function DraftEditor({
                       >
                         <AdminSurface className={styles.dialogPanel} tone="oatmeal">
                           <AlertDialog.Title asChild>
-                            <h2>{isAwaitingReminder ? "Dismiss this reminder?" : isGraduation ? "Deny this adoption notice?" : "Discard this draft?"}</h2>
+                            <h2>{isGraduation ? "Deny this adoption notice?" : "Discard this draft?"}</h2>
                           </AlertDialog.Title>
                           <AlertDialog.Description className={styles.dialogDescription}>
-                            {isAwaitingReminder
-                              ? "The reminder will be dismissed and the sponsorship will remain paused."
-                              : isGraduation
+                            {isGraduation
                               ? "The notice will be dismissed and this sponsorship will keep billing as normal."
                               : "The collected chats will go back to Ready to compose."}
                           </AlertDialog.Description>
@@ -552,7 +542,7 @@ export function DraftEditor({
                                 }}
                                 tone="brick"
                               >
-                                {isAwaitingReminder ? "Dismiss reminder" : isGraduation ? "Deny & keep billing" : "Discard draft"}
+                                {isGraduation ? "Deny & keep billing" : "Discard draft"}
                               </AdminButton>
                             </AlertDialog.Action>
                           </div>
