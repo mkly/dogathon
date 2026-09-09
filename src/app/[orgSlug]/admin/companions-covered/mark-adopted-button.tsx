@@ -61,7 +61,8 @@ export function MarkAdoptedButton({
             </AlertDialog.Title>
             <AlertDialog.Description className={styles.dialogDescription}>
               {residentName} leaves the public roster and an adoption notice is drafted for each
-              active sponsorship. Nothing is billed, paused, or ended until staff approve a notice.
+              active sponsorship. The sponsorship keeps renewing while staff review the notice and
+              while the sponsor chooses who to follow next.
             </AlertDialog.Description>
             <div className={styles.modalActions}>
               <AlertDialog.Cancel asChild>

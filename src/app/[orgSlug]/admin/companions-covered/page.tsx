@@ -134,10 +134,10 @@ export default async function CompanionsCoveredPage({ params, searchParams }: Co
           <section aria-labelledby="awaiting-heading" className={styles.awaitingSection}>
             <div className={styles.awaitingTitle}>
               <div>
-                <h2 id="awaiting-heading">Awaiting a new companion</h2>
-                <p>Sponsorships paused while their sponsors choose who to support next.</p>
+                <h2 id="awaiting-heading">Choosing next companions</h2>
+                <p>These sponsorships keep renewing while sponsors choose who to follow next.</p>
               </div>
-              <AdminBadge tone="brick">{awaitingSponsorships.length} awaiting</AdminBadge>
+              <AdminBadge tone="brick">{awaitingSponsorships.length} choosing</AdminBadge>
             </div>
             <AdminSurface className={styles.awaitingPanel} tone="mustard">
               <AdminTable>

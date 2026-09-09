@@ -15,14 +15,16 @@ import styles from "../sponsors.module.css";
 
 type AvailableResident = { id: string; name: string };
 
-export function AwaitingSponsorshipControls({
+export function SponsorshipControls({
   availableResidents,
-  formerCompanionName,
+  canEnd,
+  currentCompanionName,
   orgSlug,
   sponsorshipId,
 }: {
   availableResidents: AvailableResident[];
-  formerCompanionName: string;
+  canEnd: boolean;
+  currentCompanionName: string;
   orgSlug: string;
   sponsorshipId: string;
 }) {
@@ -44,7 +46,7 @@ export function AwaitingSponsorshipControls({
         await refreshAdminPage();
         pushToast(result.ok ? "success" : "error", result.message);
       } catch {
-        pushToast("error", "The transfer could not reach the server. Try again.");
+        pushToast("error", "The move could not reach the server. Try again.");
       } finally {
         setPendingAction(null);
       }
@@ -70,7 +72,7 @@ export function AwaitingSponsorshipControls({
     <div className={styles.awaitingControls}>
       <AdminField className={styles.transferPicker}>
         <select
-          aria-label={`New companion after ${formerCompanionName}`}
+          aria-label={`Move sponsorship from ${currentCompanionName} to`}
           disabled={pendingAction !== null || availableResidents.length === 0}
           onChange={(event) => setResidentId(event.target.value)}
           value={residentId}
@@ -87,10 +89,10 @@ export function AwaitingSponsorshipControls({
         onClick={transfer}
         tone="denim"
       >
-        {pendingAction === "transfer" ? "Transferring…" : "Transfer"}
+        {pendingAction === "transfer" ? "Moving…" : "Move sponsorship"}
       </AdminButton>
 
-      <AlertDialog.Root onOpenChange={setDialogOpen} open={dialogOpen}>
+      {canEnd ? <AlertDialog.Root onOpenChange={setDialogOpen} open={dialogOpen}>
         <AlertDialog.Trigger asChild>
           <AdminButton disabled={pendingAction !== null} tone="brick">
             {pendingAction === "end" ? "Ending…" : "End"}
@@ -104,12 +106,12 @@ export function AwaitingSponsorshipControls({
                 <h2>End this sponsorship?</h2>
               </AlertDialog.Title>
               <AlertDialog.Description className={styles.dialogDescription}>
-                The recurring charge will be canceled instead of moving the sponsorship from
-                {` ${formerCompanionName}`} to a new companion. The sponsor will receive a confirmation email.
+                The recurring charge will be canceled instead of continuing with a new companion.
+                The sponsor will receive a confirmation email.
               </AlertDialog.Description>
               <div className={styles.dialogActions}>
                 <AlertDialog.Cancel asChild>
-                  <AdminButton tone="oatmeal">Keep awaiting</AdminButton>
+                  <AdminButton tone="oatmeal">Keep sponsorship</AdminButton>
                 </AlertDialog.Cancel>
                 <AlertDialog.Action asChild>
                   <AdminButton onClick={end} tone="brick">End sponsorship</AdminButton>
@@ -118,7 +120,7 @@ export function AwaitingSponsorshipControls({
             </AdminSurface>
           </AlertDialog.Content>
         </AlertDialog.Portal>
-      </AlertDialog.Root>
+      </AlertDialog.Root> : null}
     </div>
   );
 }
