@@ -60,6 +60,20 @@ export function updatePageUrl(origin: string, orgSlug: string, updateId: string)
 }
 
 /**
+ * Stored photo URLs are relative whenever S3 is not configured, and resident
+ * photos are app-relative assets, so an email hero has to be absolute or the
+ * mail client shows a broken image.
+ */
+export function emailPhotoUrl(origin: string, photoUrl: string | null | undefined): string | null {
+  if (!photoUrl) return null;
+  try {
+    return new URL(photoUrl, origin).toString();
+  } catch {
+    return null;
+  }
+}
+
+/**
  * One send failure must not abandon the rest of the fan-out, nor strand the
  * update mid-approval, so every attempt is recorded rather than thrown.
  */

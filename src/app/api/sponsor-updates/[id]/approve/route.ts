@@ -7,6 +7,7 @@ import { env } from "@/lib/env";
 import { requireApiOrganization } from "@/lib/organization-access";
 import {
   deliverSponsorUpdate,
+  emailPhotoUrl,
   isRegularSponsorUpdateRecipient,
   updatePageUrl,
   type Delivery,
@@ -192,7 +193,7 @@ const approvalDependencies: ApprovalDependencies = {
       updateSubject: update.subject,
       teaser: update.teaser,
       updatePageUrl: updatePageUrl(origin, update.organization.slug, update.id),
-      photoUrl: update.heroPhotoUrl ?? update.resident.photoUrls[0] ?? null,
+      photoUrl: emailPhotoUrl(origin, update.heroPhotoUrl ?? update.resident.photoUrls[0]),
       sponsorshipSelectionUrl: selectionUrl,
       type: update.type,
     });
