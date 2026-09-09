@@ -74,7 +74,6 @@ async function getGraduationCompanions(orgSlug: string, residentId: string) {
       available: true,
       id: { not: residentId },
       organization: { slug: orgSlug },
-      photoUrls: { isEmpty: false },
     },
     orderBy: { name: "asc" },
     select: {
@@ -83,16 +82,13 @@ async function getGraduationCompanions(orgSlug: string, residentId: string) {
       id: true,
       name: true,
       photoUrls: true,
-      sponsorships: {
-        where: { status: "active" },
-        select: { id: true },
-      },
+      _count: { select: { sponsorships: { where: { status: "active" } } } },
     },
   });
 
   return residents
     .sort((left, right) => (
-      left.sponsorships.length - right.sponsorships.length
+      left._count.sponsorships - right._count.sponsorships
       || left.name.localeCompare(right.name)
     ))
     .slice(0, 4);
@@ -212,14 +208,20 @@ export default async function UpdatePage({ params }: UpdatePageProps) {
                 {graduationCompanions.map((resident) => (
                   <li key={resident.id}>
                     <Link className={styles.graduationCompanion} href={`/${orgSlug}/companions/${resident.id}`}>
-                      <Image
-                        alt={resident.name}
-                        className={styles.graduationCompanionPhoto}
-                        height={320}
-                        sizes="(max-width: 30rem) calc(100vw - 2.5rem), 18rem"
-                        src={resident.photoUrls[0]!}
-                        width={480}
-                      />
+                      {resident.photoUrls[0] ? (
+                        <Image
+                          alt={resident.name}
+                          className={styles.graduationCompanionPhoto}
+                          height={320}
+                          sizes="(max-width: 30rem) calc(100vw - 2.5rem), 18rem"
+                          src={resident.photoUrls[0]}
+                          width={480}
+                        />
+                      ) : (
+                        <span aria-hidden="true" className={styles.graduationCompanionPlaceholder}>
+                          🐾
+                        </span>
+                      )}
                       <span className={styles.graduationCompanionCopy}>
                         <strong>{resident.name}</strong>
                         <span>{[resident.breed, resident.ageText].filter(Boolean).join(" · ")}</span>

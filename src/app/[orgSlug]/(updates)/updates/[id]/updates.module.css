@@ -351,6 +351,16 @@
   width: 100%;
 }
 
+.graduationCompanionPlaceholder {
+  align-items: center;
+  aspect-ratio: 3 / 2;
+  background: var(--update-line);
+  display: flex;
+  font-size: 1.75rem;
+  justify-content: center;
+  width: 100%;
+}
+
 .graduationCompanionCopy {
   display: block;
   padding: 0.8rem;
