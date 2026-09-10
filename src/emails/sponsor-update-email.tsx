@@ -1,16 +1,13 @@
+import { Heading, Section, Text } from "@react-email/components";
+
 import {
-  Body,
-  Button,
-  Container,
-  Head,
-  Heading,
-  Html,
-  Img,
-  Preview,
-  Section,
-  Text,
-} from "@react-email/components";
-import type { CSSProperties } from "react";
+  EMAIL_COLOR,
+  EMAIL_FONT,
+  EmailButton,
+  EmailLayout,
+  emailBodyTextStyle,
+  emailHeadingStyle,
+} from "./email-design";
 
 export type SponsorUpdateEmailProps = {
   rescueName: string;
@@ -21,24 +18,6 @@ export type SponsorUpdateEmailProps = {
   photoUrl?: string | null;
   sponsorshipSelectionUrl?: string | null;
   type?: "regular" | "graduation";
-};
-
-const FONT =
-  "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif";
-const INK = "#1f2933";
-const MUTED = "#5d6873";
-const ACCENT = "#2f6651";
-
-const buttonStyle: CSSProperties = {
-  backgroundColor: ACCENT,
-  borderRadius: "8px",
-  color: "#ffffff",
-  display: "inline-block",
-  fontFamily: FONT,
-  fontSize: "15px",
-  fontWeight: 700,
-  padding: "13px 22px",
-  textDecoration: "none",
 };
 
 export function sponsorUpdateEmailSubject(
@@ -64,144 +43,56 @@ export function SponsorUpdateEmail(input: SponsorUpdateEmailProps) {
     : `${companionName} has a new update from ${rescueName}.`;
 
   return (
-    <Html lang="en">
-      <Head>
-        <title>{headline}</title>
-        <meta name="color-scheme" content="light only" />
-        <meta name="supported-color-schemes" content="light only" />
-      </Head>
-      <Preview>{preheader}</Preview>
-      <Body
-        style={{
-          backgroundColor: "#f4f6f5",
-          color: INK,
-          fontFamily: FONT,
-          margin: 0,
-          padding: "32px 16px",
-        }}
-      >
-        <Container
+    <EmailLayout
+      footer={`An update from ${rescueName}`}
+      label={rescueName}
+      photoAlt={companionName}
+      photoUrl={input.photoUrl}
+      preview={preheader}
+      title={headline}
+    >
+      <Heading as="h1" style={emailHeadingStyle}>
+        {headline}
+      </Heading>
+      {graduation && updateSubject !== headline ? (
+        <Heading
+          as="h2"
           style={{
-            backgroundColor: "#ffffff",
-            border: "1px solid #e2e7e4",
-            borderRadius: "12px",
-            margin: "0 auto",
-            maxWidth: "560px",
-            overflow: "hidden",
-            width: "100%",
+            color: EMAIL_COLOR.ink,
+            fontFamily: EMAIL_FONT,
+            fontSize: "18px",
+            lineHeight: "1.4",
+            margin: "0 0 10px",
           }}
         >
-          {input.photoUrl ? (
-            <Img
-              alt={companionName}
-              src={input.photoUrl}
-              width="560"
-              style={{
-                display: "block",
-                height: "auto",
-                maxWidth: "560px",
-                width: "100%",
-              }}
-            />
-          ) : null}
+          {updateSubject}
+        </Heading>
+      ) : null}
+      <Text style={{ ...emailBodyTextStyle, marginBottom: "24px" }}>
+        {input.teaser.trim()}
+      </Text>
+      <EmailButton href={input.updatePageUrl}>
+        {graduation ? `Read ${companionName}'s story` : "Read the update"}
+      </EmailButton>
 
-          <Section style={{ padding: "34px 36px 36px" }}>
-            <Text
-              style={{
-                color: ACCENT,
-                fontSize: "12px",
-                fontWeight: 700,
-                letterSpacing: "0.12em",
-                margin: "0 0 12px",
-                textTransform: "uppercase",
-              }}
-            >
-              {rescueName}
-            </Text>
-            <Heading
-              as="h1"
-              style={{
-                color: INK,
-                fontSize: "30px",
-                letterSpacing: "-0.025em",
-                lineHeight: "1.2",
-                margin: "0 0 16px",
-              }}
-            >
-              {headline}
-            </Heading>
-            {graduation && updateSubject !== headline ? (
-              <Heading
-                as="h2"
-                style={{
-                  color: INK,
-                  fontSize: "18px",
-                  lineHeight: "1.4",
-                  margin: "0 0 10px",
-                }}
-              >
-                {updateSubject}
-              </Heading>
-            ) : null}
-            <Text
-              style={{
-                color: MUTED,
-                fontSize: "16px",
-                lineHeight: "1.65",
-                margin: "0 0 24px",
-              }}
-            >
-              {input.teaser.trim()}
-            </Text>
-            <Button href={input.updatePageUrl} style={buttonStyle}>
-              {graduation ? `Read ${companionName}'s story` : "Read the update"}
-            </Button>
-
-            {graduation && input.sponsorshipSelectionUrl ? (
-              <Section
-                style={{
-                  borderTop: "1px solid #e2e7e4",
-                  marginTop: "30px",
-                  paddingTop: "24px",
-                }}
-              >
-                <Text
-                  style={{
-                    color: MUTED,
-                    fontSize: "15px",
-                    lineHeight: "1.6",
-                    margin: "0 0 18px",
-                  }}
-                >
-                  Your sponsorship can continue with another companion who could
-                  use your support.
-                </Text>
-                <Button
-                  href={input.sponsorshipSelectionUrl}
-                  style={buttonStyle}
-                >
-                  Choose a new companion
-                </Button>
-              </Section>
-            ) : null}
-          </Section>
-
-          <Text
-            style={{
-              borderTop: "1px solid #e2e7e4",
-              color: MUTED,
-              fontSize: "12px",
-              lineHeight: "1.5",
-              margin: 0,
-              padding: "18px 36px",
-              textAlign: "center",
-            }}
-          >
-            An update from {rescueName}
+      {graduation && input.sponsorshipSelectionUrl ? (
+        <Section
+          style={{
+            borderTop: `1px solid ${EMAIL_COLOR.rule}`,
+            marginTop: "30px",
+            paddingTop: "24px",
+          }}
+        >
+          <Text style={{ ...emailBodyTextStyle, fontSize: "15px" }}>
+            Your sponsorship can continue with another companion who could use
+            your support.
           </Text>
-        </Container>
-      </Body>
-    </Html>
+          <EmailButton href={input.sponsorshipSelectionUrl}>
+            Choose a new companion
+          </EmailButton>
+        </Section>
+      ) : null}
+    </EmailLayout>
   );
 }
 

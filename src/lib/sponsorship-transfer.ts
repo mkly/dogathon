@@ -9,6 +9,7 @@ import {
 import { createOrganizationEmailSender } from "@/lib/email-connectors";
 import { prisma } from "@/lib/prisma";
 import { revalidatePublicRoster } from "@/lib/public-roster-cache";
+import { emailPhotoUrl } from "@/lib/sponsor-update-delivery";
 import { cancelStripeSubscription } from "@/lib/stripe-billing";
 
 export type SponsorshipTransferErrorCode =
@@ -44,14 +45,23 @@ type SponsorshipTransferDependencies = {
 
 async function sendChoiceEmail(
   result: ChoiceResult,
-  input: { companionName?: string; type: "transferred" | "ended" },
+  input: {
+    companionName?: string;
+    companionPhotoUrl?: string | null;
+    type: "transferred" | "ended";
+  },
 ) {
+  const { env } = await import("@/lib/env");
   const subject = sponsorshipChoiceEmailSubject({
     ...input,
     organizationName: result.organization.name,
   });
   const email = createElement(SponsorshipChoiceEmail, {
     ...input,
+    companionPhotoUrl: emailPhotoUrl(
+      env.BETTER_AUTH_URL,
+      input.companionPhotoUrl,
+    ),
     monthlyCents: result.monthlyCents,
     organizationName: result.organization.name,
     sponsorName: result.sponsor.name,
@@ -102,7 +112,7 @@ export async function transferSponsorship(
         available: true,
         sponsorships: { none: { status: "active" } },
       },
-      select: { id: true, name: true },
+      select: { id: true, name: true, photoUrls: true },
     });
     if (!resident) throw new SponsorshipTransferError("resident_unavailable");
 
@@ -118,12 +128,17 @@ export async function transferSponsorship(
     if (claimed.count !== 1)
       throw new SponsorshipTransferError("not_transferable");
 
-    return { ...sponsorship, companionName: resident.name };
+    return {
+      ...sponsorship,
+      companionName: resident.name,
+      companionPhotoUrl: resident.photoUrls[0] ?? null,
+    };
   });
 
   dependencies.revalidateRoster();
   await dependencies.sendEmail(result, {
     companionName: result.companionName,
+    companionPhotoUrl: result.companionPhotoUrl,
     type: "transferred",
   });
   return result;

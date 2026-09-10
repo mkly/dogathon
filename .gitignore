@@ -28,3 +28,4 @@ npm-debug.log*
 /public/uploads/
 /.photos/
 .vercel
+/.email-previews/

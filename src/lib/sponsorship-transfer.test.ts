@@ -34,7 +34,7 @@ const sponsorship = {
 function harness(
   options: {
     claimed?: number;
-    resident?: { id: string; name: string } | null;
+    resident?: { id: string; name: string; photoUrls: string[] } | null;
     sponsorshipStatus?: "active" | "awaiting";
   } = {},
 ) {
@@ -64,6 +64,7 @@ function harness(
           : (options.resident ?? {
               id: "00000000-0000-4000-8000-000000000005",
               name: "Mochi",
+              photoUrls: ["/residents/mochi.jpg"],
             });
       },
     },
@@ -95,6 +96,7 @@ test("transfers one awaiting sponsorship without changing billing and sends conf
   );
 
   assert.equal(result.companionName, "Mochi");
+  assert.equal(result.companionPhotoUrl, "/residents/mochi.jpg");
   assert.equal(calls.email, 1);
   assert.equal(calls.revalidate, 1);
   assert.deepEqual(calls.update, {
@@ -127,7 +129,7 @@ test("transfers an active sponsorship and releases its former companion", async 
       available: true,
       sponsorships: { none: { status: "active" } },
     },
-    select: { id: true, name: true },
+    select: { id: true, name: true, photoUrls: true },
   });
   assert.deepEqual(calls.update, {
     where: { id: sponsorship.id, status: { in: ["active", "awaiting"] } },
