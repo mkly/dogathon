@@ -21,20 +21,26 @@
   height: auto;
 }
 
-.header > a {
+.homeLink,
+.headerAction a {
   color: var(--felt-ink);
   font-size: 14px;
   font-weight: 600;
   text-decoration: none;
 }
 
-.header > a:hover {
+.headerAction a:hover {
   text-decoration: underline;
   text-underline-offset: 4px;
 }
 
-.header > .accountLink {
+.headerAction > .accountLink {
   color: color-mix(in srgb, var(--felt-denim) 80%, var(--felt-ink));
+}
+
+.headerAction {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .hero {
@@ -170,13 +176,16 @@
   --photo-angle: 1.7deg;
 }
 
-.photoLink {
+.photoStage {
   position: relative;
-  display: block;
   rotate: var(--photo-angle);
 }
 
-.photoLink .gridPhoto {
+.photoLink {
+  display: block;
+}
+
+.gridPhoto {
   width: 100%;
 }
 
@@ -230,13 +239,17 @@
   line-height: 1.5;
 }
 
-.cardCopy > .cardLink {
+.cardAction {
+  min-width: 0;
+  margin-top: 12px;
+}
+
+.cardAction > .cardLink {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 7px;
   justify-self: start;
-  margin-top: 12px;
   padding: 14px 24px;
   padding-right: 17px;
   font-size: 15px;

@@ -1,15 +1,24 @@
 import { notFound } from "next/navigation";
 
-import { FeltPanel, PhotoPatch } from "@/components/felt";
+import Link from "next/link";
+
+import { FeltPanel, Stitch, StitchBadge } from "@/components/felt";
 import { PageViewTransition } from "@/components/page-view-transition";
-import { PublicHeader } from "@/components/public-header";
 import { PendingFeltSubmitButton } from "@/components/pending-submit-button";
 import { prisma } from "@/lib/prisma";
 import { getPublicOrganization } from "@/lib/public-roster-cache";
 
-import styles from "../../../../public.module.css";
+import {
+  CompanionCard,
+  CompanionCardCopy,
+  CompanionGrid,
+  CompanionPhoto,
+  RosterShell,
+  StitchedArrow,
+} from "../../roster-presentation";
 import { endSponsorshipAction, transferSponsorshipAction } from "./actions";
 import { resolveSponsorshipSelection } from "./selection";
+import styles from "./selection.module.css";
 
 type NextCompanionPageProps = {
   params: Promise<{ orgSlug: string }>;
@@ -57,8 +66,15 @@ export default async function NextCompanionPage({
 
   return (
     <PageViewTransition>
-      <main className={styles.siteShell}>
-        <PublicHeader organizationName={organization.name} orgSlug={orgSlug} />
+      <RosterShell
+        headerAction={
+          <Link href="/account">
+            My sponsorship <span aria-hidden="true">↗</span>
+          </Link>
+        }
+        organizationName={organization.name}
+        orgSlug={orgSlug}
+      >
         {!sponsorship ? (
           <Notice>
             <h1>This link no longer applies</h1>
@@ -77,9 +93,13 @@ export default async function NextCompanionPage({
           </Notice>
         ) : (
           <>
-            <FeltPanel className={styles.selectionHero} tone="moss">
-              <h1>Choose your next companion</h1>
-              <p>
+            <section className={styles.selectionHero}>
+              <StitchBadge className={styles.rescueBadge} tone="moss">
+                <Stitch fine />
+                {organization.name}
+              </StitchBadge>
+              <h1>Choose your next companion.</h1>
+              <p className={styles.lede}>
                 Your monthly sponsorship continues at the same amount. Choose an
                 available companion to follow next. You can switch companions or
                 cancel at any time from your sponsorship page.
@@ -89,55 +109,44 @@ export default async function NextCompanionPage({
                   That companion was just chosen. Please pick another.
                 </p>
               ) : null}
-            </FeltPanel>
+            </section>
 
             {residents.length ? (
-              <section
-                aria-label="Companions available to sponsor"
-                className={styles.companionGrid}
-              >
-                {residents.map((resident) => (
-                  <FeltPanel
-                    className={styles.companionCard}
-                    key={resident.id}
-                    stitched={false}
-                    tone="oatmeal"
-                  >
-                    <PhotoPatch
-                      alt={`${resident.name}, ${resident.breed}`}
-                      className={styles.gridPhoto}
-                      src={resident.photoUrls[0]}
-                    />
-                    <div className={styles.cardCopy}>
-                      <h2>{resident.name}</h2>
-                      <p>
-                        {resident.breed} · {resident.ageText}
-                      </p>
-                      <form
-                        action={transferSponsorshipAction.bind(
-                          null,
-                          orgSlug,
-                          selection,
-                        )}
-                        className={styles.selectionForm}
-                      >
-                        <input
-                          name="residentId"
-                          type="hidden"
-                          value={resident.id}
-                        />
-                        <PendingFeltSubmitButton
-                          pendingLabel="Moving sponsorship…"
-                          tone="brick"
-                          type="submit"
+              <CompanionGrid label="Companions available to follow">
+                {residents.map((resident, index) => (
+                  <CompanionCard key={resident.id}>
+                    <CompanionPhoto preload={index < 3} resident={resident} />
+                    <CompanionCardCopy
+                      action={
+                        <form
+                          action={transferSponsorshipAction.bind(
+                            null,
+                            orgSlug,
+                            selection,
+                          )}
+                          className={styles.selectionForm}
                         >
-                          Follow {resident.name}
-                        </PendingFeltSubmitButton>
-                      </form>
-                    </div>
-                  </FeltPanel>
+                          <input
+                            name="residentId"
+                            type="hidden"
+                            value={resident.id}
+                          />
+                          <PendingFeltSubmitButton
+                            pendingLabel="Moving sponsorship…"
+                            tone="moss"
+                            type="submit"
+                          >
+                            <span>Follow {resident.name}</span>
+                            <StitchedArrow />
+                          </PendingFeltSubmitButton>
+                        </form>
+                      }
+                      heading={resident.name}
+                      resident={resident}
+                    />
+                  </CompanionCard>
                 ))}
-              </section>
+              </CompanionGrid>
             ) : (
               <Notice>
                 <h2>No companions are available right now</h2>
@@ -166,7 +175,7 @@ export default async function NextCompanionPage({
             ) : null}
           </>
         )}
-      </main>
+      </RosterShell>
     </PageViewTransition>
   );
 }
