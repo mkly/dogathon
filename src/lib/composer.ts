@@ -29,6 +29,7 @@ export interface SponsorUpdateChat {
 }
 
 export interface ComposeSponsorUpdateInput {
+  signal?: AbortSignal;
   companion: SponsorUpdateCompanion;
   chats: SponsorUpdateChat[];
   previousUpdate?: {
@@ -273,6 +274,7 @@ async function composeWithModel(
   input: ComposeSponsorUpdateInput,
 ): Promise<ComposedSponsorUpdate> {
   const { output } = await generateText({
+    abortSignal: input.signal,
     model: createAiModel(),
     maxOutputTokens: MAX_SPONSOR_UPDATE_OUTPUT_TOKENS,
     providerOptions: reasoning("medium"),

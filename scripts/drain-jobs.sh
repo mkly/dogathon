@@ -1,10 +1,10 @@
 #!/usr/bin/env sh
-# Drain one roster-sync job by calling POST /api/jobs/drain, the same request the
-# production cron makes every five minutes. Reads CRON_SECRET and BETTER_AUTH_URL
+# Drain eligible jobs from every supported queue by calling POST /api/jobs/drain,
+# the same request the production cron makes every five minutes. Reads CRON_SECRET and BETTER_AUTH_URL
 # from the environment, falling back to .env in the repo root.
 #
 #   scripts/drain-jobs.sh              # one job
-#   scripts/drain-jobs.sh --all        # keep draining until the queue reports nothing to do
+#   scripts/drain-jobs.sh --all        # keep draining until every queue is empty
 #   APP_URL=https://dogathon.example scripts/drain-jobs.sh
 set -eu
 

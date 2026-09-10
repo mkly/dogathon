@@ -55,7 +55,7 @@ export class RosterSyncJobNotFoundError extends Error {
   }
 }
 
-async function getRosterSyncBoss(): Promise<PgBoss> {
+export async function getJobBoss(): Promise<PgBoss> {
   if (!globalForRosterSync.rosterSyncBossStart) {
     const boss =
       globalForRosterSync.rosterSyncBoss ??
@@ -228,7 +228,7 @@ function publicRosterSyncJob(
 }
 
 async function defaultQueue() {
-  return createRosterSyncQueue(await getRosterSyncBoss());
+  return createRosterSyncQueue(await getJobBoss());
 }
 
 export async function enqueueRosterSyncJob(input: EnqueueRosterSyncJobInput) {
@@ -250,7 +250,7 @@ export async function fetchRosterSyncJob() {
 }
 
 export async function superviseRosterSyncQueue() {
-  await (await getRosterSyncBoss()).supervise(ROSTER_SYNC_QUEUE);
+  await (await getJobBoss()).supervise(ROSTER_SYNC_QUEUE);
 }
 
 export async function succeedRosterSyncJob(
@@ -269,7 +269,7 @@ export async function failRosterSyncJob(jobId: string, error: string) {
 }
 
 export async function enqueueVolunteerPhotoCleanupJob() {
-  return (await getRosterSyncBoss()).send(
+  return (await getJobBoss()).send(
     VOLUNTEER_PHOTO_CLEANUP_QUEUE,
     {},
     {
@@ -282,15 +282,13 @@ export async function enqueueVolunteerPhotoCleanupJob() {
 }
 
 export async function fetchVolunteerPhotoCleanupJob() {
-  return (await getRosterSyncBoss())
+  return (await getJobBoss())
     .fetch<Record<string, never>>(VOLUNTEER_PHOTO_CLEANUP_QUEUE)
     .then((jobs) => jobs[0] ?? null);
 }
 
 export async function completeVolunteerPhotoCleanupJob(jobId: string) {
-  await (
-    await getRosterSyncBoss()
-  ).complete(VOLUNTEER_PHOTO_CLEANUP_QUEUE, jobId);
+  await (await getJobBoss()).complete(VOLUNTEER_PHOTO_CLEANUP_QUEUE, jobId);
 }
 
 export async function failVolunteerPhotoCleanupJob(
@@ -298,6 +296,6 @@ export async function failVolunteerPhotoCleanupJob(
   error: string,
 ) {
   await (
-    await getRosterSyncBoss()
+    await getJobBoss()
   ).fail(VOLUNTEER_PHOTO_CLEANUP_QUEUE, jobId, { error });
 }

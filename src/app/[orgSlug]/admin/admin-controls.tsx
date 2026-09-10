@@ -43,6 +43,10 @@ import {
 } from "@/components/markdown-editor";
 import { SPONSOR_UPDATE_BODY_MAX_LENGTH } from "@/lib/sponsor-update-body";
 import { pushToast } from "@/lib/toast";
+import {
+  EMAIL_COMPOSITION_POLL_INTERVAL_MS,
+  type EmailCompositionJobView,
+} from "@/lib/email-composition-client";
 
 import { refreshAdminPage, saveSettings, type SettingsState } from "./actions";
 import {
@@ -88,6 +92,93 @@ function useApiFetch() {
     },
     [router],
   );
+}
+
+function useCompositionJob(
+  orgSlug: string,
+  targetId: string,
+  onCompleted: (job: EmailCompositionJobView) => Promise<void>,
+) {
+  const apiFetch = useApiFetch();
+  const storageKey = `dogathon:composition:${orgSlug}:${targetId}`;
+  const [queued, setQueued] = useState<{ id: string; success: string } | null>(
+    null,
+  );
+  const completedRef = useRef(onCompleted);
+
+  useEffect(() => {
+    completedRef.current = onCompleted;
+  }, [onCompleted]);
+
+  useEffect(() => {
+    const saved = window.localStorage.getItem(storageKey);
+    if (!saved) return;
+    try {
+      const restored = JSON.parse(saved) as { id: string; success: string };
+      queueMicrotask(() => setQueued(restored));
+    } catch {
+      window.localStorage.removeItem(storageKey);
+    }
+  }, [storageKey]);
+
+  useEffect(() => {
+    if (!queued) return;
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const clear = () => {
+      window.localStorage.removeItem(storageKey);
+      if (!cancelled) setQueued(null);
+    };
+    const poll = async () => {
+      try {
+        const response = await apiFetch(
+          `/api/sponsor-updates/composition/${queued.id}`,
+          { headers: { "X-Organization-Slug": orgSlug } },
+          "Check composition",
+        );
+        const { job } = (await response.json()) as {
+          job: EmailCompositionJobView;
+        };
+        if (job.status === "completed") {
+          clear();
+          await completedRef.current(job);
+          pushToast("success", queued.success);
+          return;
+        }
+        if (job.status === "failed") {
+          clear();
+          pushToast(
+            "error",
+            job.errorMessage ?? "Draft composition failed. Try again safely.",
+          );
+          return;
+        }
+        timer = setTimeout(poll, EMAIL_COMPOSITION_POLL_INTERVAL_MS);
+      } catch (error) {
+        clear();
+        pushToast(
+          "error",
+          error instanceof Error
+            ? error.message
+            : "Could not recover composition status.",
+        );
+      }
+    };
+    void poll();
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
+  }, [apiFetch, orgSlug, queued, storageKey]);
+
+  return {
+    active: queued !== null,
+    begin(job: EmailCompositionJobView, success: string) {
+      const next = { id: job.id, success };
+      window.localStorage.setItem(storageKey, JSON.stringify(next));
+      setQueued(next);
+    },
+  };
 }
 
 export const richTextEditorClassNames: MarkdownEditorClassNames = {
@@ -145,6 +236,9 @@ export function DraftEditor({
   >(null);
   const motionTransition = useMotionTiming();
   const denyAction = isGraduation ? "Deny adoption notice" : "Discard draft";
+  const composition = useCompositionJob(orgSlug, id, async () => {
+    await refreshAdminPage();
+  });
 
   function openEditor() {
     setSubject(savedDraft.subject);
@@ -203,7 +297,7 @@ export function DraftEditor({
     startTransition(async () => {
       setPending("compose");
       try {
-        await apiFetch(
+        const response = await apiFetch(
           `/api/sponsor-updates/${id}/compose-graduation`,
           {
             method: "POST",
@@ -211,8 +305,14 @@ export function DraftEditor({
           },
           "Weave in recent chats",
         );
-        await refreshAdminPage();
-        pushToast("success", "Recent chats woven into the graduation story.");
+        const { job } = (await response.json()) as {
+          job: EmailCompositionJobView;
+        };
+        composition.begin(
+          job,
+          "Recent chats woven into the graduation story. Review the draft before approving.",
+        );
+        pushToast("success", "Graduation story queued for composition.");
       } catch (error) {
         pushToast(
           "error",
@@ -230,11 +330,10 @@ export function DraftEditor({
     if (!emailConnected) return;
 
     startTransition(async () => {
-      hideOptimistically(false);
       setPending("approve");
       try {
         await persistDraft(savedDraft);
-        await apiFetch(
+        const response = await apiFetch(
           `/api/sponsor-updates/${id}/approve`,
           {
             method: "POST",
@@ -242,6 +341,21 @@ export function DraftEditor({
           },
           "Approve and send",
         );
+        if (response.status === 202) {
+          const { job } = (await response.json()) as {
+            job: EmailCompositionJobView;
+          };
+          composition.begin(
+            job,
+            "Recent chats composed. Review the draft, then approve it when ready.",
+          );
+          pushToast(
+            "success",
+            "Recent chats queued. This draft was not approved or sent.",
+          );
+          return;
+        }
+        hideOptimistically(false);
         await refreshAdminPage();
         pushToast("success", "Approved and sent.");
       } catch (error) {
@@ -311,7 +425,7 @@ export function DraftEditor({
             </div>
             <div className={styles.draftActions}>
               <AdminButton
-                disabled={pending !== null}
+                disabled={pending !== null || composition.active}
                 onClick={openEditor}
                 tone="mustard"
               >
@@ -319,11 +433,11 @@ export function DraftEditor({
               </AdminButton>
               {isGraduation && pendingChatCount > 0 ? (
                 <AdminButton
-                  disabled={pending !== null}
+                  disabled={pending !== null || composition.active}
                   onClick={composeGraduation}
                   tone="denim"
                 >
-                  {pending === "compose"
+                  {pending === "compose" || composition.active
                     ? "Weaving in recent chats…"
                     : `Weave in ${pendingChatCount} recent chats`}
                 </AdminButton>
@@ -333,7 +447,9 @@ export function DraftEditor({
                   emailConnected ? undefined : EMAIL_CONNECTOR_NOTICE_ID
                 }
                 className={styles.approveButton}
-                disabled={pending !== null || !emailConnected}
+                disabled={
+                  pending !== null || composition.active || !emailConnected
+                }
                 onClick={approve}
                 title={
                   emailConnected ? undefined : emailConnectorBlockedReason()
@@ -611,12 +727,17 @@ export function ComposeButton({
   residentName: string;
 }) {
   const apiFetch = useApiFetch();
+  const router = useRouter();
   const [pending, setPending] = useState(false);
+  const composition = useCompositionJob(orgSlug, residentId, async () => {
+    await refreshAdminPage();
+    router.push(`/${orgSlug}/admin#draft-queue`);
+  });
 
   async function compose() {
     setPending(true);
     try {
-      await apiFetch(
+      const response = await apiFetch(
         "/api/sponsor-updates/compose",
         {
           method: "POST",
@@ -628,8 +749,11 @@ export function ComposeButton({
         },
         "Compose update",
       );
-      await refreshAdminPage();
-      pushToast("success", `Drafted an update for ${residentName}`);
+      const { job } = (await response.json()) as {
+        job: EmailCompositionJobView;
+      };
+      composition.begin(job, `Drafted an update for ${residentName}.`);
+      pushToast("success", `Queued an update for ${residentName}.`);
     } catch (error) {
       pushToast(
         "error",
@@ -646,15 +770,15 @@ export function ComposeButton({
     <div className={styles.actionStack}>
       <AdminButton
         className={styles.composeButton}
-        disabled={pending}
+        disabled={pending || composition.active}
         onClick={compose}
         tone="denim"
       >
-        {pending ? "Composing…" : "Compose update"}
+        {pending || composition.active ? "Composing…" : "Compose update"}
       </AdminButton>
-      {pending ? (
+      {pending || composition.active ? (
         <small className={styles.composeHint}>
-          This can take a minute or two
+          Queued safely. You can leave this page and return later.
         </small>
       ) : null}
     </div>

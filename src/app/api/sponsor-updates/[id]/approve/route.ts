@@ -4,10 +4,8 @@ import {
 } from "@/emails/sponsor-update-email";
 import { getEmailConnectorStatus } from "@/lib/email-connectors";
 import { env } from "@/lib/env";
-import {
-  composeGraduationDraft,
-  type GraduationCompositionResult,
-} from "@/lib/graduation-draft-composer";
+import { enqueueGraduationComposition } from "@/lib/email-composition-service";
+import type { EmailCompositionJobView } from "@/lib/email-composition-client";
 import { requireApiOrganization } from "@/lib/organization-access";
 import {
   deliverSponsorUpdate,
@@ -64,7 +62,10 @@ type ApprovalDependencies = {
   composeGraduation: (
     id: string,
     orgId: string,
-  ) => Promise<GraduationCompositionResult>;
+    requestedByUserId: string,
+  ) => Promise<
+    EmailCompositionJobView | "no-pending-chats" | "not-adopted" | "not-found"
+  >;
   deliver: typeof deliverSponsorUpdate;
   findUpdate: (id: string, orgId: string) => Promise<ApprovalUpdate | null>;
   getConnectorStatus: typeof getEmailConnectorStatus;
@@ -142,7 +143,8 @@ const approvalDependencies: ApprovalDependencies = {
         throw error;
       });
   },
-  composeGraduation: composeGraduationDraft,
+  composeGraduation: (id, orgId, requestedByUserId) =>
+    enqueueGraduationComposition({ updateId: id, orgId, requestedByUserId }),
   deliver: deliverSponsorUpdate,
   async findUpdate(id, orgId) {
     return prisma.sponsorUpdate.findFirst({
@@ -250,7 +252,7 @@ export function createApproveSponsorUpdateHandler(
     if (!access.ok) return access.response;
     const { orgId } = access.context;
 
-    let sponsorUpdate = await dependencies.findUpdate(id, orgId);
+    const sponsorUpdate = await dependencies.findUpdate(id, orgId);
     if (!sponsorUpdate) {
       return Response.json({ error: "Update not found" }, { status: 404 });
     }
@@ -289,9 +291,15 @@ export function createApproveSponsorUpdateHandler(
     }
 
     if (sponsorUpdate.type === "graduation") {
-      let composition: GraduationCompositionResult;
+      let composition: Awaited<
+        ReturnType<ApprovalDependencies["composeGraduation"]>
+      >;
       try {
-        composition = await dependencies.composeGraduation(id, orgId);
+        composition = await dependencies.composeGraduation(
+          id,
+          orgId,
+          access.context.userId,
+        );
       } catch (error) {
         console.error("Graduation update composition failed", {
           id,
@@ -303,28 +311,21 @@ export function createApproveSponsorUpdateHandler(
           { status: 502 },
         );
       }
-      if (composition === "conflict") {
-        return Response.json(
-          { error: "Those chats were already used in another update." },
-          { status: 409 },
-        );
-      }
       if (composition === "not-found") {
         return Response.json(
           { error: "Only draft updates can be approved" },
           { status: 409 },
         );
       }
-      if (composition === "composed") {
-        const refreshedUpdate = await dependencies.findUpdate(id, orgId);
-        if (!refreshedUpdate || refreshedUpdate.status !== "draft") {
-          return Response.json(
-            { error: "Only draft updates can be approved" },
-            { status: 409 },
-          );
-        }
-        sponsorUpdate = refreshedUpdate;
-      }
+      if (typeof composition !== "string")
+        return Response.json(
+          {
+            job: composition,
+            message:
+              "Recent chats are being composed. Review the completed draft before approving it.",
+          },
+          { status: 202 },
+        );
     }
 
     const approvedAt = dependencies.now();
