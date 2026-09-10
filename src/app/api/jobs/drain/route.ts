@@ -1,19 +1,7 @@
-import {
-  createRosterSyncDrainHandler,
-  createVolunteerPhotoCleanupDrainer,
-} from "@/lib/roster-sync-worker";
+import { createJobDrainHandler } from "@/lib/job-drain";
 
 export const maxDuration = 300;
-const drainRosterSyncJob = createRosterSyncDrainHandler();
-const drainVolunteerPhotoCleanup = createVolunteerPhotoCleanupDrainer();
-
-async function drainJobs(request: Request) {
-  const response = await drainRosterSyncJob(request);
-  if (response.ok) {
-    await drainVolunteerPhotoCleanup();
-  }
-  return response;
-}
+const drainJobs = createJobDrainHandler();
 
 export const GET = drainJobs;
 export const POST = drainJobs;

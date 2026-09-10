@@ -29,6 +29,7 @@ function conversationLines(transcript: unknown): string[] | undefined {
 export async function composeGraduationDraft(
   id: string,
   orgId: string,
+  signal?: AbortSignal,
 ): Promise<GraduationCompositionResult> {
   const [draft, settings] = await Promise.all([
     prisma.sponsorUpdate.findFirst({
@@ -61,6 +62,7 @@ export async function composeGraduationDraft(
     }),
     prisma.rescueSettings.findUnique({ where: { orgId } }),
   ]);
+  signal?.throwIfAborted();
   if (!draft) return "not-found";
   // Unavailability notices share the graduation type but are not adoption
   // stories, so the adoption-story composer must never rewrite them.
@@ -82,6 +84,7 @@ export async function composeGraduationDraft(
     .filter(Boolean)
     .join("\n\n");
   const composed = await composeSponsorUpdate({
+    signal,
     companion: {
       name: draft.resident.name,
       available: draft.resident.available,
@@ -108,6 +111,7 @@ export async function composeGraduationDraft(
       draft.resident.id,
     ),
   });
+  signal?.throwIfAborted();
 
   const checkInIds = draft.resident.checkIns.map(
     ({ id: checkInId }) => checkInId,
@@ -116,8 +120,24 @@ export async function composeGraduationDraft(
   return prisma
     .$transaction(
       async (tx) => {
+        signal?.throwIfAborted();
+        const stillEligible = await tx.resident.findFirst({
+          where: {
+            id: draft.residentId,
+            orgId,
+            unavailabilityReason: "adopted",
+          },
+          select: { id: true },
+        });
+        if (!stillEligible) return "conflict";
         const updated = await tx.sponsorUpdate.updateMany({
-          where: { id, orgId, status: "draft", type: "graduation" },
+          where: {
+            id,
+            orgId,
+            status: "draft",
+            type: "graduation",
+            updatedAt: draft.updatedAt,
+          },
           data: {
             subject: composed.subject,
             teaser: composed.teaser,

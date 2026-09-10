@@ -204,3 +204,36 @@ test("all failed deliveries revert to draft and never mark the update sent", asy
   assert.equal(markedSent, false);
   assert.deepEqual((await response.json()).counts, { sent: 0, failed: 1 });
 });
+
+test("queues graduation composition without approving or sending", async () => {
+  let claimed = false;
+  let delivered = false;
+  const handler = createApproveSponsorUpdateHandler(
+    dependencies({
+      async composeGraduation() {
+        return {
+          id: "job-1",
+          status: "queued",
+          kind: "graduation",
+          targetId: updateId,
+          draftId: null,
+          errorMessage: null,
+        };
+      },
+      async claimUpdate() {
+        claimed = true;
+        return true;
+      },
+      async deliver() {
+        delivered = true;
+        return [];
+      },
+    }),
+  );
+
+  const response = await handler(request(), context());
+  assert.equal(response.status, 202);
+  assert.equal(claimed, false);
+  assert.equal(delivered, false);
+  assert.equal((await response.json()).job.id, "job-1");
+});

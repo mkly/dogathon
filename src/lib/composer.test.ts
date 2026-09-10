@@ -159,6 +159,43 @@ test("appends a Markdown postscript verbatim", async () => {
   assert.equal(draft.bodyText.slice(-postscript.length), postscript);
 });
 
+test("passes the composition deadline to local photo fetches", async () => {
+  const originalFetch = globalThis.fetch;
+  const signal = AbortSignal.timeout(1_000);
+  let receivedSignal: AbortSignal | null | undefined;
+  globalThis.fetch = async (_input, init) => {
+    receivedSignal = init?.signal;
+    return new Response(new Uint8Array([1, 2, 3]), { status: 200 });
+  };
+
+  try {
+    await buildComposerMessages({
+      signal,
+      companion: { name: "Biscuit", available: true },
+      chats: [
+        {
+          completedAt: new Date("2026-08-12T12:00:00Z"),
+          transcript: ["Volunteer: Biscuit chased a ball."],
+          photos: [
+            {
+              id: "photo-1",
+              url: "/uploads/biscuit.jpg",
+              takenAt: new Date("2026-08-12T12:00:00Z"),
+            },
+          ],
+        },
+      ],
+      pinnedPostscript: "",
+      type: "regular",
+      companionPageUrl: "https://rescue.example/companions/biscuit",
+    });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+
+  assert.equal(receivedSignal, signal);
+});
+
 test("refuses a regular update for an unavailable companion", async () => {
   await assert.rejects(
     composeSponsorUpdate({

@@ -486,7 +486,7 @@ async function ApprovalQueue({
                 focusTargetId="draft-queue"
                 id={draft.id}
                 isGraduation={graduation}
-                key={draft.id}
+                key={`${draft.id}:${draft.updatedAt.toISOString()}`}
                 orgSlug={orgSlug}
                 pendingChatCount={adoption ? draft.resident._count.checkIns : 0}
                 subject={draft.subject}

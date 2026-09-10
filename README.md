@@ -252,9 +252,12 @@ and the server is not configured for UTC.
 
 The nightly route enqueues every organization with a saved adoption-page source
 URL. Jobs become eligible one at a time, spaced by a fixed five minutes, and
-pg-boss's exclusive queue policy skips an organization with a queued or running
-job. Each drain invocation fetches and settles at most one eligible job and
-uses a fixed 240-second budget within the route's 300-second maximum duration.
+pg-boss's exclusive roster policy skips an organization with a queued or running
+job. Each drain invocation processes at most one roster sync and one sponsor-email
+composition job, plus photo cleanup, within the route's 300-second maximum.
+Composition only creates a durable draft; staff must separately review and approve
+it before any sponsor email is sent. `scripts/drain-jobs.sh --all` stops only when
+all supported queues report that they are empty.
 
 Register these exact OAuth redirect URLs with the enabled providers, replacing
 the origin with the deployed app URL:
