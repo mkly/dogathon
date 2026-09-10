@@ -32,7 +32,10 @@ export function SponsorProfileForm({
           <input defaultValue={name} name="name" required />
         </AdminField>
       </label>
-      <p className={styles.email}>{email}</p>
+      <div className={styles.emailField}>
+        <span>Email</span>
+        <p className={styles.email}>{email}</p>
+      </div>
       {state.error ? (
         <p className={styles.actionStatus} role="alert">
           {state.error}
@@ -58,8 +61,10 @@ export function SponsorProfileForm({
 }
 
 export function BillingPortalForm({
+  residentName,
   sponsorshipId,
 }: {
+  residentName: string;
   sponsorshipId: string;
 }) {
   const [state, action, pending] = useActionState(
@@ -67,15 +72,16 @@ export function BillingPortalForm({
     initialState,
   );
   return (
-    <form action={action}>
+    <form action={action} className={styles.billingForm}>
       {state.error ? (
         <p className={styles.actionStatus} role="alert">
           {state.error}
         </p>
       ) : null}
       <AdminButton
+        aria-label={`Manage billing for ${residentName}`}
+        className={styles.sponsorshipAction}
         disabled={pending}
-        style={{ minWidth: "12ch" }}
         tone="mustard"
         type="submit"
       >
