@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import { after, before, test } from "node:test";
 
-import { composeSponsorUpdate } from "./composer.ts";
+import {
+  buildComposerMessages,
+  composeSponsorUpdate,
+  type ComposeSponsorUpdateInput,
+} from "./composer.ts";
 import { env } from "./env.ts";
 
 const originalEnvironment = {
@@ -17,6 +21,98 @@ before(() => {
 after(() => {
   env.OPENAI_API_KEY = originalEnvironment.OPENAI_API_KEY;
   env.features = originalEnvironment.features;
+});
+
+function regularInput(
+  chats: ComposeSponsorUpdateInput["chats"],
+): ComposeSponsorUpdateInput {
+  return {
+    companion: {
+      name: "Biscuit",
+      available: true,
+      personality:
+        "A very long profile must not make a thin volunteer note look rich.",
+    },
+    chats,
+    pinnedPostscript: "Thanks for supporting our rescue.",
+    type: "regular",
+    companionPageUrl: "https://rescue.example/companions/biscuit",
+  };
+}
+
+function textContent(
+  message: Awaited<ReturnType<typeof buildComposerMessages>>,
+) {
+  return message.content
+    .filter((part) => part.type === "text")
+    .map((part) => part.text)
+    .join("\n");
+}
+
+test("builds a short brief for one sparse visit", async () => {
+  const message = await buildComposerMessages(
+    regularInput([
+      {
+        completedAt: new Date("2026-08-12T12:00:00Z"),
+        transcript: [
+          "Interviewer: Please describe every detail you can remember, including the setting and your feelings.",
+          "Volunteer: Biscuit chased a ball, then curled up for a nap.",
+        ],
+        photos: [],
+      },
+    ]),
+  );
+  const content = textContent(message);
+
+  assert.match(content, /1 visit and 10 words of volunteer observations/u);
+  assert.match(content, /generally 40 to 100 words/u);
+  assert.match(content, /hard maximum of 120 words/u);
+  assert.match(content, /Do not use headings/u);
+  assert.match(
+    content,
+    /Interviewer wording, photo count, and profile length never justify/u,
+  );
+});
+
+test("allows more room only for rich multi-visit observations", async () => {
+  const observations = [
+    "Biscuit greeted us at the gate, carried her blue ball across the yard, practiced waiting before treats, walked calmly beside two new volunteers, splashed in the shallow pool, and settled on her blanket afterward.",
+    "During the next visit, Biscuit chose the shady path, stopped to sniff rosemary near the fence, shared a quiet greeting with another dog, and returned inside when called for dinner.",
+    "On Friday, Biscuit worked through a puzzle feeder, brought a rope toy to Maya, rested while the kennel was cleaned, and leaned into gentle shoulder scratches before bedtime.",
+  ];
+  const chats = ["2026-08-10", "2026-08-12", "2026-08-14"].map(
+    (day, index) => ({
+      completedAt: new Date(`${day}T12:00:00Z`),
+      transcript: [
+        `Interviewer: Question ${index + 1}`,
+        `Volunteer: ${observations[index]}`,
+      ],
+      photos: [],
+    }),
+  );
+  const content = textContent(await buildComposerMessages(regularInput(chats)));
+
+  const observationCount = content.match(
+    /3 visits and (\d+) words of volunteer observations/u,
+  );
+  assert.ok(observationCount);
+  assert.ok(Number(observationCount[1]) >= 80);
+  assert.match(content, /is rich/u);
+  assert.match(content, /generally 100 to 220 words/u);
+  assert.match(content, /hard maximum of 250 words/u);
+
+  const repeatedContent = textContent(
+    await buildComposerMessages(
+      regularInput(
+        chats.map((chat) => ({
+          ...chat,
+          transcript: [`Volunteer: ${observations[0]}`],
+        })),
+      ),
+    ),
+  );
+  assert.match(repeatedContent, /3 visits and 34 words/u);
+  assert.match(repeatedContent, /is sparse/u);
 });
 
 test("composes a grounded regular update without credentials", async () => {
@@ -41,6 +137,8 @@ test("composes a grounded regular update without credentials", async () => {
   assert.match(draft.teaser, /Biscuit/u);
   assert.match(draft.bodyText, /chased a ball/u);
   assert.match(draft.bodyText, /took a nap/u);
+  assert.doesNotMatch(draft.bodyText, /Volunteer:|On August/u);
+  assert.ok(draft.bodyText.split(/\s+/u).length <= 120);
   assert.ok(
     draft.bodyText.endsWith("Come meet us at Saturday's adoption fair."),
   );
