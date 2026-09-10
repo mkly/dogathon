@@ -107,7 +107,11 @@ export async function transferSponsorship(
     if (!resident) throw new SponsorshipTransferError("resident_unavailable");
 
     const claimed = await tx.sponsorship.updateMany({
-      where: { id: sponsorship.id, status: { in: ["active", "awaiting"] } },
+      where: {
+        id: sponsorship.id,
+        residentId: sponsorship.residentId,
+        status: { in: ["active", "awaiting"] },
+      },
       data: {
         residentId: resident.id,
         status: "active",

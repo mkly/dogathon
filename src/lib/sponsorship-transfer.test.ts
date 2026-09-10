@@ -98,7 +98,11 @@ test("transfers one awaiting sponsorship without changing billing and sends conf
   assert.equal(calls.email, 1);
   assert.equal(calls.revalidate, 1);
   assert.deepEqual(calls.update, {
-    where: { id: sponsorship.id, status: { in: ["active", "awaiting"] } },
+    where: {
+      id: sponsorship.id,
+      residentId: sponsorship.residentId,
+      status: { in: ["active", "awaiting"] },
+    },
     data: {
       residentId: "00000000-0000-4000-8000-000000000005",
       status: "active",
@@ -130,7 +134,11 @@ test("transfers an active sponsorship and releases its former companion", async 
     select: { id: true, name: true },
   });
   assert.deepEqual(calls.update, {
-    where: { id: sponsorship.id, status: { in: ["active", "awaiting"] } },
+    where: {
+      id: sponsorship.id,
+      residentId: sponsorship.residentId,
+      status: { in: ["active", "awaiting"] },
+    },
     data: {
       residentId: "00000000-0000-4000-8000-000000000005",
       status: "active",
@@ -140,7 +148,7 @@ test("transfers an active sponsorship and releases its former companion", async 
   });
 });
 
-test("a lost transfer claim never sends a confirmation", async () => {
+test("a concurrent repeated transfer that loses the resident claim has no side effects", async () => {
   const { calls, dependencies } = harness({ claimed: 0 });
   await assert.rejects(
     transferSponsorship(
@@ -153,6 +161,7 @@ test("a lost transfer claim never sends a confirmation", async () => {
       error.code === "not_transferable",
   );
   assert.equal(calls.email, 0);
+  assert.equal(calls.revalidate, 0);
 });
 
 test("refuses the current resident before changing the sponsorship", async () => {
