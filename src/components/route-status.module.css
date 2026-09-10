@@ -105,6 +105,12 @@
   flex-direction: column;
 }
 
+.volunteerPicker {
+  width: min(100%, 992px);
+  margin: 0 auto;
+  padding: 24px 16px;
+}
+
 .volunteerHeader {
   height: 116px;
   margin: 16px 16px 12px;
@@ -128,7 +134,7 @@
   padding: 16px;
   flex: 1;
   flex-direction: column;
-  border-block: 2px dashed rgb(61 51 43 / 16%);
+  border-block: 1px solid rgb(61 51 43 / 16%);
 }
 .assistantMessage {
   width: min(75%, 300px);
@@ -144,7 +150,7 @@
 .volunteerComposer {
   height: 70px;
   margin: 12px 16px max(12px, env(safe-area-inset-bottom));
-  border-radius: 999px;
+  border-radius: 6px;
 }
 
 .account {

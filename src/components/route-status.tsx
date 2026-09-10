@@ -152,7 +152,27 @@ export function AdminRouteLoading({
   );
 }
 
-export function VolunteerRouteLoading() {
+export function VolunteerRouteLoading({
+  variant = "picker",
+}: {
+  variant?: "picker" | "chat";
+}) {
+  if (variant === "picker") {
+    return (
+      <main
+        aria-busy="true"
+        aria-label="Loading volunteer companions"
+        className={styles.volunteerPicker}
+      >
+        <Skeleton className={styles.header} />
+        <Skeleton className={styles.sectionTitle} />
+        <div className={styles.stack}>
+          <Skeleton className={styles.row} />
+          <Skeleton className={styles.row} />
+        </div>
+      </main>
+    );
+  }
   return (
     <main
       aria-busy="true"
@@ -160,11 +180,6 @@ export function VolunteerRouteLoading() {
       className={styles.volunteer}
     >
       <Skeleton className={styles.volunteerHeader} />
-      <div className={styles.companions}>
-        {Array.from({ length: 4 }, (_, index) => (
-          <Skeleton className={styles.companion} key={index} />
-        ))}
-      </div>
       <div className={styles.volunteerThread}>
         <Skeleton className={styles.assistantMessage} />
         <Skeleton className={styles.userMessage} />

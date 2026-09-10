@@ -3,16 +3,8 @@ import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
 
-import clsx from "clsx";
-
-import { AdminPage } from "@/components/admin-ui";
-import {
-  FeltLink,
-  FeltPanel,
-  PhotoPatch,
-  StitchBadge,
-} from "@/components/felt";
-import felt from "@/components/felt.module.css";
+import { AdminEyebrow, AdminPage } from "@/components/admin-ui";
+import { VolunteerNav, VolunteerPhoto } from "../volunteer-ui";
 import { PageViewTransition } from "@/components/page-view-transition";
 import { getOrganizationAccessBySlug } from "@/lib/organization-access";
 import { prisma } from "@/lib/prisma";
@@ -22,6 +14,7 @@ import {
 } from "@/lib/volunteer-interview-request";
 import { uuidSchema } from "@/lib/uuid";
 
+import { CheckInConfirmation } from "../check-in-confirmation";
 import { finishCheckIn } from "../actions";
 import { CheckInChat } from "../check-in-chat";
 import styles from "../volunteer.module.css";
@@ -87,39 +80,13 @@ export default async function CheckInPage({
     return (
       <PageViewTransition>
         <AdminPage className={styles.chatPage} variant="volunteer">
-          <FeltPanel className={styles.confirmation} tone="moss">
-            <PhotoPatch
-              alt=""
-              className={styles.confirmationPhoto}
-              sizes="9rem"
-              src={residentPhoto}
-            />
-            <StitchBadge tone="cream">Update saved</StitchBadge>
-            <h1>Thanks for the update on {residentName}!</h1>
-            <p>This chat will be part of {residentName}’s next update.</p>
-            {checkIn.photos.length ? (
-              <div
-                aria-label="Photos added to this update"
-                className={styles.confirmationPhotos}
-              >
-                {checkIn.photos.map((photo) => (
-                  <PhotoPatch
-                    alt={`${residentName} from this update`}
-                    className={styles.confirmationThumbnail}
-                    key={photo.id}
-                    sizes="4rem"
-                    src={photo.webUrl ?? photo.url}
-                  />
-                ))}
-              </div>
-            ) : null}
-            <FeltLink
-              className={styles.againLink}
-              href={`/${orgSlug}/volunteer`}
-            >
-              Share another update
-            </FeltLink>
-          </FeltPanel>
+          <VolunteerNav href={`/${orgSlug}/volunteer`} label="All companions" />
+          <CheckInConfirmation
+            residentName={residentName}
+            residentPhoto={residentPhoto}
+            photos={checkIn.photos}
+            orgSlug={orgSlug}
+          />
         </AdminPage>
       </PageViewTransition>
     );
@@ -132,18 +99,17 @@ export default async function CheckInPage({
   return (
     <PageViewTransition>
       <AdminPage className={styles.chatPage} variant="volunteer">
-        <section
-          className={clsx(felt["felt-panel"], "felt-cream", styles.shell)}
-        >
+        <section className={styles.shell}>
+          <VolunteerNav href={`/${orgSlug}/volunteer`} label="All companions" />
           <header className={styles.chatHeader}>
-            <PhotoPatch
+            <VolunteerPhoto
               alt=""
               className={styles.headerPhoto}
               sizes="4rem"
               src={residentPhoto}
             />
             <div className={styles.headerCopy}>
-              <StitchBadge tone="denim">Volunteer update</StitchBadge>
+              <AdminEyebrow tone="denim">Volunteer update</AdminEyebrow>
               <h1>How’s {residentName} doing?</h1>
             </div>
           </header>

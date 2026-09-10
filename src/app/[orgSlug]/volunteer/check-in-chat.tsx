@@ -13,8 +13,8 @@ import {
   useState,
 } from "react";
 
-import { FeltButton, Stitch } from "@/components/felt";
-import felt from "@/components/felt.module.css";
+import { AdminField } from "@/components/admin-ui";
+import { VolunteerButton } from "./volunteer-ui";
 import { messageText } from "@/lib/ui-message-text";
 
 import { MAX_PHOTO_BYTES } from "./photo-limits";
@@ -77,6 +77,7 @@ export function CheckInChat({
   const [finishError, setFinishError] = useState("");
   const [finishing, setFinishing] = useState(false);
   const threadEndRef = useRef<HTMLDivElement>(null);
+  const sessionRef = useRef<HTMLDivElement>(null);
   const openingRequestedRef = useRef(false);
   const previewUrlsRef = useRef(new Set<string>());
 
@@ -97,6 +98,27 @@ export function CheckInChat({
     (message, index) =>
       message.role === "assistant" && !(busy && index === messages.length - 1),
   );
+
+  // Mobile keyboards can resize the visual viewport without changing 100dvh.
+  // Keep the conversation and composer inside the visible part of the screen.
+  useEffect(() => {
+    const viewport = window.visualViewport;
+    const shell = sessionRef.current?.closest<HTMLElement>(`.${styles.shell}`);
+    if (!viewport || !shell) return;
+    const resize = () => {
+      if (window.innerWidth < 672) {
+        shell.style.setProperty("--volunteer-viewport", `${viewport.height}px`);
+      } else {
+        shell.style.removeProperty("--volunteer-viewport");
+      }
+    };
+    resize();
+    viewport.addEventListener("resize", resize);
+    return () => {
+      viewport.removeEventListener("resize", resize);
+      shell.style.removeProperty("--volunteer-viewport");
+    };
+  }, []);
 
   useEffect(() => {
     const reduceMotion = window.matchMedia(
@@ -240,7 +262,7 @@ export function CheckInChat({
   function submitMessage(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const text = input.trim();
-    if (!text || busy) return;
+    if (!text || busy || finishing) return;
     setInput("");
     void sendMessage({ text });
   }
@@ -266,8 +288,11 @@ export function CheckInChat({
   if (!hasAttachedPhoto) {
     const pending = photos[photos.length - 1];
     return (
-      <div className={`${styles.session} ${styles.photoStep}`}>
-        <div className={clsx(felt["photo-patch"], styles.photoWell)}>
+      <div ref={sessionRef} className={`${styles.session} ${styles.photoStep}`}>
+        <p className={styles.stepLabel}>
+          1. Add a photo <span aria-hidden="true">/</span> 2. Share your visit
+        </p>
+        <div className={styles.photoWell}>
           {pending ? (
             <Image
               alt={`Photo of ${resident.name}`}
@@ -279,17 +304,26 @@ export function CheckInChat({
             />
           ) : (
             <div className={styles.photoWellEmpty}>
-              <span aria-hidden="true">📷</span>
+              <svg
+                aria-hidden="true"
+                className={styles.cameraIcon}
+                viewBox="0 0 48 48"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <path d="M17 12l3-5h8l3 5h8a4 4 0 014 4v21a4 4 0 01-4 4H9a4 4 0 01-4-4V16a4 4 0 014-4z" />
+                <circle cx="24" cy="26" r="9" />
+              </svg>
               <strong>Start with a photo of {resident.name}</strong>
               <small>Whatever they’re up to right now is perfect.</small>
             </div>
           )}
           {pending ? (
-            <div className={styles.photoWellStatus}>
+            <div className={styles.photoWellStatus} role="status">
               {pending.status === "uploading" ? "Uploading…" : "Upload failed"}
             </div>
           ) : null}
-          <Stitch fine />
         </div>
 
         {photoError ? (
@@ -301,29 +335,26 @@ export function CheckInChat({
         <div className={styles.photoActions}>
           {pending?.status === "failed" ? (
             <>
-              <FeltButton
+              <VolunteerButton
                 className={styles.cameraButton}
                 onClick={() => void uploadPhoto(pending)}
                 tone="denim"
               >
                 Try the upload again
-              </FeltButton>
-              <FeltButton
+              </VolunteerButton>
+              <VolunteerButton
                 className={styles.choosePhotoButton}
                 onClick={() => removePhoto(pending)}
                 tone="cream"
               >
                 Pick a different photo
-              </FeltButton>
+              </VolunteerButton>
             </>
           ) : (
             <>
               <label
-                className={clsx(
-                  felt["felt-button"],
-                  "felt-denim",
-                  styles.cameraButton,
-                )}
+                className={clsx(styles.action, styles.cameraButton)}
+                aria-disabled={pending?.status === "uploading"}
               >
                 Take a photo
                 <input
@@ -336,10 +367,11 @@ export function CheckInChat({
               </label>
               <label
                 className={clsx(
-                  felt["felt-button"],
-                  "felt-cream",
+                  styles.action,
+                  styles.secondaryAction,
                   styles.choosePhotoButton,
                 )}
+                aria-disabled={pending?.status === "uploading"}
               >
                 Choose from your photos
                 <input
@@ -353,25 +385,31 @@ export function CheckInChat({
           )}
         </div>
         <p className={styles.photoHint}>
-          The conversation starts as soon as your photo lands.
+          Once your photo is uploaded, we’ll ask a few questions about your
+          visit.
         </p>
       </div>
     );
   }
 
   return (
-    <div className={styles.session}>
-      <div className={styles.thread}>
+    <div ref={sessionRef} className={styles.session}>
+      <p className={styles.stepLabel}>
+        Photo added <span aria-hidden="true">/</span> Share your visit
+      </p>
+      <div
+        className={styles.thread}
+        role="region"
+        aria-label="Conversation"
+        tabIndex={0}
+      >
         <div
           aria-label="Photos for this update"
           className={styles.photoThread}
           role="group"
         >
           {initialPhotos.map((photo) => (
-            <figure
-              className={clsx(felt["photo-patch"], styles.photoTile)}
-              key={photo.id}
-            >
+            <figure className={styles.photoTile} key={photo.id}>
               <Image
                 alt={`Photo of ${resident.name}`}
                 height={120}
@@ -382,10 +420,7 @@ export function CheckInChat({
             </figure>
           ))}
           {photos.map((photo) => (
-            <figure
-              className={clsx(felt["photo-patch"], styles.photoTile)}
-              key={photo.id}
-            >
+            <figure className={styles.photoTile} key={photo.id}>
               <Image
                 alt={`Photo of ${resident.name}`}
                 height={120}
@@ -433,7 +468,7 @@ export function CheckInChat({
           ) : (
             <div className={styles.assistantRow} key={message.id}>
               <span aria-hidden="true" className={styles.avatar}>
-                🐾
+                P
               </span>
               <div className={`${styles.message} ${styles.assistantMessage}`}>
                 {text}
@@ -445,7 +480,7 @@ export function CheckInChat({
         {busy ? (
           <div className={styles.assistantRow}>
             <span aria-hidden="true" className={styles.avatar}>
-              🐾
+              P
             </span>
             <div
               aria-label="The interviewer is typing"
@@ -459,9 +494,16 @@ export function CheckInChat({
           </div>
         ) : null}
         {error ? (
-          <p className={styles.chatError} role="alert">
-            The interviewer paused. Send your message again.
-          </p>
+          <div className={styles.chatError} role="alert">
+            <p>The conversation was interrupted. Try again to continue.</p>
+            <VolunteerButton
+              disabled={finishing || busy}
+              onClick={() => void sendMessage()}
+              tone="cream"
+            >
+              Try again
+            </VolunteerButton>
+          </div>
         ) : null}
         <div ref={threadEndRef} />
       </div>
@@ -473,42 +515,42 @@ export function CheckInChat({
       </div>
 
       <div className={styles.dock}>
-        {canFinish ? (
-          <div className={styles.finishRow}>
-            <p>
-              That’s plenty for an update. Add more if you like, or wrap up.
+        <div className={styles.dockNotices}>
+          {canFinish ? (
+            <div className={styles.finishRow}>
+              <p>
+                That’s plenty for an update. Add more if you like, or wrap up.
+              </p>
+              <VolunteerButton
+                className={styles.finishButton}
+                disabled={
+                  finishing ||
+                  photos.some((photo) => photo.status === "uploading")
+                }
+                onClick={() => void finishCheckIn()}
+                tone="moss"
+              >
+                {finishing ? "Finishing…" : "Finish update"}
+              </VolunteerButton>
+            </div>
+          ) : null}
+
+          {finishError ? (
+            <p className={styles.chatError} role="alert">
+              {finishError}
             </p>
-            <FeltButton
-              className={styles.finishButton}
-              disabled={
-                finishing ||
-                photos.some((photo) => photo.status === "uploading")
-              }
-              onClick={() => void finishCheckIn()}
-              stitched
-              tone="mustard"
-            >
-              {finishing ? "Finishing…" : "Finish update"}
-            </FeltButton>
-          </div>
-        ) : null}
-
-        {finishError ? (
-          <p className={styles.chatError} role="alert">
-            {finishError}
-          </p>
-        ) : null}
-        {photoError ? (
-          <p className={styles.chatError} role="alert">
-            {photoError}
-          </p>
-        ) : null}
-
+          ) : null}
+          {photoError ? (
+            <p className={styles.chatError} role="alert">
+              {photoError}
+            </p>
+          ) : null}
+        </div>
         <form className={styles.composer} onSubmit={submitMessage}>
           <label
             className={clsx(
-              felt["felt-button"],
-              "felt-brick",
+              styles.action,
+              styles.secondaryAction,
               styles.roundButton,
               styles.photoButton,
             )}
@@ -518,25 +560,21 @@ export function CheckInChat({
             <input
               accept="image/*"
               multiple
+              disabled={finishing}
               onChange={choosePhotos}
               type="file"
             />
           </label>
-          <div
-            className={clsx(
-              felt["felt-field"],
-              felt["felt-inset"],
-              "felt-cream",
-              styles.composerField,
-            )}
-          >
+          <AdminField className={styles.composerField}>
             <label
               className={styles.srOnly}
               htmlFor={`check-in-message-${resident.id}`}
             >
               Message
             </label>
-            <input
+            <textarea
+              rows={2}
+              disabled={finishing}
               autoComplete="off"
               id={`check-in-message-${resident.id}`}
               maxLength={2000}
@@ -544,16 +582,16 @@ export function CheckInChat({
               placeholder={`Tell me about ${resident.name}…`}
               value={input}
             />
-          </div>
-          <FeltButton
+          </AdminField>
+          <VolunteerButton
             aria-label="Send message"
             className={styles.roundButton}
-            disabled={busy || !input.trim()}
+            disabled={finishing || busy || !input.trim()}
             tone="denim"
             type="submit"
           >
             <span aria-hidden="true">↑</span>
-          </FeltButton>
+          </VolunteerButton>
         </form>
       </div>
     </div>

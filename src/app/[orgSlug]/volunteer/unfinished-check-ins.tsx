@@ -3,8 +3,8 @@
 import clsx from "clsx";
 import { useState, useTransition } from "react";
 
-import { FeltLink, PhotoPatch } from "@/components/felt";
-import felt from "@/components/felt.module.css";
+import { AdminLink } from "@/components/admin-ui";
+import { VolunteerButton, VolunteerPhoto } from "./volunteer-ui";
 import { pushToast } from "@/lib/toast";
 
 import { discardCheckIn } from "./actions";
@@ -53,15 +53,8 @@ export function UnfinishedCheckIns({
       <h2 className={styles.pickerHeading}>Pick up where you left off</h2>
       <ul aria-label="Unfinished updates" className={styles.resumeList}>
         {visible.map((checkIn) => (
-          <li
-            className={clsx(
-              felt["felt-button"],
-              "felt-oatmeal",
-              styles.resumeRow,
-            )}
-            key={checkIn.id}
-          >
-            <PhotoPatch
+          <li className={styles.resumeRow} key={checkIn.id}>
+            <VolunteerPhoto
               alt=""
               className={styles.resumePhoto}
               sizes="3.25rem"
@@ -76,13 +69,9 @@ export function UnfinishedCheckIns({
                 <span className={styles.discardPrompt}>
                   Discard this update?
                 </span>
-                <button
-                  className={clsx(
-                    felt["felt-button"],
-                    "felt-brick",
-                    styles.cardAction,
-                    styles.resumeAction,
-                  )}
+                <VolunteerButton
+                  className={clsx(styles.action, styles.resumeAction)}
+                  tone="brick"
                   onClick={() => discard(checkIn)}
                   type="button"
                 >
@@ -91,19 +80,20 @@ export function UnfinishedCheckIns({
                     {" "}
                     the unfinished update for {checkIn.resident.name}
                   </span>
-                </button>
-                <button
+                </VolunteerButton>
+                <VolunteerButton
+                  tone="cream"
                   className={styles.keepButton}
                   onClick={() => setConfirming(null)}
                   type="button"
                 >
                   Keep
-                </button>
+                </VolunteerButton>
               </span>
             ) : (
               <span className={styles.resumeActions}>
-                <FeltLink
-                  className={clsx(styles.cardAction, styles.resumeAction)}
+                <AdminLink
+                  className={clsx(styles.action, styles.resumeAction)}
                   href={`/${orgSlug}/volunteer/${checkIn.id}`}
                   tone="moss"
                 >
@@ -112,7 +102,7 @@ export function UnfinishedCheckIns({
                     {" "}
                     the update for {checkIn.resident.name}
                   </span>
-                </FeltLink>
+                </AdminLink>
                 <button
                   aria-label={`Discard the unfinished update for ${checkIn.resident.name}`}
                   className={styles.discardButton}
@@ -135,7 +125,6 @@ export function UnfinishedCheckIns({
           </li>
         ))}
       </ul>
-      <h2 className={styles.pickerHeading}>Start a new update</h2>
     </>
   );
 }
