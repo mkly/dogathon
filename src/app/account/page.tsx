@@ -2,8 +2,7 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
-import { AdminBadge, AdminSurface } from "@/components/admin-ui";
-import { FeltLink } from "@/components/felt";
+import { AdminBadge, AdminLink, AdminSurface } from "@/components/admin-ui";
 import { SignOutButton } from "@/components/sign-out-button";
 import { PageViewTransition } from "@/components/page-view-transition";
 import { getSession } from "@/lib/auth-session";
@@ -16,6 +15,7 @@ import { prisma } from "@/lib/prisma";
 import { getSponsorContext } from "@/lib/sponsor-access";
 
 import { BillingPortalForm, SponsorProfileForm } from "./account-forms";
+import { sponsorshipAccountActions } from "./account-view";
 import styles from "./account.module.css";
 
 export const dynamic = "force-dynamic";
@@ -102,52 +102,79 @@ export default async function SponsorAccountPage() {
               </p>
             ) : (
               <div className={styles.list}>
-                {sponsorships.map((record) => (
-                  <article className={styles.sponsorshipCard} key={record.id}>
-                    <div>
-                      <h3>{record.resident.name}</h3>
-                      <p className={styles.rescue}>
-                        {record.organization.name}
-                      </p>
-                      <div className={styles.details}>
+                {sponsorships.map((record) => {
+                  const actions = sponsorshipAccountActions({
+                    id: record.id,
+                    organizationSlug: record.organization.slug,
+                    status: record.status,
+                    stripeCustomerId: record.stripeCustomerId,
+                  });
+
+                  return (
+                    <article className={styles.sponsorshipCard} key={record.id}>
+                      <div className={styles.cardHeading}>
+                        <div className={styles.cardIdentity}>
+                          <h3>{record.resident.name}</h3>
+                          <p className={styles.rescue}>
+                            {record.organization.name}
+                          </p>
+                        </div>
                         <AdminBadge
-                          tone={record.status === "active" ? "moss" : "brick"}
+                          tone={
+                            record.status === "active"
+                              ? "moss"
+                              : record.status === "awaiting"
+                                ? "mustard"
+                                : "brick"
+                          }
                         >
                           <span className={styles.status}>
                             {sponsorshipStatusLabel(record.status)}
                           </span>
                         </AdminBadge>
-                        <span>Started {formatDate(record.createdAt)}</span>
-                        <span>
-                          {formatMonthlyAmount(record.monthlyCents)}/month
-                        </span>
-                        {record.status === "active" ||
-                        record.status === "awaiting" ? (
-                          <span>
-                            Continues month to month; switch companions or
-                            cancel at any time
-                          </span>
-                        ) : null}
                       </div>
-                    </div>
-                    {["active", "awaiting"].includes(record.status) ||
-                    record.stripeCustomerId ? (
-                      <div className={styles.sponsorshipActions}>
-                        {["active", "awaiting"].includes(record.status) ? (
-                          <FeltLink
-                            href={`/${record.organization.slug}/sponsor/next?sponsorship=${record.id}`}
-                            tone="oatmeal"
-                          >
-                            Switch companions
-                          </FeltLink>
-                        ) : null}
-                        {record.stripeCustomerId ? (
-                          <BillingPortalForm sponsorshipId={record.id} />
-                        ) : null}
-                      </div>
-                    ) : null}
-                  </article>
-                ))}
+
+                      <dl className={styles.details}>
+                        <div>
+                          <dt>Started</dt>
+                          <dd>{formatDate(record.createdAt)}</dd>
+                        </div>
+                        <div>
+                          <dt>Monthly</dt>
+                          <dd>{formatMonthlyAmount(record.monthlyCents)}</dd>
+                        </div>
+                      </dl>
+
+                      {actions.switchCompanionsHref ? (
+                        <p className={styles.continuation}>
+                          Continues month to month; switch companions or cancel
+                          at any time.
+                        </p>
+                      ) : null}
+
+                      {actions.switchCompanionsHref || actions.billingPortal ? (
+                        <div className={styles.sponsorshipActions}>
+                          {actions.switchCompanionsHref ? (
+                            <AdminLink
+                              aria-label={`Switch companions for ${record.resident.name}`}
+                              className={styles.sponsorshipAction}
+                              href={actions.switchCompanionsHref}
+                              tone="denim"
+                            >
+                              Switch companions
+                            </AdminLink>
+                          ) : null}
+                          {actions.billingPortal ? (
+                            <BillingPortalForm
+                              residentName={record.resident.name}
+                              sponsorshipId={record.id}
+                            />
+                          ) : null}
+                        </div>
+                      ) : null}
+                    </article>
+                  );
+                })}
               </div>
             )}
           </AdminSurface>

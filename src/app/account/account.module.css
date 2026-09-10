@@ -1,5 +1,5 @@
 .page {
-  width: min(100%, 1040px);
+  width: min(100%, 1080px);
   min-height: 100svh;
   margin: 0 auto;
   padding: 32px 20px 56px;
@@ -10,7 +10,7 @@
   align-items: end;
   justify-content: space-between;
   gap: 24px;
-  margin-bottom: 24px;
+  margin-bottom: 28px;
 }
 
 .eyebrow {
@@ -24,19 +24,24 @@
 
 .header h1 {
   margin: 0;
-  font-size: clamp(2rem, 6vw, 3.25rem);
+  max-width: 18ch;
+  overflow-wrap: anywhere;
+  font-size: clamp(2rem, 5vw, 2.8rem);
+  line-height: 1.05;
   font-weight: 900;
   letter-spacing: -0.045em;
 }
 
 .header p:last-child {
+  max-width: 44rem;
   margin: 8px 0 0;
   font-weight: 650;
+  line-height: 1.5;
 }
 
 .layout {
   display: grid;
-  grid-template-columns: minmax(240px, 0.72fr) minmax(0, 1.4fr);
+  grid-template-columns: minmax(250px, 0.78fr) minmax(0, 1.45fr);
   align-items: start;
   gap: 20px;
 }
@@ -44,7 +49,7 @@
 .profile,
 .sponsorships,
 .empty {
-  padding: 20px;
+  padding: clamp(18px, 3vw, 24px);
 }
 
 .profile h2,
@@ -63,6 +68,10 @@
   line-height: 1.5;
 }
 
+.profileIntro {
+  color: rgb(61 51 43 / 72%);
+}
+
 .form {
   display: grid;
   gap: 12px;
@@ -75,9 +84,24 @@
   font-weight: 850;
 }
 
+.emailField {
+  display: grid;
+  gap: 5px;
+}
+
+.emailField > span {
+  font-size: 0.72rem;
+  font-weight: 850;
+}
+
 .email {
-  margin: 2px 0 0;
+  min-height: 2.5rem;
+  margin: 0;
+  padding: 0.62rem 0.7rem;
+  border: 1px solid rgb(61 51 43 / 18%);
+  border-radius: 6px;
   overflow-wrap: anywhere;
+  background: rgb(255 255 255 / 55%);
   font-size: 0.8rem;
   font-weight: 750;
 }
@@ -111,40 +135,74 @@
 
 .list {
   display: grid;
-  gap: 10px;
+  gap: 12px;
 }
 
 .sponsorshipCard {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  align-items: center;
-  gap: 16px;
-  padding: 14px;
+  min-width: 0;
+  padding: 17px;
   border: 1px solid rgb(61 51 43 / 17%);
-  border-radius: 7px;
-  background: white;
+  border-radius: 8px;
+  background: rgb(255 255 255 / 92%);
+  box-shadow: 0 3px 12px rgb(61 51 43 / 6%);
 }
 
 .sponsorshipCard h3 {
-  margin: 0 0 3px;
-  font-size: 1rem;
+  margin: 0 0 2px;
+  overflow-wrap: anywhere;
+  font-size: 1.08rem;
   font-weight: 900;
+  line-height: 1.25;
 }
 
 .rescue {
   margin: 0;
+  overflow-wrap: anywhere;
+  color: rgb(61 51 43 / 72%);
   font-size: 0.78rem;
   font-weight: 750;
+  line-height: 1.35;
+}
+
+.cardHeading {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.cardIdentity {
+  min-width: 0;
 }
 
 .details {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px 12px;
-  margin: 10px 0 0;
-  color: rgb(61 51 43 / 76%);
-  font-size: 0.72rem;
-  font-weight: 700;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 15px 0 0;
+}
+
+.details div {
+  min-width: 0;
+  padding: 9px 10px;
+  border-radius: 6px;
+  background: rgb(61 51 43 / 5%);
+}
+
+.details dt {
+  margin-bottom: 2px;
+  color: rgb(61 51 43 / 58%);
+  font-size: 0.62rem;
+  font-weight: 850;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.details dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-size: 0.78rem;
+  font-weight: 850;
 }
 
 .status {
@@ -152,9 +210,30 @@
 }
 
 .sponsorshipActions {
-  display: grid;
+  display: flex;
+  flex-wrap: wrap;
   gap: 8px;
-  justify-items: stretch;
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid rgb(61 51 43 / 11%);
+}
+
+.billingForm {
+  display: grid;
+}
+
+.sponsorshipAction {
+  min-width: 12ch;
+  min-height: 2.55rem;
+  white-space: nowrap;
+}
+
+.continuation {
+  margin: 11px 0 0;
+  color: rgb(61 51 43 / 68%);
+  font-size: 0.73rem;
+  font-weight: 700;
+  line-height: 1.45;
 }
 
 .empty {
@@ -176,7 +255,27 @@
     grid-template-columns: 1fr;
   }
 
-  .sponsorshipCard {
+  .header > button {
+    align-self: start;
+  }
+
+  .sponsorshipAction,
+  .billingForm {
+    width: 100%;
+  }
+}
+
+@media (max-width: 420px) {
+  .page {
+    padding-inline: 14px;
+  }
+
+  .cardHeading {
+    align-items: start;
+    flex-direction: column;
+  }
+
+  .details {
     grid-template-columns: 1fr;
   }
 }
