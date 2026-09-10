@@ -109,6 +109,62 @@ function selectedInput(input: ComposeSponsorUpdateInput) {
   return { chats, photos: newestPhotos(input.chats) };
 }
 
+function words(text: string) {
+  return text.trim().split(/\s+/u).filter(Boolean).length;
+}
+
+function volunteerObservations(chat: SponsorUpdateChat) {
+  const volunteerLines = chat.transcript
+    .filter((line) => /^Volunteer:\s*/u.test(line))
+    .map((line) => line.replace(/^Volunteer:\s*/u, "").trim())
+    .filter(Boolean);
+
+  // Direct callers and older fixtures may not label speakers. In that case,
+  // keep their source material rather than producing an empty update.
+  if (volunteerLines.length > 0) return volunteerLines;
+  return chat.transcript
+    .filter((line) => !/^Interviewer:\s*/u.test(line))
+    .map((line) => line.trim())
+    .filter(Boolean);
+}
+
+function compositionLengthBrief(
+  input: ComposeSponsorUpdateInput,
+  chats: SponsorUpdateChat[],
+) {
+  const visitCount = chats.length;
+  const uniqueObservations = new Map<string, string>();
+  for (const observation of chats.flatMap(volunteerObservations)) {
+    const normalized = observation.toLowerCase().replace(/\s+/gu, " ");
+    if (!uniqueObservations.has(normalized)) {
+      uniqueObservations.set(normalized, observation);
+    }
+  }
+  const observationWordCount = [...uniqueObservations.values()].reduce(
+    (total, observation) => total + words(observation),
+    0,
+  );
+  const sourceSummary = `${visitCount} visit${visitCount === 1 ? "" : "s"} and ${observationWordCount} words of volunteer observations`;
+
+  if (input.type === "graduation") {
+    return [
+      `Writing brief: the adoption story has ${sourceSummary}, plus the supplied graduation seed.`,
+      "Keep the narrative proportional to those facts; generally target 100 to 220 words and do not exceed 280 words. Use less when the seed and observations are sparse.",
+      "The required postscript is appended separately and does not count toward this narrative range.",
+    ].join("\n");
+  }
+
+  const sparse = visitCount <= 1 || observationWordCount < 80;
+  return [
+    `Writing brief: this regular update has ${sourceSummary} and is ${sparse ? "sparse" : "rich"}.`,
+    sparse
+      ? "Write one or two short paragraphs, generally 40 to 100 words, with a hard maximum of 120 words. Use fewer than 40 words when that is all the facts support. Do not use headings."
+      : "Write concise paragraphs, generally 100 to 220 words, with a hard maximum of 250 words. Every added paragraph must be supported by distinct volunteer observations.",
+    "Judge length only from visit count and substantive volunteer observations. Interviewer wording, photo count, and profile length never justify a longer update.",
+    "The required postscript is appended separately and does not count toward this narrative range.",
+  ].join("\n");
+}
+
 function canSendPhotoUrlDirectly(url: string) {
   return env.features.s3 && /^https?:\/\//u.test(url);
 }
@@ -188,6 +244,10 @@ export async function buildComposerMessages(
       ].join("\n\n"),
     });
   }
+  content.push({
+    type: "text",
+    text: compositionLengthBrief(input, chats),
+  });
 
   return { role: "user", content };
 }
@@ -205,11 +265,8 @@ function deterministicCompose(
   const { chats, photos } = selectedInput(input);
   const visitCount = chats.length;
   const chatBody = chats
-    .map((chat) =>
-      [`On ${formatDate(chat.completedAt)}:`, chat.transcript.join("\n")].join(
-        "\n\n",
-      ),
-    )
+    .map((chat) => volunteerObservations(chat).join(" "))
+    .filter(Boolean)
     .join("\n\n");
   const body =
     input.type === "graduation"
@@ -261,9 +318,11 @@ Use only the supplied companion profile, volunteer chats, photos, and previous u
 
 Return:
 - A subject of at most 60 characters. Name the companion and something that actually happened; never use "An update on <name>" or another generic update announcement.
-- A teaser of one or two complete sentences that works as the opening of an email and makes the specific news clear. Keep it comfortably under 240 characters; never cut off a thought to fill the limit.
-- A Markdown body of roughly 200 to 450 words. Tell what changed across the visits in narrative order. Quote or closely paraphrase concrete volunteer observations when they add character. Refer naturally to the supplied photos when relevant. Use no more than two short section headings, and never use a date as a heading. Do not insert photo ids or standalone caption lines in the body; captions are returned separately.
+- A teaser of one or two complete sentences that works as the opening of an email and makes the specific news clear. Keep it comfortably under 240 characters; never cut off a thought to fill the limit. Make the subject, teaser, body, and captions complementary; do not repeat the same sentence across fields.
+- A concise Markdown body whose length follows the writing brief in the user message. There is no minimum to pad toward. Tell only the supported events in narrative order. Quote or closely paraphrase concrete volunteer observations when they add character. Refer naturally to supplied photos when relevant, but do not add prose merely because photos exist. Use headings only for a genuinely rich multi-visit story, with no more than two short headings and never a date as a heading. Do not insert photo ids or standalone caption lines in the body; captions are returned separately.
 - Exactly one caption for every supplied photo, using that photo's exact id in the photoId field. Each caption must be at most 90 characters and describe what is visible, informed by the chats without claiming anything the image and chats do not support. Do not repeat the photo id in the caption text.
+
+Avoid repeated facts, flowery filler, generic gratitude paragraphs, invented emotional significance, and overstated medical or behavioral claims. Prefer warm, plain, specific rescue language. Treat interviewer questions as context, not source observations, and never make the story longer because an interviewer was verbose. The pinned postscript is appended by the application, so do not recreate it in the narrative.
 
 For a regular update, focus on what happened during the recent visits. Use the profile only for helpful context, and do not repeat the previous update.
 
