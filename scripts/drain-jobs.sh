@@ -41,7 +41,7 @@ if [ "${1:-}" = "--all" ]; then
     body="$(drain_once)"
     echo "$body"
     case "$body" in
-      *'"drained":false'*) break ;;
+      '{"drained":false}' | '{"drained":false,'*) break ;;
     esac
   done
 else

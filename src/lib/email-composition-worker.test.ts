@@ -78,6 +78,30 @@ test("records a safe failure when job eligibility changed", async () => {
   assert.match(message, /already used/);
 });
 
+test("fails a composition that exceeds its drain budget", async () => {
+  let message = "";
+  const drain = createEmailCompositionDrainer({
+    fetch: async () => claim,
+    composeRegular: async (_draftId, _residentId, _orgId, signal) =>
+      new Promise((_, reject) => {
+        signal?.addEventListener("abort", () => reject(signal.reason), {
+          once: true,
+        });
+      }),
+    composeGraduation: async () => "not-found",
+    complete: async () => view("completed"),
+    fail: async (_jobId, error) => {
+      message = error;
+      return { ...view("failed"), errorMessage: error };
+    },
+    reject: async () => view("failed"),
+  });
+
+  const result = await drain({ budgetMs: 10 });
+  assert.equal(result.drained, true);
+  assert.match(message, /exceeded its 10ms drain budget/);
+});
+
 test("an empty composition queue is a successful no-op", async () => {
   const drain = createEmailCompositionDrainer({
     fetch: async () => null,

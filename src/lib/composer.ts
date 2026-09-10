@@ -117,6 +117,7 @@ function canSendPhotoUrlDirectly(url: string) {
 async function imagePart(
   photo: SponsorUpdatePhoto,
   companionPageUrl: string,
+  signal?: AbortSignal,
 ): Promise<ComposerMessagePart> {
   if (canSendPhotoUrlDirectly(photo.url)) {
     return {
@@ -126,7 +127,9 @@ async function imagePart(
     };
   }
 
-  const response = await fetch(new URL(photo.url, companionPageUrl));
+  const response = await fetch(new URL(photo.url, companionPageUrl), {
+    signal,
+  });
   if (!response.ok) {
     throw new Error(
       `Could not load composer photo ${photo.id}: HTTP ${response.status}`,
@@ -164,7 +167,7 @@ export async function buildComposerMessages(
       type: "text",
       text: `Photo ${index + 1} (id ${photo.id}, from the visit on ${formatDate(photo.takenAt)})`,
     });
-    content.push(await imagePart(photo, input.companionPageUrl));
+    content.push(await imagePart(photo, input.companionPageUrl, input.signal));
   }
 
   for (const chat of chats) {

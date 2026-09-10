@@ -132,6 +132,7 @@ async function requireJob(boss: CompositionBoss, jobId: string) {
 async function defaultQueue() {
   const boss = await getJobBoss();
   await boss.createQueue(EMAIL_COMPOSITION_QUEUE, {
+    policy: "exclusive",
     retryLimit: EMAIL_COMPOSITION_RETRY_LIMIT,
     expireInSeconds: EMAIL_COMPOSITION_EXPIRE_SECONDS,
   });
