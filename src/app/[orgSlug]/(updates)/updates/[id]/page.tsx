@@ -16,7 +16,8 @@ import { prisma } from "@/lib/prisma";
 import { isPublicResidentSponsorable } from "@/lib/public-roster-cache";
 import { uuidSchema } from "@/lib/uuid";
 
-import { PhotoSlideshow, type UpdatePhoto } from "./photo-slideshow";
+import { buildPhotoPresentation, type UpdatePhoto } from "./photo-presentation";
+import { PhotoSlideshow } from "./photo-slideshow";
 import { ShareUpdateButton } from "./share-update-button";
 import styles from "./updates.module.css";
 
@@ -80,7 +81,7 @@ function updatePhotos(
     .sort((left, right) => left.createdAt.getTime() - right.createdAt.getTime())
     .map((photo) => ({
       caption: photo.caption,
-      src: photo.webUrl ?? photo.url,
+      src: photo.webUrl?.trim() || photo.url,
     }));
 }
 
@@ -120,8 +121,11 @@ export async function generateMetadata({
   if (!update) return { title: "Sponsor update" };
 
   const photos = updatePhotos(update);
-  const heroUrl =
-    update.heroPhotoUrl ?? photos[0]?.src ?? update.resident.photoUrls[0];
+  const { heroPhoto } = buildPhotoPresentation({
+    heroPhotoUrl: update.heroPhotoUrl,
+    photos,
+    residentPhotoUrls: update.resident.photoUrls,
+  });
   const title = `${update.subject} | ${update.organization.name}`;
 
   return {
@@ -131,15 +135,15 @@ export async function generateMetadata({
       type: "article",
       title: update.subject,
       description: update.teaser,
-      ...(heroUrl
-        ? { images: [{ alt: update.resident.name, url: heroUrl }] }
+      ...(heroPhoto
+        ? { images: [{ alt: update.resident.name, url: heroPhoto.src }] }
         : {}),
     },
     twitter: {
-      card: heroUrl ? "summary_large_image" : "summary",
+      card: heroPhoto ? "summary_large_image" : "summary",
       title: update.subject,
       description: update.teaser,
-      ...(heroUrl ? { images: [heroUrl] } : {}),
+      ...(heroPhoto ? { images: [heroPhoto.src] } : {}),
     },
   };
 }
@@ -162,9 +166,11 @@ export default async function UpdatePage({ params }: UpdatePageProps) {
   }
 
   const photos = updatePhotos(update);
-  const heroUrl =
-    update.heroPhotoUrl ?? photos[0]?.src ?? update.resident.photoUrls[0];
-  const heroCaption = photos.find((photo) => photo.src === heroUrl)?.caption;
+  const { heroPhoto, slideshowPhotos } = buildPhotoPresentation({
+    heroPhotoUrl: update.heroPhotoUrl,
+    photos,
+    residentPhotoUrls: update.resident.photoUrls,
+  });
   const safeBody = neutralizeUnsafeMarkdownDestinations(
     escapeHtmlInMarkdown(update.bodyText),
   );
@@ -201,18 +207,20 @@ export default async function UpdatePage({ params }: UpdatePageProps) {
           </div>
         </header>
 
-        {heroUrl ? (
+        {heroPhoto ? (
           <figure className={styles.hero}>
             <Image
-              alt={heroCaption || update.resident.name}
+              alt={heroPhoto.caption || update.resident.name}
               className={styles.heroPhoto}
               height={900}
               priority
               sizes="(max-width: 48rem) calc(100vw - 2rem), 44rem"
-              src={heroUrl}
+              src={heroPhoto.src}
               width={1400}
             />
-            {heroCaption ? <figcaption>{heroCaption}</figcaption> : null}
+            {heroPhoto.caption ? (
+              <figcaption>{heroPhoto.caption}</figcaption>
+            ) : null}
           </figure>
         ) : null}
 
@@ -220,16 +228,18 @@ export default async function UpdatePage({ params }: UpdatePageProps) {
           <ReactMarkdown>{safeBody}</ReactMarkdown>
         </div>
 
-        {photos.length ? (
+        {slideshowPhotos.length ? (
           <section
             aria-labelledby="photo-heading"
             className={styles.photoSection}
           >
-            <p className={styles.sectionLabel}>A few moments from the update</p>
+            <p className={styles.sectionLabel}>
+              {slideshowPhotos.length} photos from the update
+            </p>
             <h2 id="photo-heading">{update.resident.name}, lately</h2>
             <PhotoSlideshow
               companionName={update.resident.name}
-              photos={photos}
+              photos={slideshowPhotos}
             />
           </section>
         ) : null}
