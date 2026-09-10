@@ -73,57 +73,79 @@ const defaultDependencies: SponsorshipTransferDependencies = {
   revalidateRoster: revalidatePublicRoster,
   sendEmail: sendChoiceEmail,
   transaction: (operation) =>
-    prisma.$transaction(operation, { timeout: 20_000 }),
+    prisma.$transaction(operation, {
+      isolationLevel: "Serializable",
+      timeout: 20_000,
+    }),
 };
+
+function isSerializationConflict(error: unknown) {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    error.code === "P2034"
+  );
+}
 
 export async function transferSponsorship(
   sponsorshipId: string,
   residentId: string,
   dependencies: SponsorshipTransferDependencies = defaultDependencies,
 ) {
-  const result = await dependencies.transaction(async (tx) => {
-    const sponsorship = await tx.sponsorship.findUnique({
-      where: { id: sponsorshipId },
-      include: {
-        organization: {
-          select: { id: true, name: true, stripeAccountId: true },
+  const result = await dependencies
+    .transaction(async (tx) => {
+      const sponsorship = await tx.sponsorship.findUnique({
+        where: { id: sponsorshipId },
+        include: {
+          organization: {
+            select: { id: true, name: true, stripeAccountId: true },
+          },
+          sponsor: { select: { email: true, name: true } },
         },
-        sponsor: { select: { email: true, name: true } },
-      },
-    });
-    if (!sponsorship || !["active", "awaiting"].includes(sponsorship.status)) {
-      throw new SponsorshipTransferError("not_transferable");
-    }
+      });
+      if (
+        !sponsorship ||
+        !["active", "awaiting"].includes(sponsorship.status)
+      ) {
+        throw new SponsorshipTransferError("not_transferable");
+      }
 
-    const resident = await tx.resident.findFirst({
-      where: {
-        id: { equals: residentId, not: sponsorship.residentId },
-        orgId: sponsorship.orgId,
-        available: true,
-        sponsorships: { none: { status: "active" } },
-      },
-      select: { id: true, name: true },
-    });
-    if (!resident) throw new SponsorshipTransferError("resident_unavailable");
+      const resident = await tx.resident.findFirst({
+        where: {
+          id: { equals: residentId, not: sponsorship.residentId },
+          orgId: sponsorship.orgId,
+          available: true,
+          sponsorships: { none: { status: "active" } },
+        },
+        select: { id: true, name: true },
+      });
+      if (!resident) throw new SponsorshipTransferError("resident_unavailable");
 
-    const claimed = await tx.sponsorship.updateMany({
-      where: {
-        id: sponsorship.id,
-        residentId: sponsorship.residentId,
-        status: { in: ["active", "awaiting"] },
-      },
-      data: {
-        residentId: resident.id,
-        status: "active",
-        endedAt: null,
-        endedReason: null,
-      },
-    });
-    if (claimed.count !== 1)
-      throw new SponsorshipTransferError("not_transferable");
+      const claimed = await tx.sponsorship.updateMany({
+        where: {
+          id: sponsorship.id,
+          residentId: sponsorship.residentId,
+          status: { in: ["active", "awaiting"] },
+        },
+        data: {
+          residentId: resident.id,
+          status: "active",
+          endedAt: null,
+          endedReason: null,
+        },
+      });
+      if (claimed.count !== 1)
+        throw new SponsorshipTransferError("not_transferable");
 
-    return { ...sponsorship, companionName: resident.name };
-  });
+      return { ...sponsorship, companionName: resident.name };
+    })
+    .catch((error: unknown) => {
+      if (isSerializationConflict(error)) {
+        throw new SponsorshipTransferError("resident_unavailable");
+      }
+      throw error;
+    });
 
   dependencies.revalidateRoster();
   await dependencies.sendEmail(result, {
