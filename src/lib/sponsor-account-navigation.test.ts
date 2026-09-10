@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import {
@@ -9,6 +10,9 @@ import {
 } from "./sponsor-account-navigation";
 
 const sponsorshipId = "550e8400-e29b-41d4-a716-446655440000";
+
+const source = (relativePath: string) =>
+  readFile(new URL(relativePath, import.meta.url), "utf8");
 
 test("successful signed-in switches navigate to the sponsor account", () => {
   assert.equal(
@@ -54,4 +58,45 @@ test("the account only recognizes a single valid sponsorship id", () => {
     switchedSponsorshipId({ switched: [sponsorshipId, sponsorshipId] }),
     undefined,
   );
+});
+
+test("the transfer action routes successful signed-in and token selections through the account flow", async () => {
+  const action = await source(
+    "../app/[orgSlug]/(public)/sponsor/next/actions.ts",
+  );
+
+  assert.match(
+    action,
+    /await transferSponsorship\(sponsorship\.id, parsed\.data\.residentId\);[\s\S]*const accountPath = sponsorAccountSwitchPath\(sponsorship\.id\);[\s\S]*selection\.token \? sponsorAccountSignInPath\(accountPath\) : accountPath/u,
+  );
+  assert.match(
+    action,
+    /SponsorshipTransferError[\s\S]*redirect\(destination\(orgSlug, selection, error\.code\)\)/u,
+  );
+  assert.match(
+    action,
+    /endAwaitingSponsorship[\s\S]*redirect\(destination\(orgSlug, selection\)\)/u,
+  );
+});
+
+test("account sign-in preserves the validated return path for sessions and magic links", async () => {
+  const signInPage = await source("../app/account/sign-in/page.tsx");
+
+  assert.match(signInPage, /redirect\(redirectTo\)/u);
+  assert.match(signInPage, /<MagicLinkForm callbackURL=\{redirectTo\} \/>/u);
+});
+
+test("the account renders an ownership-validated, one-time switch confirmation", async () => {
+  const [accountPage, confirmation] = await Promise.all([
+    source("../app/account/page.tsx"),
+    source("../app/account/switch-confirmation.tsx"),
+  ]);
+
+  assert.match(
+    accountPage,
+    /sponsorships\.find\([\s\S]*record\.id === switchedId[\s\S]*<SwitchConfirmation[\s\S]*companionName=\{switchedSponsorship\.resident\.name\}[\s\S]*organizationName=\{switchedSponsorship\.organization\.name\}/u,
+  );
+  assert.match(confirmation, /aria-live="polite"[\s\S]*role="status"/u);
+  assert.match(confirmation, /url\.searchParams\.delete\("switched"\)/u);
+  assert.match(confirmation, /window\.history\.replaceState/u);
 });
