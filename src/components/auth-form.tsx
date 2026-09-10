@@ -13,7 +13,7 @@ type AuthFormProps = {
   fixedEmail?: string;
   hiddenTabs?: boolean;
   initialMode?: AuthMode;
-  onAuthenticated?: () => Promise<void> | void;
+  onAuthenticated?: () => Promise<string | void> | string | void;
   redirectTo?: string;
 };
 
@@ -55,7 +55,10 @@ export function AuthForm({
     }
 
     if (onAuthenticated) {
-      await onAuthenticated();
+      const destination = await onAuthenticated();
+      if (typeof destination === "string") {
+        router.push(destination);
+      }
       return;
     }
 

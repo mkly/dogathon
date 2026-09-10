@@ -1,12 +1,16 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { z } from "zod";
 
 import { AuthForm } from "@/components/auth-form";
 import { FeltPanel } from "@/components/felt";
 import { PageViewTransition } from "@/components/page-view-transition";
 import { getSession } from "@/lib/auth-session";
+import {
+  resolveStaffSignInDestination,
+  sanitizeStaffSignInNext,
+} from "@/lib/staff-organizations-path";
 
+import { completeStaffSignIn } from "./actions";
 import styles from "./sign-in.module.css";
 
 export const dynamic = "force-dynamic";
@@ -14,20 +18,24 @@ export const dynamic = "force-dynamic";
 type SignInPageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
-const safeNextPathSchema = z
-  .string()
-  .startsWith("/")
-  .refine((value) => !value.startsWith("//"))
-  .catch("/staff/organizations");
-const signInQuerySchema = z.object({ next: safeNextPathSchema });
 
 export default async function SignInPage({ searchParams }: SignInPageProps) {
-  const { next: redirectTo } = signInQuerySchema.parse(await searchParams);
-  const session = await getSession(await headers());
+  const query = await searchParams;
+  const rawNext = Array.isArray(query.next) ? query.next[0] : query.next;
+  const requestHeaders = await headers();
+  const session = await getSession(requestHeaders);
 
   if (session) {
-    redirect(redirectTo);
+    const destination = await resolveStaffSignInDestination(
+      requestHeaders,
+      session.user.id,
+      rawNext,
+    );
+    redirect(destination);
   }
+
+  const safeNext = sanitizeStaffSignInNext(rawNext);
+  const completeAction = completeStaffSignIn.bind(null, rawNext);
 
   return (
     <PageViewTransition>
@@ -38,7 +46,10 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
           <p className={styles.lede}>
             Sign in with your staff account to open the admin room.
           </p>
-          <AuthForm redirectTo={redirectTo} />
+          <AuthForm
+            onAuthenticated={completeAction}
+            redirectTo={safeNext ?? "/staff/organizations"}
+          />
         </FeltPanel>
       </main>
     </PageViewTransition>
