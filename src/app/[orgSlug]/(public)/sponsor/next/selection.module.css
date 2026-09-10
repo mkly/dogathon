@@ -1,0 +1,97 @@
+.selectionHero {
+  max-width: 760px;
+  margin: 0 0 56px;
+}
+
+.selectionHero > .rescueBadge {
+  --pil: 0.6;
+  --drop: 0.25;
+  padding: 10px 16px;
+  margin-bottom: 24px;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  rotate: -2deg;
+}
+
+.rescueBadge > svg {
+  opacity: 0.4;
+}
+
+.selectionHero h1 {
+  margin: 0 0 20px;
+  color: var(--felt-ink);
+  font-size: clamp(36px, 4.8vw, 60px);
+  font-weight: 700;
+  letter-spacing: -0.045em;
+  line-height: 1.08;
+}
+
+.lede {
+  margin: 0;
+  color: #655b50;
+  font-size: 18px;
+  line-height: 1.65;
+}
+
+.formError {
+  margin: 24px 0 0;
+  padding: 12px 14px;
+  border: 2px dashed #8c392e;
+  border-radius: 10px;
+  color: #742e25;
+  font-weight: 700;
+}
+
+.selectionNotice {
+  max-width: 44rem;
+  margin: 3rem auto;
+  text-align: center;
+}
+
+.selectionNotice h1,
+.selectionNotice h2,
+.selectionNotice p {
+  position: relative;
+  z-index: 1;
+}
+
+.selectionForm,
+.selectionForm button {
+  width: 100%;
+}
+
+.selectionForm button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding-right: 17px;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.stopSponsoring {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem;
+  margin-top: 64px;
+}
+
+.stopSponsoring h2,
+.stopSponsoring p {
+  position: relative;
+  z-index: 1;
+  margin-block: 0.25rem;
+}
+
+@media (max-width: 700px) {
+  .selectionHero {
+    margin-bottom: 44px;
+  }
+
+  .stopSponsoring {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}

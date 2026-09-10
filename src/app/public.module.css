@@ -75,13 +75,6 @@
   line-height: 1.6;
 }
 
-.companionGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
-  gap: 36px 28px;
-  margin-top: 40px;
-}
-
 .speciesFilters {
   display: flex;
   flex-wrap: wrap;
@@ -117,38 +110,6 @@
   opacity: 0.65;
 }
 
-.companionCard {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  padding: 8px;
-}
-
-.gridPhoto {
-  width: 100%;
-}
-
-.cardCopy {
-  position: relative;
-  z-index: 1;
-  display: grid;
-  justify-items: start;
-  padding: 1rem 0 0;
-}
-
-.cardCopy h2 {
-  margin: 0;
-  font-size: 20px;
-  font-weight: 900;
-}
-
-.cardCopy p {
-  margin: 0.3rem 0 0.25rem;
-  font-size: 13px;
-  font-weight: 600;
-  color: #725b48;
-}
-
 .cardLink {
   display: inline-flex;
   align-items: center;
@@ -168,48 +129,10 @@
 }
 
 .emptyState,
-.confirmation,
-.selectionNotice {
+.confirmation {
   max-width: 44rem;
   margin: 2rem auto;
   text-align: center;
-}
-
-.selectionNotice {
-  position: relative;
-  margin-top: 3rem;
-}
-
-.selectionHero {
-  position: relative;
-  margin: 2rem 0;
-  color: var(--felt-cream);
-}
-
-.selectionHero h1,
-.selectionHero p {
-  position: relative;
-  z-index: 1;
-}
-
-.selectionForm,
-.selectionForm button {
-  width: 100%;
-}
-
-.stopSponsoring {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 2rem;
-  margin-top: 2rem;
-}
-
-.stopSponsoring h2,
-.stopSponsoring p {
-  position: relative;
-  z-index: 1;
-  margin-block: 0.25rem;
 }
 
 .footer {
@@ -466,11 +389,6 @@
   .profile,
   .sponsorPanel {
     grid-template-columns: 1fr;
-  }
-
-  .stopSponsoring {
-    align-items: stretch;
-    flex-direction: column;
   }
 
   .sponsorPanel {

@@ -1,17 +1,9 @@
-import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { z } from "zod";
 
-import {
-  FeltLink,
-  FeltPanel,
-  PhotoPatch,
-  Stitch,
-  StitchBadge,
-} from "@/components/felt";
+import { FeltLink, FeltPanel, Stitch, StitchBadge } from "@/components/felt";
 import { PageViewTransition } from "@/components/page-view-transition";
-import { ViewTransition } from "react";
 import { formatMonthlyAmount } from "@/lib/format";
 import {
   getPublicOrganization,
@@ -22,10 +14,15 @@ import {
 import { DEFAULT_SPONSORSHIP_MONTHLY_CENTS } from "@/lib/rescue-settings";
 import { normalizeSpecies, speciesLabel } from "@/lib/species";
 
-import wordmark from "../../../../public/brand/pawcast-wordmark.png";
-
 import styles from "./roster.module.css";
-import { PhotoCharm } from "./photo-charm";
+import {
+  CompanionCard,
+  CompanionCardCopy,
+  CompanionGrid,
+  CompanionPhoto,
+  RosterShell,
+  StitchedArrow,
+} from "./roster-presentation";
 
 export const revalidate = 86400;
 
@@ -77,21 +74,15 @@ export default async function OrganizationHome({
 
   return (
     <PageViewTransition>
-      <main className={styles.siteShell}>
-        <header className={styles.header}>
-          <Link href={`/${orgSlug}`} aria-label={`${organization.name} home`}>
-            <Image
-              alt="Pawcast"
-              className={styles.wordmark}
-              src={wordmark}
-              preload
-            />
-          </Link>
+      <RosterShell
+        headerAction={
           <Link className={styles.accountLink} href="/account">
             My sponsorship <span aria-hidden="true">↗</span>
           </Link>
-        </header>
-
+        }
+        organizationName={organization.name}
+        orgSlug={orgSlug}
+      >
         <section className={styles.hero} aria-labelledby="roster-title">
           <div className={styles.heroCopy}>
             <StitchBadge className={styles.rescueBadge} tone="moss">
@@ -154,66 +145,38 @@ export default async function OrganizationHome({
         )}
 
         {residents.length ? (
-          <section
-            aria-label="Companions available to sponsor"
-            className={styles.companionGrid}
-          >
+          <CompanionGrid>
             {residents.map((resident, index) => (
-              <article className={styles.companionCard} key={resident.id}>
+              <CompanionCard key={resident.id}>
                 <Link
                   className={styles.photoLink}
                   href={`/${orgSlug}/companions/${resident.id}`}
                   aria-label={`Meet ${resident.name}`}
                   tabIndex={-1}
                 >
-                  <PhotoCharm id={resident.id} />
-                  <ViewTransition
-                    default="none"
-                    name={`companion-${resident.id}`}
-                    share="companion-photo"
-                  >
-                    <PhotoPatch
-                      alt={`${resident.name}, ${resident.breed}`}
-                      className={styles.gridPhoto}
-                      sizes="(max-width: 640px) min(300px, calc(100vw - 80px)), (max-width: 900px) calc((90vw - 48px) / 2), (max-width: 1180px) calc((90vw - 112px) / 3), 316px"
-                      preload={index < 3}
-                      src={resident.photoUrls[0]}
-                    />
-                  </ViewTransition>
+                  <CompanionPhoto preload={index < 3} resident={resident} />
                 </Link>
-                <div className={styles.cardCopy}>
-                  <h2>
+                <CompanionCardCopy
+                  action={
+                    <FeltLink
+                      className={styles.cardLink}
+                      href={`/${orgSlug}/companions/${resident.id}`}
+                      tone="moss"
+                    >
+                      <span>Meet {resident.name}</span>
+                      <StitchedArrow />
+                    </FeltLink>
+                  }
+                  heading={
                     <Link href={`/${orgSlug}/companions/${resident.id}`}>
                       {resident.name}
                     </Link>
-                  </h2>
-                  <p>
-                    {[resident.breed, resident.ageText]
-                      .filter(Boolean)
-                      .join(" · ")}
-                  </p>
-                  {resident.personality.trim() && (
-                    <p className={styles.personality}>{resident.personality}</p>
-                  )}
-                  <FeltLink
-                    className={styles.cardLink}
-                    href={`/${orgSlug}/companions/${resident.id}`}
-                    tone="moss"
-                  >
-                    <span>Meet {resident.name}</span>
-                    <svg
-                      className={styles.stitchedArrow}
-                      viewBox="0 0 36 24"
-                      aria-hidden="true"
-                      focusable="false"
-                    >
-                      <path d="M3 13 C11 10 19 15 31 12 M23 4 L32 12 L24 20" />
-                    </svg>
-                  </FeltLink>
-                </div>
-              </article>
+                  }
+                  resident={resident}
+                />
+              </CompanionCard>
             ))}
-          </section>
+          </CompanionGrid>
         ) : (
           <FeltPanel className={styles.emptyState} tone="oatmeal">
             <h2>No animals are available to sponsor right now.</h2>
@@ -228,7 +191,7 @@ export default async function OrganizationHome({
             staff room
           </Link>
         </footer>
-      </main>
+      </RosterShell>
     </PageViewTransition>
   );
 }
