@@ -325,11 +325,19 @@
   top: 50%;
   left: 50%;
   width: min(680px, calc(100vw - 32px));
-  max-height: calc(100vh - 32px);
-  overflow: auto;
   color: var(--felt-ink);
   outline: none;
   transform: translate(-50%, -50%);
+}
+.connectorDialog,
+.alertDialog {
+  max-height: calc(100vh - 32px);
+  overflow: auto;
+}
+.draftDialog {
+  max-height: calc(100vh - 32px);
+  max-height: calc(100dvh - 32px);
+  overflow: hidden;
 }
 .alertDialog {
   width: min(460px, calc(100vw - 32px));
@@ -337,6 +345,16 @@
 .dialogPanel {
   padding: 24px;
   border-radius: 8px;
+}
+.draftDialogPanel {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  max-height: inherit;
+  padding: 0;
+  overflow: hidden;
+}
+.draftDialogHeader {
+  padding: 24px 24px 0;
 }
 .dialogHeader {
   display: flex;
@@ -368,6 +386,33 @@
   line-height: 1.5;
   opacity: 0.78;
 }
+.draftEditorScroll {
+  min-width: 0;
+  min-height: 0;
+  padding: 0 24px 20px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-color: rgb(61 51 43 / 52%) transparent;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+}
+.draftEditorScroll:focus-visible {
+  outline: 2px solid var(--felt-denim);
+  outline-offset: -3px;
+}
+.draftEditorScroll::-webkit-scrollbar {
+  width: 10px;
+}
+.draftEditorScroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.draftEditorScroll::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background: rgb(61 51 43 / 52%);
+  background-clip: padding-box;
+}
 .alertDialog .dialogDescription {
   margin: 10px 0 22px;
 }
@@ -376,6 +421,13 @@
   justify-content: flex-end;
   gap: 10px;
   margin-top: 12px;
+}
+.draftModalActions {
+  margin: 0;
+  padding: 16px 24px 20px;
+  border-top: 1px solid rgb(61 51 43 / 18%);
+  background: rgb(248 242 231 / 96%);
+  box-shadow: 0 -8px 18px rgb(61 51 43 / 5%);
 }
 .actionStack {
   display: grid;
@@ -1110,9 +1162,30 @@
   .dialogPanel {
     padding: 22px 18px;
   }
+  .draftDialog {
+    width: min(680px, calc(100vw - 24px));
+    max-height: calc(100vh - 24px);
+    max-height: calc(100dvh - 24px);
+  }
+  .draftDialogPanel {
+    padding: 0;
+  }
+  .draftDialogHeader {
+    padding: 18px 18px 0;
+  }
+  .draftDialogHeader .dialogHeader {
+    margin-bottom: 16px;
+  }
+  .draftEditorScroll {
+    padding: 0 18px 16px;
+    scrollbar-gutter: auto;
+  }
   .modalActions {
     align-items: stretch;
     flex-direction: column-reverse;
+  }
+  .draftModalActions {
+    padding: 14px 18px 16px;
   }
   .settings {
     grid-template-columns: 1fr;
@@ -1155,5 +1228,19 @@
 @media (prefers-reduced-motion: reduce) {
   .skeleton::after {
     animation: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .draftEditorScroll {
+    scrollbar-color: auto;
+  }
+  .draftEditorScroll:focus-visible {
+    outline-color: Highlight;
+  }
+  .draftModalActions {
+    border-top-color: CanvasText;
+    background: Canvas;
+    box-shadow: none;
   }
 }

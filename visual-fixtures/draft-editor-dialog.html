@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Draft editor dialog visual fixture</title>
+    <link rel="stylesheet" href="../src/app/globals.css" />
+    <link rel="stylesheet" href="../src/app/felt.css" />
+    <link rel="stylesheet" href="../src/components/admin-ui.module.css" />
+    <link rel="stylesheet" href="../src/app/[orgSlug]/admin/admin.module.css" />
+    <style>
+      body {
+        min-height: 100vh;
+        overflow: hidden;
+      }
+      .fixtureContext {
+        width: min(980px, calc(100% - 32px));
+        margin: 48px auto;
+        color: #3d332b;
+      }
+      .fixtureContext p {
+        max-width: 54rem;
+        line-height: 1.6;
+      }
+      .fixtureEditor {
+        min-height: 10rem;
+        padding: 0.8rem;
+        font-size: 0.88rem;
+        line-height: 1.55;
+      }
+      .fixtureEditor p:first-child {
+        margin-top: 0;
+      }
+      .fixtureEditor p:last-child {
+        margin-bottom: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="fixtureContext">
+      <h1>Staff room</h1>
+      <p>
+        Static visual fixture for the draft editor shell. Add
+        <code>#short</code> to the URL for the short-draft state; the default
+        renders a long draft with overflowing validation content.
+      </p>
+    </main>
+    <div class="dialogOverlay"></div>
+    <section
+      aria-describedby="fixture-description"
+      aria-labelledby="fixture-title"
+      class="draftDialog"
+      role="dialog"
+    >
+      <div class="surface oatmeal dialogPanel draftDialogPanel">
+        <div class="draftDialogHeader">
+          <div class="dialogHeader">
+            <div>
+              <p class="eyebrow">Draft update</p>
+              <h2 id="fixture-title">Edit message</h2>
+            </div>
+            <button aria-label="Close editor" class="button oatmeal">✕</button>
+          </div>
+          <p class="dialogDescription" id="fixture-description">
+            Review the update copy before saving this draft.
+          </p>
+        </div>
+        <div
+          aria-label="Message fields"
+          class="draftEditorScroll"
+          role="region"
+          tabindex="0"
+        >
+          <div class="draftEditor">
+            <label for="fixture-subject">Subject</label>
+            <div class="field">
+              <input
+                id="fixture-subject"
+                value="Biscuit found the best sunny spot"
+              />
+            </div>
+            <label for="fixture-teaser">Teaser</label>
+            <div class="field">
+              <input
+                id="fixture-teaser"
+                value="A relaxed afternoon, a favorite toy, and one very happy pup."
+              />
+            </div>
+            <small class="teaserCounter">68 / 240 characters</small>
+            <label for="fixture-body">Body</label>
+            <div class="field richTextEditorField">
+              <div class="richTextEditor">
+                <div class="richTextToolbar" role="toolbar">
+                  <button class="richTextToolbarButton">B</button>
+                  <button class="richTextToolbarButton"><em>I</em></button>
+                  <button class="richTextToolbarButton">H2</button>
+                  <button class="richTextToolbarButton">• List</button>
+                  <button class="richTextToolbarButton">Link</button>
+                  <button class="richTextToolbarButton">Undo</button>
+                </div>
+                <div class="richTextEditorContent">
+                  <div
+                    class="fixtureEditor"
+                    contenteditable="true"
+                    id="fixture-body"
+                  >
+                    <p>
+                      Biscuit spent Tuesday afternoon stretched out in the sun
+                      after a cheerful walk with a volunteer. He carried his
+                      blue toy back to his bed and settled in for a nap.
+                    </p>
+                    <div data-long>
+                      <p>
+                        Later, he practiced a few cues and politely waited for a
+                        treat. The extra paragraphs make this fixture tall
+                        enough to verify that only the editing region scrolls.
+                      </p>
+                      <p>
+                        His volunteer also noted that he greeted new people
+                        calmly and enjoyed watching the activity from a quiet
+                        corner of the room.
+                      </p>
+                      <p>
+                        This final paragraph represents an unusually long draft
+                        and keeps validation feedback below the editor content.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <aside class="richTextPreview">
+                  <h3>Preview</h3>
+                  <p>
+                    Biscuit spent Tuesday afternoon stretched out in the sun…
+                  </p>
+                </aside>
+                <p class="richTextCounter" data-long>
+                  4,221 / 4,000 characters — shorten this message before saving.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modalActions draftModalActions">
+          <button class="button oatmeal">Cancel</button>
+          <button class="button mustard saveDraftButton">Save changes</button>
+        </div>
+      </div>
+    </section>
+    <script>
+      if (location.hash === "#short") {
+        document.querySelectorAll("[data-long]").forEach((element) => {
+          element.remove();
+        });
+      }
+    </script>
+  </body>
+</html>

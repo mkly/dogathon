@@ -402,104 +402,115 @@ export function DraftEditor({
                         transition={motionTransition}
                       >
                         <AdminSurface
-                          className={styles.dialogPanel}
+                          className={`${styles.dialogPanel} ${styles.draftDialogPanel}`}
                           tone="oatmeal"
                         >
-                          <div className={styles.dialogHeader}>
-                            <div>
-                              <AdminEyebrow>Draft update</AdminEyebrow>
-                              <Dialog.Title asChild>
-                                <h2>Edit message</h2>
-                              </Dialog.Title>
-                            </div>
-                            <AdminButton
-                              aria-label="Close editor"
-                              onClick={closeEditor}
-                              tone="oatmeal"
-                            >
-                              ✕
-                            </AdminButton>
-                          </div>
-                          <Dialog.Description
-                            className={styles.dialogDescription}
-                          >
-                            Review the update copy before saving this draft.
-                          </Dialog.Description>
-                          <div className={styles.draftEditor}>
-                            <label htmlFor={`subject-${id}`}>Subject</label>
-                            <AdminField>
-                              <input
-                                autoFocus
-                                id={`subject-${id}`}
-                                onChange={(event) =>
-                                  setSubject(event.target.value)
-                                }
-                                required
-                                value={subject}
-                              />
-                            </AdminField>
-                            <label htmlFor={`teaser-${id}`}>Teaser</label>
-                            <AdminField>
-                              <input
-                                aria-describedby={`teaser-counter-${id}`}
-                                id={`teaser-${id}`}
-                                maxLength={240}
-                                onChange={(event) =>
-                                  setTeaser(event.target.value)
-                                }
-                                required
-                                value={teaser}
-                              />
-                            </AdminField>
-                            <small
-                              aria-live="polite"
-                              className={styles.teaserCounter}
-                              id={`teaser-counter-${id}`}
-                            >
-                              {teaser.length} / 240 characters
-                            </small>
-                            <label
-                              htmlFor={`body-${id}`}
-                              id={`body-label-${id}`}
-                            >
-                              Body
-                            </label>
-                            <AdminField className={styles.richTextEditorField}>
-                              <MarkdownEditor
-                                classNames={richTextEditorClassNames}
-                                defaultValue={savedDraft.bodyText}
-                                disabled={pending !== null}
-                                id={`body-${id}`}
-                                labelledBy={`body-label-${id}`}
-                                maxLength={SPONSOR_UPDATE_BODY_MAX_LENGTH}
-                                onChange={setBodyText}
-                                onValidityChange={setBodyOverLimit}
-                              />
-                            </AdminField>
-                            <div className={styles.modalActions}>
+                          <div className={styles.draftDialogHeader}>
+                            <div className={styles.dialogHeader}>
+                              <div>
+                                <AdminEyebrow>Draft update</AdminEyebrow>
+                                <Dialog.Title asChild>
+                                  <h2>Edit message</h2>
+                                </Dialog.Title>
+                              </div>
                               <AdminButton
-                                disabled={pending === "save"}
+                                aria-label="Close editor"
                                 onClick={closeEditor}
                                 tone="oatmeal"
                               >
-                                Cancel
-                              </AdminButton>
-                              <AdminButton
-                                className={styles.saveDraftButton}
-                                disabled={
-                                  pending !== null ||
-                                  bodyOverLimit ||
-                                  !teaser.trim() ||
-                                  !bodyText.trim()
-                                }
-                                onClick={save}
-                                tone="mustard"
-                              >
-                                {pending === "save"
-                                  ? "Saving…"
-                                  : "Save changes"}
+                                ✕
                               </AdminButton>
                             </div>
+                            <Dialog.Description
+                              className={styles.dialogDescription}
+                            >
+                              Review the update copy before saving this draft.
+                            </Dialog.Description>
+                          </div>
+                          <div
+                            aria-label="Message fields"
+                            className={styles.draftEditorScroll}
+                            role="region"
+                            tabIndex={0}
+                          >
+                            <div className={styles.draftEditor}>
+                              <label htmlFor={`subject-${id}`}>Subject</label>
+                              <AdminField>
+                                <input
+                                  autoFocus
+                                  id={`subject-${id}`}
+                                  onChange={(event) =>
+                                    setSubject(event.target.value)
+                                  }
+                                  required
+                                  value={subject}
+                                />
+                              </AdminField>
+                              <label htmlFor={`teaser-${id}`}>Teaser</label>
+                              <AdminField>
+                                <input
+                                  aria-describedby={`teaser-counter-${id}`}
+                                  id={`teaser-${id}`}
+                                  maxLength={240}
+                                  onChange={(event) =>
+                                    setTeaser(event.target.value)
+                                  }
+                                  required
+                                  value={teaser}
+                                />
+                              </AdminField>
+                              <small
+                                aria-live="polite"
+                                className={styles.teaserCounter}
+                                id={`teaser-counter-${id}`}
+                              >
+                                {teaser.length} / 240 characters
+                              </small>
+                              <label
+                                htmlFor={`body-${id}`}
+                                id={`body-label-${id}`}
+                              >
+                                Body
+                              </label>
+                              <AdminField
+                                className={styles.richTextEditorField}
+                              >
+                                <MarkdownEditor
+                                  classNames={richTextEditorClassNames}
+                                  defaultValue={savedDraft.bodyText}
+                                  disabled={pending !== null}
+                                  id={`body-${id}`}
+                                  labelledBy={`body-label-${id}`}
+                                  maxLength={SPONSOR_UPDATE_BODY_MAX_LENGTH}
+                                  onChange={setBodyText}
+                                  onValidityChange={setBodyOverLimit}
+                                />
+                              </AdminField>
+                            </div>
+                          </div>
+                          <div
+                            className={`${styles.modalActions} ${styles.draftModalActions}`}
+                          >
+                            <AdminButton
+                              disabled={pending === "save"}
+                              onClick={closeEditor}
+                              tone="oatmeal"
+                            >
+                              Cancel
+                            </AdminButton>
+                            <AdminButton
+                              className={styles.saveDraftButton}
+                              disabled={
+                                pending !== null ||
+                                bodyOverLimit ||
+                                !teaser.trim() ||
+                                !bodyText.trim()
+                              }
+                              onClick={save}
+                              tone="mustard"
+                            >
+                              {pending === "save" ? "Saving…" : "Save changes"}
+                            </AdminButton>
                           </div>
                         </AdminSurface>
                       </motion.div>
