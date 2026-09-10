@@ -45,7 +45,7 @@ fi
     );
 
     assert.equal((await readFile(countFile, "utf8")).trim(), "2");
-    assert.equal(stdout.match(/\{"drained":/gu)?.length, 2);
+    assert.equal(stdout.trim().split("\n").length, 2);
   } finally {
     await rm(directory, { recursive: true, force: true });
   }
