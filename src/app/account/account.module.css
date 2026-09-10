@@ -34,6 +34,25 @@
   font-weight: 650;
 }
 
+.switchConfirmation {
+  display: grid;
+  gap: 3px;
+  margin: 0 0 20px;
+  padding: 14px 16px;
+  border: 1px solid rgb(61 51 43 / 24%);
+  border-radius: 7px;
+  background: var(--felt-moss);
+  box-shadow: 3px 3px 0 rgb(61 51 43 / 16%);
+  color: var(--felt-cream);
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+.switchConfirmation strong {
+  font-size: 0.95rem;
+  font-weight: 900;
+}
+
 .layout {
   display: grid;
   grid-template-columns: minmax(240px, 0.72fr) minmax(0, 1.4fr);
