@@ -4,12 +4,8 @@ import useEmblaCarousel from "embla-carousel-react";
 import Image from "next/image";
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 
+import type { UpdatePhoto } from "./photo-presentation";
 import styles from "./updates.module.css";
-
-export type UpdatePhoto = {
-  caption: string | null;
-  src: string;
-};
 
 type PhotoSlideshowProps = {
   companionName: string;
