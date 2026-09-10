@@ -62,6 +62,7 @@ export async function composeGraduationDraft(
     }),
     prisma.rescueSettings.findUnique({ where: { orgId } }),
   ]);
+  signal?.throwIfAborted();
   if (!draft) return "not-found";
   // Unavailability notices share the graduation type but are not adoption
   // stories, so the adoption-story composer must never rewrite them.
@@ -110,6 +111,7 @@ export async function composeGraduationDraft(
       draft.resident.id,
     ),
   });
+  signal?.throwIfAborted();
 
   const checkInIds = draft.resident.checkIns.map(
     ({ id: checkInId }) => checkInId,
@@ -118,6 +120,7 @@ export async function composeGraduationDraft(
   return prisma
     .$transaction(
       async (tx) => {
+        signal?.throwIfAborted();
         const stillEligible = await tx.resident.findFirst({
           where: {
             id: draft.residentId,

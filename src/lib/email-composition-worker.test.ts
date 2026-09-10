@@ -102,6 +102,33 @@ test("fails a composition that exceeds its drain budget", async () => {
   assert.match(message, /exceeded its 10ms drain budget/);
 });
 
+test("does not complete a job whose composer resolves after the deadline", async () => {
+  let completed = false;
+  let message = "";
+  const drain = createEmailCompositionDrainer({
+    fetch: async () => claim,
+    composeRegular: async () => {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      return "composed";
+    },
+    composeGraduation: async () => "not-found",
+    complete: async () => {
+      completed = true;
+      return view("completed");
+    },
+    fail: async (_jobId, error) => {
+      message = error;
+      return { ...view("failed"), errorMessage: error };
+    },
+    reject: async () => view("failed"),
+  });
+
+  const result = await drain({ budgetMs: 5 });
+  assert.equal(result.drained, true);
+  assert.equal(completed, false);
+  assert.match(message, /exceeded its 5ms drain budget/);
+});
+
 test("an empty composition queue is a successful no-op", async () => {
   const drain = createEmailCompositionDrainer({
     fetch: async () => null,

@@ -44,8 +44,12 @@ import {
 import { SPONSOR_UPDATE_BODY_MAX_LENGTH } from "@/lib/sponsor-update-body";
 import { pushToast } from "@/lib/toast";
 import {
+  emailCompositionPollExpired,
   EMAIL_COMPOSITION_POLL_INTERVAL_MS,
   type EmailCompositionJobView,
+  parsePendingEmailCompositionJob,
+  pendingEmailCompositionJob,
+  type PendingEmailCompositionJob,
 } from "@/lib/email-composition-client";
 
 import { refreshAdminPage, saveSettings, type SettingsState } from "./actions";
@@ -101,9 +105,7 @@ function useCompositionJob(
 ) {
   const apiFetch = useApiFetch();
   const storageKey = `dogathon:composition:${orgSlug}:${targetId}`;
-  const [queued, setQueued] = useState<{ id: string; success: string } | null>(
-    null,
-  );
+  const [queued, setQueued] = useState<PendingEmailCompositionJob | null>(null);
   const completedRef = useRef(onCompleted);
 
   useEffect(() => {
@@ -113,12 +115,18 @@ function useCompositionJob(
   useEffect(() => {
     const saved = window.localStorage.getItem(storageKey);
     if (!saved) return;
-    try {
-      const restored = JSON.parse(saved) as { id: string; success: string };
-      queueMicrotask(() => setQueued(restored));
-    } catch {
+    const restored = parsePendingEmailCompositionJob(saved);
+    if (!restored) {
       window.localStorage.removeItem(storageKey);
+      return;
     }
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (!cancelled) setQueued(restored);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [storageKey]);
 
   useEffect(() => {
@@ -130,6 +138,14 @@ function useCompositionJob(
       if (!cancelled) setQueued(null);
     };
     const poll = async () => {
+      if (emailCompositionPollExpired(queued)) {
+        clear();
+        pushToast(
+          "error",
+          "Draft composition is taking longer than expected. Try again to recover its status safely.",
+        );
+        return;
+      }
       try {
         const response = await apiFetch(
           `/api/sponsor-updates/composition/${queued.id}`,
@@ -139,6 +155,7 @@ function useCompositionJob(
         const { job } = (await response.json()) as {
           job: EmailCompositionJobView;
         };
+        if (cancelled) return;
         if (job.status === "completed") {
           clear();
           await completedRef.current(job);
@@ -153,8 +170,21 @@ function useCompositionJob(
           );
           return;
         }
-        timer = setTimeout(poll, EMAIL_COMPOSITION_POLL_INTERVAL_MS);
+        if (job.status !== queued.status) {
+          const next = { ...queued, status: job.status };
+          window.localStorage.setItem(storageKey, JSON.stringify(next));
+          setQueued(next);
+          return;
+        }
+        timer = setTimeout(
+          poll,
+          Math.min(
+            EMAIL_COMPOSITION_POLL_INTERVAL_MS,
+            Math.max(0, queued.deadline - Date.now()),
+          ),
+        );
       } catch (error) {
+        if (cancelled) return;
         clear();
         pushToast(
           "error",
@@ -173,8 +203,9 @@ function useCompositionJob(
 
   return {
     active: queued !== null,
+    status: queued?.status ?? null,
     begin(job: EmailCompositionJobView, success: string) {
-      const next = { id: job.id, success };
+      const next = pendingEmailCompositionJob(job, success);
       window.localStorage.setItem(storageKey, JSON.stringify(next));
       setQueued(next);
     },
@@ -437,11 +468,20 @@ export function DraftEditor({
                   onClick={composeGraduation}
                   tone="denim"
                 >
-                  {pending === "compose" || composition.active
-                    ? "Weaving in recent chats…"
-                    : `Weave in ${pendingChatCount} recent chats`}
+                  {composition.status === "queued"
+                    ? "Queued…"
+                    : pending === "compose" || composition.active
+                      ? "Weaving in recent chats…"
+                      : `Weave in ${pendingChatCount} recent chats`}
                 </AdminButton>
               ) : null}
+              <span aria-live="polite" className={styles.srOnly} role="status">
+                {composition.status === "queued"
+                  ? "Draft composition queued."
+                  : composition.status === "composing"
+                    ? "Draft composition in progress."
+                    : ""}
+              </span>
               <AdminButton
                 aria-describedby={
                   emailConnected ? undefined : EMAIL_CONNECTOR_NOTICE_ID
@@ -774,11 +814,17 @@ export function ComposeButton({
         onClick={compose}
         tone="denim"
       >
-        {pending || composition.active ? "Composing…" : "Compose update"}
+        {composition.status === "queued"
+          ? "Queued…"
+          : pending || composition.active
+            ? "Composing…"
+            : "Compose update"}
       </AdminButton>
       {pending || composition.active ? (
-        <small className={styles.composeHint}>
-          Queued safely. You can leave this page and return later.
+        <small aria-live="polite" className={styles.composeHint} role="status">
+          {composition.status === "composing"
+            ? "Composing in the background. You can leave this page and return later."
+            : "Queued safely. You can leave this page and return later."}
         </small>
       ) : null}
     </div>

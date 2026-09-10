@@ -56,7 +56,9 @@ export function createEmailCompositionQueue(boss: CompositionBoss) {
       await boss.findJobs<EmailCompositionJobData>(EMAIL_COMPOSITION_QUEUE, {
         key: singletonKey,
       })
-    ).find((job) => ["created", "retry", "active"].includes(job.state));
+    ).toSorted(
+      (left, right) => right.createdOn.getTime() - left.createdOn.getTime(),
+    )[0];
     if (!existing)
       throw new Error(`Composition singleton ${singletonKey} disappeared`);
     return publicEmailCompositionJob(existing);

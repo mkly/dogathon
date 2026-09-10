@@ -47,6 +47,7 @@ export function createEmailCompositionDrainer(
       ? AbortSignal.any([job.signal, budgetSignal])
       : budgetSignal;
     try {
+      signal.throwIfAborted();
       const result =
         job.data.kind === "regular"
           ? await dependencies.composeRegular(
@@ -60,6 +61,7 @@ export function createEmailCompositionDrainer(
               job.data.orgId,
               signal,
             );
+      signal.throwIfAborted();
       if (result !== "composed") {
         return {
           drained: true as const,

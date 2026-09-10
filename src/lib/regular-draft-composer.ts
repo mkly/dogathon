@@ -66,6 +66,7 @@ export async function composeRegularDraft(
     }),
     prisma.rescueSettings.findUnique({ where: { orgId } }),
   ]);
+  signal?.throwIfAborted();
   if (!resident) return "not-found";
   if (!resident.available) return "not-available";
   if (resident.checkIns.length === 0) return "no-pending-chats";
@@ -108,12 +109,14 @@ export async function composeRegularDraft(
       resident.id,
     ),
   });
+  signal?.throwIfAborted();
 
   const checkInIds = resident.checkIns.map(({ id }) => id);
   const photoIds = new Set(photos.map(({ id }) => id));
   return prisma
     .$transaction(
       async (tx) => {
+        signal?.throwIfAborted();
         const stillEligible = await tx.resident.findFirst({
           where: { id: residentId, orgId, available: true },
           select: { id: true },
