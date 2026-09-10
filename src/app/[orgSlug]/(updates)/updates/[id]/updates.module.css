@@ -18,6 +18,13 @@
   padding: clamp(3rem, 9vw, 7rem) 1rem 4rem;
 }
 
+/* Keep update previews and published updates free of the site's ink effect. */
+.updateCanvas h1,
+.updateCanvas h2,
+.updateCanvas h3 {
+  filter: none;
+}
+
 .articleShell article {
   background: var(--update-paper);
   border: 1px solid color-mix(in srgb, var(--update-line) 72%, transparent);
