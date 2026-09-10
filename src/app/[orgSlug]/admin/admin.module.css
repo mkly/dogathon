@@ -414,6 +414,44 @@
 .settingsStack {
   display: grid;
   gap: 24px;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+/* Keep native controls and the rich-text editor on the same settings scale.
+   Scope these rules here so the staff dashboard keeps its compact controls. */
+.settingsStack form :is(input, textarea, select, [contenteditable="true"]) {
+  font-family: inherit;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  line-height: 1.5;
+  letter-spacing: normal;
+}
+
+.settingsStack button {
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: normal;
+}
+
+.settingsStack .richTextPreview p,
+.settingsStack .richTextEditorLoading {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.settingsStack .richTextPreview h3 {
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.settingsStack .richTextCounter {
+  font-size: 0.75rem;
+  font-weight: 600;
 }
 
 .settingsNotice {
@@ -491,15 +529,21 @@
   gap: 24px;
 }
 
-.connectorHeader h2 {
+.connectorHeader h2,
+.settingsIntro > h2 {
   margin: 0;
-  font-size: 1.65rem;
+  font-size: 1.5rem;
+  font-weight: 800;
+  line-height: 1.25;
+  letter-spacing: -0.025em;
 }
 .connectorHeader p:last-child {
   max-width: 620px;
-  margin: 8px 0 0;
-  font-size: 0.85rem;
-  font-weight: 700;
+  margin: 12px 0 0;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  line-height: 1.55;
+  opacity: 0.88;
 }
 .connectorStatus {
   display: flex;
@@ -552,9 +596,9 @@
   color: var(--felt-ink);
 }
 .settingsIntro > p:last-child {
-  margin: 16px 0 0;
-  font-size: 0.88rem;
-  font-weight: 700;
+  margin: 12px 0 0;
+  font-size: 0.9375rem;
+  font-weight: 500;
   line-height: 1.55;
   opacity: 0.88;
 }
@@ -564,25 +608,25 @@
 }
 .settingsForm label {
   margin: 6px 0 0;
-  font-size: 0.7rem;
-  font-weight: 900;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: normal;
+  text-transform: none;
 }
 .tierHeader {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   margin-top: 6px;
-  font-size: 0.7rem;
-  font-weight: 900;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: normal;
+  text-transform: none;
 }
 .tierCount {
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.02em;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: normal;
   text-transform: none;
   opacity: 0.6;
 }
@@ -724,8 +768,8 @@
 }
 .tierCounter {
   justify-self: end;
-  font-size: 0.66rem;
-  font-weight: 800;
+  font-size: 0.75rem;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
   opacity: 0.5;
 }
@@ -841,9 +885,9 @@
 }
 .fieldHint {
   margin: -4px 0 0;
-  font-size: 0.75rem;
-  font-weight: 700;
-  line-height: 1.45;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1.5;
   opacity: 0.75;
 }
 
