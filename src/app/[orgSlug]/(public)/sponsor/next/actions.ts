@@ -9,6 +9,10 @@ import {
   transferSponsorship,
 } from "@/lib/sponsorship-transfer";
 import { uuidSchema } from "@/lib/uuid";
+import {
+  sponsorAccountSignInPath,
+  sponsorAccountSwitchPath,
+} from "@/lib/sponsor-account-navigation";
 
 import {
   resolveSponsorshipSelection,
@@ -50,7 +54,10 @@ export async function transferSponsorshipAction(
     }
     throw error;
   }
-  redirect(destination(orgSlug, selection));
+  const accountPath = sponsorAccountSwitchPath(sponsorship.id);
+  redirect(
+    selection.token ? sponsorAccountSignInPath(accountPath) : accountPath,
+  );
 }
 
 export async function endSponsorshipAction(

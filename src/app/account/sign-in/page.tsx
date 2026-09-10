@@ -5,16 +5,25 @@ import { FeltPanel } from "@/components/felt";
 import { MagicLinkForm } from "@/components/magic-link-form";
 import { PageViewTransition } from "@/components/page-view-transition";
 import { getSession } from "@/lib/auth-session";
+import { sponsorAccountReturnPath } from "@/lib/sponsor-account-navigation";
 
 import styles from "../../staff/sign-in/sign-in.module.css";
 
 export const dynamic = "force-dynamic";
 
-export default async function SponsorSignInPage() {
+type SponsorSignInPageProps = {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+};
+
+export default async function SponsorSignInPage({
+  searchParams,
+}: SponsorSignInPageProps) {
+  const query = await searchParams;
+  const redirectTo = sponsorAccountReturnPath(query.next);
   const session = await getSession(await headers());
 
   if (session) {
-    redirect("/account");
+    redirect(redirectTo);
   }
 
   return (
@@ -26,7 +35,7 @@ export default async function SponsorSignInPage() {
           <p className={styles.lede}>
             We&apos;ll email you a secure link—no password needed.
           </p>
-          <MagicLinkForm />
+          <MagicLinkForm callbackURL={redirectTo} />
         </FeltPanel>
       </main>
     </PageViewTransition>

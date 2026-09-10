@@ -13,10 +13,12 @@ import {
 } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 import { getSponsorContext } from "@/lib/sponsor-access";
+import { switchedSponsorshipId } from "@/lib/sponsor-account-navigation";
 
 import { BillingPortalForm, SponsorProfileForm } from "./account-forms";
 import { sponsorshipAccountActions } from "./account-view";
 import styles from "./account.module.css";
+import { SwitchConfirmation } from "./switch-confirmation";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +27,14 @@ export const metadata: Metadata = {
   description: "Manage your Dogathon sponsorships and contact preferences.",
 };
 
-export default async function SponsorAccountPage() {
+type SponsorAccountPageProps = {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+};
+
+export default async function SponsorAccountPage({
+  searchParams,
+}: SponsorAccountPageProps) {
+  const switchedId = switchedSponsorshipId(await searchParams);
   const requestHeaders = await headers();
   const session = await getSession(requestHeaders);
 
@@ -66,6 +75,9 @@ export default async function SponsorAccountPage() {
     },
     orderBy: { createdAt: "desc" },
   });
+  const switchedSponsorship = sponsorships.find(
+    (record) => record.id === switchedId,
+  );
 
   return (
     <PageViewTransition>
@@ -80,6 +92,13 @@ export default async function SponsorAccountPage() {
           </div>
           <SignOutButton redirectTo="/account/sign-in" />
         </header>
+
+        {switchedSponsorship ? (
+          <SwitchConfirmation
+            companionName={switchedSponsorship.resident.name}
+            organizationName={switchedSponsorship.organization.name}
+          />
+        ) : null}
 
         <div className={styles.layout}>
           <AdminSurface className={styles.profile} tone="mustard">

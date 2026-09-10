@@ -7,7 +7,11 @@ import { authClient } from "@/lib/auth-client";
 
 import styles from "./auth-form.module.css";
 
-export function MagicLinkForm() {
+export function MagicLinkForm({
+  callbackURL = "/account",
+}: {
+  callbackURL?: string;
+}) {
   const [emailSent, setEmailSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -20,7 +24,7 @@ export function MagicLinkForm() {
     const form = new FormData(event.currentTarget);
     const email = String(form.get("email") ?? "").trim();
     const result = await authClient.signIn.magicLink({
-      callbackURL: "/account",
+      callbackURL,
       email,
     });
 
