@@ -167,6 +167,7 @@ svg.stitch.fine rect.thread {
   cursor: pointer;
   font: inherit;
   font-weight: 900;
+  text-decoration: none;
   transition:
     filter var(--motion-duration-fast) var(--motion-ease-standard),
     opacity var(--motion-duration-fast) var(--motion-ease-standard),

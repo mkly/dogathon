@@ -157,14 +157,6 @@
   color: var(--felt-ink);
   font-size: 15px;
   font-weight: 800;
-  text-decoration: underline;
-  text-decoration-color: var(--felt-mustard);
-  text-decoration-thickness: 2px;
-  text-underline-offset: 5px;
-}
-
-.cardLink:hover {
-  text-decoration-color: currentColor;
 }
 
 .emptyState,
