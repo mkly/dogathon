@@ -196,11 +196,13 @@ export function OrganizationsRouteLoading() {
     <main
       aria-busy="true"
       aria-label="Loading rescue organizations"
-      className={styles.organizations}
+      className={styles.page}
     >
-      <Skeleton className={styles.organizationCard} />
-      <Skeleton className={styles.organizationCard} />
-      <Skeleton className={styles.organizationCard} />
+      <Skeleton className={styles.header} />
+      <div className={styles.stack}>
+        <Skeleton className={styles.settingsCard} />
+        <Skeleton className={styles.settingsEditorCard} />
+      </div>
     </main>
   );
 }

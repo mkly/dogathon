@@ -163,20 +163,6 @@
   min-height: 430px;
 }
 
-.organizations {
-  display: grid;
-  width: min(100%, 760px);
-  min-height: 100svh;
-  margin: 0 auto;
-  align-content: start;
-  gap: 24px;
-  padding: 32px 20px 56px;
-}
-
-.organizationCard {
-  min-height: 150px;
-}
-
 .publicPage {
   width: min(100%, 980px);
   min-height: 100svh;

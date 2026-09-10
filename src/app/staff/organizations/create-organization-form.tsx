@@ -2,8 +2,8 @@
 
 import { useActionState, useState } from "react";
 
-import { FeltButton, FeltField } from "@/components/felt";
-import styles from "@/components/auth-form.module.css";
+import { AdminButton, AdminField } from "@/components/admin-ui";
+import styles from "./organizations.module.css";
 import {
   organizationSlug,
   organizationSlugWhileTyping,
@@ -24,7 +24,7 @@ export function CreateOrganizationForm() {
   return (
     <form action={formAction} className={styles.form}>
       <label htmlFor="organization-name">Rescue name</label>
-      <FeltField>
+      <AdminField>
         <input
           id="organization-name"
           name="name"
@@ -34,10 +34,13 @@ export function CreateOrganizationForm() {
           }}
           required
         />
-      </FeltField>
+      </AdminField>
       <label htmlFor="organization-slug">Rescue URL name</label>
-      <FeltField>
+      <AdminField>
         <input
+          aria-describedby="organization-slug-help"
+          autoCapitalize="none"
+          spellCheck={false}
           id="organization-slug"
           name="slug"
           onBlur={() => setSlug(organizationSlug(slug))}
@@ -52,15 +55,21 @@ export function CreateOrganizationForm() {
           required
           value={slug}
         />
-      </FeltField>
+      </AdminField>
+      <p className={styles.helper} id="organization-slug-help">
+        Your public page will be at /{slug || "your-rescue"}. Use lowercase
+        letters, numbers, and hyphens.
+      </p>
       {state.error ? (
         <p className={styles.error} role="alert">
           {state.error}
         </p>
       ) : null}
-      <FeltButton disabled={pending} tone="moss" type="submit">
-        {pending ? "Creating…" : "Create organization"}
-      </FeltButton>
+      <div className={styles.saveRow}>
+        <AdminButton disabled={pending} tone="moss" type="submit">
+          {pending ? "Creating…" : "Create organization"}
+        </AdminButton>
+      </div>
     </form>
   );
 }
