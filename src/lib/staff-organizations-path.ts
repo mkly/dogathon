@@ -20,9 +20,17 @@ export function staffOrganizationsSignInPath(searchParams: SearchParams) {
 
 export const AUTHORIZED_STAFF_ROLES = ["owner", "admin", "member"] as const;
 export type AuthorizedStaffRole = (typeof AUTHORIZED_STAFF_ROLES)[number];
+const ORGANIZATION_MEMBERSHIP_ROLES = [
+  ...AUTHORIZED_STAFF_ROLES,
+  "volunteer",
+] as const;
 
 export function isAuthorizedStaffMembership(role: string): boolean {
   return (AUTHORIZED_STAFF_ROLES as readonly string[]).includes(role);
+}
+
+function isOrganizationMembership(role: string): boolean {
+  return (ORGANIZATION_MEMBERSHIP_ROLES as readonly string[]).includes(role);
 }
 
 export function sanitizeStaffSignInNext(candidate: unknown): string | null {
@@ -75,7 +83,7 @@ export function extractOrgSlugFromPath(path: string): string | null {
   return null;
 }
 
-export type AuthorizedStaffOrganization = {
+export type StaffOrganizationMembership = {
   id: string;
   name: string;
   slug: string;
@@ -83,9 +91,7 @@ export type AuthorizedStaffOrganization = {
 };
 
 export type StaffSignInDependencies = {
-  findAuthorizedOrganizations: (
-    userId: string,
-  ) => Promise<AuthorizedStaffOrganization[]>;
+  findOrganizations: (userId: string) => Promise<StaffOrganizationMembership[]>;
   setActiveOrganization: (
     organizationId: string,
     requestHeaders: Headers,
@@ -93,7 +99,7 @@ export type StaffSignInDependencies = {
 };
 
 export const defaultStaffSignInDependencies: StaffSignInDependencies = {
-  findAuthorizedOrganizations: async (userId: string) => {
+  findOrganizations: async (userId: string) => {
     const { prisma } = await import("@/lib/prisma");
     const members = await prisma.member.findMany({
       where: { userId },
@@ -105,7 +111,7 @@ export const defaultStaffSignInDependencies: StaffSignInDependencies = {
     });
 
     return members
-      .filter((m) => isAuthorizedStaffMembership(m.role))
+      .filter((m) => isOrganizationMembership(m.role))
       .map((m) => ({
         id: m.organization.id,
         name: m.organization.name,
@@ -132,15 +138,24 @@ export async function resolveStaffSignInDestination(
   dependencies: StaffSignInDependencies = defaultStaffSignInDependencies,
 ): Promise<string> {
   const safeNext = sanitizeStaffSignInNext(candidateNext);
-  const authorizedOrgs = await dependencies.findAuthorizedOrganizations(userId);
+  const organizations = await dependencies.findOrganizations(userId);
+  const authorizedStaffOrganizations = organizations.filter((organization) =>
+    isAuthorizedStaffMembership(organization.role),
+  );
 
   if (safeNext && !isDefaultStaffDestination(safeNext)) {
     const targetOrgSlug = extractOrgSlugFromPath(safeNext);
     if (targetOrgSlug) {
-      const matchingOrg = authorizedOrgs.find(
+      const matchingOrg = organizations.find(
         (org) => org.slug === targetOrgSlug,
       );
-      if (matchingOrg) {
+      const targetArea = safeNext.split("?")[0].split("#")[0].split("/")[2];
+      const authorizedForTarget =
+        matchingOrg &&
+        (targetArea === "volunteer"
+          ? isOrganizationMembership(matchingOrg.role)
+          : isAuthorizedStaffMembership(matchingOrg.role));
+      if (matchingOrg && authorizedForTarget) {
         await dependencies.setActiveOrganization(
           matchingOrg.id,
           requestHeaders,
@@ -154,8 +169,8 @@ export async function resolveStaffSignInDestination(
     }
   }
 
-  if (authorizedOrgs.length === 1) {
-    const singleOrg = authorizedOrgs[0];
+  if (authorizedStaffOrganizations.length === 1) {
+    const singleOrg = authorizedStaffOrganizations[0];
     await dependencies.setActiveOrganization(singleOrg.id, requestHeaders);
     return `/${singleOrg.slug}/admin`;
   }

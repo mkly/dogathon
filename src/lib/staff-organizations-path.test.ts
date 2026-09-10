@@ -9,7 +9,7 @@ import {
   sanitizeStaffSignInNext,
   staffOrganizationsPath,
   staffOrganizationsSignInPath,
-  type AuthorizedStaffOrganization,
+  type StaffOrganizationMembership,
   type StaffSignInDependencies,
 } from "./staff-organizations-path.ts";
 
@@ -94,7 +94,7 @@ test("isAuthorizedStaffMembership only authorizes owner, admin, and member roles
   assert.equal(isAuthorizedStaffMembership("unknown"), false);
 });
 
-function createMockDeps(orgs: AuthorizedStaffOrganization[]): {
+function createMockDeps(orgs: StaffOrganizationMembership[]): {
   activated: string[];
   deps: StaffSignInDependencies;
 } {
@@ -102,7 +102,7 @@ function createMockDeps(orgs: AuthorizedStaffOrganization[]): {
   return {
     activated,
     deps: {
-      findAuthorizedOrganizations: async () => orgs,
+      findOrganizations: async () => orgs,
       setActiveOrganization: async (orgId: string) => {
         activated.push(orgId);
       },
@@ -111,7 +111,7 @@ function createMockDeps(orgs: AuthorizedStaffOrganization[]): {
 }
 
 test("single-organization staff is activated and redirected directly to /[orgSlug]/admin", async () => {
-  const org: AuthorizedStaffOrganization = {
+  const org: StaffOrganizationMembership = {
     id: "org-single",
     name: "Happy Paws",
     slug: "happy-paws",
@@ -132,7 +132,7 @@ test("single-organization staff is activated and redirected directly to /[orgSlu
 });
 
 test("single-organization staff signing in with default /staff/organizations lands directly in admin room", async () => {
-  const org: AuthorizedStaffOrganization = {
+  const org: StaffOrganizationMembership = {
     id: "org-single",
     name: "Happy Paws",
     slug: "happy-paws",
@@ -153,7 +153,7 @@ test("single-organization staff signing in with default /staff/organizations lan
 });
 
 test("multiple-organization staff retain the organization picker without activating any org", async () => {
-  const orgs: AuthorizedStaffOrganization[] = [
+  const orgs: StaffOrganizationMembership[] = [
     { id: "org-1", name: "Happy Paws", slug: "happy-paws", role: "owner" },
     { id: "org-2", name: "City Hounds", slug: "city-hounds", role: "member" },
   ];
@@ -186,9 +186,15 @@ test("staff with zero organizations retain the existing onboarding / organizatio
   assert.deepEqual(activated, []);
 });
 
-test("volunteer-only members are excluded from authorized staff and retain organization picker without looping", async () => {
-  // A volunteer membership has role "volunteer" which does not qualify as an authorized staff admin
-  const { activated, deps } = createMockDeps([]);
+test("volunteer-only members are excluded from default staff selection and retain the organization picker", async () => {
+  const { activated, deps } = createMockDeps([
+    {
+      id: "org-volunteer",
+      name: "Happy Paws",
+      slug: "happy-paws",
+      role: "volunteer",
+    },
+  ]);
   const headers = new Headers();
 
   const destination = await resolveStaffSignInDestination(
@@ -202,8 +208,51 @@ test("volunteer-only members are excluded from authorized staff and retain organ
   assert.deepEqual(activated, []);
 });
 
+test("explicit volunteer return flows activate an authorized volunteer membership", async () => {
+  const { activated, deps } = createMockDeps([
+    {
+      id: "org-volunteer",
+      name: "Happy Paws",
+      slug: "happy-paws",
+      role: "volunteer",
+    },
+  ]);
+  const headers = new Headers();
+
+  const destination = await resolveStaffSignInDestination(
+    headers,
+    "user-volunteer",
+    "/happy-paws/volunteer",
+    deps,
+  );
+
+  assert.equal(destination, "/happy-paws/volunteer");
+  assert.deepEqual(activated, ["org-volunteer"]);
+});
+
+test("volunteer-only memberships cannot use explicit admin return flows", async () => {
+  const { activated, deps } = createMockDeps([
+    {
+      id: "org-volunteer",
+      name: "Happy Paws",
+      slug: "happy-paws",
+      role: "volunteer",
+    },
+  ]);
+
+  const destination = await resolveStaffSignInDestination(
+    new Headers(),
+    "user-volunteer",
+    "/happy-paws/admin",
+    deps,
+  );
+
+  assert.equal(destination, "/staff/organizations");
+  assert.deepEqual(activated, []);
+});
+
 test("active-organization selection activates the requested authorized organization when explicit", async () => {
-  const orgs: AuthorizedStaffOrganization[] = [
+  const orgs: StaffOrganizationMembership[] = [
     { id: "org-1", name: "Happy Paws", slug: "happy-paws", role: "owner" },
     { id: "org-2", name: "City Hounds", slug: "city-hounds", role: "admin" },
   ];
@@ -222,7 +271,7 @@ test("active-organization selection activates the requested authorized organizat
 });
 
 test("explicit next destinations preserve safe non-organization return flows", async () => {
-  const org: AuthorizedStaffOrganization = {
+  const org: StaffOrganizationMembership = {
     id: "org-1",
     name: "Happy Paws",
     slug: "happy-paws",
@@ -243,7 +292,7 @@ test("explicit next destinations preserve safe non-organization return flows", a
 });
 
 test("unauthorized destinations fall back to default behavior without causing redirect loops", async () => {
-  const org: AuthorizedStaffOrganization = {
+  const org: StaffOrganizationMembership = {
     id: "org-single",
     name: "Happy Paws",
     slug: "happy-paws",
@@ -267,7 +316,7 @@ test("unauthorized destinations fall back to default behavior without causing re
 });
 
 test("invalid or unsafe destinations fall back to default behavior", async () => {
-  const org: AuthorizedStaffOrganization = {
+  const org: StaffOrganizationMembership = {
     id: "org-single",
     name: "Happy Paws",
     slug: "happy-paws",
@@ -288,7 +337,7 @@ test("invalid or unsafe destinations fall back to default behavior", async () =>
 });
 
 test("existing authenticated sessions follow the same destination resolution and activation", async () => {
-  const singleOrg: AuthorizedStaffOrganization = {
+  const singleOrg: StaffOrganizationMembership = {
     id: "org-single",
     name: "Happy Paws",
     slug: "happy-paws",
